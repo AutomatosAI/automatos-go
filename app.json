@@ -10,16 +10,87 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.automatos.app",
+      "associatedDomains": ["applinks:ui.automatos.app", "webcredentials:clerk.automatos.app"],
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": ["remote-notification"]
       }
     },
     "android": {
-      "package": "com.automatos.app"
+      "package": "com.automatos.app",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "ui.automatos.app",
+              "pathPrefix": "/go"
+            },
+            {
+              "scheme": "https",
+              "host": "ui.automatos.app",
+              "pathPrefix": "/command-center"
+            },
+            {
+              "scheme": "https",
+              "host": "ui.automatos.app",
+              "pathPrefix": "/chat"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "enableBackgroundRemoteNotifications": true
+        }
+      ],
+      "expo-local-authentication",
+      [
+        "expo-camera",
+        {
+          "barcodeScannerEnabled": true
+        }
+      ],
+      "expo-image-picker",
+      "expo-document-picker",
+      [
+        "expo-speech-recognition",
+        {
+          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
+        }
+      ],
+      [
+        "@livekit/react-native-expo-plugin",
+        {
+          "android": {
+            "audioType": "communication"
+          }
+        }
+      ],
+      "@config-plugins/react-native-webrtc",
+      [
+        "expo-video",
+        {
+          "supportsBackgroundPlayback": false,
+          "supportsPictureInPicture": false
+        }
+      ],
+      [
+        "@sentry/react-native",
+        {
+          "url": "https://de.sentry.io/"
+        }
+      ],
+      "expo-localization",
+      "expo-system-ui",
       [
         "expo-build-properties",
         {
@@ -42,7 +113,9 @@
             ]
           }
         }
-      ]
+      ],
+      "./plugins/with-pinned-background-modes",
+      "./plugins/with-sentry-upload-guard"
     ],
     "extra": {
       "router": {}

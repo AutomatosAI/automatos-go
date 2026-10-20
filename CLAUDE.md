@@ -62,6 +62,7 @@ src/styles/          tokens, looks, the three layouts, fonts, mascot, the AI lab
 src/ui/              primitives shared by all three layouts
 src/lib/             logger (the only console user), env (zod-parsed EXPO_PUBLIC_*)
 scripts/             release-env guard, testflight-decide, sync-core, check-routes
+plugins/             local config plugins: pinned background modes, Sentry upload guard (docs/native-modules.md)
 ```
 
 Code rules (PRD-001 §4.11): HTTP only through `src/api/`; zod at every
