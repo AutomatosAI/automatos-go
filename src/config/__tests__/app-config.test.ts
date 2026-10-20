@@ -2,10 +2,11 @@
 // build (fingerprint policy) or a store rejection, so every value is pinned.
 
 import { execFileSync } from 'node:child_process';
-import { readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
+import { IOSConfig } from 'expo/config-plugins';
 import { describe, expect, it } from 'vitest';
 
 import appJson from '../../../app.json';
@@ -306,6 +307,146 @@ describe('App Transport Security (K11)', () => {
   });
 });
 
+// ITMS-91053: the privacy manifest. The collected types follow the privacy policy draft's
+// Appendix A.1 (reports/mobile-review-2026-10-20/drafts); docs/native-modules.md 'Privacy
+// manifest' records the accessed-API sources.
+type PrivacyManifest = IOSConfig.PrivacyInfo.PrivacyInfo;
+
+const privacy: PrivacyManifest = expo.ios.privacyManifests;
+const dataType = (name: string) => `NSPrivacyCollectedDataType${name}`;
+const LINKED_TYPES = [
+  'EmailAddress',
+  'Name',
+  'PhotosorVideos',
+  'AudioData',
+  'CustomerSupport',
+  'OtherUserContent',
+  'UserID',
+  'DeviceID',
+  'OtherUsageData',
+  'OtherDiagnosticData',
+].map(dataType);
+const NOT_LINKED_TYPES = ['CrashData'].map(dataType);
+// No analytics, no performance tracing, no location: the app collects none (US-002f notes).
+const NEVER_DECLARED = [
+  'ProductInteraction',
+  'PerformanceData',
+  'PreciseLocation',
+  'CoarseLocation',
+].map(dataType);
+
+const collectedTypes = (linked: boolean) =>
+  privacy.NSPrivacyCollectedDataTypes.filter(
+    (entry) => entry.NSPrivacyCollectedDataTypeLinked === linked,
+  ).map((entry) => entry.NSPrivacyCollectedDataType);
+
+// Each accessed-API reason as 'category reason', so manifests compare as sets.
+const declaredReasons = (manifest: Partial<PrivacyManifest>) =>
+  (manifest.NSPrivacyAccessedAPITypes ?? [])
+    .flatMap((entry) =>
+      entry.NSPrivacyAccessedAPITypeReasons.map(
+        (reason) => `${entry.NSPrivacyAccessedAPIType} ${reason}`,
+      ),
+    )
+    .sort();
+
+const XCPRIVACY_API_KEY = '<key>NSPrivacyAccessedAPIType</key>';
+const XCPRIVACY_API_ENTRY =
+  /<key>NSPrivacyAccessedAPIType<\/key>\s*<string>([^<]+)<\/string>\s*<key>NSPrivacyAccessedAPITypeReasons<\/key>\s*<array>([\s\S]*?)<\/array>/g;
+
+// The accessed-API entries of one PrivacyInfo.xcprivacy (an XML plist), as 'category reason'.
+function xcprivacyReasons(xml: string): { entries: number; reasons: string[] } {
+  const matches = [...xml.matchAll(XCPRIVACY_API_ENTRY)];
+  const reasons = matches.flatMap(([, category, array]) =>
+    [...array.matchAll(/<string>([^<]+)<\/string>/g)].map(([, reason]) => `${category} ${reason}`),
+  );
+  return { entries: matches.length, reasons };
+}
+
+// Every PrivacyInfo.xcprivacy under node_modules (the files docs/native-modules.md lists), with
+// how many accessed-API keys it has and the reasons the parser read.
+function nodeModulesManifests() {
+  const out = execFileSync('find', ['node_modules', '-name', 'PrivacyInfo.xcprivacy'], {
+    cwd: PROJECT_ROOT,
+    encoding: 'utf8',
+  });
+  return out
+    .split('\n')
+    .filter(Boolean)
+    .sort()
+    .map((file) => {
+      const xml = readFileSync(path.join(PROJECT_ROOT, file), 'utf8');
+      return { file, keys: xml.split(XCPRIVACY_API_KEY).length - 1, ...xcprivacyReasons(xml) };
+    });
+}
+
+describe('iOS privacy manifest (US-002f, ITMS-91053)', () => {
+  // read once at collection, like introspect() below, so the scan is not under a test timeout
+  const manifests = nodeModulesManifests();
+
+  it('declares no tracking and no tracking domains', () => {
+    expect(privacy.NSPrivacyTracking).toBe(false);
+    expect(privacy.NSPrivacyTrackingDomains).toEqual([]);
+  });
+
+  it('declares exactly the linked and the not-linked collected types, each once', () => {
+    expect([...collectedTypes(true)].sort()).toEqual([...LINKED_TYPES].sort());
+    expect(collectedTypes(false)).toEqual(NOT_LINKED_TYPES);
+    expect(privacy.NSPrivacyCollectedDataTypes).toHaveLength(
+      LINKED_TYPES.length + NOT_LINKED_TYPES.length,
+    );
+  });
+
+  it('collects every type for App Functionality only, never for tracking', () => {
+    for (const entry of privacy.NSPrivacyCollectedDataTypes) {
+      expect(entry.NSPrivacyCollectedDataTypeTracking).toBe(false);
+      expect(entry.NSPrivacyCollectedDataTypePurposes).toEqual([
+        'NSPrivacyCollectedDataTypePurposeAppFunctionality',
+      ]);
+    }
+  });
+
+  it.each(NEVER_DECLARED)('does not declare %s', (type) => {
+    expect([...collectedTypes(true), ...collectedTypes(false)]).not.toContain(type);
+  });
+
+  it('declares no location type of any kind', () => {
+    const types = privacy.NSPrivacyCollectedDataTypes.map(
+      (entry) => entry.NSPrivacyCollectedDataType,
+    );
+    expect(types.filter((name) => name.includes('Location'))).toEqual([]);
+  });
+
+  it('gives every accessed-API entry at least one reason, one entry per category', () => {
+    const categories = privacy.NSPrivacyAccessedAPITypes.map(
+      (entry) => entry.NSPrivacyAccessedAPIType,
+    );
+    expect(new Set(categories).size).toBe(categories.length);
+    for (const entry of privacy.NSPrivacyAccessedAPITypes) {
+      expect(entry.NSPrivacyAccessedAPITypeReasons.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('reads every accessed-API entry of each node_modules PrivacyInfo.xcprivacy', () => {
+    expect(manifests.length).toBeGreaterThan(0);
+    for (const { file, keys, entries } of manifests) {
+      expect({ file, entries }).toEqual({ file, entries: keys });
+    }
+  });
+
+  it('declares the union of every PrivacyInfo.xcprivacy under node_modules', () => {
+    const union = [...new Set(manifests.flatMap((manifest) => manifest.reasons))].sort();
+    expect(declaredReasons(privacy)).toEqual(union);
+  });
+
+  it("survives Expo's build-time merge into PrivacyInfo.xcprivacy, also on a re-run", () => {
+    const { mergePrivacyInfo } = IOSConfig.PrivacyInfo;
+    const first = mergePrivacyInfo({}, privacy);
+    expect(first).toEqual(privacy);
+    expect(mergePrivacyInfo(first, privacy)).toEqual(privacy);
+  });
+});
+
 const ANDROID_PERMISSIONS = [
   'INTERNET',
   'ACCESS_NETWORK_STATE',
@@ -358,6 +499,10 @@ describe('Android permissions (US-002c)', () => {
       android: { usesCleartextTraffic: true },
     });
   });
+
+  it('turns Android auto backup off (US-002f): no app data in a cloud backup', () => {
+    expect(expo.android.allowBackup).toBe(false);
+  });
 });
 
 type ManifestFilter = {
@@ -366,6 +511,7 @@ type ManifestFilter = {
 };
 
 type Introspected = {
+  ios: { privacyManifests?: unknown };
   _internal: {
     modResults: {
       ios: { infoPlist: Record<string, unknown>; entitlements: Record<string, unknown> };
@@ -397,7 +543,18 @@ function introspect(): Introspected {
 }
 
 describe('the evaluated native config (expo config --type introspect)', () => {
-  const { ios, android } = introspect()._internal.modResults;
+  const evaluated = introspect();
+  const { ios, android } = evaluated._internal.modResults;
+
+  // Prebuild's withPrivacyInfo writes PrivacyInfo.xcprivacy from the evaluated config's
+  // ios.privacyManifests, so no plugin may drop or change it.
+  it('keeps the privacy manifest exactly as app.json declares it', () => {
+    expect(evaluated.ios.privacyManifests).toEqual(privacy);
+  });
+
+  it('the Android application sets allowBackup false', () => {
+    expect(android.manifest.manifest.application[0].$['android:allowBackup']).toBe('false');
+  });
 
   it('Info.plist ends with exactly one background mode, remote-notification', () => {
     expect(ios.infoPlist.UIBackgroundModes).toEqual(['remote-notification']);

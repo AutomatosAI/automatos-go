@@ -207,6 +207,68 @@ MMKVCore 2.4.0, hermes-engine, and GoogleSignIn ~> 9.0 with its dependencies (th
 only the photo and motion notices). OT-3 runs `strings` / `nm` on the IPA's main binary and
 frameworks for the classes above before the first submit; a hit means a key here and a new build.
 
+## Privacy manifest
+
+`ios.privacyManifests` in `app.json` (US-002f) is the app's own `PrivacyInfo.xcprivacy`: prebuild's
+`withPrivacyInfo` (`@expo/config-plugins` `ios/PrivacyInfo.js`) merges it into the file and adds
+the file to the Xcode project. It is in the first native build so the first upload is not bounced
+(ITMS-91053) and a later wave needs no extra build for it.
+
+**Tracking:** `NSPrivacyTracking` false, `NSPrivacyTrackingDomains` empty.
+
+**Collected data types** follow the privacy policy draft, Appendix A.1
+(`reports/mobile-review-2026-10-20/drafts/privacy-policy-automatos-go.md` in the workspace root).
+Each has `NSPrivacyCollectedDataTypeTracking` false and the one purpose
+`NSPrivacyCollectedDataTypePurposeAppFunctionality`.
+
+| Linked | Types (`NSPrivacyCollectedDataType…`)                                                                                                                       |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| yes    | `EmailAddress`, `Name`, `PhotosorVideos`, `AudioData`, `CustomerSupport`, `OtherUserContent`, `UserID`, `DeviceID`, `OtherUsageData`, `OtherDiagnosticData` |
+| no     | `CrashData`                                                                                                                                                 |
+
+Not declared: `ProductInteraction`, `PerformanceData` and any location type. The draft marks the
+Sentry-dependent rows [CHECK], so the Sentry setup has to match what is declared here: no user ID
+on events and no IP storage (`CrashData` not linked), no performance tracing (`PerformanceData`),
+no tap or screen breadcrumbs (`ProductInteraction`). Turning one of them on changes a row here and
+costs a build. Gerard confirms the draft's [CHECK] items; the A7 release kit's US-021f audits the
+result.
+
+**Accessed API types** are the union of every `PrivacyInfo.xcprivacy` under `node_modules`
+(`find node_modules -name PrivacyInfo.xcprivacy`, each read with `plutil -convert json -o -`,
+21 Oct 2026), de-duplicated by category with every reason kept, so the app's own manifest covers
+those pods however CocoaPods links them.
+
+| File                                                                | Category: reasons                                         |
+| ------------------------------------------------------------------- | --------------------------------------------------------- |
+| `expo-application/ios/PrivacyInfo.xcprivacy`                        | FileTimestamp: C617.1                                     |
+| `expo-constants/ios/PrivacyInfo.xcprivacy`                          | UserDefaults: CA92.1                                      |
+| `expo-file-system/ios/PrivacyInfo.xcprivacy`                        | FileTimestamp: 0A2A.1, 3B52.1 · DiskSpace: E174.1, 85F4.1 |
+| `expo-localization/ios/PrivacyInfo.xcprivacy`                       | UserDefaults: CA92.1                                      |
+| `expo-notifications/ios/PrivacyInfo.xcprivacy`                      | UserDefaults: CA92.1                                      |
+| `expo-system-ui/ios/PrivacyInfo.xcprivacy`                          | UserDefaults: CA92.1                                      |
+| `expo-task-manager/ios/PrivacyInfo.xcprivacy`                       | UserDefaults: CA92.1                                      |
+| `react-native/React/Resources/PrivacyInfo.xcprivacy`                | FileTimestamp: C617.1 · UserDefaults: CA92.1              |
+| `react-native/ReactCommon/cxxreact/PrivacyInfo.xcprivacy`           | FileTimestamp: C617.1                                     |
+| `react-native/third-party-podspecs/RCT-Folly/PrivacyInfo.xcprivacy` | FileTimestamp: C617.1                                     |
+| `react-native/third-party-podspecs/boost/PrivacyInfo.xcprivacy`     | FileTimestamp: C617.1 · SystemBootTime: 35F9.1            |
+| `react-native/third-party-podspecs/glog/PrivacyInfo.xcprivacy`      | FileTimestamp: C617.1                                     |
+
+The resulting list (`NSPrivacyAccessedAPICategory…`):
+
+- `DiskSpace`: 85F4.1, E174.1
+- `FileTimestamp`: 0A2A.1, 3B52.1, C617.1
+- `SystemBootTime`: 35F9.1
+- `UserDefaults`: CA92.1
+
+None of these files collects a data type or tracks. `app-config.test.ts` re-reads every
+`PrivacyInfo.xcprivacy` under `node_modules` and fails when the declared reasons are not exactly
+this union, so a dependency bump that adds a reason shows up in CI. It also checks that Expo's
+`mergePrivacyInfo` keeps the manifest and that `expo config --type introspect` carries it
+unchanged. Not checkable here: the pods `pod install` fetches as binaries (LiveKitWebRTC, Sentry,
+MMKVCore, hermes-engine, the GoogleSignIn chain) are not in `node_modules`, so whatever manifests
+they carry are not in this union; the Xcode privacy report of the first archive (OT-3) shows the
+aggregate.
+
 ## App Transport Security and cleartext
 
 - iOS: `ios.infoPlist.NSAppTransportSecurity` is `{ NSAllowsLocalNetworking: true }` (K11; PRD-001
@@ -255,6 +317,10 @@ the Expo template's manifest, and each wired plugin's `withPermissions` call (20
 `expo config --type introspect` shows the declared list kept and each blocked permission with
 `tools:node="remove"` (asserted in `app-config.test.ts`). The manifest merged with the Gradle
 dependencies is proven only by the first Android build.
+
+`android.allowBackup` is `false` (US-002f): Android's auto backup takes none of the app's data.
+`expo config --type introspect` shows `android:allowBackup="false"` on the application, with
+`expo-secure-store`'s `fullBackupContent` and `dataExtractionRules` still attached.
 
 ## Minimum OS versions
 
