@@ -4,12 +4,17 @@
     "slug": "automatos-go",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/brand/icon.png",
     "scheme": "automatos",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.automatos.app",
+      "icon": {
+        "light": "./assets/brand/icon.png",
+        "dark": "./assets/brand/icon-dark.png"
+      },
       "associatedDomains": ["applinks:ui.automatos.app", "webcredentials:clerk.automatos.app"],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
@@ -29,6 +34,10 @@
     },
     "android": {
       "package": "com.automatos.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/brand/adaptive-icon.png",
+        "backgroundColor": "#f4eee2"
+      },
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.ACCESS_NETWORK_STATE",
@@ -131,6 +140,17 @@
       ],
       "expo-localization",
       "expo-system-ui",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#f4eee2",
+          "image": "./assets/brand/splash.png",
+          "imageWidth": 220,
+          "dark": {
+            "backgroundColor": "#1a1814"
+          }
+        }
+      ],
       [
         "expo-font",
         {
