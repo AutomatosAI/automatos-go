@@ -140,6 +140,7 @@ check "Clerk provider asks for the 'mobile' JWT template" "all_exist src/auth/pr
 check "unknown auth mode → 'This server needs a newer Automatos Go'" "grep -rq 'needs a newer Automatos Go' src/auth"
 check "sign-in machine and screens exist" "all_exist src/auth/sign-in-machine.ts src/auth/server-words.ts src/auth/screens 'app/(auth)/sign-in.tsx'"
 check "no sign-up, social or Apple sign-in path (D5, D6)" "! added_code | grep -E 'useSignUp|signUp\\.|useSSO|oauth_|expo-apple-authentication|useSignInWithApple' | grep -q ."
+check "no account-creation pointer anywhere in the app (LEAD-20OCT-SIGNUP)" "! added_code | grep -iE 'create (an|one|your) account|no account\\?' | grep -q ."
 
 # --- FND: the shared contracts (K5) --------------------------------------------------------------
 echo ""; echo "=== FND shared contracts"
