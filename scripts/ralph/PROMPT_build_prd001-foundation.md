@@ -15,7 +15,7 @@ This is a **React Native / Expo SDK 54 app**. There is NO browser, NO simulator 
 3. `CLAUDE.md` once US-001 has written it.
 4. The story's sources, READ ONLY:
    - the academy template `/Users/gkavanagh/Development/Automatos-AI-Platform/.worktrees/automatos-academy-app/testflight-main`;
-   - automatos-ai `/Users/gkavanagh/Development/Automatos-AI-Platform/.worktrees/automatos-ai/mobile-review-main` @ `630fc1c85` (vendoring source, route manifest, fonts, brand mark, the server code the digests cite);
+   - automatos-ai `/Users/gkavanagh/Development/Automatos-AI-Platform/.worktrees/automatos-ai/core-pin-630fc1c85` @ `630fc1c85` (vendoring source, route manifest, fonts, brand mark, the server code the digests cite);
    - the digests `/Users/gkavanagh/Development/Automatos-AI-Platform/reports/mobile-review-2026-10-20/digests/*.md` (wire formats and endpoint shapes, verified 20 Oct);
    - the Studio design handoff `/Users/gkavanagh/Development/Automatos-AI-Platform/DUMPING AREA/design_handoff_automatos_mobile/README.md` (and `_ds/…/tokens/`).
    Never edit, copy a file into, run anything in, or `git` anything inside those paths. Copy FROM them into this worktree only.

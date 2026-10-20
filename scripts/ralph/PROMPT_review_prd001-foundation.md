@@ -24,7 +24,7 @@ git diff --stat $BASE..HEAD
 git diff $BASE..HEAD -- . ':!package-lock.json' ':!assets/fonts' ':!assets/brand' ':!src/core/web' ':!src/core/route-manifest.json'
 ```
 
-`src/core/web/**` is generated: review `scripts/sync-core.ts`, `scripts/core-manifest.json`, `core.lock.json` and `src/core/shims/`, then spot-check three vendored files against their source at `/Users/gkavanagh/Development/Automatos-AI-Platform/.worktrees/automatos-ai/mobile-review-main/frontend/` (header + alias rewrite only). Read beside the diff: `scripts/ralph/prd-001-foundation.json` (binding: decisions, ACs, notes, ownerTest), `docs/prd/PRD-001-AUTOMATOS-GO-V1.md` §4, and the academy template (READ ONLY) for US-001's lift. Never file a finding against a line this diff does not touch.
+`src/core/web/**` is generated: review `scripts/sync-core.ts`, `scripts/core-manifest.json`, `core.lock.json` and `src/core/shims/`, then spot-check three vendored files against their source at `/Users/gkavanagh/Development/Automatos-AI-Platform/.worktrees/automatos-ai/core-pin-630fc1c85/frontend/` (header + alias rewrite only). Read beside the diff: `scripts/ralph/prd-001-foundation.json` (binding: decisions, ACs, notes, ownerTest), `docs/prd/PRD-001-AUTOMATOS-GO-V1.md` §4, and the academy template (READ ONLY) for US-001's lift. Never file a finding against a line this diff does not touch.
 
 ## Verification
 
