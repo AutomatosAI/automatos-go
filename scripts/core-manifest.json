@@ -1,0 +1,79 @@
+{
+  "source": "AutomatosAI/automatos-ai",
+  "sha": "630fc1c85af06c5c76e70c74e9653ee1804fdf41",
+  "root": "frontend",
+  "notes": [
+    "Vendored by scripts/sync-core.ts into src/core/web/ (K1); core.lock.json records every file written. Never edit a vendored file: fix this manifest or src/core/shims/ and re-run the sync.",
+    "lib/discussion.ts is an addition to the PRD-001 §4.3 chat list: D31 'Ask Auto about' a ticket builds its opening message with it."
+  ],
+  "sets": {
+    "chat": [
+      "lib/chat/receipts.ts",
+      "lib/chat/errors.ts",
+      "lib/chat/narration.ts",
+      "lib/chat/tool-calls.ts",
+      "lib/chat/approvals.ts",
+      "lib/chat/suggestion.ts",
+      "lib/chat/retry.ts",
+      "lib/chat/deliverables.ts",
+      "lib/chat/message-text.ts",
+      "lib/chat/chat-session.ts",
+      "lib/ai-label/copy.ts",
+      "components/play/chat/labels.ts",
+      "components/play/chat/reply.ts",
+      "components/play/chat/caption.ts",
+      "lib/discussion.ts"
+    ],
+    "cc": [],
+    "styles": []
+  },
+  "extract": {},
+  "drop": {
+    "lib/chat/chat-session.ts": {
+      "names": ["loadChatSession", "saveChatSession"],
+      "reason": "they read and write window.localStorage; the app persists the session itself (encrypted MMKV, D-CACHE)"
+    }
+  },
+  "typeOnly": {
+    "components/widgets/types.ts": {
+      "names": ["MissionApprovalTask", "MissionApprovalWidgetData", "ToolApprovalWidgetData"],
+      "reason": "lib/chat/approvals.ts needs the card data types; the file also types React widget components"
+    },
+    "lib/api-client.ts": {
+      "names": ["ApprovalGrant"],
+      "reason": "lib/ticket-links.ts types a question link with it; the client itself uses fetch and localStorage"
+    },
+    "hooks/use-activity-api.ts": {
+      "names": ["ActivityFeedItem"],
+      "reason": "lib/ticket-links.ts types a feed link with it; the hook is TanStack Query"
+    },
+    "lib/theme-sdk/index.ts": {
+      "names": [
+        "HostChatMessage",
+        "HostDeliverable",
+        "HostReceipt",
+        "HostToolCall",
+        "MissionSuggestionMessage"
+      ],
+      "reason": "Play's chat helpers and lib/mascot/types.ts type-import these from the SDK barrel, which re-exports React hooks and Next.js components"
+    },
+    "lib/theme-sdk/chat.ts": {
+      "names": ["HostChatMessage", "HostDeliverable", "HostReceipt", "HostToolCall"],
+      "reason": "the barrel's chat types; the module's runtime is React hooks over the web's stores"
+    },
+    "lib/theme-sdk/cards.ts": {
+      "names": ["MissionSuggestionMessage"],
+      "reason": "the barrel re-exports this type through cards.ts, whose runtime is React card components"
+    },
+    "lib/theme-sdk/host-cards/chat-cards.tsx": {
+      "names": ["MissionSuggestionMessage", "WithdrawOffer"],
+      "reason": "the SDK's chat types are declared beside React card components"
+    }
+  },
+  "shims": {
+    "@ai-sdk/react": {
+      "path": "src/core/shims/ai-sdk-react.ts",
+      "reason": "types/chat.ts type-imports UIMessage; the app has no AI SDK, so a structural type stands in"
+    }
+  }
+}

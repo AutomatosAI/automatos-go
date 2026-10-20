@@ -16,6 +16,7 @@
     "test:coverage": "vitest run --coverage",
     "check:bundle": "expo export --platform ios --output-dir .expo/bundle-check",
     "check:doctor": "npx --yes expo-doctor",
+    "check:core": "tsx scripts/sync-core.ts --check",
     "eas-build-pre-install": "node scripts/check-release-env.js"
   },
   "dependencies": {
@@ -83,6 +84,7 @@
     "eslint-config-expo": "~10.0.0",
     "eslint-config-prettier": "^9.1.0",
     "prettier": "^3.3.3",
+    "tsx": "^4.23.15",
     "typescript": "~5.9.2",
     "vitest": "^3.2.4"
   }

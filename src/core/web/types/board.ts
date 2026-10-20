@@ -1,0 +1,115 @@
+// Vendored from AutomatosAI/automatos-ai frontend/types/board.ts @ 630fc1c85af06c5c76e70c74e9653ee1804fdf41 — do not edit — scripts/sync-core.ts
+/**
+ * Board types for the Kanban task management view (PRD-72 v2).
+ * "Task" in UI = "Recipe" in backend. No backend rename.
+ */
+
+export type BoardStatus = 'inbox' | 'assigned' | 'in_progress' | 'review' | 'blocked' | 'done' | 'failed' | 'cancelled' | 'closed'
+
+export type TaskPriority = 'urgent' | 'high' | 'medium' | 'low'
+
+export type ReviewMode = 'human' | 'llm' | 'auto'
+
+export interface BoardTask {
+  id: string
+  type: 'routine' | 'playbook' | 'task' | 'mission'
+  name: string
+  description?: string
+  status: BoardStatus
+  priority: TaskPriority
+  tags: string[]
+  assignee?: {
+    agent_id: number
+    agent_name: string
+    agent_icon?: string | null
+  }
+  creator?: string
+  due_date?: string
+  review_mode: ReviewMode
+  started_at?: string
+  completed_at?: string
+  duration_ms?: number
+  step_progress?: { current: number; total: number }
+  error_message?: string
+  // PRD-161: dispatch retry counter. >0 means a prior attempt's lease expired
+  // (worker crashed/hung) and the task was requeued → render an "unresponsive"
+  // badge so the user sees the agent missed its ack deadline.
+  attempts?: number
+  report_id?: string
+  source_id: string
+  project_id?: number
+  mission_name?: string
+  /** A mission ticket's run (orchestration_run_id): its actions live on /missions/<id> (PRD-252 D6). */
+  mission_id?: string
+  parent_task_id?: string
+  child_count?: number
+  sla_deadline?: string
+  blocked_at?: string
+  blocked_reason?: string
+  planning_data?: { playbook_id?: number; execution_id?: string; step_progress?: { current: number; total: number }; approval_action?: { type: string; post_id?: string; [key: string]: any } }
+  result?: any
+  // PRD-234: the session reference a `runtime: cli` ticket carries once a CLI host claims it
+  runtime_ref?: Record<string, any> | null
+  /** PRD-252 R3: why it waits in Review / Blocked (core/services/ticket_reasons.py codes). */
+  review_reason?: string | null
+  blocked_code?: string | null
+  source_type?: string
+  /** PRD-252 R4: the ticket's number in its workspace, #0042 (a mission step: #0051.3). */
+  number?: string | null
+  /** P256-FIX-N13-7: the ticket's board number as stored (1394, shown #1394); its number when the API sent none. */
+  workspace_seq?: number | null
+  /** PRD-252 D3: Rejects since the brief was last agreed; from 3, Review suggests Discuss. */
+  times_sent_back?: number
+  /** F243: the draft a failed redo keeps on the card's face (the last run that had one). */
+  kept_draft?: string | null
+  /** PRE-11: the owner's document its answer was added to Knowledge as, or null. */
+  knowledge_document_id?: number | null
+}
+
+export interface BoardColumn {
+  status: BoardStatus
+  label: string
+  count: number
+  tasks: BoardTask[]
+}
+
+export interface BoardAgent {
+  id: number
+  name: string
+  role?: string
+  premium_icon?: string | null
+  status: 'working' | 'idle' | 'offline'
+  badge?: string // LEAD, INT, SPC
+}
+
+export const BOARD_COLUMNS: { status: BoardStatus; label: string }[] = [
+  { status: 'inbox', label: 'Inbox' },
+  { status: 'assigned', label: 'Assigned' },
+  { status: 'in_progress', label: 'In Progress' },
+  { status: 'review', label: 'Review' },
+  { status: 'blocked', label: 'Blocked' },
+  { status: 'done', label: 'Done' },
+  { status: 'failed', label: 'Failed' },
+  // PRD-252 R7 (D1): Cancelled and Closed are one stage; a closed ticket
+  // stays 'closed' and sits in the Cancelled column.
+  { status: 'cancelled', label: 'Cancelled' }, // PRD-234 S1a
+]
+
+export const PRIORITY_CONFIG: Record<TaskPriority, { label: string; color: string; cssVar: string }> = {
+  urgent: { label: 'Urgent', color: 'hsl(var(--destructive))', cssVar: '--destructive' },
+  high: { label: 'High', color: 'hsl(var(--warning))', cssVar: '--warning' },
+  medium: { label: 'Medium', color: 'hsl(var(--info))', cssVar: '--info' },
+  low: { label: 'Low', color: 'hsl(var(--muted-foreground))', cssVar: '--muted-foreground' },
+}
+
+export const STATUS_CONFIG: Record<BoardStatus, { label: string; dotColor: string; cssVar: string }> = {
+  inbox: { label: 'Inbox', dotColor: 'bg-muted-foreground', cssVar: '--muted-foreground' },
+  assigned: { label: 'Assigned', dotColor: 'bg-[hsl(var(--agent))]', cssVar: '--agent' },
+  in_progress: { label: 'In Progress', dotColor: 'bg-[hsl(var(--info))]', cssVar: '--info' },
+  review: { label: 'Review', dotColor: 'bg-[hsl(var(--warning))]', cssVar: '--warning' },
+  blocked: { label: 'Blocked', dotColor: 'bg-[hsl(var(--destructive))]', cssVar: '--destructive' },
+  done: { label: 'Done', dotColor: 'bg-[hsl(var(--success))]', cssVar: '--success' },
+  failed: { label: 'Failed', dotColor: 'bg-[hsl(var(--destructive))]', cssVar: '--destructive' },
+  cancelled: { label: 'Cancelled', dotColor: 'bg-muted-foreground', cssVar: '--muted-foreground' }, // PRD-234 S1a
+  closed: { label: 'Closed', dotColor: 'bg-muted-foreground', cssVar: '--muted-foreground' },
+}
