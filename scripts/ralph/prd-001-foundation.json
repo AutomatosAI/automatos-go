@@ -214,6 +214,31 @@
       "notes": "An RGBA PNG that is fully opaque still fails App Store processing (ITMS-90717): the alpha channel itself must be gone (e.g. sips to JPEG and back to PNG, or Pillow convert('RGB')). | Built 21 Oct: Pillow convert('RGB') drops the alpha channel; ios.icon.dark set (no OT-8 fallback needed); the shipped marks are 1.52x/1.18x upscales of the 333x396 master, so a vector or 1024 master stays OT-8."
     },
     {
+      "id": "US-002f",
+      "prdStory": "US-002",
+      "priority": 6.5,
+      "passes": false,
+      "title": "iOS privacy manifest and Android allowBackup false, in the first native build",
+      "description": "As the release owner, I want the App Store privacy manifest and Android's backup rule in app.json before the first native build, so the first TestFlight upload is not bounced (ITMS-91053) and no later wave needs an extra native build for them. Lead, 20 Oct, moved forward from the A7 release kit (its US-021f stays as the audit).",
+      "acceptanceCriteria": [
+        "app.json expo.ios.privacyManifests: NSPrivacyTracking false; NSPrivacyTrackingDomains []; NSPrivacyCollectedDataTypes, each with NSPrivacyCollectedDataTypeTracking false and purposes [NSPrivacyCollectedDataTypePurposeAppFunctionality]: LINKED (NSPrivacyCollectedDataTypeLinked true) EmailAddress, Name, PhotosorVideos, AudioData, CustomerSupport, OtherUserContent, UserID, DeviceID, OtherUsageData, OtherDiagnosticData; NOT LINKED CrashData; and NO ProductInteraction, PerformanceData or any location type (source: reports/mobile-review-2026-10-20/drafts/privacy-policy-automatos-go.md Appendix A.1 in the workspace root; read it)",
+        "NSPrivacyAccessedAPITypes = the union of every PrivacyInfo.xcprivacy under node_modules (find node_modules -name PrivacyInfo.xcprivacy; convert each with `plutil -convert json -o - <file>`), de-duplicated by category with every reason code kept; record the files read and the resulting list in docs/native-modules.md under 'Privacy manifest'",
+        "app.json expo.android.allowBackup false",
+        "src/config/__tests__/app-config.test.ts asserts NSPrivacyTracking false, the exact linked/not-linked type sets, that no location/ProductInteraction/PerformanceData type is declared, that every accessed-API entry has at least one reason, and allowBackup false",
+        "npx expo config --type introspect evaluates and still carries the manifest (the build-time merge keeps it)",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npx expo-doctor passes"
+      ],
+      "files": [
+        "app.json",
+        "src/config/__tests__/app-config.test.ts",
+        "docs/native-modules.md"
+      ],
+      "notes": "A native change: it lands before Gerard's first iOS build (OT-3). Data types follow the privacy draft; Gerard confirms them (the draft's [CHECK] items) and a later change is one rebuild. Do not add analytics, tracking or location; the app collects none."
+    },
+    {
       "id": "US-003a",
       "prdStory": "US-003",
       "title": "sync-core: the vendoring engine, the lock, the drift check — and the chat set vendored",
@@ -448,7 +473,8 @@
         "npm run typecheck passes",
         "npm run lint passes (0 errors)",
         "npx vitest run passes",
-        "npm run check:bundle passes"
+        "npm run check:bundle passes",
+        "src/auth/token-cache.ts (the Clerk tokenCache) writes every item with expo-secure-store keychainAccessible AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY and records each key it writes in ONE index item, the start of the app's secure-storage key registry (src/lib/secure-keys.ts), so a reinstall wipe and sign-out can list and delete every key; tested with a fake SecureStore (lead, 20 Oct, from the release audit)"
       ],
       "files": ["src/auth/providers/", "src/auth/select.ts", "src/auth/config.ts", "src/auth/AuthRoot.tsx", "src/auth/token-cache.ts", "src/auth/strings.ts", "src/auth/__tests__/"],
       "priority": 17,
