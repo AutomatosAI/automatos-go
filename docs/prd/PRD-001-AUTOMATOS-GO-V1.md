@@ -51,12 +51,13 @@ Hosted Studio users sign in with Clerk. Self-hosted users pair their phone with 
 
 ### 4.1 Scaffold
 
-Start fresh from the academy app's TestFlight tree (`.worktrees/automatos-academy-app/testflight-main`). Expo SDK 54, React Native 0.81.5, React 19.1, TypeScript 5.9, expo-router 6, `@clerk/expo` ~3.0.1, vitest. Lift verbatim and then rename:
+Start fresh from the academy app's TestFlight tree (`.worktrees/automatos-academy-app/testflight-main`). Expo SDK 54, React Native 0.81.5, React 19.1, TypeScript 5.9, expo-router 6, `@clerk/expo` on the newest 3.2.x that accepts Expo SDK 54 (3.0.x clashes with `expo-doctor`), vitest. Lift verbatim and then rename:
 
 - `eas.json` (profiles development, preview, testflight, production; `appVersionSource: remote`); add an Android preview profile that builds an installable APK for testers.
 - `.github/workflows/ci.yml` (typecheck, lint, test:coverage; switch `npm install` to `npm ci`), `malware-scan.yml` (already on this repo's main), `testflight.yml` (the fingerprint loop) with two changes: it waits for or skips when a testflight build is already in progress, so two quick merges never start two native builds [D48]; and the `testflight` environment only serves `main` [D50].
 - `scripts/check-release-env.js` as the `eas-build-pre-install` hook, with this app's required variables.
-- The Clerk plumbing that must travel with `@clerk/expo`: `metro.config.js` with the `react-dom` shims, `babel.config.js`, `.npmrc`, the explicit `expo-modules-core` dependency, and the `expo-build-properties` `extraPods` for GoogleUtilities and RecaptchaInterop.
+- The Clerk plumbing that must travel with `@clerk/expo`: `metro.config.js` with the `react-dom` shims, `babel.config.js`, and `.npmrc`. The `expo-build-properties` `extraPods` for GoogleUtilities and RecaptchaInterop stay only while Clerk's Google sign-in pod still autolinks. The academy's explicit `expo-modules-core` dependency does not travel: Clerk 3.2.x no longer needs it.
+- No `.env.example` file. The README and CLAUDE.md list every `EXPO_PUBLIC_*` variable with a one-line comment, and `scripts/check-release-env.js` enforces them at build time.
 - Store lessons: honest `NS…UsageDescription` strings for every framework the binary references (the academy's first upload was bounced for `PHAsset`), `ITSAppUsesNonExemptEncryption: false`.
 - `runtimeVersion: { policy: "fingerprint" }` [D46], not `appVersion`.
 - Repo files: `CLAUDE.md` (stack, commands, traps, terms), `LICENSE` (Apache-2.0), `README.md`.
