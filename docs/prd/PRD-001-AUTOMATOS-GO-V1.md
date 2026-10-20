@@ -115,7 +115,7 @@ New in core: `ai-sdk-stream.ts` (the `0:` / `d:` / `e:` line buffer, from `lib/c
 ### 4.5 Sign in and connect
 
 - **First run:** "Sign in to Automatos" (hosted) or "Connect to your own server".
-- **Hosted:** Clerk email code, password or passkey; sign-in only. "No account? Create one in Studio" links to the web [D5, D6]. Waitlist and unlinked-account (409) errors are shown as written by the server.
+- **Hosted:** Clerk email code, password or passkey; sign-in only [D5, D6]. The app has no pointer to creating an account: Apple and Google both count a link out to sign-up as account creation, which would require deletion in the app, and the app deletes nothing [D63]. The sign-in screen says "Sign in with your Automatos account". Waitlist and unlinked-account (409) errors are shown as written by the server.
 - **Own server:** scan the QR code from Studio → Settings → Phones & devices with the in-app scanner (the QR is a universal link `https://<web>/go/pair?api=…&code=…`; if the OS camera opens it, the app catches it). Or type the server address and the code. The app reads `/.well-known/automatos.json`, then `POST /api/v1/mobile/pair`, and keeps the device token in SecureStore. HTTPS is required except on private addresses (`192.168.x`, `10.x`, `.local`), which show a persistent "unencrypted home network" note.
 - **After either:** `GET /api/workspaces/current` gives the role, plan exposure and AI providers. The AI-provider consent sheet appears before the first message [D23].
 - **Server switch:** Settings shows the server, the edition, the workspace and the role; "Sign out" or "Forget this server".
@@ -248,7 +248,7 @@ Every story: typecheck, lint and vitest pass in CI (nothing runs on a maintainer
 - [ ] Clerk sign-in with those three methods only; tokens from `getToken({template: "mobile"})`
 - [ ] Second-factor steps work (the academy's step machine)
 - [ ] Waitlist, unlinked account (409) and pending invitation responses show the server's words
-- [ ] "Create an account in Studio" opens the web; no sign-up in the app
+- [ ] No sign-up in the app and no pointer to creating an account (store account-deletion rules, D63)
 
 #### US-006: Connect to your own server
 **Description:** As a self-hoster, I want to scan the code in Studio and be connected.
