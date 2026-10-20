@@ -2,6 +2,7 @@
 // build (fingerprint policy) or a store rejection, so every value is pinned.
 
 import { execFileSync } from 'node:child_process';
+import { readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
@@ -137,6 +138,7 @@ describe('app.json plugins: every native module wired in the first build (US-002
         '@sentry/react-native',
         'expo-localization',
         'expo-system-ui',
+        'expo-font',
         'expo-build-properties',
         './plugins/with-pinned-background-modes',
         './plugins/with-sentry-upload-guard',
@@ -182,6 +184,32 @@ describe('app.json plugins: every native module wired in the first build (US-002
 
   it('leaves Android minSdkVersion at the React Native default: no module needs more', () => {
     expect(options('expo-build-properties')).not.toHaveProperty('android.minSdkVersion');
+  });
+});
+
+const FONTS_DIR = 'assets/fonts';
+
+// Every TTF under assets/fonts/<family>/, as the './'-relative path app.json uses.
+function fontFilesOnDisk(): string[] {
+  return readdirSync(path.join(PROJECT_ROOT, FONTS_DIR), { recursive: true, encoding: 'utf8' })
+    .filter((file) => file.endsWith('.ttf'))
+    .map((file) => `./${FONTS_DIR}/${file.split(path.sep).join('/')}`)
+    .sort();
+}
+
+describe('app.json embeds every bundled font (US-002d, K6)', () => {
+  const fonts = (pluginOptions(expo.plugins as readonly PluginEntry[], 'expo-font') ?? {}) as {
+    fonts?: string[];
+  };
+
+  it('the expo-font plugin lists exactly the TTFs on disk', () => {
+    expect(fontFilesOnDisk()).toHaveLength(20);
+    expect([...(fonts.fonts ?? [])].sort()).toEqual(fontFilesOnDisk());
+  });
+
+  it('lists each font once and only by its shared fonts list (same files on iOS and Android)', () => {
+    expect(new Set(fonts.fonts).size).toBe(fonts.fonts?.length);
+    expect(Object.keys(fonts)).toEqual(['fonts']);
   });
 });
 
@@ -403,6 +431,11 @@ describe('the evaluated native config (expo config --type introspect)', () => {
         key.endsWith('UsageDescription') && String(value).includes('$(PRODUCT_NAME)'),
     );
     expect(defaults).toEqual([]);
+  });
+
+  it('Info.plist UIAppFonts registers every bundled TTF (expo-font)', () => {
+    const files = fontFilesOnDisk().map((file) => path.posix.basename(file));
+    expect([...(ios.infoPlist.UIAppFonts as string[])].sort()).toEqual(files.sort());
   });
 
   it('Info.plist App Transport Security is exactly NSAllowsLocalNetworking', () => {

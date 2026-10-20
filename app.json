@@ -132,6 +132,33 @@
       "expo-localization",
       "expo-system-ui",
       [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/bricolage-grotesque/BricolageGrotesque96ptExtraBold-Bold.ttf",
+            "./assets/fonts/chakra-petch/ChakraPetch-Medium.ttf",
+            "./assets/fonts/chakra-petch/ChakraPetch-SemiBold.ttf",
+            "./assets/fonts/fredoka/FredokaLight-SemiBold.ttf",
+            "./assets/fonts/geist/Geist-Medium.ttf",
+            "./assets/fonts/geist/Geist-Regular.ttf",
+            "./assets/fonts/geist/Geist-SemiBold.ttf",
+            "./assets/fonts/geist-mono/GeistMono-Medium.ttf",
+            "./assets/fonts/geist-mono/GeistMono-Regular.ttf",
+            "./assets/fonts/geist-mono/GeistMono-SemiBold.ttf",
+            "./assets/fonts/instrument-serif/InstrumentSerif-Italic.ttf",
+            "./assets/fonts/instrument-serif/InstrumentSerif-Regular.ttf",
+            "./assets/fonts/newsreader/Newsreader16pt16pt-Italic.ttf",
+            "./assets/fonts/newsreader/Newsreader16pt16pt-Medium.ttf",
+            "./assets/fonts/newsreader/Newsreader16pt16pt-MediumItalic.ttf",
+            "./assets/fonts/newsreader/Newsreader16pt16pt-Regular.ttf",
+            "./assets/fonts/newsreader/Newsreader16pt16pt-SemiBold.ttf",
+            "./assets/fonts/rajdhani/Rajdhani-Bold.ttf",
+            "./assets/fonts/rajdhani/Rajdhani-Medium.ttf",
+            "./assets/fonts/rajdhani/Rajdhani-SemiBold.ttf"
+          ]
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "android": {
