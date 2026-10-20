@@ -213,6 +213,125 @@ describe('app.json links and background modes (K9, K11)', () => {
   });
 });
 
+// ITMS-90683: App Store processing bounces a binary that references a privacy framework
+// without its usage string, even when the app never asks. docs/native-modules.md 'Symbols and
+// usage keys' maps each key to the modules that reference it.
+const USED_KEYS: string[] = [
+  'NSCameraUsageDescription',
+  'NSMicrophoneUsageDescription',
+  'NSSpeechRecognitionUsageDescription',
+  'NSPhotoLibraryUsageDescription',
+  'NSFaceIDUsageDescription',
+  'NSLocalNetworkUsageDescription',
+];
+const REFERENCED_ONLY_KEYS: string[] = [
+  'NSPhotoLibraryAddUsageDescription',
+  'NSMotionUsageDescription',
+];
+const REQUIRED_KEYS = [...USED_KEYS, ...REFERENCED_ONLY_KEYS];
+const UNUSED_NOTICE =
+  'a bundled library references it, so Apple requires this notice; the app never asks for access.';
+// Checked against every bundled module and referenced by none, so a notice would be untrue.
+const UNREFERENCED_KEYS: string[] = [
+  'NSLocationWhenInUseUsageDescription',
+  'NSLocationAlwaysAndWhenInUseUsageDescription',
+  'NSContactsUsageDescription',
+  'NSCalendarsUsageDescription',
+  'NSCalendarsFullAccessUsageDescription',
+  'NSRemindersUsageDescription',
+  'NSAppleMusicUsageDescription',
+  'NSBluetoothAlwaysUsageDescription',
+  'NSUserTrackingUsageDescription',
+];
+
+const infoPlist: Record<string, unknown> = expo.ios.infoPlist;
+
+describe('iOS usage strings (US-002c, ITMS-90683)', () => {
+  it.each(REQUIRED_KEYS)('%s is 30+ characters and names Automatos Go', (key) => {
+    const value = infoPlist[key];
+    expect(typeof value).toBe('string');
+    expect(String(value).length).toBeGreaterThanOrEqual(30);
+    expect(value).toContain('Automatos Go');
+  });
+
+  it.each(REFERENCED_ONLY_KEYS)('%s says the app does not use it and never asks', (key) => {
+    expect(infoPlist[key]).toMatch(/^Automatos Go does not /);
+    expect(infoPlist[key]).toContain(UNUSED_NOTICE);
+  });
+
+  it.each(USED_KEYS)('%s says what the app uses it for', (key) => {
+    expect(infoPlist[key]).not.toContain(UNUSED_NOTICE);
+  });
+
+  it.each(UNREFERENCED_KEYS)('%s is absent: no bundled module references it', (key) => {
+    expect(infoPlist).not.toHaveProperty(key);
+  });
+});
+
+describe('App Transport Security (K11)', () => {
+  it('allows plain HTTP to local networks only', () => {
+    expect(expo.ios.infoPlist.NSAppTransportSecurity).toEqual({ NSAllowsLocalNetworking: true });
+  });
+
+  it('never allows arbitrary loads', () => {
+    expect(expo.ios.infoPlist.NSAppTransportSecurity).not.toHaveProperty('NSAllowsArbitraryLoads');
+  });
+});
+
+const ANDROID_PERMISSIONS = [
+  'INTERNET',
+  'ACCESS_NETWORK_STATE',
+  'CAMERA',
+  'RECORD_AUDIO',
+  'MODIFY_AUDIO_SETTINGS',
+  'BLUETOOTH',
+  'BLUETOOTH_ADMIN',
+  'POST_NOTIFICATIONS',
+  'RECEIVE_BOOT_COMPLETED',
+  'WAKE_LOCK',
+  'USE_BIOMETRIC',
+  'USE_FINGERPRINT',
+  'VIBRATE',
+  'WRITE_EXTERNAL_STORAGE',
+].map((name) => `android.permission.${name}`);
+
+const ANDROID_BLOCKED = [
+  'SYSTEM_ALERT_WINDOW',
+  'FOREGROUND_SERVICE',
+  'READ_EXTERNAL_STORAGE',
+  'READ_MEDIA_IMAGES',
+  'READ_MEDIA_VIDEO',
+  'READ_MEDIA_AUDIO',
+  'ACCESS_FINE_LOCATION',
+  'ACCESS_COARSE_LOCATION',
+  'ACCESS_BACKGROUND_LOCATION',
+  'READ_CONTACTS',
+  'WRITE_CONTACTS',
+].map((name) => `android.permission.${name}`);
+
+describe('Android permissions (US-002c)', () => {
+  it('declares exactly what the modules need', () => {
+    expect(expo.android.permissions).toEqual(ANDROID_PERMISSIONS);
+  });
+
+  it('blocks what modules or the template add and the app does not use', () => {
+    expect(expo.android.blockedPermissions).toEqual(ANDROID_BLOCKED);
+  });
+
+  it('never both declares and blocks a permission', () => {
+    const declared = new Set<string>(expo.android.permissions);
+    expect(expo.android.blockedPermissions.filter((name) => declared.has(name))).toEqual([]);
+  });
+
+  it('allows cleartext for private-address servers through expo-build-properties (K11)', () => {
+    expect(
+      pluginOptions(expo.plugins as readonly PluginEntry[], 'expo-build-properties'),
+    ).toMatchObject({
+      android: { usesCleartextTraffic: true },
+    });
+  });
+});
+
 type ManifestFilter = {
   $?: Record<string, string>;
   data?: { $: Record<string, string> }[];
@@ -224,7 +343,13 @@ type Introspected = {
       ios: { infoPlist: Record<string, unknown>; entitlements: Record<string, unknown> };
       android: {
         manifest: {
-          manifest: { application: { activity: { 'intent-filter': ManifestFilter[] }[] }[] };
+          manifest: {
+            'uses-permission': { $: Record<string, string> }[];
+            application: {
+              $: Record<string, string>;
+              activity: { 'intent-filter': ManifestFilter[] }[];
+            }[];
+          };
         };
       };
     };
@@ -266,6 +391,35 @@ describe('the evaluated native config (expo config --type introspect)', () => {
       '/command-center',
       '/chat',
     ]);
+  });
+
+  it.each(REQUIRED_KEYS)('Info.plist keeps the app.json string for %s', (key) => {
+    expect(ios.infoPlist[key]).toBe(infoPlist[key]);
+  });
+
+  it('no usage string is left at a plugin default ("Allow $(PRODUCT_NAME) …")', () => {
+    const defaults = Object.entries(ios.infoPlist).filter(
+      ([key, value]) =>
+        key.endsWith('UsageDescription') && String(value).includes('$(PRODUCT_NAME)'),
+    );
+    expect(defaults).toEqual([]);
+  });
+
+  it('Info.plist App Transport Security is exactly NSAllowsLocalNetworking', () => {
+    expect(ios.infoPlist.NSAppTransportSecurity).toEqual({ NSAllowsLocalNetworking: true });
+  });
+
+  it('the Android manifest keeps the declared permissions and removes every blocked one', () => {
+    const entries = android.manifest.manifest['uses-permission'].map((entry) => entry.$);
+    const isRemoved = (entry: Record<string, string>) => entry['tools:node'] === 'remove';
+    const removed = entries.filter(isRemoved).map((entry) => entry['android:name']);
+    const kept = entries.filter((entry) => !isRemoved(entry)).map((entry) => entry['android:name']);
+    expect(removed).toEqual(ANDROID_BLOCKED);
+    expect([...kept].sort()).toEqual([...ANDROID_PERMISSIONS].sort());
+  });
+
+  it('the Android application allows cleartext traffic (K11)', () => {
+    expect(android.manifest.manifest.application[0].$['android:usesCleartextTraffic']).toBe('true');
   });
 });
 

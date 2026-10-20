@@ -13,11 +13,51 @@
       "associatedDomains": ["applinks:ui.automatos.app", "webcredentials:clerk.automatos.app"],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "UIBackgroundModes": ["remote-notification"]
+        "UIBackgroundModes": ["remote-notification"],
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        },
+        "NSCameraUsageDescription": "Automatos Go uses the camera to scan the QR code that connects it to your server, and to take photos you send to Auto.",
+        "NSMicrophoneUsageDescription": "Automatos Go uses the microphone when you talk to Auto.",
+        "NSSpeechRecognitionUsageDescription": "Automatos Go turns what you say to Auto into text, using speech recognition on this iPhone.",
+        "NSPhotoLibraryUsageDescription": "Automatos Go lets you choose photos from your library to attach to a message for Auto.",
+        "NSFaceIDUsageDescription": "Automatos Go asks for Face ID before you approve a request or answer a question in your workspace.",
+        "NSLocalNetworkUsageDescription": "Automatos Go connects to your own Automatos server when it runs on your home or office network.",
+        "NSPhotoLibraryAddUsageDescription": "Automatos Go does not save anything to your photo library; a bundled library references it, so Apple requires this notice; the app never asks for access.",
+        "NSMotionUsageDescription": "Automatos Go does not use motion data; a bundled library references it, so Apple requires this notice; the app never asks for access."
       }
     },
     "android": {
       "package": "com.automatos.app",
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.WAKE_LOCK",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.VIBRATE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.READ_CONTACTS",
+        "android.permission.WRITE_CONTACTS"
+      ],
       "intentFilters": [
         {
           "action": "VIEW",
@@ -95,6 +135,7 @@
         "expo-build-properties",
         {
           "android": {
+            "usesCleartextTraffic": true,
             "packagingOptions": {
               "exclude": ["META-INF/versions/9/OSGI-INF/MANIFEST.MF"]
             }
