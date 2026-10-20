@@ -1,7 +1,7 @@
 // App environment — EXPO_PUBLIC_* vars are inlined by Expo at build time, so
 // each one is read by its full static name (Expo cannot inline a dynamic
-// lookup). Values come from the EAS environment for cloud builds; see
-// .env.example for the names. Parsed once with zod at the boundary: an empty
+// lookup). Values come from the EAS environment for cloud builds; README.md
+// 'Environment' lists the names. Parsed once with zod at the boundary: an empty
 // value is allowed (that feature reports "not configured"), a present value
 // must be well formed.
 

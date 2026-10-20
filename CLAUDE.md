@@ -12,7 +12,7 @@ CI is the gate. Nothing runs on this machine except pure-Node checks: npm ci --i
 ## Stack
 
 Expo SDK 54 · React Native 0.81.5 · React 19.1 · TypeScript 5.9 strict ·
-expo-router 6 · `@clerk/expo` ~3.0.1 · TanStack Query · zod · vitest (node
+expo-router 6 · `@clerk/expo` ~3.2.16 · TanStack Query · zod · vitest (node
 environment, no React renderer). Node 22 (`.nvmrc`; Expo SDK 54 needs >= 20.19).
 Scaffold lifted from the academy app's TestFlight tree.
 
@@ -31,6 +31,19 @@ Scaffold lifted from the academy app's TestFlight tree.
 CI (`.github/workflows/ci.yml`): jobs `typecheck · lint · test` and
 `expo-doctor · iOS bundle` (names are read by branch protection — do not
 rename). `malware-scan.yml` is never edited.
+
+## Environment
+
+Build-time `EXPO_PUBLIC_*` values from the EAS environment of the build profile
+(no `.env.example`: the secrets hook blocks `*.env.*`, so README.md
+'Environment' and this list are the record). `scripts/check-release-env.js`
+enforces them (production fails, preview/testflight warn); `src/lib/env.ts`
+parses them with zod (blank = "not configured").
+
+- `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` — Clerk publishable key for hosted sign-in; `pk_live_` in production.
+- `EXPO_PUBLIC_API_URL` — base URL of the hosted Automatos API (the built-in server).
+- `EXPO_PUBLIC_WEB_URL` — base URL of hosted Studio ("Create an account in Studio").
+- `EXPO_PUBLIC_SENTRY_DSN` — Sentry (EU) DSN; recommended, error reporting is off without it.
 
 ## Layout (PRD-001 §4.3)
 
@@ -67,27 +80,40 @@ functions < 50 lines, components < 150; pure logic outside React with tests in
 - **Clerk ships `import.meta`.** `babel.config.js` keeps `unstable_transformImportMeta: true`
   (Hermes has no `import.meta`) and `react-native-worklets/plugin` (Reanimated 4).
 - **extraPods.** `expo-build-properties` → `ios.extraPods` GoogleUtilities and RecaptchaInterop
-  with `modular_headers: true` — Clerk's native pods fail to link without them.
+  with `modular_headers: true` — Clerk's native pods fail to link without them. Still needed
+  on `@clerk/expo` 3.2.16: its `ios/ClerkGoogleSignIn.podspec` (GoogleSignIn ~> 9.0) autolinks,
+  because Expo autolinking takes every podspec in the package's top-level folders. Drop the
+  extraPods only when that podspec is gone from the installed Clerk.
+- **Clerk 3.2 needs iOS 17.** `@clerk/expo` 3.2.x also autolinks `ios/ClerkExpo.podspec`
+  (`platforms :ios => '17.0'`), so `expo-build-properties` sets `ios.deploymentTarget: "17.0"`
+  (pod install fails below it), plus `android.packagingOptions.exclude`
+  `META-INF/versions/9/OSGI-INF/MANIFEST.MF` for clerk-android's duplicate entry. Clerk's own
+  config plugin (`@clerk/expo` in `plugins`) would set both, but it defaults to adding the Sign
+  in with Apple entitlement and injects the ClerkKit SPM packages for Clerk's native UI, which
+  this app does not use — so it is not wired.
 - **ITMS-90683.** App Store Connect bounces a binary that references a privacy framework
   (PHAsset, AVCaptureDevice, …) without its `NS…UsageDescription`, even if the app never
   asks. Every referenced framework gets an honest usage string naming Automatos Go.
-- **legacy-peer-deps.** `.npmrc` sets it: the SDK 54 peer graph (worklets 0.5.1 vs a floated
-  expo-modules-core) does not resolve strictly. The lockfile is generated with it under Node 22
+- **legacy-peer-deps.** `.npmrc` sets it: the SDK 54 peer graph does not resolve strictly —
+  `@clerk/react` 6.x and `@clerk/shared` 4.x (from `@clerk/expo` 3.2) peer react/react-dom
+  `~19.1.4`, while React Native 0.81.5's renderer requires react 19.1.0 exactly. The lockfile is generated with it under Node 22
   from a clean state, so it carries every platform's optional binaries (CI is linux-x64).
 - **Fingerprint = build quota.** `runtimeVersion.policy: fingerprint`: any native change
   (a native dependency, a config plugin, `app.json`) changes the fingerprint and costs an iOS
   build from the 15 a month shared with the academy app [D43]. Batch native changes per PR;
   JavaScript-only merges ship over the air.
 - **expo-doctor vs `@clerk/expo` 3.0.x.** Clerk 3.0.x declares a required peer on
-  `expo-modules-core`. expo-doctor 1.21 fails either way: with the explicit dependency (kept,
-  PRD-001 §4.1) → "The package "expo-modules-core" should not be installed directly in your
-  project. You should instead use the exported API from the expo package."; without it →
-  "Missing peer dependency: expo-modules-core / Required by: @clerk/expo". Neither check has a
-  package.json exclusion. Clerk >= 3.1.0 drops the peer. Owner decision pending (see the kit).
+  `expo-modules-core`, and expo-doctor fails either way (with it as a direct dependency:
+  "should not be installed directly"; without: "Missing peer dependency"). Clerk >= 3.1.0
+  drops the peer, so the app is on 3.2.16 with no direct `expo-modules-core` (it comes with
+  `expo`) and expo-doctor passes with no `expo.doctor` exclusion (lead decision, 20 Oct).
+  Never add `expo-modules-core` back as a direct dependency.
 - **No EAS link in the repo.** `app.json` has no `owner`, `extra.eas.projectId` or
   `updates.url` until `eas init` (a human step); `testflight.yml` stops with "run eas init".
-- **`.env.example` is blocked for Claude Code** by the workspace's secrets hook (`*.env.*`).
-  It holds names only; a human edits it outside Claude Code.
+- **No `.env.example`.** The workspace's secrets hook blocks Claude Code from writing
+  `*.env.*` files, so the repo has none (lead decision, 20 Oct): every `EXPO_PUBLIC_*` name is
+  listed under Environment above and in README.md. A new name goes in all three places
+  (README, this file, `scripts/check-release-env.js`).
 
 ## Terms
 

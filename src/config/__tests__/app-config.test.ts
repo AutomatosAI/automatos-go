@@ -69,6 +69,26 @@ describe('app.json plugins', () => {
       },
     });
   });
+
+  // @clerk/expo >= 3.2 autolinks a ClerkExpo pod that needs iOS 17.0 and pulls
+  // clerk-android with a duplicate META-INF entry. Clerk's own config plugin
+  // would set both but also adds Sign in with Apple (D-SIGNIN), so
+  // expo-build-properties carries them instead.
+  it('raises iOS to 17.0 for the ClerkExpo pod', () => {
+    expect(pluginOptions(plugins, 'expo-build-properties')).toMatchObject({
+      ios: { deploymentTarget: '17.0' },
+    });
+  });
+
+  it("excludes clerk-android's duplicate META-INF manifest from the APK", () => {
+    expect(pluginOptions(plugins, 'expo-build-properties')).toMatchObject({
+      android: { packagingOptions: { exclude: ['META-INF/versions/9/OSGI-INF/MANIFEST.MF'] } },
+    });
+  });
+
+  it('does not wire the @clerk/expo plugin (it adds Sign in with Apple by default)', () => {
+    expect(pluginNames(plugins)).not.toContain('@clerk/expo');
+  });
 });
 
 describe('app.json carries no EAS project link (OT-1, D-NO-SECRETS)', () => {

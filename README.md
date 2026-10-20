@@ -21,7 +21,7 @@ The plan is [PRD-001](docs/prd/PRD-001-AUTOMATOS-GO-V1.md). The server side
 ## Stack
 
 Expo SDK 54 · React Native 0.81.5 · React 19.1 · TypeScript 5.9 (strict) ·
-expo-router 6 · `@clerk/expo` ~3.0.1 + expo-secure-store · TanStack Query ·
+expo-router 6 · `@clerk/expo` ~3.2.16 + expo-secure-store · TanStack Query ·
 zod at every boundary · vitest (pure TypeScript, node environment). Node 22
 (`.nvmrc`). The build and release setup is lifted from the Automatos Academy
 app's TestFlight tree.
@@ -38,6 +38,24 @@ npm run check:bundle      # expo export --platform ios: compiles the JS bundle, 
 npm run check:doctor      # expo-doctor
 npm run format:check      # prettier --check .
 ```
+
+## Environment
+
+The app reads these build-time values; Expo inlines them into the bundle. Cloud
+builds take them from the EAS environment of the build profile, and there is no
+`.env.example` in this repository. `scripts/check-release-env.js` runs before
+every EAS build: a production build fails without the required ones, preview
+and TestFlight builds warn. An empty value turns the feature off with a "not
+configured" state instead of a crash (`src/lib/env.ts`).
+
+| Name                                | What it is                                                                      |
+| ----------------------------------- | ------------------------------------------------------------------------------- |
+| `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk publishable key for hosted sign-in (`pk_live_` required in production).   |
+| `EXPO_PUBLIC_API_URL`               | Base URL of the hosted Automatos API, the built-in server.                      |
+| `EXPO_PUBLIC_WEB_URL`               | Base URL of hosted Studio, opened by "Create an account in Studio".             |
+| `EXPO_PUBLIC_SENTRY_DSN`            | Sentry (EU) DSN for error reports; recommended, reporting stays off without it. |
+
+## CI and release
 
 CI (`.github/workflows/ci.yml`) runs two jobs on every pull request and every
 push to `main`: **typecheck · lint · test** and **expo-doctor · iOS bundle**.

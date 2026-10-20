@@ -19,7 +19,7 @@
     "eas-build-pre-install": "node scripts/check-release-env.js"
   },
   "dependencies": {
-    "@clerk/expo": "~3.0.1",
+    "@clerk/expo": "~3.2.16",
     "@tanstack/react-query": "^5.60.0",
     "expo": "~54.0.37",
     "expo-auth-session": "~7.0.11",
@@ -31,7 +31,6 @@
     "expo-haptics": "~15.0.8",
     "expo-linear-gradient": "~15.0.0",
     "expo-linking": "~8.0.12",
-    "expo-modules-core": "~3.0.30",
     "expo-notifications": "~0.32.17",
     "expo-router": "~6.0.24",
     "expo-secure-store": "~15.0.8",

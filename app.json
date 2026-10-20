@@ -23,7 +23,13 @@
       [
         "expo-build-properties",
         {
+          "android": {
+            "packagingOptions": {
+              "exclude": ["META-INF/versions/9/OSGI-INF/MANIFEST.MF"]
+            }
+          },
           "ios": {
+            "deploymentTarget": "17.0",
             "extraPods": [
               {
                 "name": "GoogleUtilities",
