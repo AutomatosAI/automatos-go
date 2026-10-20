@@ -195,23 +195,23 @@
       "title": "App icon and splash: the Studio brand mark, light and dark",
       "description": "As a user, I want to recognise Automatos Go on my home screen. Source: automatos-ai frontend/public/brand/automatos-mark-hi.png (K7). Tools: sips (macOS built-in) or `uvx --with pillow python`; no npm dependency.",
       "acceptanceCriteria": [
-        "assets/brand/icon.png: 1024x1024, RGB with NO alpha channel (App Store), the burnt-orange mark centred on Studio cream #f4eee2 with the mark inside the central ~60% safe area",
-        "assets/brand/icon-dark.png: the same on Studio Dark ground (hsl(30 12% 9%), #1a1814); used as ios.icon.dark when the installed @expo/config-types types ios.icon as an object with light/dark (quote the type line in the DONE mark), otherwise kept on disk and recorded as OT-8",
-        "assets/brand/adaptive-icon.png (Android foreground: 1024x1024, transparent, mark inside the adaptive safe zone) with android.adaptiveIcon.backgroundColor #f4eee2",
-        "assets/brand/splash.png (the mark, transparent background) wired through the expo-splash-screen plugin with backgroundColor #f4eee2 and dark.backgroundColor #1a1814, imageWidth as the template",
-        "assets/brand/SOURCES.md: the source file (automatos-ai path @ 630fc1c85 + sha256), every command used",
-        "src/config/__tests__/brand-assets.test.ts reads the PNG headers (IHDR, no dependency) and asserts: icon.png and icon-dark.png 1024x1024 with colour type 2 (RGB, no alpha); adaptive-icon.png 1024x1024 with alpha; splash.png has alpha; app.json references exactly these files",
-        "npx expo config --type introspect exits 0",
-        "npx expo-doctor passes",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes",
-        "npm run check:bundle passes"
+        "assets/brand/icon.png: 1024x1024, RGB with NO alpha channel (App Store), the burnt-orange mark centred on Studio cream #f4eee2 with the mark inside the central ~60% safe area → DONE — assets/brand/icon.png 1024x1024 PNG colour type 2 (Pillow convert('RGB'), no tRNS), mark 489x600 at (267, 212) on #f4eee2, inside the central 60% (205–819); test '%s is 1024x1024 8-bit RGB with no alpha channel' + 'icon.png sits on Studio cream' (first pixel f4 ee e2)",
+        "assets/brand/icon-dark.png: the same on Studio Dark ground (hsl(30 12% 9%), #1a1814); used as ios.icon.dark when the installed @expo/config-types types ios.icon as an object with light/dark (quote the type line in the DONE mark), otherwise kept on disk and recorded as OT-8 → DONE — assets/brand/icon-dark.png 1024x1024 colour type 2 on #1a1814, wired as ios.icon = { light: icon.png, dark: icon-dark.png }; @expo/config-types 54.0.10 ExpoConfig.d.ts: `icon?: string | IOSIcons;` (IOSIcons: light?, dark?, tinted?); test 'icon-dark.png sits on the Studio Dark ground'",
+        "assets/brand/adaptive-icon.png (Android foreground: 1024x1024, transparent, mark inside the adaptive safe zone) with android.adaptiveIcon.backgroundColor #f4eee2 → DONE — assets/brand/adaptive-icon.png 1024x1024 colour type 6, mark 379x465 (diagonal 600 px) inside the 66/108 safe-zone circle (626 px), transparent edge; app.json android.adaptiveIcon { foregroundImage, backgroundColor #f4eee2 }; tests 'adaptive-icon.png is a 1024x1024 foreground with alpha and a transparent edge', 'gives Android an adaptive icon on Studio cream'",
+        "assets/brand/splash.png (the mark, transparent background) wired through the expo-splash-screen plugin with backgroundColor #f4eee2 and dark.backgroundColor #1a1814, imageWidth as the template → DONE — assets/brand/splash.png 321x394 RGBA (the alpha-trimmed mark at source resolution); expo-splash-screen plugin { backgroundColor #f4eee2, image, imageWidth 220 (academy template), dark.backgroundColor #1a1814 }; introspect: Android splashscreen_background #f4eee2, UILaunchStoryboardName SplashScreen; tests 'splash.png has an alpha channel', 'wires the splash through expo-splash-screen…'",
+        "assets/brand/SOURCES.md: the source file (automatos-ai path @ 630fc1c85 + sha256), every command used → DONE — assets/brand/SOURCES.md: frontend/public/brand/automatos-mark-hi.png @ 630fc1c85, sha256 23ef339101e679f420829df75a35509f5cff746c20da415a29b5c68242455548; cp + `uvx --with pillow==13.0.0 python -I compose.py` (script inline) + cp; output sha256 table; two runs byte-identical",
+        "src/config/__tests__/brand-assets.test.ts reads the PNG headers (IHDR, no dependency) and asserts: icon.png and icon-dark.png 1024x1024 with colour type 2 (RGB, no alpha); adaptive-icon.png 1024x1024 with alpha; splash.png has alpha; app.json references exactly these files → DONE — src/config/__tests__/brand-assets.test.ts, 10 tests, node:fs + node:zlib only: IHDR size/bit depth/colour type, no tRNS on icons, first-pixel ground colours, adaptive alpha, splash alpha, 'references exactly the four brand files, and they are all that is on disk'",
+        "npx expo config --type introspect exits 0 → DONE — npx expo config --type introspect exit 0 (only the existing Sentry org/project notice)",
+        "npx expo-doctor passes → DONE — npx expo-doctor: 18/18 checks passed",
+        "npm run typecheck passes → DONE — npm run typecheck exit 0",
+        "npm run lint passes (0 errors) → DONE — npm run lint exit 0, 0 errors (1 pre-existing warning: src/lib/logger.ts unused eslint-disable)",
+        "npx vitest run passes → DONE — npx vitest run: 8 files, 180 tests passed",
+        "npm run check:bundle passes → DONE — npm run check:bundle: Exported .expo/bundle-check (ios hbc 3.77 MB)"
       ],
       "files": ["assets/brand/", "app.json", "src/config/__tests__/brand-assets.test.ts"],
       "priority": 6,
-      "passes": false,
-      "notes": "An RGBA PNG that is fully opaque still fails App Store processing (ITMS-90717): the alpha channel itself must be gone (e.g. sips to JPEG and back to PNG, or Pillow convert('RGB'))."
+      "passes": true,
+      "notes": "An RGBA PNG that is fully opaque still fails App Store processing (ITMS-90717): the alpha channel itself must be gone (e.g. sips to JPEG and back to PNG, or Pillow convert('RGB')). | Built 21 Oct: Pillow convert('RGB') drops the alpha channel; ios.icon.dark set (no OT-8 fallback needed); the shipped marks are 1.52x/1.18x upscales of the 333x396 master, so a vector or 1024 master stays OT-8."
     },
     {
       "id": "US-003a",
