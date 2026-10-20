@@ -22,11 +22,16 @@ export type VendorConfig = {
 };
 
 export type VendoredFile = { readonly path: string; readonly text: string };
-export type VendorResult = { readonly files: VendoredFile[]; readonly problems: string[] };
+export type VendorResult = {
+  readonly files: VendoredFile[];
+  /** the root-relative source path of every vendored file */
+  readonly sources: string[];
+  readonly problems: string[];
+};
 
-type Mode = { readonly kind: 'full' | SelectMode; readonly names: readonly string[] };
+export type Mode = { readonly kind: 'full' | SelectMode; readonly names: readonly string[] };
+export type Edit = { readonly start: number; readonly end: number; readonly text: string };
 type Job = { readonly path: string; readonly chain: readonly string[] };
-type Edit = { readonly start: number; readonly end: number; readonly text: string };
 type RefOutcome = {
   readonly edit?: Edit;
   readonly next?: Job;
@@ -39,7 +44,7 @@ type RefOutcome = {
 
 const NAMED_KINDS: readonly SelectMode[] = ['typeOnly', 'extract', 'drop'];
 
-function modeOf(manifest: Manifest, path: string): Mode {
+export function modeOf(manifest: Manifest, path: string): Mode {
   const kind = NAMED_KINDS.find((k) => path in manifest[k]);
   return kind ? { kind, names: manifest[kind][path]?.names ?? [] } : { kind: 'full', names: [] };
 }
@@ -48,7 +53,7 @@ function chainText(chain: readonly string[]): string {
   return `\n    import chain: ${chain.join(' → ')}`;
 }
 
-function header(manifest: Manifest, path: string, mode: Mode): string {
+export function header(manifest: Manifest, path: string, mode: Mode): string {
   const how = mode.kind === 'full' ? '' : ` · ${mode.kind}: ${mode.names.join(', ')}`;
   return (
     `// Vendored from ${manifest.source} ${manifest.root}/${path} @ ${manifest.sha}${how} — ` +
@@ -56,7 +61,7 @@ function header(manifest: Manifest, path: string, mode: Mode): string {
   );
 }
 
-function applyEdits(text: string, edits: readonly Edit[]): string {
+export function applyEdits(text: string, edits: readonly Edit[]): string {
   return [...edits]
     .sort((a, b) => b.start - a.start)
     .reduce((out, edit) => out.slice(0, edit.start) + edit.text + out.slice(edit.end), text);
@@ -171,10 +176,11 @@ function manifestProblems(
   reached: ReadonlySet<string>,
   shimsUsed: ReadonlySet<string>,
 ): string[] {
+  // a set entry may be narrowed by extract or drop (its runtime is what the set wants), not typeOnly
   const conflicts = Object.values(manifest.sets)
     .flat()
-    .filter((path) => path in manifest.typeOnly || path in manifest.extract)
-    .map((path) => `${path} is in a set (vendored whole) and also listed typeOnly/extract`);
+    .filter((path) => path in manifest.typeOnly)
+    .map((path) => `${path} is in a set (vendored for its runtime) and also listed typeOnly`);
   const unused = NAMED_KINDS.flatMap((kind) =>
     Object.keys(manifest[kind])
       .filter((path) => !reached.has(path))
@@ -203,5 +209,5 @@ export function vendor(config: VendorConfig, tree: SourceTree): VendorResult {
     queue.push(...fresh);
   }
   problems.push(...manifestProblems(config.manifest, seen, shimsUsed));
-  return { files: [...files.values()], problems };
+  return { files: [...files.values()], sources: [...files.keys()], problems };
 }

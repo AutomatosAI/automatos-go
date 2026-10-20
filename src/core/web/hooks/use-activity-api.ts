@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/hooks/use-activity-api.ts @ 630fc1c85af06c5c76e70c74e9653ee1804fdf41 · typeOnly: ActivityFeedItem — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/hooks/use-activity-api.ts @ 630fc1c85af06c5c76e70c74e9653ee1804fdf41 · typeOnly: ActivityFeedItem, ScheduleItem, ScheduleItemType — do not edit — scripts/sync-core.ts
 // ============= TYPES =============
 
 export interface ActivityAgent {
@@ -52,4 +52,45 @@ export interface ActivityFeedItem {
   board_status?: string | null
   /** PRD-252 R4: a ticket's number, #0042 */
   number?: string | null
+}
+
+export interface ScheduleRecurrence {
+  cron_expression: string | null
+  interval_minutes: number | null
+  timezone: string
+  active_hours: Record<string, unknown> | null
+}
+
+/**
+ * The six sources of the schedule feed (PRD-162 + the board-task SLA source):
+ * routine = agent heartbeat, recipe = cron playbook, task = agent-scheduled task,
+ * mission = a mission's SLA deadline, task_due = a board task's SLA deadline,
+ * social = a scheduled social post (PRD-251 US-307).
+ */
+export type ScheduleItemType = 'routine' | 'recipe' | 'task' | 'mission' | 'task_due' | 'social'
+
+export interface ScheduleItem {
+  id: string
+  name: string
+  type: ScheduleItemType
+  next_run_at: string | null
+  frequency: string
+  agent_name: string | null
+  agent_id: number | null
+  recurrence?: ScheduleRecurrence
+  /** The row behind the item, so the calendar can act on it (pause, cancel,
+   *  open) without parsing the composite `id`. Each source sets its own. */
+  scheduled_task_id?: number
+  task_type?: 'one_shot' | 'recurring'
+  /** task only: what firing does — open a chat, or file a board ticket */
+  deliver_as?: 'chat' | 'board_task'
+  mission_id?: number
+  playbook_id?: number
+  board_task_id?: number
+  /** task_due only: the board card's status and priority */
+  status?: string
+  priority?: string
+  /** social only: the post, and the timezone its slot is shown in (the post's own) */
+  post_id?: string
+  timezone?: string
 }

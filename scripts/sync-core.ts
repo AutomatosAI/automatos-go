@@ -23,6 +23,7 @@ import {
   type Manifest,
 } from './sync-core/manifest';
 import { checkoutProblems, fsTree, listFiles, readAliases, readPackages } from './sync-core/source';
+import { vendorTests } from './sync-core/tests';
 
 const REPO = path.resolve(__dirname, '..');
 
@@ -60,12 +61,21 @@ function sync(checkout: string): void {
   if (refused.length > 0) fail(refused);
   const sourceRoot = path.join(source, manifest.root);
   const config = { manifest, aliases: readAliases(sourceRoot), packages: readPackages(REPO) };
-  const { files, problems } = vendor(config, fsTree(sourceRoot));
+  const tree = fsTree(sourceRoot);
+  const modules = vendor(config, tree);
+  const tests = vendorTests(config, tree, modules.sources);
+  const problems = [...modules.problems, ...tests.problems];
   if (problems.length > 0) fail([...problems, `${problems.length} problem(s): nothing written`]);
+  const files = [...modules.files, ...tests.files];
   writeFiles(files);
-  const lock = buildLock(manifest, files, new Date().toISOString());
+  const lock = buildLock(manifest, files, new Date().toISOString(), tests.skipped);
   fs.writeFileSync(path.join(REPO, LOCK_PATH), `${JSON.stringify(lock, null, 2)}\n`);
+  const skipped = Object.keys(tests.skipped).length;
   say(process.stdout, `vendored ${files.length} files from ${manifest.source}@${manifest.sha}`);
+  say(
+    process.stdout,
+    `${tests.files.length} of them are web tests and fixtures; ${skipped} tests skipped`,
+  );
 }
 
 function check(): void {

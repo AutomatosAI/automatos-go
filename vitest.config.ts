@@ -12,7 +12,13 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['src/**/*.test.ts', 'scripts/**/*.test.ts', 'plugins/**/*.test.ts'],
+    include: [
+      'src/**/*.test.ts',
+      // the web's own tests for the vendored core, copied by scripts/sync-core.ts (US-003b)
+      'src/core/web/**/__tests__/*.test.ts',
+      'scripts/**/*.test.ts',
+      'plugins/**/*.test.ts',
+    ],
     environment: 'node',
     coverage: {
       provider: 'v8',

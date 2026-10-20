@@ -21,17 +21,21 @@ export const manifestSchema = z.object({
   drop: z.record(namedEntry),
   typeOnly: z.record(namedEntry),
   shims: z.record(z.object({ path: z.string().min(1), reason })),
+  /** web test files (root-relative) the static rule would copy but that cannot run here */
+  skipTests: z.record(reason).default({}),
 });
 
 export type Manifest = z.infer<typeof manifestSchema>;
 
-// passthrough: later stories add keys (skippedTests, US-003b) that --check must not reject.
+// passthrough: later stories may add keys that --check must not reject.
 export const lockSchema = z
   .object({
     source: z.string().min(1),
     sha: z.string().min(1),
     syncedAt: z.string().min(1),
     files: z.record(z.string().regex(/^[0-9a-f]{64}$/)),
+    /** every web test beside a vendored module that was not copied, with the reason */
+    skippedTests: z.record(z.string().min(1)).default({}),
   })
   .passthrough();
 
@@ -55,13 +59,16 @@ export function buildLock(
   manifest: Pick<Manifest, 'source' | 'sha'>,
   files: readonly { readonly path: string; readonly text: string }[],
   syncedAt: string,
+  skippedTests: Readonly<Record<string, string>> = {},
 ): Lock {
   const sorted = [...files].sort((a, b) => a.path.localeCompare(b.path));
+  const skipped = Object.entries(skippedTests).sort(([a], [b]) => a.localeCompare(b));
   return {
     source: manifest.source,
     sha: manifest.sha,
     syncedAt,
     files: Object.fromEntries(sorted.map((file) => [file.path, sha256(file.text)])),
+    skippedTests: Object.fromEntries(skipped),
   };
 }
 

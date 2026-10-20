@@ -9,7 +9,11 @@ import { declaredNames, hasExportModifier } from './ast';
 export type Alias = { readonly key: string; readonly target: string; readonly wildcard: boolean };
 
 /** A read-only view of the source's root (frontend/); paths are root-relative, posix. */
-export type SourceTree = { readonly read: (path: string) => string | undefined };
+export type SourceTree = {
+  readonly read: (path: string) => string | undefined;
+  /** the names of the files directly in a directory; empty when there is none */
+  readonly list: (dir: string) => readonly string[];
+};
 
 export type Resolved =
   | { readonly kind: 'local'; readonly path: string | undefined; readonly base: string }

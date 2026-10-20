@@ -46,19 +46,24 @@ function isGlobalMemberAccess(model: FileModel, id: ts.Identifier): boolean {
   );
 }
 
-function isForbiddenGlobal(model: FileModel, id: ts.Identifier): boolean {
-  if (!FORBIDDEN_GLOBALS.has(id.text)) return false;
+function isUnboundUse(model: FileModel, id: ts.Identifier, names: ReadonlySet<string>): boolean {
+  if (!names.has(id.text)) return false;
   if (isGlobalMemberAccess(model, id)) return true;
   return !isMemberName(id) && isGlobal(model, id);
 }
 
-/** Every forbidden global the file refers to, as `name (line N)`, in source order. */
-export function forbiddenGlobals(model: FileModel): string[] {
+/** Every one of `names` the file uses as a global, as `name (line N)`, in source order. */
+export function globalsUsed(model: FileModel, names: ReadonlySet<string>): string[] {
   const found = new Set<string>();
   forEachIdentifier(model.sf, (id) => {
-    if (!isForbiddenGlobal(model, id)) return;
+    if (!isUnboundUse(model, id, names)) return;
     const { line } = model.sf.getLineAndCharacterOfPosition(id.getStart());
     found.add(`${id.text} (line ${line + 1})`);
   });
   return [...found];
+}
+
+/** Every forbidden global the file refers to, as `name (line N)`, in source order. */
+export function forbiddenGlobals(model: FileModel): string[] {
+  return globalsUsed(model, FORBIDDEN_GLOBALS);
 }

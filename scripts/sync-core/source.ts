@@ -67,16 +67,30 @@ export function readPackages(repo: string): Set<string> {
   return new Set(Object.keys(packageJsonSchema.parse(JSON.parse(text)).dependencies));
 }
 
+/** The absolute path of a root-relative one, or undefined when it climbs out of `root`. */
+function inside(root: string, relative: string): string | undefined {
+  const normal = path.posix.normalize(relative);
+  if (path.posix.isAbsolute(normal) || normal.startsWith('..')) return undefined;
+  return path.join(root, normal);
+}
+
 /** Reads files under `root` only; a path that climbs out of it reads as missing. */
 export function fsTree(root: string): SourceTree {
   return {
     read: (relative) => {
-      const normal = path.posix.normalize(relative);
-      if (path.posix.isAbsolute(normal) || normal.startsWith('..')) return undefined;
-      const file = path.join(root, normal);
-      return fs.existsSync(file) && fs.statSync(file).isFile()
+      const file = inside(root, relative);
+      return file && fs.existsSync(file) && fs.statSync(file).isFile()
         ? fs.readFileSync(file, 'utf8')
         : undefined;
+    },
+    list: (relative) => {
+      const dir = inside(root, relative);
+      if (!dir || !fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return [];
+      return fs
+        .readdirSync(dir, { withFileTypes: true })
+        .filter((entry) => entry.isFile())
+        .map((entry) => entry.name)
+        .sort();
     },
   };
 }

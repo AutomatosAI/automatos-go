@@ -1,49 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { vendor, type VendorResult } from '../sync-core/closure';
-import { buildLock, checkLock, manifestSchema, type Manifest } from '../sync-core/manifest';
-import { aliasesFromPaths, type SourceTree } from '../sync-core/resolve';
-
-const SHA = '630fc1c85af06c5c76e70c74e9653ee1804fdf41';
-const REASON = 'a test entry';
-const ALIASES = aliasesFromPaths({
-  '@/*': ['./*'],
-  '@automatos/theme-sdk': ['./lib/theme-sdk/index.ts'],
-});
-
-function manifest(overrides: Partial<Manifest> = {}): Manifest {
-  return manifestSchema.parse({
-    source: 'AutomatosAI/automatos-ai',
-    sha: SHA,
-    root: 'frontend',
-    sets: { chat: ['lib/a.ts'] },
-    extract: {},
-    drop: {},
-    typeOnly: {},
-    shims: {},
-    ...overrides,
-  });
-}
-
-function tree(files: Record<string, string>): SourceTree {
-  const map = new Map(Object.entries(files));
-  return { read: (path) => map.get(path) };
-}
-
-function run(files: Record<string, string>, overrides: Partial<Manifest> = {}): VendorResult {
-  const config = { manifest: manifest(overrides), aliases: ALIASES, packages: new Set(['zod']) };
-  return vendor(config, tree(files));
-}
-
-function output(result: VendorResult, path: string): string {
-  const file = result.files.find((f) => f.path === `src/core/web/${path}`);
-  if (!file) throw new Error(`${path} was not vendored`);
-  return file.text;
-}
-
-function vendoredPaths(result: VendorResult): string[] {
-  return result.files.map((f) => f.path).sort();
-}
+import { buildLock, checkLock } from '../sync-core/manifest';
+import { REASON, SHA, manifest, output, run, vendoredPaths } from './sync-core-helpers';
 
 describe('sync-core: copy, aliases and the closure', () => {
   it('rewrites @/ and @automatos/theme-sdk aliases to relative paths inside src/core/web', () => {
@@ -220,6 +178,36 @@ describe('sync-core: extract', () => {
     expect(text).toContain('function split');
     expect(text).toContain('export interface Frame');
     expect(text).not.toMatch(/useStream|useEffect|react/);
+  });
+});
+
+describe('sync-core: a set entry narrowed', () => {
+  const hook = [
+    "import { useEffect } from 'react'",
+    'export function parseFrames(text: string) { return text.split(/\\n\\n/) }',
+    'export function useStream() { useEffect(() => undefined, []) }',
+  ].join('\n');
+
+  it('a set entry listed under extract is vendored with only the named exports', () => {
+    const result = run(
+      { 'hooks/use-stream.ts': hook },
+      {
+        sets: { cc: ['hooks/use-stream.ts'] },
+        extract: { 'hooks/use-stream.ts': { names: ['parseFrames'], reason: REASON } },
+      },
+    );
+    expect(result.problems).toEqual([]);
+    expect(output(result, 'hooks/use-stream.ts')).not.toMatch(/useStream|react/);
+  });
+
+  it('a set entry listed under typeOnly is refused', () => {
+    const result = run(
+      { 'lib/a.ts': 'export type A = number\n' },
+      { typeOnly: { 'lib/a.ts': { names: ['A'], reason: REASON } } },
+    );
+    expect(result.problems).toContain(
+      'lib/a.ts is in a set (vendored for its runtime) and also listed typeOnly',
+    );
   });
 });
 
