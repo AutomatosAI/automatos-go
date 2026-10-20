@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "Automatos Go",
+    "slug": "automatos-go",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "automatos",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.automatos.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.automatos.app"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "extraPods": [
+              {
+                "name": "GoogleUtilities",
+                "modular_headers": true
+              },
+              {
+                "name": "RecaptchaInterop",
+                "modular_headers": true
+              }
+            ]
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "router": {}
+    },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    }
+  }
+}
