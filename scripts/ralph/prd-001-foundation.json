@@ -217,26 +217,26 @@
       "id": "US-002f",
       "prdStory": "US-002",
       "priority": 6.5,
-      "passes": false,
+      "passes": true,
       "title": "iOS privacy manifest and Android allowBackup false, in the first native build",
       "description": "As the release owner, I want the App Store privacy manifest and Android's backup rule in app.json before the first native build, so the first TestFlight upload is not bounced (ITMS-91053) and no later wave needs an extra native build for them. Lead, 20 Oct, moved forward from the A7 release kit (its US-021f stays as the audit).",
       "acceptanceCriteria": [
-        "app.json expo.ios.privacyManifests: NSPrivacyTracking false; NSPrivacyTrackingDomains []; NSPrivacyCollectedDataTypes, each with NSPrivacyCollectedDataTypeTracking false and purposes [NSPrivacyCollectedDataTypePurposeAppFunctionality]: LINKED (NSPrivacyCollectedDataTypeLinked true) EmailAddress, Name, PhotosorVideos, AudioData, CustomerSupport, OtherUserContent, UserID, DeviceID, OtherUsageData, OtherDiagnosticData; NOT LINKED CrashData; and NO ProductInteraction, PerformanceData or any location type (source: reports/mobile-review-2026-10-20/drafts/privacy-policy-automatos-go.md Appendix A.1 in the workspace root; read it)",
-        "NSPrivacyAccessedAPITypes = the union of every PrivacyInfo.xcprivacy under node_modules (find node_modules -name PrivacyInfo.xcprivacy; convert each with `plutil -convert json -o - <file>`), de-duplicated by category with every reason code kept; record the files read and the resulting list in docs/native-modules.md under 'Privacy manifest'",
-        "app.json expo.android.allowBackup false",
-        "src/config/__tests__/app-config.test.ts asserts NSPrivacyTracking false, the exact linked/not-linked type sets, that no location/ProductInteraction/PerformanceData type is declared, that every accessed-API entry has at least one reason, and allowBackup false",
-        "npx expo config --type introspect evaluates and still carries the manifest (the build-time merge keeps it)",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes",
-        "npx expo-doctor passes"
+        "app.json expo.ios.privacyManifests: NSPrivacyTracking false; NSPrivacyTrackingDomains []; NSPrivacyCollectedDataTypes, each with NSPrivacyCollectedDataTypeTracking false and purposes [NSPrivacyCollectedDataTypePurposeAppFunctionality]: LINKED (NSPrivacyCollectedDataTypeLinked true) EmailAddress, Name, PhotosorVideos, AudioData, CustomerSupport, OtherUserContent, UserID, DeviceID, OtherUsageData, OtherDiagnosticData; NOT LINKED CrashData; and NO ProductInteraction, PerformanceData or any location type (source: reports/mobile-review-2026-10-20/drafts/privacy-policy-automatos-go.md Appendix A.1 in the workspace root; read it) → DONE — app.json expo.ios.privacyManifests (fa52265): NSPrivacyTracking false, NSPrivacyTrackingDomains []; 10 linked + CrashData not linked, each Tracking false and purposes [AppFunctionality]; no ProductInteraction/PerformanceData/location; tests 'declares exactly the linked and the not-linked collected types, each once', 'collects every type for App Functionality only, never for tracking', 'does not declare %s' x4, 'declares no location type of any kind'",
+        "NSPrivacyAccessedAPITypes = the union of every PrivacyInfo.xcprivacy under node_modules (find node_modules -name PrivacyInfo.xcprivacy; convert each with `plutil -convert json -o - <file>`), de-duplicated by category with every reason code kept; record the files read and the resulting list in docs/native-modules.md under 'Privacy manifest' → DONE — 12 files (7 expo-*, 5 react-native) read with plutil; union DiskSpace [85F4.1, E174.1], FileTimestamp [0A2A.1, 3B52.1, C617.1], SystemBootTime [35F9.1], UserDefaults [CA92.1]; recorded in docs/native-modules.md 'Privacy manifest' (per-file table + list); test 'declares the union of every PrivacyInfo.xcprivacy under node_modules' re-reads them on every run (parser completeness: 'reads every accessed-API entry of each node_modules PrivacyInfo.xcprivacy')",
+        "app.json expo.android.allowBackup false → DONE — app.json expo.android.allowBackup false; introspect shows android:allowBackup=\"false\" on the application",
+        "src/config/__tests__/app-config.test.ts asserts NSPrivacyTracking false, the exact linked/not-linked type sets, that no location/ProductInteraction/PerformanceData type is declared, that every accessed-API entry has at least one reason, and allowBackup false → DONE — describe 'iOS privacy manifest (US-002f, ITMS-91053)' (10 tests incl. 'gives every accessed-API entry at least one reason, one entry per category' and Expo mergePrivacyInfo first run + re-run) and 'turns Android auto backup off (US-002f)'; mutation (drop a reason, add ProductInteraction, allowBackup true) turned 5 red, restored",
+        "npx expo config --type introspect evaluates and still carries the manifest (the build-time merge keeps it) → DONE — introspected ios.privacyManifests equals app.json ('keeps the privacy manifest exactly as app.json declares it') and 'the Android application sets allowBackup false'",
+        "npm run typecheck passes → DONE — tsc --noEmit clean",
+        "npm run lint passes (0 errors) → DONE — eslint 0 errors (1 pre-existing warning: src/lib/logger.ts unused disable)",
+        "npx vitest run passes → DONE — 34 files / 517 tests pass (app-config.test.ts 110)",
+        "npx expo-doctor passes → DONE — 18/18 checks passed"
       ],
       "files": [
         "app.json",
         "src/config/__tests__/app-config.test.ts",
         "docs/native-modules.md"
       ],
-      "notes": "A native change: it lands before Gerard's first iOS build (OT-3). Data types follow the privacy draft; Gerard confirms them (the draft's [CHECK] items) and a later change is one rebuild. Do not add analytics, tracking or location; the app collects none."
+      "notes": "A native change: it lands before Gerard's first iOS build (OT-3). Data types follow the privacy draft; Gerard confirms them (the draft's [CHECK] items) and a later change is one rebuild. Do not add analytics, tracking or location; the app collects none. | Built 21 Oct (fa52265): the manifest follows the draft as written; its Sentry [CHECK] rows now bind the Sentry setup: no user ID or IP on events (CrashData not linked), no tracing (PerformanceData), no tap or screen breadcrumbs (ProductInteraction); docs/native-modules.md says so."
     },
     {
       "id": "US-003a",
