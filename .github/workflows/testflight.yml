@@ -76,9 +76,11 @@ jobs:
             exit 1
           fi
 
-      - uses: expo/expo-github-action@v8
+      # Third-party code that receives EXPO_TOKEN: the action is pinned to a commit
+      # and eas-cli to an exact version, both bumped deliberately (never a floating tag).
+      - uses: expo/expo-github-action@c7b66a9c327a43a8fa7c0158e7f30d6040d2481e # v8 (8.2.1)
         with:
-          eas-version: latest
+          eas-version: 24.11.0
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Check EAS auth
