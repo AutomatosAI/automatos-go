@@ -532,20 +532,20 @@
       "title": "Sign-in screens: email code, password, passkey, second factor; no account-creation pointer",
       "description": "As a hosted Studio user, I want to sign in with email code, password or passkey and nothing else (D5, D6, §4.5). The screens are thin wiring over US-005b's machine and the FND primitives.",
       "acceptanceCriteria": [
-        "src/auth/screens/: SignInScreen (choice of email code, password, passkey), the email-code step, the password step, the passkey button, the second-factor step (code field, Verify, Send a new code where delivery applies) — each a component under 150 lines reading tokens only",
-        "app/(auth)/_layout.tsx and app/(auth)/sign-in.tsx mount SignInScreen",
-        "NO pointer to creating an account anywhere in the app (LEAD-20OCT-SIGNUP): no 'Create an account' / 'No account?' link, button or copy; the sign-in screen's lead line is 'Sign in with your Automatos account' (in src/auth/strings.ts); README.md and CLAUDE.md describe EXPO_PUBLIC_WEB_URL as the base for links into Studio, not account creation",
-        "Errors and refusals render the server's words (US-005b) and never leak internals",
-        "A security-reviewer run (foreground) on src/auth/screens and the passkey wiring finds no HIGH/CRITICAL, or each one is fixed in this story",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes",
-        "npm run check:bundle passes"
+        "src/auth/screens/: SignInScreen (choice of email code, password, passkey), the email-code step, the password step, the passkey button, the second-factor step (code field, Verify, Send a new code where delivery applies) — each a component under 150 lines reading tokens only → DONE — src/auth/screens/ (72e4de4): SignInScreen (createSignInMachine over useSignIn().signIn, useSyncExternalStore), IdentifyStep (email + 'Email me a code' / 'Use my password' + PasskeyButton), EmailCodeStep and SecondFactorStep over CodeEntry (code field, Verify, 'Send a new code' only when codeEntryFor(...).canResend = needsDelivery: email_code/phone_code, Start again), PasswordStep, PasskeyButton, plus StepNote, ErrorStep, AccountLine; pure view logic in sign-in-view.ts; every component under 150 lines (lint), tokens only (no colour literal: lint 0); screens.test.ts 'has every step US-005c names', 'exports exactly one component per file'",
+        "app/(auth)/_layout.tsx and app/(auth)/sign-in.tsx mount SignInScreen → DONE — app/(auth)/_layout.tsx (loading until Clerk is loaded, signed in → Redirect '/', else Stack) and app/(auth)/sign-in.tsx (return <SignInScreen />); screens.test.ts 'app/(auth)/sign-in.tsx mounts SignInScreen', '…sends a signed-in user home'",
+        "NO pointer to creating an account anywhere in the app (LEAD-20OCT-SIGNUP): no 'Create an account' / 'No account?' link, button or copy; the sign-in screen's lead line is 'Sign in with your Automatos account' (in src/auth/strings.ts); README.md and CLAUDE.md describe EXPO_PUBLIC_WEB_URL as the base for links into Studio, not account creation → DONE — SIGN_IN_SCREEN_COPY.lead 'Sign in with your Automatos account' (src/auth/strings.ts), rendered by SignInScreen's header; no account-creation copy in the app: README.md, CLAUDE.md, scripts/check-release-env.js and src/lib/env.ts now describe EXPO_PUBLIC_WEB_URL as the base for links into Studio; screens.test.ts 'no sign-in copy points at making an account', 'no app source points at making an account, or has another way in' (all of src/ and app/), 'the screens open no link into Studio', 'README.md and CLAUDE.md describe EXPO_PUBLIC_WEB_URL as links into Studio'; gate greps (added_code) 0 hits; iOS bundle has no such copy",
+        "Errors and refusals render the server's words (US-005b) and never leak internals → DONE — every note and the error step render the machine's text, which is serverWords/clerkWords (Clerk longMessage, never its developer message; Automatos 409/403 verbatim) or SIGN_IN_COPY; StepNote shows only note.text (alert + VoiceOver announce), no code, status or URL; screens.test.ts 'takes its words from src/auth/strings.ts, never a literal in JSX text'",
+        "A security-reviewer run (foreground) on src/auth/screens and the passkey wiring finds no HIGH/CRITICAL, or each one is fixed in this story → DONE — security-reviewer (foreground) on src/auth/screens, app/(auth), AuthRoot passkeys + app.json webcredentials: no HIGH/CRITICAL. L2 fixed here (PasswordStep clears a refused password; tests 'clears a refused password', 'keeps the step and its note object while Sign in runs'). Owner checks, not code: M1 passkeys need the production Clerk FAPI clerk.automatos.app with the app in its AASA webcredentials (a pk_test_ build's passkey fails with the honest passkeyFailed copy); L3 turn on Clerk's email enumeration protection. M2 (ref refreshed in useEffect, the AuthRoot idiom) and L1 (two raw-error dev logs in sign-in-machine.ts, logger is __DEV__-only) left as is",
+        "npm run typecheck passes → DONE — npm run typecheck: tsc --noEmit clean",
+        "npm run lint passes (0 errors) → DONE — npm run lint: eslint . 0 problems",
+        "npx vitest run passes → DONE — npx vitest run --coverage: 77 files, 1167 tests passed; sign-in-view.ts 100%, all files 99.06% lines / 97.31% branches",
+        "npm run check:bundle passes → DONE — npm run check:bundle: iOS Hermes bundle exported to .expo/bundle-check; carries 'Sign in with your Automatos account', 'Sign in with a passkey', \"Confirm it's you\""
       ],
       "files": ["src/auth/screens/", "src/auth/strings.ts", "app/(auth)/"],
       "priority": 19,
-      "passes": false,
-      "notes": "Screenshots and real sign-ins are OT-7."
+      "passes": true,
+      "notes": "Screenshots and real sign-ins are OT-7. | US-005c built 21 Oct (72e4de4): the (auth) layout redirects a signed-in user to '/' (a local constant FND-4 replaces with its route table); the choice stays mounted while the passkey sheet is up so a cancel keeps the typed address; Screen has no keyboard-inset prop, so SignInScreen scrolls its own ScrollView (automaticallyAdjustKeyboardInsets) inside a non-scrolling Screen."
     },
     {
       "id": "FND-4",
