@@ -1,7 +1,7 @@
 // The sheet's and the toast's logic, pure (PRD-001 §4.11, K5). The handoff (README 'Interactions'):
-// sheets slide up 220 ms ease and the backdrop fades to hsla(30,12%,9%,.34), a tap on it closes the
-// sheet; feedback is a toast at the top on iOS and an ink snackbar at the bottom on Android, for
-// 2.4 s. Under Reduce Motion the sheet does not slide: it cross-fades in place.
+// sheets slide up 220 ms ease and the backdrop fades to the handoff's ink at 34 %, a tap on it
+// closes the sheet; feedback is a toast at the top on iOS and an ink snackbar at the bottom on
+// Android, for 2.4 s. Under Reduce Motion the sheet does not slide: it cross-fades in place.
 
 import type { ColourName, ColourScheme, Colours, RadiusName, SpaceName } from '../styles/tokens';
 import { tint } from './paint';
@@ -42,8 +42,9 @@ export function sheetOpacity(progress: number, slide: boolean): number {
 }
 
 /**
- * The handoff's backdrop ink, hsl(30 12% 9%), at 34 %: Light's foreground and Dark's background
- * are that ink, so the backdrop darkens the screen in both schemes.
+ * The handoff's backdrop ink (hue 30°, 12 % saturation, 9 % lightness) at 34 %: Light's
+ * foreground and Dark's background are that ink, so the backdrop darkens the screen in both
+ * schemes.
  */
 export function backdropColour(colours: Colours, scheme: ColourScheme): string {
   return tint(scheme === 'dark' ? colours.background : colours.foreground, BACKDROP_ALPHA);

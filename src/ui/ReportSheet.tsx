@@ -2,17 +2,19 @@
 // a Deliverable. A reason (the server's ids, src/ui/strings.ts), an optional note of up to 500
 // characters, and Send: POST /api/v1/reports through the API client, a toast on success, the
 // taxonomy's own words on failure (errorCopy, what ErrorState shows). Nothing renders unless the
-// server lists report_content and the role may report (report.ts: canReport). The draft starts
+// server lists report_content (canReportContent) and the role may report (roleCan), the same gate
+// as report.ts canReport, which the actions that open the sheet ask. The draft starts
 // empty each time the sheet opens (a parent re-rendering the same target keeps it), and the sheet
 // keeps the last target on screen while it slides away.
 
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import type { GateInput } from '../api/capabilities';
+import { canReportContent, type GateInput } from '../api/capabilities';
 import type { ApiClient } from '../api/client';
 import { REPORT_NOTE_MAX_CHARS, reportContent, type ReportTarget } from '../api/reports';
 import type { WorkspaceRole } from '../api/workspace';
+import { roleCan } from '../auth/role';
 import { logger } from '../lib/logger';
 import { useTokens } from '../styles/theme';
 import { Button } from './Button';
@@ -23,7 +25,6 @@ import { TextField } from './TextField';
 import { useToast } from './ToastProvider';
 import {
   EMPTY_REPORT_DRAFT,
-  canReport,
   draftPayload,
   noteCounter,
   reportSentMessage,
@@ -89,7 +90,8 @@ export function ReportSheet({ target, onClose, client, discovery, role }: Report
       setError(null);
     }
   }
-  if (!canReport(discovery, role) || held === null) return null;
+  const allowed = canReportContent(discovery) && roleCan(role, 'report');
+  if (!allowed || held === null) return null;
   const payload = draftPayload(held, draft);
 
   const send = async () => {

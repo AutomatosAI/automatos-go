@@ -1,6 +1,6 @@
 // The paint and touch helpers every primitive shares, pure: a token key to its colour, a token at
-// an alpha (CSS hsl(var(--x) / a), which React Native has no syntax for), the 44 pt touch target
-// as hitSlop, and accessibility labels joined from their parts.
+// an alpha (the web's var(--x) with an alpha, which React Native has no syntax for), the 44 pt
+// touch target as hitSlop, and accessibility labels joined from their parts.
 
 import type { ColourName, Colours } from '../styles/tokens';
 
@@ -14,7 +14,7 @@ export function paint(colours: Colours, key: ColourKey): string {
 const HEX = /^#([0-9a-fA-F]{6})([0-9a-fA-F]{2})?$/;
 const ALPHA_MAX = 255;
 
-/** A token colour at an alpha (CSS hsl(var(--x) / a)); an alpha the token already has multiplies. */
+/** A token colour at an alpha (the web's var(--x) / a); an alpha the token has multiplies. */
 export function tint(hex: string, alpha: number): string {
   const match = HEX.exec(hex);
   if (!match) throw new RangeError(`${hex} isn't a #RRGGBB or #RRGGBBAA token colour`);
