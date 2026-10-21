@@ -66,20 +66,20 @@
       "title": "The chat controller: one thread's state, send, Stop, the stale-id check and in-flight resume",
       "description": "As a user, I want my turn to stream, Stop to really stop, and a reopened chat to show 'Auto is working…' when a turn is still running (D-STOP, D-STALE-CHAT). The state is a pure reducer over the foundation's turnReducer; the hook only wires it.",
       "acceptanceCriteria": [
-        "src/chat/controller/thread.ts (pure): threadReducer(state, action) with actions loaded(messages), send(draft), frame(f) (delegates the live turn to turnReducer from src/core/turn-reducer.ts), finished, failed(apiError), stopped, refetched(messages) (merge by id, never duplicate); a deep-frozen input proves no mutation",
-        "ensureLiveChatId(client, cachedId) → the id when GET /api/chat/{id} answers, null (start a draft) on 404 or 403; never reuses an id it has not checked this launch",
-        "Stop: aborts the stream read AND calls cancelTurn; the state shows stopped, not failed",
-        "Reopen: when fetchChat reports turnInFlight, the thread shows working and refetches messages on the foundation's chat_changed event for this chat (useLiveEvent) or on resume",
-        "src/chat/controller/use-thread.ts: the hook wiring client, stream, live events and query keys from src/api/query-keys.ts (chat.thread, chat.messages); nothing persisted (D-CACHE)",
-        "src/chat/__tests__/thread.test.ts: send → frames → finished; Stop calls cancel; stale id → draft; turnInFlight → working → chat_changed → refetched merge; e: error → failed with the taxonomy kind",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes"
+        "src/chat/controller/thread.ts (pure): threadReducer(state, action) with actions loaded(messages), send(draft), frame(f) (delegates the live turn to turnReducer from src/core/turn-reducer.ts), finished, failed(apiError), stopped, refetched(messages) (merge by id, never duplicate); a deep-frozen input proves no mutation → DONE — src/chat/controller/thread.ts threadReducer: opened, loaded, send, frame (turnReducer from core/turn-reducer), finished, failed, stopped, stopFailed, named, refetched (mergeById: fresh copy kept, never a second id), gaveUp; thread.test.ts folds deep-frozen states and actions through every one and proves no input changes (544ed85)",
+        "ensureLiveChatId(client, cachedId) → the id when GET /api/chat/{id} answers, null (start a draft) on 404 or 403; never reuses an id it has not checked this launch → DONE — src/chat/controller/live-chat.ts ensureLiveChatId over checkChat: GET /api/chat/{id} on every call, the id when it answers, null on 404 and 403, any other failure thrown (retried, never a silent draft); chat.thread is never persisted, so no earlier launch's answer is reused; live-chat.test.ts (544ed85)",
+        "Stop: aborts the stream read AND calls cancelTurn; the state shows stopped, not failed → DONE — turn-runner.ts stop(): aborts the read AND posts cancelTurn; the thread shows stopped, never failed (no finished/failed dispatched); a draft stopped before its chat-id frame reads on until the frame names the chat, then cancels it; a cancel that fails returns to working; thread.test.ts + turn-runner.test.ts (544ed85)",
+        "Reopen: when fetchChat reports turnInFlight, the thread shows working and refetches messages on the foundation's chat_changed event for this chat (useLiveEvent) or on resume → DONE — loaded with turnInFlight and the user's message newest → working (live turn with no draft); use-thread.ts refetches chat.messages on useLiveEvent('chat_changed') for this chat (isChatChangedFor) and on an AppState return to the foreground; the reply retires the wait; the web's 5-minute guard (gaveUp) (544ed85)",
+        "src/chat/controller/use-thread.ts: the hook wiring client, stream, live events and query keys from src/api/query-keys.ts (chat.thread, chat.messages); nothing persisted (D-CACHE) → DONE — src/chat/controller/use-thread.ts: useThread(cachedId) wires the client, the turn runner (sendTurn/cancelTurn), useLiveEvent and queryKeys.chat.thread / chat.messages (persist: false; thread.test.ts asserts isPersistableKey false for both); nothing written to the phone (544ed85)",
+        "src/chat/__tests__/thread.test.ts: send → frames → finished; Stop calls cancel; stale id → draft; turnInFlight → working → chat_changed → refetched merge; e: error → failed with the taxonomy kind → DONE — src/chat/__tests__/thread.test.ts: send → frames → finished (then the saved reply retires it); Stop calls cancel and aborts the read; stale id (404, 403) → draft; turnInFlight → working → chat_changed → refetched merge; e: line → failed {kind: 'turn', code: 'rate_limited'}, a 403 → {kind: 'forbidden'}; plus thread-merge, turn-runner and live-chat tests: src/chat 8 files / 78 tests (544ed85)",
+        "npm run typecheck passes → DONE — npm run typecheck exit 0 (544ed85)",
+        "npm run lint passes (0 errors) → DONE — npm run lint exit 0, 0 problems (544ed85)",
+        "npx vitest run passes → DONE — npx vitest run: 94 files / 1358 tests passed (544ed85)"
       ],
       "files": ["src/chat/controller/", "src/chat/__tests__/"],
       "priority": 2,
-      "passes": false,
-      "notes": "The turn is a detached producer on the server: closing the connection only marks client_gone; the reply is still saved (digest line 12)."
+      "passes": true,
+      "notes": "The turn is a detached producer on the server: closing the connection only marks client_gone; the reply is still saved (digest line 12). | Built 544ed85. A live turn holds back the saved messages from where it started (the server saves the user's message before streaming), so a refetch never draws the turn twice; the reply retires it. A turn the server failed (e: line) stays on screen until the next send, so its failure keeps the kit's fixed copy (US-008c maps the code). Stop before a draft's chat-id frame reads on silently until the frame names the chat, then cancels it ('named' keeps the thread in that chat). A failed cancel returns the thread to working. The hook refetches on AppState resume itself: the foundation's RESUME_INVALIDATIONS carries no chat family, by design (chat_changed reaches subscribers only)."
     },
     {
       "id": "US-008c",
