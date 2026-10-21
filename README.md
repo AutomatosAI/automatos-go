@@ -52,7 +52,7 @@ configured" state instead of a crash (`src/lib/env.ts`).
 | ----------------------------------- | ------------------------------------------------------------------------------- |
 | `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk publishable key for hosted sign-in (`pk_live_` required in production).   |
 | `EXPO_PUBLIC_API_URL`               | Base URL of the hosted Automatos API, the built-in server.                      |
-| `EXPO_PUBLIC_WEB_URL`               | Base URL of hosted Studio, opened by "Create an account in Studio".             |
+| `EXPO_PUBLIC_WEB_URL`               | Base URL of hosted Studio, for links into Studio (a Deliverable, settings).     |
 | `EXPO_PUBLIC_SENTRY_DSN`            | Sentry (EU) DSN for error reports; recommended, reporting stays off without it. |
 
 ## Recording a real chat turn

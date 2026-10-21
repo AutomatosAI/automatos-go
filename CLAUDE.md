@@ -51,7 +51,7 @@ parses them with zod (blank = "not configured").
 
 - `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` — Clerk publishable key for hosted sign-in; `pk_live_` in production.
 - `EXPO_PUBLIC_API_URL` — base URL of the hosted Automatos API (the built-in server).
-- `EXPO_PUBLIC_WEB_URL` — base URL of hosted Studio ("Create an account in Studio").
+- `EXPO_PUBLIC_WEB_URL` — base URL of hosted Studio, for links into Studio (a Deliverable, settings); never account creation.
 - `EXPO_PUBLIC_SENTRY_DSN` — Sentry (EU) DSN; recommended, error reporting is off without it.
 
 ## Layout (PRD-001 §4.3)

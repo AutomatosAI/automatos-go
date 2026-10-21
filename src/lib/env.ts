@@ -38,7 +38,7 @@ const EnvSchema = z.object({
   clerkPublishableKey: clerkKeyOrBlank,
   /** hosted Automatos API base URL (the built-in server; discovery is read from it) */
   apiUrl: httpUrlOrBlank,
-  /** hosted Studio web URL — "Create an account in Studio" opens it in the browser */
+  /** hosted Studio web URL — the base for links into Studio, opened in the system browser */
   webUrl: httpUrlOrBlank,
   /** Sentry DSN (EU region) — empty keeps error reporting off */
   sentryDsn: httpUrlOrBlank,

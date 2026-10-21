@@ -16,7 +16,7 @@ const REQUIRED = [
     productionPrefix: 'pk_live_',
   },
   { name: 'EXPO_PUBLIC_API_URL', why: 'the hosted Automatos API (the built-in server)' },
-  { name: 'EXPO_PUBLIC_WEB_URL', why: "hosted Studio ('Create an account in Studio')" },
+  { name: 'EXPO_PUBLIC_WEB_URL', why: 'links into hosted Studio' },
 ];
 
 const RECOMMENDED = [
