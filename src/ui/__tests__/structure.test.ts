@@ -68,6 +68,7 @@ describe('src/ui: accessibility', () => {
       [
         'Button',
         'Card',
+        'CommandCentreButton',
         'IconButton',
         'ListRow',
         'Pill',

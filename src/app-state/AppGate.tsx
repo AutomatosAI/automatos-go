@@ -1,9 +1,10 @@
 // The signed-in gate (PRD-001 §4.4, §4.5): app/(app)/_layout.tsx renders its screens through it.
 // Thin wiring over gate.ts (the decision, tested): the build and the session first (accessView),
 // then, under the persisted cache, discovery and the workspace bootstrap (useLaunch → launchView).
-// Ready, the screens get the session (session.tsx); any other state is a whole screen, and every
-// one a signed-in person can be stuck on offers Sign out. Signed out, the phone forgets the
-// session's cached data (session-cache.ts) and goes to sign-in.
+// Ready, the screens get the session (session.tsx) and the one live connection (LiveEvents, FND-5);
+// any other state is a whole screen, and every one a signed-in person can be stuck on offers Sign
+// out. Signed out, the phone forgets the session's cached data (session-cache.ts) and goes to
+// sign-in.
 
 import type { LucideIcon } from 'lucide-react-native';
 import { Redirect } from 'expo-router';
@@ -12,6 +13,7 @@ import { StyleSheet, View } from 'react-native';
 import CirclePause from 'lucide-react-native/icons/circle-pause';
 import ServerOff from 'lucide-react-native/icons/server-off';
 
+import { LiveEvents } from '../api/live';
 import { currentServer, type Server } from '../api/server';
 import { useAuthSession, type AuthSession } from '../auth/AuthRoot';
 import { logger } from '../lib/logger';
@@ -119,6 +121,7 @@ function Launch({ server, session, children }: LaunchProps) {
       workspace={view.workspace}
       client={client}
     >
+      <LiveEvents />
       {children}
     </AppSessionProvider>
   );

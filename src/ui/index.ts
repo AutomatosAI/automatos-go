@@ -5,6 +5,7 @@
 export { Button, type ButtonProps } from './Button';
 export { Card, type CardProps } from './Card';
 export { Chip, type ChipProps } from './Chip';
+export { CommandCentreButton, type CommandCentreButtonProps } from './CommandCentreButton';
 export { CountBadge, type CountBadgeProps } from './CountBadge';
 export { Divider, type DividerProps } from './Divider';
 export { EmptyState, type EmptyStateProps } from './EmptyState';
@@ -31,7 +32,9 @@ export { canReport } from './report';
 export { TOAST_DURATION_MS, toastPlacement, type ToastPlacement } from './overlay';
 export {
   PIP_TOKENS,
+  COMMAND_CENTRE_BUTTON,
   badgeText,
+  commandCentreLabel,
   countPhrase,
   errorCopy,
   pluralForm,

@@ -16,7 +16,7 @@ import {
   type TypeScale,
   type TypeStyle,
 } from '../styles/type';
-import { DISABLED_OPACITY, paint, tint, type ColourKey } from './paint';
+import { DISABLED_OPACITY, joinLabel, paint, tint, type ColourKey } from './paint';
 import { UI_COPY } from './strings';
 
 // ── Text ────────────────────────────────────────────────────────────────────────────────────
@@ -283,6 +283,19 @@ export function pluralForm(count: number, forms: PluralForms): string {
 /** '1 agent', '6 agents'. */
 export function countPhrase(count: number, forms: PluralForms): string {
   return `${count} ${pluralForm(count, forms)}`;
+}
+
+/** The header's Command Centre button (handoff §1 Header): 36 pt high, a 15 pt icon, 12 pt label. */
+export const COMMAND_CENTRE_BUTTON = Object.freeze({
+  height: ICON_BUTTON_SIZES.md.box,
+  iconSize: 15,
+  level: 5 as TextLevel,
+});
+
+/** 'Command Centre', or 'Command Centre, 6 need you': the badge inside says nothing on its own. */
+export function commandCentreLabel(total: number): string {
+  const count = badgeText(total) === null ? null : countPhrase(Math.floor(total), UI_COPY.needYou);
+  return joinLabel(UI_COPY.commandCentre, count);
 }
 
 // ── Fields and errors ───────────────────────────────────────────────────────────────────────

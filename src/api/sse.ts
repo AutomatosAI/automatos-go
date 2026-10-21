@@ -10,15 +10,20 @@ import { openStream, readChunks, type StreamOutcome } from './stream';
 
 export type ServerEvent = ReturnType<typeof parseSSEFrames>['events'][number];
 
-/** Every complete event of the stream, in order, until it ends or the caller aborts. */
+/**
+ * Every complete event of the stream, in order, until it ends or the caller aborts. onOpen runs
+ * once the server has answered OK, before the first event (the live status, the backoff reset).
+ */
 export async function readEvents(
   client: Pick<ApiClient, 'stream'>,
   route: Route,
   onEvent: (event: ServerEvent) => void,
   signal?: AbortSignal,
+  onOpen?: () => void,
 ): Promise<StreamOutcome> {
   const response = await openStream(client, route, { signal });
   if (!response) return 'aborted';
+  onOpen?.();
   let buffer = '';
   return readChunks(
     response,
