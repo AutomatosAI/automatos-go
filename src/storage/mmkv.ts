@@ -8,6 +8,7 @@ import { getRandomBytes } from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 import { createMMKV } from 'react-native-mmkv';
 
+import { KEYCHAIN_OPTIONS } from '../lib/secure-store';
 import {
   openEncryptedStorage,
   type KeyValueStorage,
@@ -17,11 +18,7 @@ import {
 
 const MMKV_ID = 'automatos-go';
 
-/** This phone only (no iCloud Keychain, no backup restore onto another device), after first unlock. */
-const KEYCHAIN_OPTIONS: SecureStore.SecureStoreOptions = Object.freeze({
-  keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
-});
-
+/** The keychain options every app item uses (lib/secure-store.ts); the registry lists this item. */
 const keychain: SecureKeyStore = Object.freeze({
   getItem: (key: string) => SecureStore.getItem(key, KEYCHAIN_OPTIONS),
   setItem: (key: string, value: string) => SecureStore.setItem(key, value, KEYCHAIN_OPTIONS),

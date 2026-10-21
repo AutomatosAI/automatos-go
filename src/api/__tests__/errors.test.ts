@@ -4,6 +4,7 @@ import { SERVER_MESSAGE_MAX_CHARS } from '../config';
 import {
   abortError,
   ApiError,
+  APP_ERROR_CODES,
   detailOf,
   errorFromResponse,
   isAbortError,
@@ -12,7 +13,7 @@ import {
   userMessage,
   type ApiErrorKind,
 } from '../errors';
-import { API_ERROR_COPY } from '../strings';
+import { API_ERROR_COPY, APP_ERROR_COPY } from '../strings';
 
 const KINDS: readonly ApiErrorKind[] = [
   'network',
@@ -121,5 +122,21 @@ describe('userMessage and the copy', () => {
 
   it('falls back to the server copy for anything that is not an ApiError', () => {
     expect(userMessage(new Error('TypeError: x is undefined'))).toBe(API_ERROR_COPY.server);
+  });
+
+  it("shows an app-raised code's own words (sign-in not set up for this server)", () => {
+    const notSetUp = new ApiError('auth', { code: APP_ERROR_CODES.signInNotSetUp });
+    expect(userMessage(notSetUp)).toBe(APP_ERROR_COPY.signInNotSetUp);
+    expect(APP_ERROR_COPY.signInNotSetUp).not.toMatch(/\d|https?:|\//);
+  });
+
+  it('a response cannot pick those words: a code read from a body keeps the kind copy', () => {
+    const fromBody = errorFromResponse(
+      401,
+      JSON.stringify({ detail: { code: APP_ERROR_CODES.signInNotSetUp, message: 'x' } }),
+    );
+    expect(fromBody.code).toBe(APP_ERROR_CODES.signInNotSetUp);
+    expect(userMessage(fromBody)).toBe(API_ERROR_COPY.auth);
+    expect(userMessage(new ApiError('auth', { code: 'constructor' }))).toBe(API_ERROR_COPY.auth);
   });
 });

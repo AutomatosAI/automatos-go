@@ -15,6 +15,12 @@ export const API_ERROR_COPY: Readonly<Record<ApiErrorKind, string>> = Object.fre
     "Automatos sent something this version can't read. Try again, or update the app.",
 });
 
+/** Words for an error the app raises itself, by its code (errors.ts APP_ERROR_CODES). */
+export const APP_ERROR_COPY = Object.freeze({
+  /** The server's Clerk has no "mobile" JWT template yet (D39): nothing the user can fix. */
+  signInNotSetUp: 'Sign-in is not set up for Automatos Go on this server yet.',
+});
+
 /** Workspace states the bootstrap reports in its own words (D8: nothing about plans or billing). */
 export const WORKSPACE_COPY = Object.freeze({
   paused: 'Your workspace is paused; ask your workspace owner',
