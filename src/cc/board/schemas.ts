@@ -86,7 +86,7 @@ export const TicketDetailSchema = z.object({
 
 export type TicketDetail = Readonly<z.output<typeof TicketDetailSchema>>;
 
-/** POST …/approve: {success, task_id, status, action_result}; a mission card answers its own shape. */
+/** POST …/approve: {success, task_id, status, action_result}; a mission card has its own shape. */
 export const ApproveResultSchema = z.object({
   status: Text,
   action_result: z

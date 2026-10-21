@@ -85,10 +85,7 @@ export function sortTickets(tickets: readonly BoardTicket[]): BoardTicket[] {
 }
 
 /** The tickets in one column (closed in cancelled) or under one unknown status; 'all' is all. */
-export function filterTickets(
-  tickets: readonly BoardTicket[],
-  filter: BoardFilter,
-): BoardTicket[] {
+export function filterTickets(tickets: readonly BoardTicket[], filter: BoardFilter): BoardTicket[] {
   if (filter === 'all') return [...tickets];
   return tickets.filter((ticket) => boardColumn(ticket.status) === filter);
 }
@@ -100,13 +97,10 @@ export type BoardFilterOption = {
 };
 
 function countBy(tickets: readonly BoardTicket[]): ReadonlyMap<string, number> {
-  return tickets.reduce(
-    (counts, ticket) => {
-      const column = boardColumn(ticket.status);
-      return new Map(counts).set(column, (counts.get(column) ?? 0) + 1);
-    },
-    new Map<string, number>(),
-  );
+  return tickets.reduce((counts, ticket) => {
+    const column = boardColumn(ticket.status);
+    return new Map(counts).set(column, (counts.get(column) ?? 0) + 1);
+  }, new Map<string, number>());
 }
 
 /** All, every column (even when empty), then each unknown status the tickets carry, with counts. */
@@ -171,7 +165,7 @@ export function priorityWord(priority: string): string {
     : humanised(priority);
 }
 
-/** '#0042' (the API's number, else its workspace_seq), or null: never the row id (F414). */
+/** Its board number, #0042 (the API's, else its workspace_seq), or null: never the row id (F414). */
 export function ticketNumberOf(ticket: BoardTicket): string | null {
   return ticketNumber(ticket);
 }

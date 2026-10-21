@@ -272,7 +272,9 @@ describe('card words', () => {
     expect(ticketNumberOf(ticket())).toBe('#1394');
     expect(ticketNumberOf(ticket({ number: null, workspace_seq: 42 }))).toBe('#0042');
     expect(
-      ticketNumberOf(ticket({ number: null, workspace_seq: 42, source_type: 'orchestration_task' })),
+      ticketNumberOf(
+        ticket({ number: null, workspace_seq: 42, source_type: 'orchestration_task' }),
+      ),
     ).toBeNull();
     expect(ticketNumberOf(ticket({ number: null, workspace_seq: null }))).toBeNull();
   });

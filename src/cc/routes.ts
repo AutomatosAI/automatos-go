@@ -9,7 +9,7 @@ import type { Route } from '../api/routes';
 
 export const CC_ROUTES = Object.freeze({
   board: Object.freeze({
-    /** Every open ticket and the newest ?finished_limit finished ones (api/board_tasks.py list_tasks). */
+    /** Every open ticket and the newest ?finished_limit finished ones (board_tasks.py list_tasks). */
     list: { method: 'GET', path: '/api/v1/tasks' },
     /** One ticket by its integer row id, never its number. */
     ticket: { method: 'GET', path: '/api/v1/tasks/{task_id}' },
@@ -19,7 +19,7 @@ export const CC_ROUTES = Object.freeze({
     reject: { method: 'POST', path: '/api/v1/tasks/{task_id}/reject' },
   }),
   calendar: Object.freeze({
-    /** ?range=7d: routines, playbooks, scheduled tasks, mission SLAs, task deadlines, social posts. */
+    /** ?range=7d: routines, playbooks, scheduled tasks, mission SLAs, deadlines, social posts. */
     schedule: { method: 'GET', path: '/api/activity/schedule' },
     /** Pause or resume a routine (flips its heartbeat; agents:update). */
     toggleRoutine: { method: 'PATCH', path: '/api/heartbeat/{agent_id}/toggle' },
