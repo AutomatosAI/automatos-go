@@ -1,29 +1,9 @@
-// Command Centre placeholder (K5) — A3 replaces it with the Board (routes.cc.board, US-010).
-import { StyleSheet, View } from 'react-native';
-import LayoutDashboard from 'lucide-react-native/icons/layout-dashboard';
+// routes.cc.board ('/cc'): every link into the Command Centre lands here and goes on to the Board's
+// own screen (app/(app)/cc/board.tsx), where the shell's Board tab also goes.
+import { Redirect } from 'expo-router';
 
-import { PLACEHOLDER_COPY } from '../../../src/app-state/strings';
-import { useGoBack } from '../../../src/navigation/use-go-back';
-import { useTokens } from '../../../src/styles/theme';
-import { Button, EmptyState, Screen } from '../../../src/ui';
+import { BOARD_SCREEN } from '../../../src/cc/shell/tabs';
 
-export default function CommandCentrePlaceholder() {
-  const goBack = useGoBack();
-  const { spacing } = useTokens();
-  return (
-    <Screen scroll>
-      <View style={[styles.centre, { gap: spacing.space3, padding: spacing.space9 }]}>
-        <EmptyState
-          icon={LayoutDashboard}
-          title={PLACEHOLDER_COPY.ccTitle}
-          message={PLACEHOLDER_COPY.ccMessage}
-        />
-        <Button label={PLACEHOLDER_COPY.back} variant="outline" onPress={goBack} />
-      </View>
-    </Screen>
-  );
+export default function CommandCentreIndex() {
+  return <Redirect href={BOARD_SCREEN} />;
 }
-
-const styles = StyleSheet.create({
-  centre: { flexGrow: 1, alignItems: 'center', justifyContent: 'center' },
-});

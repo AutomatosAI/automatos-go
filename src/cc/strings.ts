@@ -12,3 +12,42 @@ export const BOARD_COPY = Object.freeze({
   /** Longer than the server keeps (MAX_REVIEW_FEEDBACK_CHARS): it would be cut off silently. */
   feedbackTooLong: (max: number) => `Keep the note under ${max} characters.`,
 });
+
+/** The Command Centre's frame (handoff §2): the top bar, the head and the tabs. */
+export const SHELL_COPY = Object.freeze({
+  /** iOS shows the word beside the chevron; Android the arrow alone (handoff §Frame). */
+  back: 'Auto',
+  backLabel: 'Back to Auto',
+  eyebrow: 'Operations',
+  title: 'Command Centre',
+  /** The stream's state, a word beside the dot (every colour status has a word, §4.6). */
+  live: Object.freeze({ live: 'Streaming live', connecting: 'Connecting', offline: 'Offline' }),
+  tabsLabel: 'Command Centre sections',
+  tabs: Object.freeze({
+    board: 'Board',
+    calendar: 'Calendar',
+    questions: 'Questions',
+    deliverables: 'Deliverables',
+  }),
+  /** The lede: '1 agent working, 5 in queue, 6 need your eyes.' */
+  agents: Object.freeze({ one: 'agent working', other: 'agents working' }),
+  inQueue: 'in queue',
+  needs: Object.freeze({ one: 'needs your eyes', other: 'need your eyes' }),
+  nothingNeeds: 'nothing needs your eyes',
+  /** The eyebrow's date, English in v1 (Sunday first, as Date.getDay counts). */
+  weekdays: Object.freeze(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']),
+  months: Object.freeze([
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ]),
+});

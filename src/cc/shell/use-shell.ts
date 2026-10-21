@@ -1,0 +1,67 @@
+// The shell's hooks: they read the clock, the phone's timezone, the board and the server's needs-you
+// answer, and hand them to the pure modules beside them (dateline.ts, lede.ts, tabs.ts). The board is
+// the Board tab's own query (one cache entry); needs-you is the foundation's useNeedsYou, so the
+// lede's number is the Command Centre button's. No stream is opened here (D-LIVE).
+
+import { useQuery } from '@tanstack/react-query';
+import { useCalendars } from 'expo-localization';
+import { usePathname } from 'expo-router';
+import { useEffect, useState } from 'react';
+
+import { useNeedsYou } from '../../api/needs-you';
+import { useApiClient } from '../../app-state/session';
+import { boardQuery } from '../board/api';
+import { eyebrowText, msUntilNextMinute, wallClock, zoneCity } from './dateline';
+import { boardFigures, ledeParts, tabCounts, type LedePart } from './lede';
+import { FIRST_TAB, shellTab, type CcTab, type TabCounts } from './tabs';
+
+/** Now, re-read at the turn of every minute while the shell is mounted. */
+export function useMinuteClock(): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setTimeout(() => setNow(new Date()), msUntilNextMinute(now));
+    return () => clearTimeout(timer);
+  }, [now]);
+  return now;
+}
+
+/** The phone's IANA timezone (expo-localization), or null when it reports none. */
+export function usePhoneTimeZone(): string | null {
+  const [calendar] = useCalendars();
+  return calendar?.timeZone ?? null;
+}
+
+/** 'Operations · Mon 19 Oct · 08:14 London', in the phone's timezone. */
+export function useEyebrow(): string {
+  const now = useMinuteClock();
+  const zone = usePhoneTimeZone();
+  return eyebrowText(wallClock(now, zone), zoneCity(zone));
+}
+
+export type ShellFigures = {
+  readonly lede: readonly LedePart[];
+  readonly counts: TabCounts;
+};
+
+/** The lede and the tab figures; a source that has not answered yet shows nothing of its own. */
+export function useShellFigures(): ShellFigures {
+  const client = useApiClient();
+  const board = useQuery(boardQuery(client)).data?.tasks ?? null;
+  const needsYou = useNeedsYou().query.data ?? null;
+  return {
+    lede: ledeParts({
+      figures: board ? boardFigures(board) : null,
+      needsTotal: needsYou ? needsYou.total : null,
+    }),
+    counts: tabCounts({ board, needsYou: needsYou ? needsYou.counts : null }),
+  };
+}
+
+/** The tab the shell shows; a sheet or detail opened over a tab keeps that tab. */
+export function useShellTab(): CcTab {
+  const pathname = usePathname();
+  const [shown, setShown] = useState<CcTab>(FIRST_TAB);
+  const tab = shellTab(pathname, shown);
+  if (tab !== shown) setShown(tab);
+  return tab;
+}
