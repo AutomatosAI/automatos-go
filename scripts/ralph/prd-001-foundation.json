@@ -239,6 +239,32 @@
       "notes": "A native change: it lands before Gerard's first iOS build (OT-3). Data types follow the privacy draft; Gerard confirms them (the draft's [CHECK] items) and a later change is one rebuild. Do not add analytics, tracking or location; the app collects none. | Built 21 Oct (fa52265): the manifest follows the draft as written; its Sentry [CHECK] rows now bind the Sentry setup: no user ID or IP on events (CrashData not linked), no tracing (PerformanceData), no tap or screen breadcrumbs (ProductInteraction); docs/native-modules.md says so."
     },
     {
+      "id": "US-002g",
+      "prdStory": "US-002",
+      "priority": 6.6,
+      "passes": false,
+      "title": "expo-device in the first native build (the phone's model name for push registration and Studio's device list)",
+      "description": "As the release owner, I want expo-device installed before the first native build, so the A4 push wave can register a hosted phone with its model name (W2 US-009) without another iOS build. Lead, 21 Oct, from the A4 push kit.",
+      "acceptanceCriteria": [
+        "expo-device installed with `npx expo install expo-device` at the SDK 54 version (npm install --ignore-scripts --no-audit --no-fund for the lock, as US-002a did); package-lock.json updated",
+        "docs/native-modules.md lists expo-device: what it is for (Device.modelName for the device name A4 sends; nothing else), its permissions (none) and its privacy-manifest effect (none expected: re-run US-002f's union over node_modules' PrivacyInfo.xcprivacy and update app.json and the doc if expo-device adds an accessed-API reason)",
+        "src/config/__tests__/app-config.test.ts asserts expo-device is a dependency",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npx expo-doctor passes",
+        "npm run check:bundle passes"
+      ],
+      "files": [
+        "package.json",
+        "package-lock.json",
+        "docs/native-modules.md",
+        "src/config/__tests__/app-config.test.ts",
+        "app.json"
+      ],
+      "notes": "A native module: it must land before Gerard's first iOS build (OT-3). Do not use it anywhere yet; A4 reads Device.modelName."
+    },
+    {
       "id": "US-003a",
       "prdStory": "US-003",
       "title": "sync-core: the vendoring engine, the lock, the drift check — and the chat set vendored",
