@@ -242,18 +242,18 @@
       "id": "US-002g",
       "prdStory": "US-002",
       "priority": 6.6,
-      "passes": false,
+      "passes": true,
       "title": "expo-device in the first native build (the phone's model name for push registration and Studio's device list)",
       "description": "As the release owner, I want expo-device installed before the first native build, so the A4 push wave can register a hosted phone with its model name (W2 US-009) without another iOS build. Lead, 21 Oct, from the A4 push kit.",
       "acceptanceCriteria": [
-        "expo-device installed with `npx expo install expo-device` at the SDK 54 version (npm install --ignore-scripts --no-audit --no-fund for the lock, as US-002a did); package-lock.json updated",
-        "docs/native-modules.md lists expo-device: what it is for (Device.modelName for the device name A4 sends; nothing else), its permissions (none) and its privacy-manifest effect (none expected: re-run US-002f's union over node_modules' PrivacyInfo.xcprivacy and update app.json and the doc if expo-device adds an accessed-API reason)",
-        "src/config/__tests__/app-config.test.ts asserts expo-device is a dependency",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes",
-        "npx expo-doctor passes",
-        "npm run check:bundle passes"
+        "expo-device installed with `npx expo install expo-device` at the SDK 54 version (npm install --ignore-scripts --no-audit --no-fund for the lock, as US-002a did); package-lock.json updated → DONE — npx expo install expo-device -- --ignore-scripts --no-audit --no-fund: package.json expo-device ~8.0.10 (SDK 54 bundledNativeModules range; peers expo \"*\"); package-lock.json adds node_modules/expo-device 8.0.10 and ua-parser-js 0.7.41 (web-only dependency), no existing entry changed; expo install added no plugin (none shipped), app.json unchanged — commit 1988e5d",
+        "docs/native-modules.md lists expo-device: what it is for (Device.modelName for the device name A4 sends; nothing else), its permissions (none) and its privacy-manifest effect (none expected: re-run US-002f's union over node_modules' PrivacyInfo.xcprivacy and update app.json and the doc if expo-device adds an accessed-API reason) → DONE — docs/native-modules.md: Modules row and a new 'expo-device' section (Device.modelName for the device name A4 sends, nothing else; permissions none: no config plugin, no usage key — UIKit UIDevice/sysctl/ProcessInfo only — and an empty Android manifest; privacy manifest none to add); union re-run with plutil over 13 node_modules PrivacyInfo.xcprivacy files: expo-device declares SystemBootTime 35F9.1, already in the union via boost, so app.json ios.privacyManifests unchanged; per-file privacy table row added and the re-run noted",
+        "src/config/__tests__/app-config.test.ts asserts expo-device is a dependency → DONE — describe 'package.json: native modules added for later waves': \"carries expo-device at SDK 54's range, for the model name A4 registers a phone with (US-002g)\" (asserts dependencies['expo-device'] equals expo/bundledNativeModules.json's range; mutation — dependency dropped — turned it red, restored) and 'needs no plugin for expo-device (it ships none)'",
+        "npm run typecheck passes → DONE — npm run typecheck exit 0",
+        "npm run lint passes (0 errors) → DONE — npm run lint exit 0 (0 errors; 1 pre-existing warning: src/lib/logger.ts unused disable)",
+        "npx vitest run passes → DONE — npx vitest run: 37 files / 571 tests pass",
+        "npx expo-doctor passes → DONE — npx expo-doctor: 18/18 checks passed",
+        "npm run check:bundle passes → DONE — npm run check:bundle exit 0 (iOS bundle exported to .expo/bundle-check)"
       ],
       "files": [
         "package.json",
@@ -262,7 +262,7 @@
         "src/config/__tests__/app-config.test.ts",
         "app.json"
       ],
-      "notes": "A native module: it must land before Gerard's first iOS build (OT-3). Do not use it anywhere yet; A4 reads Device.modelName."
+      "notes": "A native module: it must land before Gerard's first iOS build (OT-3). Do not use it anywhere yet; A4 reads Device.modelName. | Built 21 Oct (1988e5d): expo-device ~8.0.10, no plugin, no usage key, no permission; its privacy manifest (SystemBootTime 35F9.1) was already covered, so app.json is unchanged and nothing imports it yet."
     },
     {
       "id": "US-003a",
