@@ -82,19 +82,19 @@
       "title": "The Board tab: status filter pills and the ticket cards",
       "description": "As a user, I want to see the board and find every ticket the server counts (D-BOARD, the handoff's Board).",
       "acceptanceCriteria": [
-        "app/(app)/cc/board.tsx with src/cc/board/BoardTab.tsx: filter pills All + every status (incl. Failed and Cancelled) with column dots and words; the active pill solid; counts per status",
-        "src/cc/board/TicketCard.tsx: the kind row (#number, kind icon, KIND · PRIORITY, StatusPip with its WORD), the serif title, the reason chip ('Waiting on your answer', 'Deliverable to review', from the vendored ticket-stage), tags, agent swatch and name; tap → routes.cc.ticket(taskId)",
-        "Pull to refresh; empty state per filter; errors through the foundation's ErrorState; live refresh via the foundation's invalidation (no polling)",
-        "src/cc/board/view-model.ts (pure) maps a ticket → card fields; tested in src/cc/__tests__/board-view.test.ts",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes",
-        "npm run check:bundle passes"
+        "app/(app)/cc/board.tsx with src/cc/board/BoardTab.tsx: filter pills All + every status (incl. Failed and Cancelled) with column dots and words; the active pill solid; counts per status → DONE — app/(app)/cc/board.tsx wires src/cc/board/BoardTab.tsx; FilterPills.tsx: All + inbox, assigned, in_progress, review, blocked, done, failed, cancelled (closed counted in Cancelled) + any unknown status, each with its PIP_TOKENS dot, word and mono count, shown even at 0; the active pill solid ink (foundation Pill) (5943345)",
+        "src/cc/board/TicketCard.tsx: the kind row (#number, kind icon, KIND · PRIORITY, StatusPip with its WORD), the serif title, the reason chip ('Waiting on your answer', 'Deliverable to review', from the vendored ticket-stage), tags, agent swatch and name; tap → routes.cc.ticket(taskId) → DONE — src/cc/board/TicketCard.tsx: kind row #number · kind icon (square-check-big, book-bookmark, target, refresh-cw) · KIND · raised priority (urgent/high only, as the web's KanbanKindRow) · StatusPip with its word; Title 5 serif; Chip from the vendored ticket-stage (its words, e.g. 'Question', 'Your OK' — the handoff's 'Waiting on your answer' is the prototype's, not ticket-stage's); up to 3 tags (mission: dropped); agent swatch (name folded onto chart1–5 tokens, none = mutedForeground) and name; tap → router.push(routes.cc.ticket(row id)) (5943345)",
+        "Pull to refresh; empty state per filter; errors through the foundation's ErrorState; live refresh via the foundation's invalidation (no polling) → DONE — FlatList RefreshControl through src/cc/use-pull-refresh.ts (spinner only for the user's pull; a failed pull toasts userMessage, the list keeps its data); emptyCopy per filter (All, each column, unknown) in EmptyState; no data + error → foundation ErrorState with retry; no refetchInterval, the list is queryKeys.board() so board_changed invalidation and resume refetch reach it (5943345)",
+        "src/cc/board/view-model.ts (pure) maps a ticket → card fields; tested in src/cc/__tests__/board-view.test.ts → DONE — src/cc/board/view-model.ts ticketCard/filterPills/emptyCopy/filterInForce/boardView/agentSwatch; src/cc/__tests__/board-view.test.ts 28 tests: card fields, row-id href, kinds, raised priority, 8 columns' pips and words, closed, unknown status and alias, ticket-stage chips, tags, unassigned, a11y label, immutability, swatches in Light and Dark, pills with counts and dots, empty copy per filter, sort order, top-level only, filter fallback (5943345)",
+        "npm run typecheck passes → DONE — npm run typecheck exit 0 (5943345)",
+        "npm run lint passes (0 errors) → DONE — npm run lint exit 0, 0 errors 0 warnings (5943345)",
+        "npx vitest run passes → DONE — npx vitest run: 91 files, 1374 tests passed (5943345)",
+        "npm run check:bundle passes → DONE — npm run check:bundle exit 0 (expo export --platform ios, 6.28 MB hbc) (5943345)"
       ],
       "files": ["app/(app)/cc/board.tsx", "src/cc/board/", "src/cc/__tests__/"],
       "priority": 3,
-      "passes": false,
-      "notes": "Column dot colours in the handoff are literal HSL values: map them to Studio tokens (status tokens) — no literal colour in src/cc."
+      "passes": true,
+      "notes": "Column dot colours in the handoff are literal HSL values: map them to Studio tokens (status tokens) — no literal colour in src/cc. | US-010c DONE 21 Oct (5943345): list and counts are top-level tickets (mission steps nest, as on the web and the shell's Board figure); every column pill shows even at 0 (D26: Failed and Cancelled always reachable; the prototype hid empty ones); a chosen unknown-status filter falls back to All once its tickets move on; agent swatches are chart1–5 by name (the web's agent-tones.ts is a literal-colour roster table); sizes and token keys in src/cc/board/chrome.ts; usePullRefresh in src/cc/ for the other tabs. No FOUNDATION GAP. HEADS-UP US-010d: the card pushes routes.cc.ticket(id) = /cc/ticket/{id}; app/(app)/cc/ticket/[taskId].tsx does not exist yet, and its sheet presentation goes in app/(app)/cc/_layout.tsx."
     },
     {
       "id": "US-010d",
