@@ -10,6 +10,7 @@ import { IOSConfig } from 'expo/config-plugins';
 import { describe, expect, it } from 'vitest';
 
 import appJson from '../../../app.json';
+import packageJson from '../../../package.json';
 
 const { expo } = appJson;
 
@@ -97,6 +98,20 @@ describe('app.json plugins', () => {
 
   it('does not wire the @clerk/expo plugin (it adds Sign in with Apple by default)', () => {
     expect(pluginNames(plugins)).not.toContain('@clerk/expo');
+  });
+});
+
+// A native module added after US-002a still has to be in the first build (D-NATIVE-ONCE).
+describe('package.json: native modules added for later waves', () => {
+  const sdkPins = requireFromRoot('expo/bundledNativeModules.json') as Record<string, string>;
+
+  it("carries expo-device at SDK 54's range, for the model name A4 registers a phone with (US-002g)", () => {
+    expect(packageJson.dependencies).toHaveProperty('expo-device', sdkPins['expo-device']);
+  });
+
+  it('needs no plugin for expo-device (it ships none)', () => {
+    expect(pluginNames(expo.plugins as readonly PluginEntry[])).not.toContain('expo-device');
+    expect(() => requireFromRoot.resolve('expo-device/app.plugin.js')).toThrow();
   });
 });
 

@@ -29,6 +29,7 @@ into `app.json` ([Config plugins](#config-plugins)). The last column maps each i
 | Sign-in storage                                | `expo-secure-store`                   | 15.0.8 (`~15.0.8`)                        | US-001                                                                                                                                                                                                                                  | `expo-secure-store` (wired in US-001)                                                                                              | `LAContext` → `NSFaceIDUsageDescription`                                                                                                                                 |
 | Push, actions                                  | `expo-notifications`                  | 0.32.17 (`~0.32.17`)                      | US-001                                                                                                                                                                                                                                  | `expo-notifications`, `enableBackgroundRemoteNotifications: true`                                                                  | none (CoreLocation `CLRegion` data type only, no `CLLocationManager`)                                                                                                    |
 | Push, actions                                  | `expo-local-authentication`           | 17.0.9 (`~17.0.9`)                        | expo install                                                                                                                                                                                                                            | `expo-local-authentication`                                                                                                        | `LAContext` → `NSFaceIDUsageDescription`                                                                                                                                 |
+| Push: the phone's model name (A4)              | `expo-device`                         | 8.0.10 (`~8.0.10`)                        | expo install (US-002g, lead 21 Oct); peers `expo "*"`                                                                                                                                                                                   | none (ships no `app.plugin.js`)                                                                                                    | none (UIKit `UIDevice` and `sysctl` only, no privacy framework); see [expo-device](#expo-device)                                                                         |
 | QR scan                                        | `expo-camera`                         | 17.0.10 (`~17.0.10`)                      | expo install                                                                                                                                                                                                                            | `expo-camera`, `barcodeScannerEnabled: true`                                                                                       | `AVCaptureDevice` → `NSCameraUsageDescription`, `NSMicrophoneUsageDescription`; `CMMotionManager` → `NSMotionUsageDescription`                                           |
 | Attachments                                    | `expo-image-picker`                   | 17.0.11 (`~17.0.11`)                      | expo install                                                                                                                                                                                                                            | `expo-image-picker`                                                                                                                | `PHAsset`, `PHPhotoLibrary` → `NSPhotoLibraryUsageDescription`; `.addOnly` → `NSPhotoLibraryAddUsageDescription`; `AVCaptureDevice` (video) → `NSCameraUsageDescription` |
 | Attachments                                    | `expo-document-picker`                | 14.0.8 (`~14.0.8`)                        | expo install                                                                                                                                                                                                                            | `expo-document-picker`                                                                                                             | none                                                                                                                                                                     |
@@ -109,6 +110,21 @@ React Native 0.85.3 in their own repos (devDependencies); no React Native versio
 was found in either podspec or `android/build.gradle`. The native compile is proven only by the first iOS build (OT-3).
 
 3.x (no Nitro) was not taken: K8 takes the newest compatible line.
+
+## expo-device
+
+Installed in US-002g (lead, 21 Oct, from the A4 push kit) so the first native build carries it:
+A4 registers a hosted phone with its model name (W2 US-009) and Studio lists it under that name,
+without another iOS build. The app reads `Device.modelName` for that device name and nothing else;
+no code imports it until A4.
+
+- **Permissions:** none. It ships no config plugin, references no privacy framework (UIKit
+  `UIDevice`, `sysctl`, `ProcessInfo`), needs no usage key, and its Android manifest declares no
+  permission.
+- **Privacy manifest:** none to add. Its `ios/PrivacyInfo.xcprivacy` declares SystemBootTime
+  35F9.1 (`ProcessInfo.systemUptime` for `getUptimeAsync`), already in the union through
+  `boost`, so `ios.privacyManifests` is unchanged ([Privacy manifest](#privacy-manifest)).
+- **Dependencies:** `ua-parser-js` 0.7.41, used by its web implementation only.
 
 ## What is not installed
 
@@ -235,13 +251,15 @@ result.
 
 **Accessed API types** are the union of every `PrivacyInfo.xcprivacy` under `node_modules`
 (`find node_modules -name PrivacyInfo.xcprivacy`, each read with `plutil -convert json -o -`,
-21 Oct 2026), de-duplicated by category with every reason kept, so the app's own manifest covers
-those pods however CocoaPods links them.
+21 Oct 2026; re-run in US-002g after `expo-device`, 13 files, same union), de-duplicated by
+category with every reason kept, so the app's own manifest covers those pods however CocoaPods
+links them.
 
 | File                                                                | Category: reasons                                         |
 | ------------------------------------------------------------------- | --------------------------------------------------------- |
 | `expo-application/ios/PrivacyInfo.xcprivacy`                        | FileTimestamp: C617.1                                     |
 | `expo-constants/ios/PrivacyInfo.xcprivacy`                          | UserDefaults: CA92.1                                      |
+| `expo-device/ios/PrivacyInfo.xcprivacy`                             | SystemBootTime: 35F9.1                                    |
 | `expo-file-system/ios/PrivacyInfo.xcprivacy`                        | FileTimestamp: 0A2A.1, 3B52.1 · DiskSpace: E174.1, 85F4.1 |
 | `expo-localization/ios/PrivacyInfo.xcprivacy`                       | UserDefaults: CA92.1                                      |
 | `expo-notifications/ios/PrivacyInfo.xcprivacy`                      | UserDefaults: CA92.1                                      |
@@ -419,6 +437,7 @@ entry exists, so there is no exclusion to justify.
 ## Installing
 
 `npx expo install <pkgs> -- --ignore-scripts` adds a bare config plugin to `app.json` for
-packages it knows (it added `@sentry/react-native` and `expo-localization` on 20 Oct).
+packages it knows (it added `@sentry/react-native` and `expo-localization` on 20 Oct;
+`expo-device` ships no plugin, so US-002g left `app.json` alone).
 Plugins are wired with their options by US-002b, so that change was reverted: in this
 story only `package.json`, `package-lock.json` and this file change.
