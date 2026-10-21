@@ -11,6 +11,33 @@ export const BOARD_COPY = Object.freeze({
   feedbackRequired: 'Say what to change before you send it back.',
   /** Longer than the server keeps (MAX_REVIEW_FEEDBACK_CHARS): it would be cut off silently. */
   feedbackTooLong: (max: number) => `Keep the note under ${max} characters.`,
+  /** A ticket no agent of this workspace holds (the web's word). */
+  unassigned: 'Unassigned',
+  /** Between the kind and a raised priority on a card's kind row: 'MISSION · HIGH'. */
+  separator: '·',
+  filtersLabel: 'Filter the board by status',
+  listLabel: 'Tickets',
+  loading: 'Loading the board…',
+  /** What a card opens, said after its own label. */
+  openHint: 'Opens the ticket',
+  /** An empty filter: the column's word in the title, a line on what would be there. */
+  emptyAll: Object.freeze({
+    title: 'Nothing on the board',
+    message: 'Tickets show here when you or Auto file work.',
+  }),
+  emptyTitle: (word: string) => `Nothing in ${word}`,
+  emptyMessages: Object.freeze({
+    inbox: 'No ticket is waiting to be picked up.',
+    assigned: 'No ticket is waiting for its agent to start.',
+    in_progress: 'No agent is working on a ticket right now.',
+    review: 'Nothing is waiting for your verdict.',
+    blocked: 'Nothing is held up.',
+    done: 'No ticket has finished yet.',
+    failed: 'No ticket has failed.',
+    cancelled: 'No ticket was cancelled or closed.',
+  }),
+  /** A status this version does not know, once its last ticket has moved on. */
+  emptyOther: 'No ticket has this status now.',
 });
 
 /** The Command Centre's frame (handoff §2): the top bar, the head and the tabs. */
