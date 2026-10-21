@@ -65,7 +65,16 @@ describe('src/ui: accessibility', () => {
 
   it('covers every pressable and input primitive', () => {
     expect(interactive.map((component) => component.name).sort()).toEqual(
-      ['Button', 'Card', 'IconButton', 'ListRow', 'Pill', 'SegmentedControl', 'TextField'].sort(),
+      [
+        'Button',
+        'Card',
+        'IconButton',
+        'ListRow',
+        'Pill',
+        'SegmentedControl',
+        'Sheet',
+        'TextField',
+      ].sort(),
     );
   });
 
