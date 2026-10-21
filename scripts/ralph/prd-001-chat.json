@@ -1,0 +1,281 @@
+{
+  "project": "Automatos Go — PRD-001 wave A2: Studio layout and chat",
+  "prd": "docs/prd/PRD-001-AUTOMATOS-GO-V1.md (AutomatosAI/automatos-go#2). Stories US-008 and US-009 re-cut for one session each.",
+  "backendPrd": "automatos-ai docs/PRDS/PRD-266-AUTOMATOS-GO-BACKEND.md (AutomatosAI/automatos-ai#1257)",
+  "branchName": "feat/a2-studio-chat",
+  "base": "origin/feat/a0-a1-foundation",
+  "worktree": "/Users/gkavanagh/Development/Automatos-AI-Platform/.worktrees/automatos-go/feat+a2-studio-chat",
+  "description": "Talk to Auto on the phone: the Studio home (header with the Command Centre button, the needs strip, the Auto thread), streaming turns with receipts and a Stop that cancels on the server, Auto's cards (file a Mission, approve a plan, grant or deny a tool, task cards, withdraw offers, limit and attachment notices), the pill composer with the AI label, older chats, 'Ask Auto about' a ticket, attachments (camera, photos, files, HEIC to JPEG) and Report this on Auto's messages. STUDIO LAYOUT ONLY (styles are wave A5) and TOKENS ONLY. This wave is JavaScript only: no dependency, no native module, no app.json change (it ships over the air). It runs IN PARALLEL with the A3 Command Centre kit on the same foundation and must stay file-disjoint (KC1). THIS JSON IS THE BINDING CONTRACT.",
+  "references": {
+    "prd": "docs/prd/PRD-001-AUTOMATOS-GO-V1.md — §4.4 data, §4.6 rules (AI label), §4.7 screens (Home, Chat, Every surface: Report this), §4.11",
+    "foundation": "This branch's foundation (feat/a0-a1-foundation) — read before building: src/api/{client,stream,errors,strings,query-keys,live,needs-you,reports,workspace,capabilities}.ts, src/auth/role.ts, src/navigation/{routes,web-links}.ts, src/ui/ (primitives, Sheet, Toast, ReportSheet, CommandCentreButton), src/styles/ (tokens, theme, type, ai-label.tsx), src/core/{ai-sdk-stream,turn-reducer}.ts and the vendored src/core/web/lib/chat/*, lib/discussion.ts, lib/ai-label/copy.ts, components/play/chat/labels.ts. scripts/ralph/prd-001-foundation.json lists what each foundation story promised.",
+    "automatosAi": "/Users/gkavanagh/Development/Automatos-AI-Platform/.worktrees/automatos-ai/mobile-review-main — READ ONLY @ 630fc1c85. Behavioural reference for each card: frontend/components/chatbot/{message.tsx, mission-suggestion-card.tsx, withdraw-offer-card.tsx, discussion-bar.tsx, rebrief-dialog.tsx, message-box.tsx}, frontend/components/play/chat/receipts.tsx, frontend/lib/chat/hooks.ts (send/stop/cancel), frontend/lib/chat/api.ts (history, messages), orchestrator/api/chat.py (request and response shapes).",
+    "digests": "/Users/gkavanagh/Development/Automatos-AI-Platform/reports/mobile-review-2026-10-20/digests/chat-api.md — the ChatRequest body (line 7), the d: frame catalogue (8), the turn order (9), receipts (11), lifecycle: detached turns, Stop = POST /api/chat/{id}/cancel, turnInFlight, chat_changed (12), mission suggestion and approvals (14), the AI label (15), persisted messages and history (17), the endpoints (20-45).",
+    "designStudio": "/Users/gkavanagh/Development/Automatos-AI-Platform/DUMPING AREA/design_handoff_automatos_mobile/README.md §1 'Auto (home / chat)' — header, home variant `needs` (2a), the thread, 'What Auto did', the link button, typing; AutomatosApp.dc.html for exact spacing. Decisions override it: D29 composer = pill input + round send/stop + [+], NO suggestion chips; D30 no Plan toggle (no `modes` variant); D38 nothing under 11 pt."
+  },
+  "localChecks": {
+    "allowed": "npm run typecheck, npm run lint, npx vitest run, npm run check:bundle, npm run check:core, npm run check:routes, bash scripts/ralph/acceptance-prd001-chat.sh --no-ci. node_modules comes from setup-worktree.sh (npm ci --ignore-scripts or a clone of the foundation worktree's).",
+    "never": "npm install / npx expo install / any dependency change, expo start, expo run:*, expo prebuild, any eas command, a simulator, Metro's dev server, any server, gh workflow run, git push, opening a PR."
+  },
+  "decisions": [
+    {"id": "D-NO-WEBVIEW", "text": "No WebView; Studio links open the system browser through the foundation's web-link mapping.", "source": "FR-10, D3"},
+    {"id": "D-HOME", "text": "Home is the Auto thread with the server's needs-you rows above it (the handoff's `needs` variant 2a); older chats sit behind a list button; the morning digest will arrive as Auto's message in the same thread (A4, nothing to build here).", "source": "D28"},
+    {"id": "D-COMPOSER", "text": "Pill input, round send/stop button, [+] for camera, photo library and files; Return inserts a newline; the button sends or stops; NO suggestion chips.", "source": "D29"},
+    {"id": "D-NO-PLAN", "text": "No Plan toggle: never send planMode or missionMode. Auto's own cards render and work in the thread as in Studio.", "source": "D30"},
+    {"id": "D-CARDS", "text": "Mission suggestion (file it → POST /api/missions), plan approval (mission_approval → POST /api/missions/{id}/approve | /reject), tool approval (tool_approval → POST /api/v1/approval-grants/{id}/grant | /deny), task card, withdraw offer (Withdraw = deny the grant, Keep it = nothing), limit and attachment notices. Each refuses honestly when the role cannot act.", "source": "D30, D16, D17"},
+    {"id": "D-ASK-AUTO", "text": "'Ask Auto about #0419' opens a NEW conversation with the ticket in the request's page context (the web's Discuss, vendored lib/discussion.ts) and offers 'Update ticket and re-queue' (POST /api/v1/tasks/{id}/rebrief).", "source": "D31"},
+    {"id": "D-STOP", "text": "Stop cancels on the server (POST /api/chat/{chat_id}/cancel) as well as aborting the read; dropping the connection alone never cancels a turn.", "source": "PRD-001 §4.7; digests/chat-api.md line 12"},
+    {"id": "D-STALE-CHAT", "text": "A stale chat id silently creates a new chat on the server, so GET /api/chat/{id} is checked before a cached id is reused; reopening a chat whose turn is in flight shows 'Auto is working…' and refetches on chat_changed.", "source": "PRD-001 §4.4"},
+    {"id": "D-AI-LABEL", "text": "The foundation's AiLabel sits by the composer on every chat screen, in its fixed colours; while useAiLabelVisible() is false the composer is disabled with the vendored paused text.", "source": "§4.6, FR-8, PRD-264 EUAI-11a"},
+    {"id": "D-ROLES", "text": "Viewers get history read-only with 'Ask your workspace owner for editor access to talk to Auto' and a disabled composer; owners, admins and editors chat and act on cards (src/auth/role.ts roleCan).", "source": "D16, D17"},
+    {"id": "D-NO-BILLING", "text": "Nothing about plans, credits or prices: limit_reached frames and trial_exhausted / rate_limited errors render this kit's fixed copy (e.g. 'Auto has reached a limit for now. Ask your workspace owner.'), never a server string that may name a plan.", "source": "D8, FR-11"},
+    {"id": "D-CACHE", "text": "Chat message bodies are never persisted (the foundation's persister excludes the chat families; do not add a second store).", "source": "§4.4"},
+    {"id": "D-ONE-CLIENT", "text": "All HTTP through the foundation's src/api client and stream; zod at every boundary; unknown frames and fields ignored.", "source": "§4.4, §4.11"},
+    {"id": "D-SHAPE", "text": "Files 200-400 lines (never over 800), functions under 50, components under 150, nesting under 4; pure logic in plain TS with tests; immutability; tokens only.", "source": "§4.11"},
+    {"id": "D-NATIVE-ONCE", "text": "No dependency, native module, config plugin or app.json change in this wave (package.json, package-lock.json, app.json, eas.json untouched — gate-enforced).", "source": "§4.2, D43"},
+    {"id": "KC1-FILES", "text": "This kit may create or change ONLY: src/chat/**, app/(app)/index.tsx (replaces the foundation's placeholder home), app/(app)/chat/**, app/(app)/chats.tsx, and its own kit files under scripts/ralph/. Everything else — src/api, src/auth, src/core, src/styles, src/ui, src/navigation, src/storage, app/_layout.tsx, app/(app)/_layout.tsx, app/(app)/cc/**, app/(app)/settings/**, src/cc/**, package.json, app.json, .github — belongs to the foundation or the A3 kit (gate-enforced allowlist).", "source": "kit (parallel waves)"},
+    {"id": "KC2-FOUNDATION-GAPS", "text": "The foundation's contracts are fixed for this wave. If one is missing or wrong, build the smallest feature-local adapter under src/chat/ and write 'FOUNDATION GAP: <what, where>' in the story's DONE mark; never edit a foundation file. A missing UI primitive is built feature-local under src/chat/components/.", "source": "kit"},
+    {"id": "KC3-ROUTES", "text": "Every server path this wave calls is a constant in src/chat/routes.ts (the route check reads it); a route PRD-266 adds is marked pendingUpstream. App navigation uses the foundation's src/navigation/routes.ts builders only (cc.questions, cc.ticket(taskId), cc.social(postId), settings, chat(id), chats).", "source": "kit, K4"},
+    {"id": "KC4-HOME-THREAD", "text": "The home thread is the newest conversation from GET /api/chat/history after the stale check, or a draft with no id; the first message of a draft creates the chat and the chat-id frame tells the app its id. 'New chat' starts a draft.", "source": "kit (D28, §4.4)"},
+    {"id": "KC5-PLAIN-TEXT", "text": "Auto's answer renders as plain text with paragraphs, as the handoff draws it (14/1.55, no bubble); a markdown renderer would be a new dependency and is not in this wave (open question for Gerard).", "source": "kit"}
+  ],
+  "userStories": [
+    {
+      "id": "US-008a",
+      "prdStory": "US-008",
+      "title": "Chat data layer: the route table, zod schemas and API functions over the foundation client",
+      "description": "As the chat, I need typed calls for every chat endpoint (digests/chat-api.md lines 7, 14, 17, 20-45), all through the foundation's client and stream (D-ONE-CLIENT).",
+      "acceptanceCriteria": [
+        "src/chat/routes.ts exports CHAT_ROUTES with {method, path} for: POST /api/chat, GET /api/chat/{chat_id}, GET /api/chat/{chat_id}/messages, GET /api/chat/history, POST /api/chat/{chat_id}/cancel, GET /api/chat/agents, POST /api/attachments, POST /api/missions, POST /api/missions/{mission_id}/approve, POST /api/missions/{mission_id}/reject, POST /api/v1/approval-grants/{grant_id}/grant, POST /api/v1/approval-grants/{grant_id}/deny, GET /api/v1/tasks/{task_id}, POST /api/v1/tasks/{task_id}/rebrief; npm run check:routes passes",
+        "src/chat/schemas.ts: zod for the chat ({id, title, turnInFlight, …}), the persisted message ({id, role, parts: receipts | reasoning | narration | text | task_card | file, attachments, source, createdAt}), the history row ({id, title, createdAt, updatedAt, lastMessagePreview, kind 'user' | 'auto'}), the agents list and each card action's response; unknown fields ignored",
+        "src/chat/request.ts (pure): buildChatRequest({chatId?, text, files?, context?}) → the ChatRequest body (message {role 'user', parts [{type 'text', text} | {type 'file', filename, mediaType, url, attachment_id}]}, attachment_ids, selectedVisibilityType 'private', context {page 'chat', route, selected?}); never sets planMode or missionMode (D-NO-PLAN)",
+        "src/chat/api.ts exports sendTurn(client, body, onFrame, signal) (through src/api/stream.ts), cancelTurn, fetchChat, fetchMessages, fetchHistory(limit, startingAfter?), fetchAgents; card actions live with their cards (US-008d/e)",
+        "src/chat/__tests__/: request building (text, files, ticket context, no planMode), each schema with unknown fields, history paging params, sendTurn feeding frames from a fake stream",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes"
+      ],
+      "files": ["src/chat/routes.ts", "src/chat/schemas.ts", "src/chat/request.ts", "src/chat/api.ts", "src/chat/__tests__/"],
+      "priority": 1,
+      "passes": false,
+      "notes": "A stale or unknown id silently creates a NEW chat (chat.py:263-281); another user's chat is 403. GET /api/chat/history takes only `limit` today and ignores starting_after (PRD-266 §4.9 fixes it): send it anyway and dedupe."
+    },
+    {
+      "id": "US-008b",
+      "prdStory": "US-008",
+      "title": "The chat controller: one thread's state, send, Stop, the stale-id check and in-flight resume",
+      "description": "As a user, I want my turn to stream, Stop to really stop, and a reopened chat to show 'Auto is working…' when a turn is still running (D-STOP, D-STALE-CHAT). The state is a pure reducer over the foundation's turnReducer; the hook only wires it.",
+      "acceptanceCriteria": [
+        "src/chat/controller/thread.ts (pure): threadReducer(state, action) with actions loaded(messages), send(draft), frame(f) (delegates the live turn to turnReducer from src/core/turn-reducer.ts), finished, failed(apiError), stopped, refetched(messages) (merge by id, never duplicate); a deep-frozen input proves no mutation",
+        "ensureLiveChatId(client, cachedId) → the id when GET /api/chat/{id} answers, null (start a draft) on 404 or 403; never reuses an id it has not checked this launch",
+        "Stop: aborts the stream read AND calls cancelTurn; the state shows stopped, not failed",
+        "Reopen: when fetchChat reports turnInFlight, the thread shows working and refetches messages on the foundation's chat_changed event for this chat (useLiveEvent) or on resume",
+        "src/chat/controller/use-thread.ts: the hook wiring client, stream, live events and query keys from src/api/query-keys.ts (chat.thread, chat.messages); nothing persisted (D-CACHE)",
+        "src/chat/__tests__/thread.test.ts: send → frames → finished; Stop calls cancel; stale id → draft; turnInFlight → working → chat_changed → refetched merge; e: error → failed with the taxonomy kind",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes"
+      ],
+      "files": ["src/chat/controller/", "src/chat/__tests__/"],
+      "priority": 2,
+      "passes": false,
+      "notes": "The turn is a detached producer on the server: closing the connection only marks client_gone; the reply is still saved (digest line 12)."
+    },
+    {
+      "id": "US-008c",
+      "prdStory": "US-008",
+      "title": "Thread rendering: messages, 'What Auto did' receipts, tool lines, working indicator, notices and errors",
+      "description": "As a user, I want to read Auto's reply and see what it did, exactly as Studio shows it (the handoff's thread; receipts mirror components/play/chat/receipts.tsx).",
+      "acceptanceCriteria": [
+        "src/chat/components/: MessageList (a FlatList that scrolls to the bottom only when a message is added), UserBubble (ink bubble, max 82%), AutoMessage (the 'A' mark + 'AUTO' mono label + plain text, KC5), ReceiptsCard ('What Auto did' with ✓ / … / ✕ / – marks from the vendored receipts and labels, the closing note), ToolLines (running and finished tool calls from the vendored labels), WorkingIndicator ('Auto is working…', the pulse off under Reduce Motion), TurnNotice (limit, attachment unavailable, errors with Retry through the vendored retry.ts)",
+        "src/chat/view-model.ts (pure): a message → render rows (text, receipts lines with marks and words, tool lines, notices); limit and trial/rate errors use this kit's fixed copy in src/chat/strings.ts (D-NO-BILLING); receipt links go through the foundation's appRouteForWebLink",
+        "Every status mark also has a word for screen readers (§4.6); tokens only; text >= 11 pt",
+        "src/chat/__tests__/view-model.test.ts: each receipt status, a waiting tool line (not failed), narration removed, each notice, a limit frame never echoing server text",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": ["src/chat/components/", "src/chat/view-model.ts", "src/chat/strings.ts", "src/chat/__tests__/"],
+      "priority": 3,
+      "passes": false,
+      "notes": "Receipt rendering rules (digest line 11): done → 'subject: effect'; waiting → 'effect — waiting for you'; refused/skipped → 'subject: tried, refused|not run: reason'; closing note NO_ACTIONS / NOTHING_ON_THE_BOARD."
+    },
+    {
+      "id": "US-008d",
+      "prdStory": "US-008",
+      "title": "Auto's cards I: the Mission suggestion (file it) and the plan approval",
+      "description": "As an owner, admin or editor, I want to file the Mission Auto suggests and approve or reject its plan from the thread (D-CARDS).",
+      "acceptanceCriteria": [
+        "src/chat/cards/MissionSuggestionCard.tsx: shows the suggested goal; 'File it' → POST /api/missions {goal, config: {source: 'chat', chat_id, context_messages: the last 5}} (as frontend/components/chatbot/mission-suggestion-card.tsx); the filed state shows the Mission and links to it through the vendored missionHref and the foundation's appRouteForWebLink",
+        "src/chat/cards/PlanApprovalCard.tsx: the mission_approval card (goal, numbered tasks with agent roles, risk and oversight text); Approve → POST /api/missions/{id}/approve with an empty body (extra=forbid); Reject → POST /api/missions/{id}/reject {reason} (a reason is required)",
+        "src/chat/cards/actions.ts (pure): payload builders and canAct(role) from src/auth/role.ts; a viewer sees the card read-only with the D17 copy, never a button that will 403",
+        "Server refusals (403, 409, 422) render the taxonomy copy or the server's detail.message where it is a user-facing sentence, never a status code",
+        "src/chat/__tests__/cards-mission.test.ts: payloads (context_messages capped at 5), reject without a reason refused client-side, viewer read-only",
+        "npm run check:routes passes",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes"
+      ],
+      "files": ["src/chat/cards/", "src/chat/__tests__/"],
+      "priority": 4,
+      "passes": false,
+      "notes": "Face ID before approve (D19) is a setting built in A4 (US-014); do not build it here."
+    },
+    {
+      "id": "US-008e",
+      "prdStory": "US-008",
+      "title": "Auto's cards II: tool approval, task card, withdraw offer",
+      "description": "As an owner, admin or editor, I want to grant or deny a tool Auto asks for, open the ticket Auto filed, and withdraw a request I no longer want (D-CARDS).",
+      "acceptanceCriteria": [
+        "src/chat/cards/ToolApprovalCard.tsx: the tool_approval card (action, message, permission level, risk); Grant → POST /api/v1/approval-grants/{grant_id}/grant, Deny → /deny; the waiting state from the tool-end 'waiting' frame is drawn as waiting, not failed; a 409 'already answered' shows the server's honest words",
+        "src/chat/cards/TaskCard.tsx: '#0431: filed to Inbox' style card with a link to the foundation's cc.ticket(taskId)",
+        "src/chat/cards/WithdrawOfferCard.tsx: each request with Withdraw (= deny the grant) and Keep it (no call); settled states 'Withdrawn.' / 'Kept — it still waits for your yes.' (frontend/components/chatbot/withdraw-offer-card.tsx)",
+        "Role gating and refusal copy as US-008d (shared helpers in src/chat/cards/actions.ts)",
+        "src/chat/__tests__/cards-tools.test.ts: grant/deny payloads, waiting vs failed, withdraw calls deny and keep calls nothing, viewer read-only",
+        "npm run check:routes passes",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes"
+      ],
+      "files": ["src/chat/cards/", "src/chat/__tests__/"],
+      "priority": 5,
+      "passes": false,
+      "notes": "Today the approval-grant verbs are owner/admin only on the server (PRD-266 W1 opens them to editors, D16). Gate the UI on roleCan; the server's 403 for an editor before W1 deploys renders the taxonomy's forbidden copy."
+    },
+    {
+      "id": "US-009a",
+      "prdStory": "US-009",
+      "title": "The composer: pill input, round send/stop, Return for a newline, the AI label fence",
+      "description": "As a user, I want to write to Auto in a pill composer whose button sends or stops (D-COMPOSER), with the AI label always beside it (D-AI-LABEL).",
+      "acceptanceCriteria": [
+        "src/chat/composer/composer-state.ts (pure): composerState({text, streaming, role, aiLabelVisible, uploading}) → {buttonMode 'send' | 'stop' | 'disabled', inputEditable, placeholder, notice}; send disabled when the text is blank and nothing is attached; stop while streaming; viewer → disabled with the D17 copy; label not visible → disabled with the vendored AI_LABEL_PAUSED_TEXT",
+        "src/chat/composer/Composer.tsx: a multiline pill TextField where Return inserts a newline (no submit on Return), the 42 px round button (arrow-up / square icons from lucide), a [+] button slot for US-009b, and the foundation's AiLabel rendered beside it with useAiLabelVisible feeding composerState",
+        "No suggestion chips, no Plan toggle, no voice button (A6) in the composer",
+        "src/chat/__tests__/composer-state.test.ts covers every branch above",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": ["src/chat/composer/", "src/chat/__tests__/"],
+      "priority": 6,
+      "passes": false,
+      "notes": "The handoff's 2j composer minus the chips. The AI label's colours are fixed by the foundation; never restyle it."
+    },
+    {
+      "id": "US-008f",
+      "prdStory": "US-008",
+      "title": "The Studio home: header, needs strip, the Auto thread and the chat route",
+      "description": "As a user, I want to open the app and talk to Auto, with what needs me at the top (D-HOME, the handoff's 2a).",
+      "acceptanceCriteria": [
+        "app/(app)/index.tsx replaces the foundation's placeholder with the home: src/chat/home/HomeHeader.tsx (the brand mark from assets/brand + 'automatos' in Newsreader, the mono line 'WORKSPACE · N AGENTS' or 'AUTO IS WORKING' while streaming, the foundation's CommandCentreButton, the avatar chip → routes.settings), src/chat/home/NeedsStrip.tsx, the thread (US-008c) and the composer (US-009a)",
+        "src/chat/home/needs-strip.ts (pure): the foundation's useNeedsYou() rows → strip cards ('NEEDS YOU · N' + 'Command Centre →'; StatusPip + word; serif title clamped to 2 lines; mono meta like 'QUESTION · #0419'); a question → routes.cc.questions, a review ticket → routes.cc.ticket(taskId), a social post awaiting approval → routes.cc.social(postId); the count is the server's total (D26), never recomputed; hidden when zero",
+        "app/(app)/chat/[id].tsx renders one conversation (an id, or 'new' for a draft) with the same thread and composer (src/chat/screens/ChatScreen.tsx shared by home and route)",
+        "The home thread follows KC4 (newest conversation after the stale check, else a draft)",
+        "src/chat/__tests__/needs-strip.test.ts: each row kind → route, count from total, empty → hidden",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": ["app/(app)/index.tsx", "app/(app)/chat/", "src/chat/home/", "src/chat/screens/", "src/chat/__tests__/"],
+      "priority": 7,
+      "passes": false,
+      "notes": "The needs-you payload shape (rows per kind) is in digests/command-centre-api.md; parse only through the foundation's needs-you module."
+    },
+    {
+      "id": "US-008g",
+      "prdStory": "US-008",
+      "title": "Older chats: the list behind the list button",
+      "description": "As a user, I want to reopen an older conversation (D28: older chats behind a list button; PRD open question 3: newest 50, paged).",
+      "acceptanceCriteria": [
+        "app/(app)/chats.tsx: newest first, 50 per page, 'Load more'; each row title, last-message preview, relative time; 'New chat' → routes.chat('new'); a row → routes.chat(id); reached from a list button in the home header",
+        "src/chat/history/history.ts (pure): page merging with dedupe by id and an end-of-list rule that also stops when the server ignored starting_after (no new ids)",
+        "src/chat/__tests__/history.test.ts: merge, dedupe, the ignored-cursor stop",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": ["app/(app)/chats.tsx", "src/chat/history/", "src/chat/home/HomeHeader.tsx", "src/chat/__tests__/"],
+      "priority": 8,
+      "passes": false,
+      "notes": "History rows carry kind 'user' | 'auto' (Auto's unprompted threads); show both."
+    },
+    {
+      "id": "US-008h",
+      "prdStory": "US-008 (D31)",
+      "title": "Ask Auto about a ticket: the discussion conversation and 'Update ticket and re-queue'",
+      "description": "As a user, I want 'Ask Auto about #0419' (from the Command Centre's ticket sheet, wave A3) to open a conversation about that ticket and let me re-queue it with the agreed brief (D-ASK-AUTO). The foundation's routes.chatWithTicket(taskId) is the contract both waves use.",
+      "acceptanceCriteria": [
+        "app/(app)/chat/[id].tsx (id 'new' with the ticket param decoded by the foundation's helper) loads the ticket (GET /api/v1/tasks/{task_id}), builds the vendored discussionOf(task) and sends every message of that conversation with context.selected = discussionSelection(discussion) (vendored lib/discussion.ts)",
+        "src/chat/discussion/DiscussionBar.tsx: 'Discussing #0419 — <title>' with 'Update ticket and re-queue' and End; a missing ticket shows 'Ticket #… could not be opened here. It may be in another workspace.'",
+        "src/chat/discussion/RebriefSheet.tsx: the brief prefilled with the vendored proposedBrief(messages), capped at the vendored MAX_BRIEF_CHARS; Save → POST /api/v1/tasks/{task_id}/rebrief {brief}; role-gated ('approve')",
+        "src/chat/__tests__/discussion.test.ts: the request carries the selection, the brief cap, rebrief payload, missing ticket copy",
+        "npm run check:routes passes",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": ["app/(app)/chat/", "src/chat/discussion/", "src/chat/__tests__/"],
+      "priority": 9,
+      "passes": false,
+      "notes": "Web reference: frontend/components/chatbot/discussion-bar.tsx and rebrief-dialog.tsx; on a Mission's ticket the web points at the Mission instead (D4 of PRD-252) — mirror that with the vendored missionHref and the foundation's appRouteForWebLink."
+    },
+    {
+      "id": "US-009b",
+      "prdStory": "US-009",
+      "title": "Attachments: camera, photo library and files, HEIC to JPEG, upload, attach to the message",
+      "description": "As a user, I want to send a photo or a file to Auto (D-COMPOSER). Modules (installed by the foundation): expo-image-picker, expo-document-picker, expo-image-manipulator, expo-file-system.",
+      "acceptanceCriteria": [
+        "src/chat/attachments/AttachMenu.tsx: the composer's [+] opens a Sheet with Camera, Photo library, Files; permissions asked at the tap, never at launch; a denied permission explains how to allow it in Settings",
+        "src/chat/attachments/attachments.ts (pure): isHeic(mime, filename) → convert; the converted JPEG's name and mime; the ChatRequest file part {type 'file', filename, mediaType, url, attachment_id} and attachment_ids from an upload response",
+        "src/chat/attachments/upload.ts: HEIC/HEIF converted to JPEG with expo-image-manipulator BEFORE upload; POST /api/attachments as multipart FormData through the foundation client; progress/uploading state feeds composerState; the server's refusal (type or size) shows its words through the taxonomy",
+        "Attachments appear as removable chips above the input until sent",
+        "src/chat/__tests__/attachments.test.ts: HEIC detection by mime and by extension, the rename, part building, multiple attachments",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes",
+        "EVERY image leaves the phone re-encoded (lead, 20 Oct; store privacy labels): camera shots, photo-library picks and image files chosen in Files (JPEG, HEIC/HEIF, PNG, WebP) go through expo-image-manipulator before upload, so no EXIF or GPS metadata is sent; non-image files (PDF, DOCX, XLSX…) upload unchanged. attachments.ts exports needsReencode(mime, filename) (pure) and the test covers each image type and each non-image type",
+        "Android uses the system photo picker (expo-image-picker's default, no legacy picker) and the build requests no READ_MEDIA_IMAGES / READ_MEDIA_VIDEO / READ_EXTERNAL_STORAGE permission; a test or gate check reads app.json's android.permissions and blockedPermissions to prove it"
+      ],
+      "files": ["src/chat/attachments/", "src/chat/composer/Composer.tsx", "src/chat/__tests__/"],
+      "priority": 10,
+      "passes": false,
+      "notes": "HEIC is not on the server's attachment allow-list today (D29), hence the conversion on the phone."
+    },
+    {
+      "id": "US-009c",
+      "prdStory": "US-009",
+      "title": "Report this on Auto's messages",
+      "description": "As a user, I want to report an Auto message (D15). The foundation's ReportSheet does the work; this story mounts it on Auto's messages.",
+      "acceptanceCriteria": [
+        "A long-press (and an accessible action) on an Auto message offers 'Report this', opening the foundation's ReportSheet with target_type 'message' and the message id; nothing on the user's own messages",
+        "Hidden when the foundation's gate says no (capability report_content absent — true until PRD-266 US-016 deploys — or the role cannot report); never a second report implementation (no POST /api/v1/reports in src/chat)",
+        "src/chat/__tests__/report.test.ts: the action appears only on Auto messages and only when the gate allows",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes",
+        "bash scripts/ralph/acceptance-prd001-chat.sh --no-ci passes"
+      ],
+      "files": ["src/chat/components/AutoMessage.tsx", "src/chat/report/", "src/chat/__tests__/"],
+      "priority": 11,
+      "passes": false,
+      "notes": "The device check that the report reaches the owner and the moderation inbox is an ownerTest after PRD-266 W3."
+    }
+  ],
+  "ownerTest": [
+    {"id": "OT-C1", "what": "On Gerard's iPhone (the A0 internal build + this wave over the air): the home in Studio light and dark — header, needs strip with real rows, the thread; screenshots in both.", "why": "PRD-001 §5: UI stories attach screenshots from an EAS internal build."},
+    {"id": "OT-C2", "what": "Against hosted Studio: a streamed reply with receipts; Stop mid-turn cancels on the server (the reply does not complete later); leave and reopen during a turn → 'Auto is working…' then the reply.", "why": "Needs a live server."},
+    {"id": "OT-C3", "what": "Auto's cards on device: file a suggested Mission, approve and reject a plan, grant and deny a tool, withdraw a request; as a viewer, everything read-only with the editor-access copy.", "why": "Needs real cards from a live workspace and a viewer account."},
+    {"id": "OT-C4", "what": "Composer: Return inserts a newline, the button sends and stops; the AI label is visible beside it in light and dark.", "why": "Device behaviour."},
+    {"id": "OT-C5", "what": "Attachments: a camera photo, a HEIC from the library (arrives as JPEG), a PDF from Files; a refused type shows the server's words.", "why": "Native pickers and a live upload."},
+    {"id": "OT-C6", "what": "From a ticket (after the A3 wave): 'Ask Auto about #n' opens the discussion; 'Update ticket and re-queue' re-queues it.", "why": "Crosses the two parallel waves."},
+    {"id": "OT-C7", "what": "Report this on an Auto message once PRD-266 US-016 is deployed and the discovery document lists report_content.", "why": "Server dependency."},
+    {"id": "OT-C8", "what": "Decide KC5: plain text for Auto's answers (as the handoff draws it) or a markdown renderer (a new JS dependency, shippable over the air).", "why": "Open question for Gerard."}
+  ]
+}
