@@ -33,6 +33,10 @@ jobs:
       - name: Unit tests (coverage gate on src/core, src/api, src/auth)
         run: npm run test:coverage
 
+      # src/core/web must match core.lock.json byte for byte (no hand edits, no drift).
+      - name: Vendored core matches the lock
+        run: npm run check:core
+
   bundle:
     name: expo-doctor · iOS bundle
     runs-on: ubuntu-latest

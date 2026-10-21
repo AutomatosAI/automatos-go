@@ -55,6 +55,29 @@ configured" state instead of a crash (`src/lib/env.ts`).
 | `EXPO_PUBLIC_WEB_URL`               | Base URL of hosted Studio, opened by "Create an account in Studio".             |
 | `EXPO_PUBLIC_SENTRY_DSN`            | Sentry (EU) DSN for error reports; recommended, reporting stays off without it. |
 
+## Recording a real chat turn
+
+The parity corpus (`src/core/__fixtures__/parity/`) tells us when the app's
+stream parser and the server disagree. Its `contract` files are built from the
+frame catalogue; `recorded` files are real turns, and only
+`scripts/record-turn.ts` writes them. It posts one message to `POST /api/chat`
+(a new chat in that workspace), keeps the body's chunks as they arrived, waits
+for the turn to finish, reads the saved messages back and writes
+`recorded-<time>.json`. `npx vitest run` then checks that the parser's answer
+and receipts equal the message the server saved.
+
+```bash
+AUTOMATOS_API_URL=https://<api host> \
+AUTOMATOS_TOKEN=<a Clerk session token> \
+AUTOMATOS_WORKSPACE_ID=<workspace uuid> \
+  npx tsx scripts/record-turn.ts "What is on my board?" [--out <dir>]
+```
+
+The file names the server by its origin only and never holds the token or a
+header; the script refuses to write it if the token or the workspace id appears
+anywhere in it. This repository is public: record in a workspace whose content
+may be published, and read the file before committing it.
+
 ## CI and release
 
 CI (`.github/workflows/ci.yml`) runs two jobs on every pull request and every

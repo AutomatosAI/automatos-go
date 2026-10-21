@@ -1,0 +1,104 @@
+{
+  "provenance": "contract",
+  "kind": "chat-turn",
+  "title": "A tool approval that waits: tool-end success false + waiting true, a tool_approval card, a waiting receipt",
+  "source": {
+    "catalogue": "orchestrator/consumers/chatbot/streaming.py:106-141"
+  },
+  "chunks": [
+    "d:{\"type\":\"chat-id\",\"chatId\":\"0",
+    "c0ff",
+    "ee0-0000-4000-8000-00000000c4a7\",\"ai_generated\":true}\nd:{\"type\": \"tool-start\"",
+    ", \"data\": {\"toolCallId\": \"call_7\", \"toolName\": \"platform_update_agent\", \"input\": {\"agent_id\": 12, \"name\": \"Scout (EU)\"}}}\nd:{\"type\": \"tool-end\", \"data",
+    "\": {\"tool",
+    "CallId\": \"call_7\", \"toolName\": ",
+    "\"pla",
+    "tform_update_agent\", \"success\": false, \"durationMs\": 38, \"summary\": \"Approval",
+    " requested\", \"waiting\": true}}\nd:{\"type\":\"tool-data\",\"data\":{\"tool_approval\": {\"grant_id\": 91, \"action\": \"platform_update_agent\", \"message\": \"Rename t",
+    "he agent ",
+    "'Scout' to 'Scout (EU)'\", \"perm",
+    "issi",
+    "on_level\": \"write\", \"params\": {\"agent_id\": \"12\", \"name\": \"Scout (EU)\"}, \"risk",
+    "_class\": \"agent_config\", \"risk_tier\": \"human_in_the_loop\", \"oversight_rationale\": \"This action requires human approval before it runs.\", \"requires_app",
+    "roval\": t",
+    "rue}}}\nd:{\"type\": \"tool-result\"",
+    ", \"d",
+    "ata\": {\"toolCallId\": \"call_7\", \"toolName\": \"platform_update_agent\", \"result\":",
+    " \"Approval requested: grant 91\"}}\n0:\"I've raised a card for your approval to rename Scout.\"\nd:{\"type\":\"tool-data\",\"data\":{\"receipts\": {\"receipts\": [{\"",
+    "action\": ",
+    "\"platform_update_agent\", \"kind\"",
+    ": \"w",
+    "rite\", \"status\": \"waiting\", \"subject\": \"Scout\", \"effect\": \"card raised: chang",
+    "e an agent 'Scout'\", \"link\": null, \"reason\": null}], \"model\": \"claude-sonnet-5-5\"}}}\nd:{\"type\": \"receipts\", \"data\": {\"receipts\": [{\"action\": \"platform",
+    "_update_a",
+    "gent\", \"kind\": \"write\", \"status",
+    "\": \"",
+    "waiting\", \"subject\": \"Scout\", \"effect\": \"card raised: change an agent 'Scout'",
+    "\", \"link\": null, \"reason\": null}], \"model\": \"claude-sonnet-5-5\"}}\nd:{\"type\":\"finish\",\"finishReason\":\"stop\",\"ai_generated\":true}\n"
+  ],
+  "expected": {
+    "frames": [
+      "chat-id",
+      "tool-start",
+      "tool-end",
+      "tool-data",
+      "tool-result",
+      "text",
+      "tool-data",
+      "receipts",
+      "finish"
+    ],
+    "rest": "",
+    "turn": {
+      "chatId": "0c0ffee0-0000-4000-8000-00000000c4a7",
+      "text": "I've raised a card for your approval to rename Scout.",
+      "toolCalls": [
+        {
+          "toolCallId": "call_7",
+          "toolName": "platform_update_agent",
+          "state": "completed",
+          "waiting": true,
+          "skipped": false,
+          "durationMs": 38
+        }
+      ],
+      "waitingToolCallId": "call_7",
+      "approvals": [
+        {
+          "kind": "tool",
+          "key": "tool-91",
+          "data": {
+            "grant_id": 91,
+            "action": "platform_update_agent",
+            "message": "Rename the agent 'Scout' to 'Scout (EU)'",
+            "permission_level": "write",
+            "params": {
+              "agent_id": "12",
+              "name": "Scout (EU)"
+            },
+            "risk_class": "agent_config",
+            "risk_tier": "human_in_the_loop",
+            "oversight_rationale": "This action requires human approval before it runs.",
+            "requires_approval": true
+          }
+        }
+      ],
+      "receipts": [
+        {
+          "action": "platform_update_agent",
+          "kind": "write",
+          "status": "waiting",
+          "subject": "Scout",
+          "effect": "card raised: change an agent 'Scout'",
+          "link": null,
+          "reason": null
+        }
+      ],
+      "finish": {
+        "finishReason": "stop",
+        "aiGenerated": true
+      },
+      "error": null
+    }
+  }
+}

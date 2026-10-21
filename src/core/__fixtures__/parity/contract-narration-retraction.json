@@ -1,0 +1,93 @@
+{
+  "provenance": "contract",
+  "kind": "chat-turn",
+  "title": "A nudged claim retracted (narration retracted: true) and the retry narrated before its tool call: neither stays in the answer",
+  "source": {
+    "catalogue": "orchestrator/consumers/chatbot/service.py:1856-1873"
+  },
+  "chunks": [
+    "d:{\"type\":\"chat-id\",\"chatId\":\"0c0ffee0-0000-4000-8",
+    "000",
+    "-00000000c4a7\",\"ai_generated\":true}\n0:\"I've moved #0422 to Done.\"\n0:\"Let me check the ca",
+    "rd first.\"\nd:{\"type\": \"nar",
+    "ration\", \"data\": {\"text\": \"I've moved #0422 to Don",
+    "e.\"",
+    ", \"retracted\": true}}\nd:{\"type\": \"narration\", \"data\": {\"text\": \"Let me check the card fi",
+    "rst.\"}}\nd:{\"type\": \"tool-s",
+    "tart\", \"data\": {\"toolCallId\": \"call_2\", \"toolName\"",
+    ": \"",
+    "platform_get_task\", \"input\": {\"task_id\": 422}}}\nd:{\"type\": \"tool-end\", \"data\": {\"toolCal",
+    "lId\": \"call_2\", \"toolName\"",
+    ": \"platform_get_task\", \"success\": true, \"durationM",
+    "s\":",
+    " 120, \"summary\": \"#0422 is in Review\"}}\nd:{\"type\": \"tool-result\", \"data\": {\"toolCallId\":",
+    " \"call_2\", \"toolName\": \"pl",
+    "atform_get_task\", \"result\": \"{\\\"id\\\": 422, \\\"numbe",
+    "r\\\"",
+    ": \\\"#0422\\\", \\\"status\\\": \\\"review\\\"}\"}}\n0:\"#0422 is still in Review, so I have not moved",
+    " it.\"\nd:{\"type\":\"tool-data",
+    "\",\"data\":{\"receipts\": {\"receipts\": [{\"action\": \"pl",
+    "atf",
+    "orm_get_task\", \"kind\": \"read\", \"status\": \"done\", \"subject\": \"#0422\", \"effect\": \"looked u",
+    "p\", \"link\": \"/command-cent",
+    "er?tab=board&task_id=422\", \"reason\": null}], \"mode",
+    "l\":",
+    " \"claude-sonnet-5-5\"}}}\nd:{\"type\": \"receipts\", \"data\": {\"receipts\": [{\"action\": \"platfor",
+    "m_get_task\", \"kind\": \"read",
+    "\", \"status\": \"done\", \"subject\": \"#0422\", \"effect\":",
+    " \"l",
+    "ooked up\", \"link\": \"/command-center?tab=board&task_id=422\", \"reason\": null}], \"model\": \"",
+    "claude-sonnet-5-5\"}}\nd:{\"t",
+    "ype\":\"finish\",\"finishReason\":\"stop\",\"ai_generated\"",
+    ":tr",
+    "ue}\n"
+  ],
+  "expected": {
+    "frames": [
+      "chat-id",
+      "text",
+      "text",
+      "narration",
+      "narration",
+      "tool-start",
+      "tool-end",
+      "tool-result",
+      "text",
+      "tool-data",
+      "receipts",
+      "finish"
+    ],
+    "rest": "",
+    "turn": {
+      "chatId": "0c0ffee0-0000-4000-8000-00000000c4a7",
+      "text": "#0422 is still in Review, so I have not moved it.",
+      "progress": [
+        "Let me check the card first."
+      ],
+      "toolCalls": [
+        {
+          "toolCallId": "call_2",
+          "toolName": "platform_get_task",
+          "state": "completed",
+          "summary": "#0422 is in Review"
+        }
+      ],
+      "receipts": [
+        {
+          "action": "platform_get_task",
+          "kind": "read",
+          "status": "done",
+          "subject": "#0422",
+          "effect": "looked up",
+          "link": "/command-center?tab=board&task_id=422",
+          "reason": null
+        }
+      ],
+      "finish": {
+        "finishReason": "stop",
+        "aiGenerated": true
+      },
+      "error": null
+    }
+  }
+}
