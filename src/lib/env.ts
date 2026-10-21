@@ -9,7 +9,7 @@ import { z } from 'zod';
 
 const HTTP_PROTOCOLS = new Set(['http:', 'https:']);
 
-function isHttpUrl(value: string): boolean {
+export function isHttpUrl(value: string): boolean {
   try {
     return HTTP_PROTOCOLS.has(new URL(value).protocol);
   } catch {

@@ -14,3 +14,8 @@ export const API_ERROR_COPY: Readonly<Record<ApiErrorKind, string>> = Object.fre
   invalid_response:
     "Automatos sent something this version can't read. Try again, or update the app.",
 });
+
+/** Workspace states the bootstrap reports in its own words (D8: nothing about plans or billing). */
+export const WORKSPACE_COPY = Object.freeze({
+  paused: 'Your workspace is paused; ask your workspace owner',
+});
