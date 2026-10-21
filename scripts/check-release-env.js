@@ -26,33 +26,33 @@ const RECOMMENDED = [
 const STRICT_PROFILES = new Set(['production']);
 const CHECKED_PROFILES = new Set(['production', 'preview', 'testflight']);
 
+function isSet(env, name) {
+  return (env[name] ?? '').trim() !== '';
+}
+
+function requiredProblems(env, item, strict) {
+  const value = (env[item.name] ?? '').trim();
+  if (!value) return [`${item.name} is not set — needed for ${item.why}.`];
+  const testKey = strict && item.productionPrefix && !value.startsWith(item.productionPrefix);
+  return testKey
+    ? [`${item.name} must be a production key (${item.productionPrefix}…) in a store build.`]
+    : [];
+}
+
 /**
  * Pure check over an env map — returns `{ errors, warnings }` as message lists.
  * `errors` is only ever non-empty for a strict (store-bound) profile.
  */
 function checkReleaseEnv(env, profile) {
-  const errors = [];
-  const warnings = [];
-  if (!CHECKED_PROFILES.has(profile)) return { errors, warnings };
+  if (!CHECKED_PROFILES.has(profile)) return { errors: [], warnings: [] };
   const strict = STRICT_PROFILES.has(profile);
-  const problems = strict ? errors : warnings;
-
-  for (const item of REQUIRED) {
-    const value = (env[item.name] ?? '').trim();
-    if (!value) {
-      problems.push(`${item.name} is not set — needed for ${item.why}.`);
-    } else if (strict && item.productionPrefix && !value.startsWith(item.productionPrefix)) {
-      problems.push(
-        `${item.name} must be a production key (${item.productionPrefix}…) in a store build.`,
-      );
-    }
-  }
-  for (const item of RECOMMENDED) {
-    if (!(env[item.name] ?? '').trim()) {
-      warnings.push(`${item.name} is not set — ${item.why}.`);
-    }
-  }
-  return { errors, warnings };
+  const problems = REQUIRED.flatMap((item) => requiredProblems(env, item, strict));
+  const unset = RECOMMENDED.filter((item) => !isSet(env, item.name)).map(
+    (item) => `${item.name} is not set — ${item.why}.`,
+  );
+  return strict
+    ? { errors: problems, warnings: unset }
+    : { errors: [], warnings: [...problems, ...unset] };
 }
 
 // CLI output goes to stdout/stderr directly: eslint's no-console holds everywhere

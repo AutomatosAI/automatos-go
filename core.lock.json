@@ -1,8 +1,9 @@
 {
   "source": "AutomatosAI/automatos-ai",
   "sha": "630fc1c85af06c5c76e70c74e9653ee1804fdf41",
-  "syncedAt": "2026-10-20T23:35:10.994Z",
+  "syncedAt": "2026-10-21T01:08:06.727Z",
   "files": {
+    "src/core/route-manifest.json": "ca3cdb30d43bde93e274f0541037b823697143369774eb077beb4bd42c74db8d",
     "src/core/web/components/activity/board/ticket-kind.ts": "30de4bc14578ab4204fda1eb4c198b407781698c1f747ad75b4dc636d9666c1d",
     "src/core/web/components/activity/board/ticket-stage.ts": "924c0d1f2daa3fa1e33452ccfe1641462fd1260d1029e818a80ed65dcc76722c",
     "src/core/web/components/command-center/__tests__/activity-row-links.test.ts": "f784da9d339ef84f3787df5be3ea0ed51a7265a9695fb9f11d13a2252afe27f0",

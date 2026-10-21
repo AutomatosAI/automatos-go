@@ -17,6 +17,7 @@
     "check:bundle": "expo export --platform ios --output-dir .expo/bundle-check",
     "check:doctor": "npx --yes expo-doctor",
     "check:core": "tsx scripts/sync-core.ts --check",
+    "check:routes": "tsx scripts/check-routes.ts",
     "eas-build-pre-install": "node scripts/check-release-env.js"
   },
   "dependencies": {

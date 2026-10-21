@@ -4,7 +4,8 @@
 //   npx tsx scripts/sync-core.ts --source <automatos-ai checkout>   vendor and write the lock
 //   npx tsx scripts/sync-core.ts --check                            (npm run check:core) drift check
 //
-// --check needs no checkout: it compares src/core/web with the lock. The engine lives in
+// --check needs no checkout: it compares src/core/web (and every lock-listed copy, such as
+// src/core/route-manifest.json) with the lock. The engine lives in
 // scripts/sync-core/ (pure, tested in scripts/__tests__/sync-core.test.ts); this file does the
 // reading, the writing and the exit codes.
 import fs from 'node:fs';
@@ -12,6 +13,7 @@ import path from 'node:path';
 import { parseArgs } from 'node:util';
 
 import { vendor, type VendoredFile } from './sync-core/closure';
+import { copyFiles } from './sync-core/copy';
 import {
   buildLock,
   checkLock,
@@ -57,16 +59,18 @@ function writeFiles(files: readonly VendoredFile[]): void {
 function sync(checkout: string): void {
   const manifest = readManifest();
   const source = path.resolve(checkout);
-  const refused = checkoutProblems(source, manifest.sha, manifest.root);
+  const copySources = Object.keys(manifest.copy);
+  const refused = checkoutProblems(source, manifest.sha, [manifest.root, ...copySources]);
   if (refused.length > 0) fail(refused);
   const sourceRoot = path.join(source, manifest.root);
   const config = { manifest, aliases: readAliases(sourceRoot), packages: readPackages(REPO) };
   const tree = fsTree(sourceRoot);
   const modules = vendor(config, tree);
   const tests = vendorTests(config, tree, modules.sources);
-  const problems = [...modules.problems, ...tests.problems];
+  const copies = copyFiles(manifest, fsTree(source));
+  const problems = [...modules.problems, ...tests.problems, ...copies.problems];
   if (problems.length > 0) fail([...problems, `${problems.length} problem(s): nothing written`]);
-  const files = [...modules.files, ...tests.files];
+  const files = [...modules.files, ...tests.files, ...copies.files];
   writeFiles(files);
   const lock = buildLock(manifest, files, new Date().toISOString(), tests.skipped);
   fs.writeFileSync(path.join(REPO, LOCK_PATH), `${JSON.stringify(lock, null, 2)}\n`);
@@ -74,7 +78,8 @@ function sync(checkout: string): void {
   say(process.stdout, `vendored ${files.length} files from ${manifest.source}@${manifest.sha}`);
   say(
     process.stdout,
-    `${tests.files.length} of them are web tests and fixtures; ${skipped} tests skipped`,
+    `${tests.files.length} of them are web tests and fixtures; ${skipped} tests skipped; ` +
+      `${copies.files.length} copied from outside ${manifest.root}/`,
   );
 }
 

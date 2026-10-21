@@ -23,6 +23,8 @@ export const manifestSchema = z.object({
   shims: z.record(z.object({ path: z.string().min(1), reason })),
   /** web test files (root-relative) the static rule would copy but that cannot run here */
   skipTests: z.record(reason).default({}),
+  /** checkout-relative files outside the root, copied verbatim to `to` under src/core/ */
+  copy: z.record(z.object({ to: z.string().min(1), reason })).default({}),
 });
 
 export type Manifest = z.infer<typeof manifestSchema>;
@@ -78,7 +80,7 @@ export function buildLock(
  * Returns one line per problem; an empty list means the tree matches the lock.
  */
 export function checkLock(
-  manifest: Pick<Manifest, 'source' | 'sha' | 'sets'>,
+  manifest: Pick<Manifest, 'source' | 'sha' | 'sets' | 'copy'>,
   lock: Lock,
   files: ReadonlyMap<string, string>,
 ): string[] {
@@ -112,9 +114,16 @@ function extraProblems(lock: Lock, files: ReadonlyMap<string, string>): string[]
     .map((path) => `extra: ${path} (not written by scripts/sync-core.ts)`);
 }
 
-function setProblems(manifest: Pick<Manifest, 'sets'>, lock: Lock): string[] {
-  return Object.values(manifest.sets)
+function setProblems(manifest: Pick<Manifest, 'sets' | 'copy'>, lock: Lock): string[] {
+  const sets = Object.values(manifest.sets)
     .flat()
     .filter((entry) => !(webPath(entry) in lock.files))
     .map((entry) => `not vendored: ${entry} is in ${MANIFEST_PATH} but not in ${LOCK_PATH}`);
+  const copies = Object.entries(manifest.copy)
+    .filter(([, { to }]) => !(to in lock.files))
+    .map(
+      ([from, { to }]) =>
+        `not copied: ${from} → ${to} is in ${MANIFEST_PATH} but not in ${LOCK_PATH}`,
+    );
+  return [...sets, ...copies];
 }

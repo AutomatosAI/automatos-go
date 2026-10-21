@@ -37,6 +37,11 @@ jobs:
       - name: Vendored core matches the lock
         run: npm run check:core
 
+      # Every {method, path} in a src/**/routes.ts table is served by automatos-ai at the pinned
+      # SHA (src/core/route-manifest.json); a pendingUpstream route passes and is listed (K4).
+      - name: Route tables match the server
+        run: npm run check:routes
+
   bundle:
     name: expo-doctor · iOS bundle
     runs-on: ubuntu-latest

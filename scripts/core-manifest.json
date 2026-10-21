@@ -5,7 +5,8 @@
   "notes": [
     "Vendored by scripts/sync-core.ts into src/core/web/ (K1); core.lock.json records every file written. Never edit a vendored file: fix this manifest or src/core/shims/ and re-run the sync.",
     "lib/discussion.ts is an addition to the PRD-001 \u00a74.3 chat list: D31 'Ask Auto about' a ticket builds its opening message with it.",
-    "Tests: every __tests__/*.test.ts beside a vendored file that imports a vendored module is copied to the mirrored __tests__/ when it needs only vitest, vendored modules and test fixtures, runs in node and is pure; every other one is listed in core.lock.json skippedTests with the reason. skipTests (root-relative path \u2192 reason) skips by hand a test the rule would copy but that cannot run here."
+    "Tests: every __tests__/*.test.ts beside a vendored file that imports a vendored module is copied to the mirrored __tests__/ when it needs only vitest, vendored modules and test fixtures, runs in node and is pure; every other one is listed in core.lock.json skippedTests with the reason. skipTests (root-relative path \u2192 reason) skips by hand a test the rule would copy but that cannot run here.",
+    "copy: checkout-relative files outside the root, copied verbatim (no header line) to a path under src/core/ and lock-listed like any vendored file; the server's route manifest is one (US-004c, K4)."
   ],
   "sets": {
     "chat": [
@@ -119,5 +120,11 @@
       "reason": "types/chat.ts type-imports UIMessage; the app has no AI SDK, so a structural type stands in"
     }
   },
-  "skipTests": {}
+  "skipTests": {},
+  "copy": {
+    "orchestrator/reports/route-manifest.json": {
+      "to": "src/core/route-manifest.json",
+      "reason": "the server's {method, path} pairs at the pin (orchestrator/scripts/dump_routes.py); scripts/check-routes.ts checks every src/**/routes.ts table against it (K4)"
+    }
+  }
 }

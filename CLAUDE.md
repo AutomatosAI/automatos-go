@@ -18,15 +18,24 @@ Scaffold lifted from the academy app's TestFlight tree.
 
 ## Commands
 
-| Command                                    | What it does                                                                                     |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------ |
-| `npm ci --ignore-scripts`                  | install from the committed lockfile (lifecycle scripts off)                                      |
-| `npm run typecheck`                        | `tsc --noEmit`                                                                                   |
-| `npm run lint`                             | `eslint .` — `no-console` everywhere but `src/lib/logger.ts`                                     |
-| `npx vitest run` / `npm run test:coverage` | tests; coverage gate 80/80/80, branches 70 on `src/core/*.ts`, `src/api/**`, `src/auth/**`       |
-| `npm run check:bundle`                     | `expo export --platform ios` into `.expo/bundle-check` — compiles the JS bundle, no native build |
-| `npx expo-doctor`                          | Expo's project checks (CI job `expo-doctor · iOS bundle`)                                        |
-| `npx expo config --type introspect`        | evaluates every config plugin without writing ios/ or android/                                   |
+| Command                                    | What it does                                                                                             |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `npm ci --ignore-scripts`                  | install from the committed lockfile (lifecycle scripts off)                                              |
+| `npm run typecheck`                        | `tsc --noEmit`                                                                                           |
+| `npm run lint`                             | `eslint .` — the §4.11 guards in `eslint.config.js` (proved by `scripts/__tests__/eslint-rules.test.ts`) |
+| `npx vitest run` / `npm run test:coverage` | tests; coverage gate 80/80/80, branches 70 on `src/core/*.ts`, `src/api/**`, `src/auth/**`               |
+| `npm run check:bundle`                     | `expo export --platform ios` into `.expo/bundle-check` — compiles the JS bundle, no native build         |
+| `npx expo-doctor`                          | Expo's project checks (CI job `expo-doctor · iOS bundle`)                                                |
+| `npx expo config --type introspect`        | evaluates every config plugin without writing ios/ or android/                                           |
+| `npm run check:core`                       | `src/core/web` and `src/core/route-manifest.json` match `core.lock.json` (no hand edits, no drift)       |
+| `npm run check:routes`                     | every `src/**/routes.ts` route is served at the pinned SHA, or is marked `pendingUpstream` (K4)          |
+
+Lint guards: `fetch` / `XMLHttpRequest` only in `src/api/**`; `expo/fetch` only in
+`src/api/transport.ts`; never `react-native-webview`; files warn over 400 lines and fail over
+800; functions 50 lines (`.tsx` 150; test callbacks exempt, as on the web), depth 4,
+complexity 10; no colour literals in `src/**` or `app/**` outside `src/styles/tokens/**` and
+`src/styles/ai-label.tsx`; `src/core/*.ts` and `src/core/parity/**` import no React, React
+Native or Expo; `console` only in `src/lib/logger.ts`.
 
 CI (`.github/workflows/ci.yml`): jobs `typecheck · lint · test` and
 `expo-doctor · iOS bundle` (names are read by branch protection — do not

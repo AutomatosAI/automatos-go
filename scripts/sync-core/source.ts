@@ -25,8 +25,15 @@ function topLevel(checkout: string): { top: string } | { error: string } {
   }
 }
 
-/** Why the checkout cannot be vendored from; empty when it is at the pin and unmodified. */
-export function checkoutProblems(checkout: string, sha: string, root: string): string[] {
+/**
+ * Why the checkout cannot be vendored from; empty when it is at the pin and nothing under
+ * `paths` (the manifest's root and every copy source, checkout-relative) is modified.
+ */
+export function checkoutProblems(
+  checkout: string,
+  sha: string,
+  paths: readonly string[],
+): string[] {
   const found = topLevel(checkout);
   if ('error' in found) return [`${checkout} is not a git work tree: ${found.error}`];
   if (fs.realpathSync(found.top) !== fs.realpathSync(checkout)) {
@@ -39,10 +46,13 @@ export function checkoutProblems(checkout: string, sha: string, root: string): s
         'pin, or change the pin in the same commit as the re-sync',
     ];
   }
-  const changes = git(checkout, ['status', '--porcelain', '--', root]);
+  const changes = git(checkout, ['status', '--porcelain', '--', ...paths]);
   return changes === ''
     ? []
-    : [`${checkout}/${root} has local changes; vendor only from an unmodified tree:\n${changes}`];
+    : [
+        `${checkout} has local changes in ${paths.join(', ')}; vendor only from an unmodified ` +
+          `tree:\n${changes}`,
+      ];
 }
 
 const tsconfigSchema = z.object({
