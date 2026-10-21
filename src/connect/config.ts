@@ -52,3 +52,22 @@ export const APP_SCHEME = 'automatos';
 export const APP_PAIR_LINK = `${APP_SCHEME}:/${PAIR_LINK_PATH}`;
 /** A pairing link is a host, a path and two short parameters: anything this long is not one. */
 export const PAIR_LINK_MAX_LENGTH = 2048;
+
+/** POST /pair's one refusal code: a wrong, expired or used code (automatos-ai api/mobile_devices.py). */
+export const INVALID_PAIRING_CODE = 'invalid_pairing_code';
+/**
+ * The device token: 'amd_' and token_urlsafe(32), 47 characters (services/mobile/pairing.py). The
+ * app reads the prefix, base64url and a length window; anything else is not a device token.
+ */
+export const DEVICE_TOKEN_PREFIX = 'amd_';
+export const DEVICE_TOKEN_MIN_LENGTH = 36;
+export const DEVICE_TOKEN_MAX_LENGTH = 512;
+
+/** The install id (KC9): random bytes as base64url, inside the server's ^[A-Za-z0-9_-]{8,128}$. */
+export const INSTALL_ID_BYTES = 16;
+/** Its expo-secure-store item, outside the app's key registry so no wipe removes it (KC9). */
+export const INSTALL_ID_ITEM = 'automatos.install-id.v1';
+
+/** The server's column limits for a device (core/models/mobile_devices.py). */
+export const DEVICE_NAME_MAX_LENGTH = 120;
+export const APP_VERSION_MAX_LENGTH = 32;
