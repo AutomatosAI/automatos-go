@@ -25,6 +25,8 @@ export type AuthSession = {
   /** false until Clerk has read its stored client (the shell shows loading meanwhile). */
   readonly isLoaded: boolean;
   readonly isSignedIn: boolean;
+  /** Whose session it is (Clerk's user id): the persisted cache's owner. null while signed out. */
+  readonly ownerId: string | null;
   readonly provider: AuthProvider;
   /** Spread into createApiClient's options: the bearer and the 401 → onExpired binding. */
   readonly clientAuth: ClientAuth;
@@ -44,7 +46,7 @@ export function useAuthSession(): AuthSession {
  * signal) is built once over a ref that always holds the latest calls.
  */
 function ClerkSession({ children }: { readonly children: ReactNode }) {
-  const { getToken, signOut, isLoaded, isSignedIn } = useAuth();
+  const { getToken, signOut, isLoaded, isSignedIn, userId } = useAuth();
   const latest = useRef<ClerkSessionPort>({ getToken, signOut: () => signOut() });
   useEffect(() => {
     latest.current = { getToken, signOut: () => signOut() };
@@ -64,8 +66,8 @@ function ClerkSession({ children }: { readonly children: ReactNode }) {
     [],
   );
   const session = useMemo<AuthSession>(
-    () => ({ isLoaded, isSignedIn: isSignedIn === true, ...binding }),
-    [isLoaded, isSignedIn, binding],
+    () => ({ isLoaded, isSignedIn: isSignedIn === true, ownerId: userId ?? null, ...binding }),
+    [isLoaded, isSignedIn, userId, binding],
   );
   return <AuthSessionContext.Provider value={session}>{children}</AuthSessionContext.Provider>;
 }

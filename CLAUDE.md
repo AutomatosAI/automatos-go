@@ -28,7 +28,7 @@ Scaffold lifted from the academy app's TestFlight tree.
 | `npx expo-doctor`                          | Expo's project checks (CI job `expo-doctor · iOS bundle`)                                                |
 | `npx expo config --type introspect`        | evaluates every config plugin without writing ios/ or android/                                           |
 | `npm run check:core`                       | `src/core/web` and `src/core/route-manifest.json` match `core.lock.json` (no hand edits, no drift)       |
-| `npm run check:routes`                     | every `src/**/routes.ts` route is served at the pinned SHA, or is marked `pendingUpstream` (K4)          |
+| `npm run check:routes`                     | server tables `src/**/routes.ts` (not `src/navigation/`) served at the pin or `pendingUpstream` (K4)     |
 
 Lint guards: `fetch` / `XMLHttpRequest` only in `src/api/**`; `expo/fetch` only in
 `src/api/transport.ts`; never `react-native-webview`; files warn over 400 lines and fail over
@@ -70,6 +70,8 @@ src/voice/           quick-ask (STT, TTS), Auto Live (LiveKit), voice screen
 src/styles/          tokens, looks, the three layouts, fonts, mascot, the AI label
 src/ui/              primitives shared by all three layouts
 src/lib/             logger (the only console user), env (zod-parsed EXPO_PUBLIC_*)
+src/app-state/       the shell: the signed-in gate (gate.ts decides), the session (useAppSession, useApiClient), the cache roots
+src/navigation/      every app route (routes.ts) and web link → app route (web-links.ts); kits link only through them
 scripts/             release-env guard, testflight-decide, sync-core, check-routes
 plugins/             local config plugins: pinned background modes, Sentry upload guard (docs/native-modules.md)
 ```

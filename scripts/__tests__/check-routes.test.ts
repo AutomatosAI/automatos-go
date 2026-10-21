@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import * as appRoutes from '../../src/navigation/routes';
 import {
+  APP_ROUTE_TABLE,
   checkRoutes,
   collectRoutes,
   formatReport,
@@ -32,9 +34,20 @@ describe('check-routes: finding the route tables', () => {
     ['src/core/web/lib/routes.ts', false],
     ['src/api/__tests__/routes.ts', false],
     ['src/navigation/web-routes.ts', false],
+    ['src/navigation/routes.ts', false],
     ['scripts/routes.ts', false],
   ])('%s is a route table: %s', (file, expected) => {
     expect(isRouteTableFile(file)).toBe(expected);
+  });
+});
+
+describe("check-routes: the app's own route table", () => {
+  it('holds screen paths only: no {method, path} server route hides in it', () => {
+    const { routes, problems } = collectRoutes(APP_ROUTE_TABLE, appRoutes);
+    expect(routes).toEqual([]);
+    expect(problems).toEqual([
+      `${APP_ROUTE_TABLE} exports no route table (an object of {method, path})`,
+    ]);
   });
 });
 

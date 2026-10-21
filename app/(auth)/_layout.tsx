@@ -4,10 +4,8 @@
 import { Redirect, Stack } from 'expo-router';
 
 import { useAuthSession } from '../../src/auth/AuthRoot';
+import { routes } from '../../src/navigation/routes';
 import { LoadingState, Screen } from '../../src/ui';
-
-/** Home; FND-4's route table (src/navigation/routes.ts) takes this over. */
-const SIGNED_IN_HOME = '/';
 
 export default function AuthLayout() {
   const { isLoaded, isSignedIn } = useAuthSession();
@@ -18,6 +16,6 @@ export default function AuthLayout() {
       </Screen>
     );
   }
-  if (isSignedIn) return <Redirect href={SIGNED_IN_HOME} />;
+  if (isSignedIn) return <Redirect href={routes.home} />;
   return <Stack screenOptions={{ headerShown: false }} />;
 }

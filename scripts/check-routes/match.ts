@@ -36,11 +36,19 @@ export type FoundRoute = z.infer<typeof appRouteSchema> & {
 
 export type Collected = { readonly routes: FoundRoute[]; readonly problems: string[] };
 
-/** Every src/**\/routes.ts the app owns (not the web mirror, not a test fixture). */
+/**
+ * The app's own screen paths (FND-4, K5): routes inside this app for expo-router, not server
+ * paths, so they have no {method, path} to check. scripts/__tests__/check-routes.test.ts loads the
+ * real file and fails if a server route is ever put there.
+ */
+export const APP_ROUTE_TABLE = 'src/navigation/routes.ts';
+
+/** Every src/**\/routes.ts server table the app owns (not the web mirror, not a test fixture). */
 export function isRouteTableFile(file: string): boolean {
   return (
     path.posix.basename(file) === 'routes.ts' &&
     file.startsWith('src/') &&
+    file !== APP_ROUTE_TABLE &&
     !file.startsWith('src/core/web/') &&
     !file.split('/').includes('__tests__')
   );
