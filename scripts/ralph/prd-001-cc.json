@@ -1,0 +1,254 @@
+{
+  "project": "Automatos Go — PRD-001 wave A3: the Command Centre",
+  "prd": "docs/prd/PRD-001-AUTOMATOS-GO-V1.md (AutomatosAI/automatos-go#2). Stories US-010..US-013 re-cut for one session each.",
+  "backendPrd": "automatos-ai docs/PRDS/PRD-266-AUTOMATOS-GO-BACKEND.md (AutomatosAI/automatos-ai#1257)",
+  "branchName": "feat/a3-command-centre",
+  "base": "origin/feat/a0-a1-foundation",
+  "worktree": "/Users/gkavanagh/Development/Automatos-AI-Platform/.worktrees/automatos-go/feat+a3-command-centre",
+  "description": "The Command Centre on the phone: the shell (top bar with STREAMING LIVE, the head with the lede, sticky tabs with counts), the Board with every status including Failed and Cancelled and the ticket sheet (Approve, Send back with a note, Ask Auto about), the Calendar day view with Pause/Resume for routines and scheduled tasks only, Questions answerable by owners, admins and editors (viewers read-only), social post approvals against the exact version shown, and the Deliverables gallery (text and images inline, PDF/DOCX/XLSX in the system viewer, Report this). STUDIO LAYOUT ONLY and TOKENS ONLY: these screens are built once and A5 dresses them for Play and HUD. JavaScript only: no dependency, no native module, no app.json change. It runs IN PARALLEL with the A2 chat kit on the same foundation and must stay file-disjoint (KX1). THIS JSON IS THE BINDING CONTRACT.",
+  "references": {
+    "prd": "docs/prd/PRD-001-AUTOMATOS-GO-V1.md — §4.4 data, §4.6 rules (the Command Centre is one set of screens), §4.7 screens (Board, Calendar, Questions, Deliverables, Needs strip social post), §4.11",
+    "foundation": "This branch's foundation (feat/a0-a1-foundation) — read before building: src/api/{client,errors,strings,query-keys,live,needs-you,reports,workspace}.ts, src/auth/role.ts, src/navigation/{routes,web-links}.ts (cc.* builders, chatWithTicket), src/ui/ (primitives, Sheet, Toast, ReportSheet, CommandCentreButton), src/styles/ (tokens, theme, type), the vendored src/core/web/: lib/ticket-number.ts, lib/grant-owner.ts, lib/ticket-links.ts, components/activity/board/{ticket-stage,ticket-kind}.ts, components/command-center/{calendar-kinds,calendar-actions}.ts. scripts/ralph/prd-001-foundation.json lists what each foundation story promised.",
+    "automatosAi": "/Users/gkavanagh/Development/Automatos-AI-Platform/.worktrees/automatos-ai/mobile-review-main — READ ONLY @ 630fc1c85. Behavioural reference: frontend/components/command-center/ (command-center-shell.tsx, board-tab.tsx, calendar-tab.tsx, question-card.tsx), frontend/components/deliverables/ (deliverable-open-button.tsx), frontend/hooks/{use-board-tasks,use-activity-api,use-scheduled-tasks-api,use-approval-grants,use-deliverables-api}.ts, the socials approval components; server: orchestrator/api/{board_tasks,activity,approval_grants,scheduled_tasks,heartbeat,deliverables}.py and the socials routes.",
+    "digests": "/Users/gkavanagh/Development/Automatos-AI-Platform/reports/mobile-review-2026-10-20/digests/command-centre-api.md — statuses, ticket numbers, the SSE stream, needs-you, questions, calendar kinds and pause routes, deliverables (no review state), social approve/request-changes, every endpoint with its body and auth (verified 20 Oct).",
+    "designStudio": "/Users/gkavanagh/Development/Automatos-AI-Platform/DUMPING AREA/design_handoff_automatos_mobile/README.md §2 'Command Centre' (top bar, head, sticky tabs, Board, ticket sheet, Calendar, Questions) and AutomatosApp.dc.html. Decisions override it: D25 Deliverables = a gallery with NO Awaiting/Done pills, NO Approve/Request changes, NO 'DLV-' ids; D26 Failed and Cancelled are Board filters too; D27 pause only routines and scheduled tasks; D38 nothing under 11 pt."
+  },
+  "localChecks": {
+    "allowed": "npm run typecheck, npm run lint, npx vitest run, npm run check:bundle, npm run check:core, npm run check:routes, bash scripts/ralph/acceptance-prd001-cc.sh --no-ci. node_modules comes from setup-worktree.sh.",
+    "never": "npm install / npx expo install / any dependency change, expo start, expo run:*, expo prebuild, any eas command, a simulator, Metro's dev server, any server, gh workflow run, git push, opening a PR."
+  },
+  "decisions": [
+    {"id": "D-NO-WEBVIEW", "text": "No WebView; a link to a Studio-only page opens the system browser through the foundation's web-link mapping ('Manage in Studio').", "source": "FR-10, D3"},
+    {"id": "D-ONE-SET", "text": "The Command Centre is ONE set of screens (Board, Calendar, Questions, Deliverables, sheets) built from tokens and the foundation's primitives, so A5 can dress them for Play (6/8/10/14 radii, serif display) and HUD (square panels, brackets, glyph plus WORD) without copying a screen: no style decision is hard-coded in a screen.", "source": "PRD-001 §4.6"},
+    {"id": "D-BOARD", "text": "Every status is a filter, including Failed and Cancelled (closed folds into Cancelled as on the web); the server's needs-you number is the one number on the Command Centre button and the lede; the ticket sheet has Approve, Send back (a note is required) and Ask Auto about (the ticket as chat context, then 'Update ticket and re-queue' — the chat wave renders it).", "source": "D26, D31, PRD-001 §4.7"},
+    {"id": "D-PAUSE", "text": "Pause/Resume only for routines (PATCH /api/heartbeat/{agent_id}/toggle) and agent-scheduled tasks (PATCH /api/v1/scheduled-tasks/{id}/status); every other kind shows 'Manage in Studio'. Paused items are greyed and keep a word.", "source": "D27"},
+    {"id": "D-QUESTIONS", "text": "Answer with an option or in your own words; Dismiss (= deny) says that a stopped run's question closes its run; viewers read the question with the reason they cannot answer.", "source": "D16, D17, PRD-001 §4.7"},
+    {"id": "D-SOCIAL", "text": "A social post awaiting approval opens from the needs strip (the chat wave's home links to routes.cc.social(postId)): the post as it will publish; Approve sends the content_hash of the exact version shown; Request changes needs a comment; never from a notification.", "source": "D45"},
+    {"id": "D-DELIVERABLES", "text": "A gallery like Studio: filter by type, load more, open; text and images inline, PDF/DOCX/XLSX in the system viewer after an authenticated download. NO review state, NO Approve/Request changes, NO Awaiting/Done pills, NO 'DLV-' ids.", "source": "D25"},
+    {"id": "D-LIVE", "text": "Live updates come from the foundation's ONE tasks/stream connection (board_changed invalidates board, ticket, needs-you and questions centrally; it refetches on resume). This wave opens no second connection and only reads useLiveStatus() for 'STREAMING LIVE'.", "source": "PRD-001 §4.4, K5"},
+    {"id": "D-ROLES", "text": "Owners, admins and editors approve, send back, answer, pause and approve social posts; viewers read only (src/auth/role.ts roleCan). Server 403s before PRD-266 W1 (questions are owner/admin only today) render the taxonomy's forbidden copy.", "source": "D16, D17"},
+    {"id": "D-WRITES", "text": "Writes (answer, approve, pause) are never queued offline; the server's compare-and-swap answer is the truth (409 'already answered' shows its words).", "source": "PRD-001 §4.4"},
+    {"id": "D-NO-BILLING", "text": "Nothing about plans, credits or prices.", "source": "D8"},
+    {"id": "D-ONE-CLIENT", "text": "All HTTP through the foundation's client; zod at every boundary; unknown fields ignored.", "source": "§4.4, §4.11"},
+    {"id": "D-SHAPE", "text": "Files 200-400 lines (never over 800), functions under 50, components under 150, nesting under 4; pure logic in plain TS with tests; immutability; tokens only (the vendored calendar-kinds colours count as tokens, K14); every colour status has a word; 11 pt minimum.", "source": "§4.6, §4.11, D38"},
+    {"id": "D-NATIVE-ONCE", "text": "No dependency, native module, config plugin or app.json change (package.json, package-lock.json, app.json, eas.json untouched — gate-enforced). The document viewer module was installed by the foundation (docs/native-modules.md names it).", "source": "§4.2, D43"},
+    {"id": "KX1-FILES", "text": "This kit may create or change ONLY: src/cc/**, app/(app)/cc/** (replacing the foundation's placeholders), and its own kit files under scripts/ralph/. Everything else — src/api, src/auth, src/core, src/styles, src/ui, src/navigation, src/storage, app/_layout.tsx, app/(app)/_layout.tsx, app/(app)/index.tsx, app/(app)/chat/**, app/(app)/chats.tsx, app/(app)/settings/**, src/chat/**, package.json, app.json, .github — belongs to the foundation or the A2 kit (gate-enforced allowlist).", "source": "kit (parallel waves)"},
+    {"id": "KX2-FOUNDATION-GAPS", "text": "The foundation's contracts are fixed for this wave. If one is missing or wrong, build the smallest adapter under src/cc/ and write 'FOUNDATION GAP: <what, where>' in the DONE mark; never edit a foundation file. A missing UI primitive is built feature-local under src/cc/components/.", "source": "kit"},
+    {"id": "KX3-ROUTES", "text": "Every server path this wave calls is a constant in src/cc/routes.ts (the route check reads it). App routes are the foundation's builders; this wave creates the screen files they point at: app/(app)/cc/{board,calendar,questions,deliverables}.tsx, app/(app)/cc/ticket/[taskId].tsx, app/(app)/cc/social/[postId].tsx, app/(app)/cc/deliverable/[id].tsx — matching src/navigation/routes.ts exactly (read it; if a builder's path differs, follow the builder).", "source": "kit, K4, K5"}
+  ],
+  "userStories": [
+    {
+      "id": "US-010a",
+      "prdStory": "US-010",
+      "title": "Board data: the route table, ticket schemas, every status, sort and filter",
+      "description": "As the Board, I need the tickets and pure rules for statuses, order and filters (D-BOARD; digests/command-centre-api.md).",
+      "acceptanceCriteria": [
+        "src/cc/routes.ts exports CC_ROUTES {method, path} for every endpoint this wave calls: GET /api/v1/tasks, GET /api/v1/tasks/{task_id}, POST /api/v1/tasks/{task_id}/approve, POST /api/v1/tasks/{task_id}/reject, GET /api/activity/schedule, PATCH /api/heartbeat/{agent_id}/toggle, PATCH /api/v1/scheduled-tasks/{task_id}/status, GET /api/v1/approval-grants, POST /api/v1/approval-grants/{grant_id}/answer, POST /api/v1/approval-grants/{grant_id}/deny, GET /api/socials/posts/{post_id}, GET /api/socials/posts/{post_id}/media/{file_name}, POST /api/socials/posts/{post_id}/approve, POST /api/socials/posts/{post_id}/request-changes, GET /api/deliverables, GET /api/deliverables/{deliverable_id}, GET /api/workspaces/{workspace_id}/files/raw — each path checked against the route manifest; npm run check:routes passes",
+        "src/cc/board/schemas.ts: zod for GET /api/v1/tasks?finished_limit=200 ({tasks: [board ticket with id, number, title, status, priority, kind/source, agent {id, name}, tags, review_reason, blocked_code, updated_at, …]}) and the ticket detail; unknown fields ignored; status strings outside the known set are kept and shown under their own word, never dropped",
+        "src/cc/board/board.ts (pure): BOARD_STATUSES = inbox, assigned, in_progress, review, blocked, done, failed, cancelled (closed folds into cancelled); filterTickets(tickets, status | 'all'); sortTickets per the handoff (Blocked → Review → In progress → Assigned → Inbox → Done) with Failed and Cancelled after Done; reason chip words from the vendored ticket-stage.ts; kind icon and label from the vendored ticket-kind.ts; numbers from the vendored ticket-number.ts",
+        "src/cc/board/api.ts: fetchBoard, fetchTicket(taskId), approveTicket(taskId, note?), sendBack(taskId, feedback) through the foundation client, with query keys from src/api/query-keys.ts (board, ticket)",
+        "src/cc/__tests__/board.test.ts: every status incl. failed and cancelled, closed → cancelled, sort order, filter, an unknown status kept, send back without feedback refused client-side",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes"
+      ],
+      "files": ["src/cc/routes.ts", "src/cc/board/", "src/cc/__tests__/"],
+      "priority": 1,
+      "passes": false,
+      "notes": "Measured 20 Oct (orchestrator/api/board_tasks.py:74): VALID_STATUSES = inbox, assigned, in_progress, review, blocked, done, failed, cancelled, closed. GET /api/v1/tasks/{task_id} takes the integer row id; a ticket number resolves only via the list's ?search=."
+    },
+    {
+      "id": "US-010b",
+      "prdStory": "US-010",
+      "title": "The Command Centre shell: top bar, head and lede, sticky tabs with counts",
+      "description": "As a user, I want one tap from the home to the Command Centre and to see at a glance what needs me (the handoff §2 head and tabs; D26).",
+      "acceptanceCriteria": [
+        "app/(app)/cc/_layout.tsx replaces the foundation's placeholder: the top bar (back to Auto, '● STREAMING LIVE' from the foundation's useLiveStatus(), a word when offline), the head (eyebrow 'OPERATIONS · <weekday day month> · <time> <city or timezone>' in the phone's timezone, the 'Command Centre' title, the lede), and sticky tabs Board · Calendar · Questions · Deliverables with mono counts; app/(app)/cc/index.tsx redirects to the Board",
+        "src/cc/shell/lede.ts (pure): the lede '1 agent working, 5 in queue, 6 need your eyes.' with pluralisation, the needs clause from the foundation's useNeedsYou().total (the server's number, D26, never recomputed), the working/queued figures from the board data; tab counts (Questions = needs-you counts.question, others from their data)",
+        "src/cc/__tests__/lede.test.ts: pluralisation (0, 1, many), the needs clause equals the server total, missing data → the clause omitted rather than a wrong number",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": ["app/(app)/cc/_layout.tsx", "app/(app)/cc/index.tsx", "src/cc/shell/", "src/cc/__tests__/"],
+      "priority": 2,
+      "passes": false,
+      "notes": "The Command Centre button itself (and its count) is the foundation's CommandCentreButton on the home header; this wave never renders a second needs-you number source."
+    },
+    {
+      "id": "US-010c",
+      "prdStory": "US-010",
+      "title": "The Board tab: status filter pills and the ticket cards",
+      "description": "As a user, I want to see the board and find every ticket the server counts (D-BOARD, the handoff's Board).",
+      "acceptanceCriteria": [
+        "app/(app)/cc/board.tsx with src/cc/board/BoardTab.tsx: filter pills All + every status (incl. Failed and Cancelled) with column dots and words; the active pill solid; counts per status",
+        "src/cc/board/TicketCard.tsx: the kind row (#number, kind icon, KIND · PRIORITY, StatusPip with its WORD), the serif title, the reason chip ('Waiting on your answer', 'Deliverable to review', from the vendored ticket-stage), tags, agent swatch and name; tap → routes.cc.ticket(taskId)",
+        "Pull to refresh; empty state per filter; errors through the foundation's ErrorState; live refresh via the foundation's invalidation (no polling)",
+        "src/cc/board/view-model.ts (pure) maps a ticket → card fields; tested in src/cc/__tests__/board-view.test.ts",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": ["app/(app)/cc/board.tsx", "src/cc/board/", "src/cc/__tests__/"],
+      "priority": 3,
+      "passes": false,
+      "notes": "Column dot colours in the handoff are literal HSL values: map them to Studio tokens (status tokens) — no literal colour in src/cc."
+    },
+    {
+      "id": "US-010d",
+      "prdStory": "US-010",
+      "title": "The ticket sheet: Approve, Send back with a note, Ask Auto about",
+      "description": "As an owner, admin or editor, I want to act on a ticket from my phone (D-BOARD, D31).",
+      "acceptanceCriteria": [
+        "app/(app)/cc/ticket/[taskId].tsx (as the foundation's routes.cc.ticket builder points) with src/cc/ticket/TicketSheet.tsx: kind row, serif title, agent and updated time, description, 'Waiting for your answer' box → routes.cc.questions, the linked Deliverable row → routes.cc.deliverable(id)",
+        "Approve (only in Review) → POST /api/v1/tasks/{task_id}/approve {note?}; Send back → a note field that must be non-empty → POST /api/v1/tasks/{task_id}/reject {feedback}; both role-gated (roleCan 'approve'); server refusals show the taxonomy copy or the server's user-facing detail.message",
+        "Ask Auto about #number → navigates to the foundation's routes.chatWithTicket(taskId) (the A2 wave renders the discussion); never opens a chat screen of its own",
+        "src/cc/ticket/actions.ts (pure): which actions show for a status and role; payloads; tested in src/cc/__tests__/ticket.test.ts (Approve only in review, Send back requires feedback, viewer sees none, Ask Auto about always present)",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": ["app/(app)/cc/ticket/", "src/cc/ticket/", "src/cc/__tests__/"],
+      "priority": 4,
+      "passes": false,
+      "notes": "POST /approve outside Review answers 42x; POST /reject is 422 unless review/done or no agent (digest). Face ID before approve (D19) is A4."
+    },
+    {
+      "id": "US-011a",
+      "prdStory": "US-011",
+      "title": "Calendar data: the schedule feed, the day model, who may pause",
+      "description": "As the Calendar, I need the seven-day schedule grouped by day and the pause rules (D-PAUSE; digests/command-centre-api.md).",
+      "acceptanceCriteria": [
+        "src/cc/calendar/schemas.ts: zod for GET /api/activity/schedule?range=7d ({scheduled: [{id, name, type routine|recipe|task|mission|task_due|social, next_run_at, frequency, agent_name, agent_id, scheduled_task_id, mission_id, board_task_id, post_id, paused?, recurrence {…}}], scheduler_active}); unknown fields and types kept with their own word",
+        "src/cc/calendar/day-model.ts (pure): items → the 7-day strip (today first, a dot when a day has items) and the selected day's time-ordered rows in the phone's timezone (expo-localization's timezone, never a hardcoded zone); always-on items (every N minutes) as the dashed band; kind label and colour from the vendored calendar-kinds.ts",
+        "src/cc/calendar/pause.ts (pure): pauseAction(item) → {kind: 'routine', agentId} | {kind: 'scheduled_task', id, next: 'paused' | 'active'} | {kind: 'manage_in_studio', link} — routines and scheduled tasks only (D27), using the vendored calendar-actions.ts where it already decides",
+        "src/cc/calendar/api.ts: fetchSchedule, toggleRoutine(agentId) → PATCH /api/heartbeat/{agent_id}/toggle, setScheduledTaskStatus(id, status) → PATCH /api/v1/scheduled-tasks/{task_id}/status {status}",
+        "src/cc/__tests__/calendar.test.ts: grouping across midnight in two timezones, the band, each kind's pause action, paused items greyed (paused flag) and still listed",
+        "npm run check:routes passes",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes"
+      ],
+      "files": ["src/cc/calendar/", "src/cc/__tests__/"],
+      "priority": 5,
+      "passes": false,
+      "notes": "Today a paused scheduled task vanishes from the feed (services/activity_service.py 'active' filter); PRD-266 §4.9 keeps it with paused: true. Handle both: until that server fix deploys, a paused scheduled task disappears from the feed after Pause — say so in the DONE mark; do not build a client-side store of paused items."
+    },
+    {
+      "id": "US-011b",
+      "prdStory": "US-011",
+      "title": "The Calendar tab: day view, seven-day strip, the item sheet with Pause/Resume",
+      "description": "As a user, I want today's schedule and to pause a routine (the handoff's Calendar; D-PAUSE).",
+      "acceptanceCriteria": [
+        "app/(app)/cc/calendar.tsx with src/cc/calendar/{DayStrip,DayView,ItemSheet}.tsx: the strip (selected chip, today, dot), the always-on band, rows (mono time, kind label in its kind colour with an 8 px square and the kind WORD, serif title, meta); empty 'Nothing scheduled this day.'",
+        "ItemSheet: Pause/Resume for routines and scheduled tasks (role-gated 'pause'), 'Manage in Studio' (system browser via the foundation's web-link mapping) for every other kind, 'Open #n on the board' when the item has a ticket",
+        "Paused rows at reduced opacity WITH the word 'Paused'",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": ["app/(app)/cc/calendar.tsx", "src/cc/calendar/"],
+      "priority": 6,
+      "passes": false,
+      "notes": "Pause never applies to Playbooks or social posts (D27, PRD non-goals)."
+    },
+    {
+      "id": "US-012a",
+      "prdStory": "US-012",
+      "title": "Questions: answer with an option or your own words, Dismiss, viewers read-only",
+      "description": "As an owner, admin or editor, I want to answer my agents' questions from the phone (D-QUESTIONS; the handoff's question card).",
+      "acceptanceCriteria": [
+        "src/cc/questions/schemas.ts + api.ts: GET /api/v1/approval-grants?status=pending&kind=question ({grants: [{id, question_md, options[], owner {agent {id, name}, ticket {id, title, number}}, cascade {total, tasks[]}}]}); answer(grantId, {option} | {answer_text}) → POST …/answer; dismiss(grantId) → POST …/deny",
+        "app/(app)/cc/questions.tsx with src/cc/questions/QuestionCard.tsx: agent · ticket link, the question text (markdown shown as plain text with paragraphs), 'Blocking N downstream tasks' with the cascade list, option buttons that answer immediately, 'Answer in your own words instead' → a text field + Answer, Dismiss with the copy that dismissing a stopped run's question closes its run",
+        "Answered → the card leaves and the server's honest result shows as a toast ('Answered.' or the 409 'was already answered' words; never 'the agent is resuming': the answer route cannot tell whether the agent resumed, lead 21 Oct); never queued offline (D-WRITES)",
+        "Viewers (roleCan 'answer' false) see the questions read-only with the reason; a 403 from the server (questions are owner/admin only until PRD-266 W1) shows the forbidden copy, not an error page",
+        "src/cc/questions/answer.ts (pure) + src/cc/__tests__/questions.test.ts: option payload, free-text payload (blank refused), dismiss, the role matrix, the 409 path",
+        "npm run check:routes passes",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": ["app/(app)/cc/questions.tsx", "src/cc/questions/", "src/cc/__tests__/"],
+      "priority": 7,
+      "passes": false,
+      "notes": "An option must be one of the grant's options (422 otherwise). Question text is never persisted (the foundation's persister excludes the questions family)."
+    },
+    {
+      "id": "US-012b",
+      "prdStory": "US-012",
+      "title": "Social post approval: the post as it will publish, Approve the exact version, Request changes with a comment",
+      "description": "As an owner, admin or editor, I want to approve a social post from the needs strip (D-SOCIAL).",
+      "acceptanceCriteria": [
+        "app/(app)/cc/social/[postId].tsx with src/cc/social/SocialPostPreview.tsx: GET /api/socials/posts/{post_id}; the post as it will publish (channel, text, media through GET …/media/{file_name} with the bearer, scheduled time)",
+        "Approve → POST /api/socials/posts/{post_id}/approve {content_hash} with the hash of the version on screen (from the response, never recomputed or omitted); a 409 hash mismatch reloads the post and says it changed; Request changes → a comment that must be non-empty → POST …/request-changes {comment}; role-gated ('approve')",
+        "src/cc/social/approval.ts (pure) + src/cc/__tests__/social.test.ts: approve payload carries exactly the displayed content_hash, request-changes requires a comment, the 409 reload path, viewer read-only",
+        "No push wiring here, but the social post approval screen is reachable through the foundation's route builder with the post id, so the A4 push kit opens it from a notification (D18: approvals open the app)",
+        "npm run check:routes passes",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": ["app/(app)/cc/social/", "src/cc/social/", "src/cc/__tests__/"],
+      "priority": 8,
+      "passes": false,
+      "notes": "Editors already hold socials:approve on the server (D45)."
+    },
+    {
+      "id": "US-013a",
+      "prdStory": "US-013",
+      "title": "Deliverables gallery: type filters, load more, the card",
+      "description": "As a user, I want to look at what was made, like Studio's gallery (D-DELIVERABLES).",
+      "acceptanceCriteria": [
+        "src/cc/deliverables/schemas.ts + api.ts: GET /api/deliverables?limit&offset&artifact_type ({success, deliverables: [{id (uuid), artifact_type, source_type, agent_name, title, summary, preview_url, content_url?, created_at, status}]}), offset paging; GET /api/deliverables/{deliverable_id}?include_content=true (content inline up to 1 MB, content_truncated)",
+        "app/(app)/cc/deliverables.tsx with src/cc/deliverables/DeliverableCard.tsx: type filter pills (from the artifact types present), cards with icon, type label, title, excerpt, mono meta (agent, time) — NO 'DLV-' id, NO Awaiting/Done pills, NO Approve/Request changes; 'Load more'; tap → routes.cc.deliverable(id)",
+        "src/cc/deliverables/gallery.ts (pure) + src/cc/__tests__/deliverables.test.ts: filters, page merge with dedupe, the card view-model",
+        "npm run check:routes passes",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": ["app/(app)/cc/deliverables.tsx", "src/cc/deliverables/", "src/cc/__tests__/"],
+      "priority": 9,
+      "passes": false,
+      "notes": "The only mutation the server has is a soft DELETE, and the app deletes nothing (D63)."
+    },
+    {
+      "id": "US-013b",
+      "prdStory": "US-013",
+      "title": "Deliverable detail: text and images inline, PDF/DOCX/XLSX in the system viewer, Report this",
+      "description": "As a user, I want to open a Deliverable on my phone (D-DELIVERABLES) and report it if it is wrong (D15).",
+      "acceptanceCriteria": [
+        "app/(app)/cc/deliverable/[id].tsx with src/cc/deliverables/DeliverableDetail.tsx: text content inline (plain text with paragraphs; content_truncated → a note), images inline with the bearer in the image source headers",
+        "src/cc/deliverables/open-file.ts: PDF, DOCX and XLSX → an authenticated download (the foundation client's bearer + X-Workspace-ID) of preview_url/content_url (resolved the way frontend/components/deliverables/deliverable-open-button.tsx does) into the cache directory with expo-file-system, then the system viewer module the foundation installed (docs/native-modules.md); the downloaded file is deleted when the viewer closes or on the next open",
+        "src/cc/deliverables/file-kind.ts (pure): artifact type / mime / extension → inline-text | inline-image | system-viewer | unsupported (unsupported → 'Open in Studio' through the web-link mapping); tested",
+        "Report this on the detail opens the foundation's ReportSheet with target_type 'deliverable' (hidden when its gate says no); no second report implementation",
+        "src/cc/__tests__/deliverable-detail.test.ts: file-kind mapping, the download URL and headers built through the client, the report action gated",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes",
+        "bash scripts/ralph/acceptance-prd001-cc.sh --no-ci passes"
+      ],
+      "files": ["app/(app)/cc/deliverable/", "src/cc/deliverables/", "src/cc/__tests__/"],
+      "priority": 10,
+      "passes": false,
+      "notes": "A row's preview_url / content_url is usually an API route behind auth (e.g. GET /api/workspaces/{workspace_id}/files/raw?path=…) — never open it in a browser."
+    }
+  ],
+  "ownerTest": [
+    {"id": "OT-X1", "what": "On Gerard's iPhone: the Command Centre in Studio light and dark — head, tabs, Board, Calendar, Questions, Deliverables; screenshots of each.", "why": "PRD-001 §5: UI stories attach screenshots from an EAS internal build."},
+    {"id": "OT-X2", "what": "Live updates: move a ticket in Studio and watch the phone's Board and the needs-you number change without a pull; background the app, change the board, return → refreshed.", "why": "Needs the live stream."},
+    {"id": "OT-X3", "what": "Ticket sheet: Approve a ticket in Review, Send back with a note, Ask Auto about → the A2 discussion opens (after both waves merge).", "why": "Live server; crosses the two parallel waves."},
+    {"id": "OT-X4", "what": "Calendar: pause and resume a routine and a scheduled task; a Playbook shows 'Manage in Studio'.", "why": "Live server."},
+    {"id": "OT-X5", "what": "Questions: answer with an option, answer in your own words, dismiss; as an editor after PRD-266 W1 deploys; as a viewer read-only.", "why": "Live server and role accounts."},
+    {"id": "OT-X6", "what": "Social approval from the needs strip: approve the exact version; edit the post in Studio first and confirm the phone refuses the stale version and reloads; request changes with a comment.", "why": "Live socials data."},
+    {"id": "OT-X7", "what": "Deliverables: a text, an image, a PDF, a DOCX and an XLSX open (the last three in QuickLook); Report this once PRD-266 US-016 is deployed.", "why": "Native viewer and live files."}
+  ]
+}
