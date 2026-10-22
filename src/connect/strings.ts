@@ -3,6 +3,7 @@
 
 import type { AddressRefusal } from './address';
 import type { PairRefusal } from './api';
+import type { DeviceRefusalReason } from './expiry';
 import type { PairCodeRefusal } from './pair-code';
 
 /** Why a typed server address was refused (address.ts). */
@@ -28,6 +29,7 @@ export const PAIR_CODE_COPY: Readonly<Record<PairCodeRefusal, string>> = Object.
 });
 
 const NEW_CODE = 'Make a new one in Studio → Settings → Phones & devices.';
+const PAIR_AGAIN = 'Pair it again from Studio → Settings → Phones & devices.';
 
 /** Why POST /pair did not pair this phone (api.ts), each with the fix. */
 export const PAIR_REFUSAL_COPY: Readonly<Record<PairRefusal, string>> = Object.freeze({
@@ -48,3 +50,12 @@ export const DEVICE_NAME_COPY = Object.freeze({
   ios: 'Automatos Go on iPhone',
   android: 'Automatos Go on Android',
 } as const);
+
+/** Why a paired phone is back at Connect (expiry.ts), naming the server it was paired to. */
+export const DEVICE_REFUSAL_COPY: Readonly<
+  Record<DeviceRefusalReason, (server: string) => string>
+> = Object.freeze({
+  revoked: (server: string) => `This phone was removed from ${server}. ${PAIR_AGAIN}`,
+  pairing_required: (server: string) => `${server} only answers paired phones. ${PAIR_AGAIN}`,
+  ended: (server: string) => `This phone's connection to ${server} ended. ${PAIR_AGAIN}`,
+});

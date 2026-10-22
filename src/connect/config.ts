@@ -71,3 +71,22 @@ export const INSTALL_ID_ITEM = 'automatos.install-id.v1';
 /** The server's column limits for a device (core/models/mobile_devices.py). */
 export const DEVICE_NAME_MAX_LENGTH = 120;
 export const APP_VERSION_MAX_LENGTH = 32;
+
+/**
+ * The paired record's expo-secure-store item (KC9), written through the app's key registry
+ * (src/lib/secure-keys.ts) so sign-out and the reinstall wipe find it.
+ */
+export const PAIRED_RECORD_ITEM = 'automatos.paired-server.v1';
+
+/**
+ * The reinstall wipe's marker (install-marker.ts): its own small MMKV file, deleted with the app.
+ * Not the encrypted store: that one's key is a keychain item every wipe deletes, so a marker kept
+ * there would be lost with it and the next launch would wipe again.
+ */
+export const INSTALL_MARKER_STORE_ID = 'automatos-go.install';
+export const INSTALL_MARKER_KEY = 'install-marker.v1';
+export const INSTALL_MARKER_VALUE = 'checked';
+
+/** The device lane's 401 codes (automatos-ai core/auth/device.py, core/auth/bearer_registry.py). */
+export const DEVICE_REVOKED = 'device_revoked';
+export const DEVICE_PAIRING_REQUIRED = 'device_pairing_required';

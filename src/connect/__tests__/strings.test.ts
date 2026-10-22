@@ -1,12 +1,19 @@
 import { describe, expect, it } from 'vitest';
 
-import { ADDRESS_COPY, DEVICE_NAME_COPY, PAIR_CODE_COPY, PAIR_REFUSAL_COPY } from '../strings';
+import {
+  ADDRESS_COPY,
+  DEVICE_NAME_COPY,
+  DEVICE_REFUSAL_COPY,
+  PAIR_CODE_COPY,
+  PAIR_REFUSAL_COPY,
+} from '../strings';
 
 const MESSAGES = [
   ...Object.values(ADDRESS_COPY),
   ...Object.values(PAIR_CODE_COPY),
   ...Object.values(PAIR_REFUSAL_COPY),
   ...Object.values(DEVICE_NAME_COPY),
+  ...Object.values(DEVICE_REFUSAL_COPY).map((words) => words('Home NAS')),
 ];
 
 describe('connect copy', () => {

@@ -17,7 +17,7 @@ export const deviceTokenSchema = z
   .regex(DEVICE_TOKEN_PATTERN);
 
 /** Python's isoformat() of an aware datetime: '2026-11-20T10:00:00.123456+00:00'. */
-const isoDateTime = z.string().datetime({ offset: true });
+export const isoDateTime = z.string().datetime({ offset: true });
 
 /** POST /api/v1/mobile/pair (automatos-ai api/mobile_devices.py `pair`), Cache-Control no-store. */
 export const pairResponseSchema = z.object({

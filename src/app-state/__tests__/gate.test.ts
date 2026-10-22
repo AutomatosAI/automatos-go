@@ -25,13 +25,15 @@ const WORKSPACE: Workspace = WorkspaceSchema.parse({
 });
 const HOSTED: Discovery = hostedDefaults(SERVER);
 /** A server that signs in only with modes this version does not have yet. */
-const DEVICE_ONLY: Discovery = DiscoverySchema.parse({
+const UNKNOWN_MODES: Discovery = DiscoverySchema.parse({
   schema: 'automatos-discovery/v1',
   edition: 'local',
   api_url: 'http://192.168.1.20:8000',
   web_url: 'http://192.168.1.20:3000',
-  auth: { modes: ['device', 'passkey-v2'], clerk: null },
+  auth: { modes: ['oidc', 'passkey-v2'], clerk: null },
 });
+/** A paired self-hosted install: 'device' is registered since US-006c. */
+const DEVICE_ONLY: Discovery = { ...UNKNOWN_MODES, auth: { modes: ['device'], clerk: null } };
 
 const ok = <T>(data: T): Step<T> => ({ status: 'success', data });
 const failed = (error: unknown): Step<never> => ({ status: 'error', error });
@@ -88,7 +90,7 @@ describe('launchView: discovery, a supported sign-in, then the workspace', () =>
   });
 
   it('tells a server with no sign-in this app has that it needs a newer Automatos Go', () => {
-    expect(launchView({ discovery: ok(DEVICE_ONLY), workspace: PENDING })).toEqual({
+    expect(launchView({ discovery: ok(UNKNOWN_MODES), workspace: PENDING })).toEqual({
       kind: 'unsupported',
       message: AUTH_COPY.unsupportedServer,
     });
@@ -126,7 +128,8 @@ describe('launchView: discovery, a supported sign-in, then the workspace', () =>
   it('bootstraps only for a server that takes a sign-in this app has', () => {
     expect(serverSupported(PENDING)).toBe(false);
     expect(serverSupported(failed(OFFLINE))).toBe(false);
-    expect(serverSupported(ok(DEVICE_ONLY))).toBe(false);
+    expect(serverSupported(ok(UNKNOWN_MODES))).toBe(false);
+    expect(serverSupported(ok(DEVICE_ONLY))).toBe(true);
   });
 });
 
