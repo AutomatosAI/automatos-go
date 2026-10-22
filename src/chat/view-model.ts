@@ -2,11 +2,10 @@
 // one row (the user's bubble, or Auto's message with its receipts); a live turn is the user's draft
 // and Auto's reply so far (text with narration already taken out by turnReducer, tool lines, the
 // receipts, the limit and attachment notices); then 'Auto is working…' while a turn runs and one
-// notice for a turn that failed, stopped or could not be stopped. Receipts and tool lines are the
-// web's words (vendored receipts.ts, Play's labels.ts) with Play's marks, and every mark has a word
-// for screen readers (§4.6). A receipt's link is mapped by the foundation's appRouteForWebLink, so
-// it opens an app screen or Studio, never another site. Every failure says the kit's own words
-// (strings.ts): the server's may name a plan (D-NO-BILLING). The components only draw these rows.
+// notice for a turn that failed, stopped or could not be stopped. Receipts and tool lines are built
+// by lines.ts; every notice's mark has a word for screen readers (§4.6). Every failure says the
+// kit's own words (strings.ts): the server's may name a plan (D-NO-BILLING). Auto's cards sit inside
+// the reply that raised them (cards/view.ts places them). The components only draw these rows.
 
 import { ApiError } from '../api/errors';
 import {
@@ -15,68 +14,33 @@ import {
   type TurnErrorCode,
   type TurnState,
 } from '../core/turn-reducer';
-import {
-  MARK_DONE,
-  MARK_FAILED,
-  MARK_MUTED,
-  MARK_WAITING,
-  toolLineLabel,
-  toolStatusOf,
-  type LineTone,
-} from '../core/web/components/play/chat/labels';
+import { MARK_FAILED, MARK_MUTED, type LineTone } from '../core/web/components/play/chat/labels';
 import { messageText, savedTurnError } from '../core/web/lib/chat/message-text';
-import {
-  NO_ACTIONS,
-  NOTHING_ON_THE_BOARD,
-  movedSomethingOnTheBoard,
-  receiptLine,
-  receiptsOf,
-  safeLink,
-} from '../core/web/lib/chat/receipts';
+import { receiptsOf } from '../core/web/lib/chat/receipts';
 import { lastTurn } from '../core/web/lib/chat/retry';
-import type { Receipt, ToolCall } from '../core/web/types';
-import { appRouteForWebLink, type WebLinkTarget } from '../navigation/web-links';
-import type { ColourName } from '../styles/tokens';
 import { joinLabel } from '../ui/paint';
 import { errorCopy } from '../ui/variants';
+import { placedCards, type CardRow, type PlacedCards } from './cards/view';
 import { canSend, shownMessages, type ThreadFailure, type ThreadState } from './controller/thread';
-import type { StoredMessage } from './schemas';
 import {
-  CHAT_COPY,
-  NOTICE_WORDS,
-  RECEIPT_BADGES,
-  RECEIPT_STATUS_WORDS,
-  TOOL_STATUS_WORDS,
-  TURN_ERROR_COPY,
-  type FailureCopy,
-} from './strings';
+  receiptsView,
+  toolLineRows,
+  type LineOptions,
+  type ReceiptsView,
+  type ToolLineRow,
+} from './lines';
+import type { StoredMessage } from './schemas';
+import { CHAT_COPY, NOTICE_WORDS, TURN_ERROR_COPY, type FailureCopy } from './strings';
 
-export type ReceiptRow = {
-  readonly key: string;
-  readonly status: Receipt['status'];
-  readonly mark: string;
-  readonly tone: LineTone;
-  readonly text: string;
-  /** Play's tag beside the line: Done, Not done or Skipped. */
-  readonly badge: string | null;
-  readonly link: WebLinkTarget | null;
-  readonly accessibilityLabel: string;
-};
-
-export type ReceiptsView = {
-  readonly lines: readonly ReceiptRow[];
-  /** NO_ACTIONS, NOTHING_ON_THE_BOARD, or none when a card on the board moved. */
-  readonly note: string | null;
-};
-
-export type ToolLineRow = {
-  readonly key: string;
-  /** null while the call runs: the line shows a spinner. */
-  readonly mark: string | null;
-  readonly tone: LineTone;
-  readonly text: string;
-  readonly accessibilityLabel: string;
-};
+export {
+  MARK_COLOURS,
+  receiptBadge,
+  receiptsView,
+  toolLineRows,
+  type ReceiptRow,
+  type ReceiptsView,
+  type ToolLineRow,
+} from './lines';
 
 export type NoticeKind = keyof typeof NOTICE_WORDS;
 
@@ -108,103 +72,28 @@ export type AutoRow = {
   readonly toolLines: readonly ToolLineRow[];
   readonly receipts: ReceiptsView | null;
   readonly notices: readonly Notice[];
+  /** Auto's cards this reply raised (a Mission suggestion, a plan to approve). */
+  readonly cards: readonly CardRow[];
 };
 
 export type ChatRow =
   | UserRow
   | AutoRow
   | { readonly type: 'working'; readonly key: string }
-  | { readonly type: 'notice'; readonly key: string; readonly notice: Notice };
+  | { readonly type: 'notice'; readonly key: string; readonly notice: Notice }
+  /** Cards whose reply was never saved (a stopped or failed turn): after the saved messages. */
+  | { readonly type: 'cards'; readonly key: string; readonly cards: readonly CardRow[] };
 
-export type ViewOptions = {
-  /** Studio's base URL for links the phone has no screen for (EXPO_PUBLIC_WEB_URL by default). */
-  readonly webUrl?: string;
-};
+export type ViewOptions = LineOptions;
 
 export const LIVE_USER_KEY = 'live-user';
 export const LIVE_AUTO_KEY = 'live-auto';
 export const WORKING_KEY = 'working';
 export const TURN_NOTICE_KEY = 'turn-notice';
-
-/** The token a mark is painted in: Play's tones on Studio's colours (the handoff's markColor). */
-export const MARK_COLOURS: Readonly<Record<LineTone, ColourName>> = Object.freeze({
-  running: 'accent',
-  done: 'olive',
-  failed: 'destructive',
-  waiting: 'accent',
-  muted: 'mutedForeground',
-});
-
-const RECEIPT_LOOK: Readonly<
-  Record<Receipt['status'], { readonly mark: string; readonly tone: LineTone }>
-> = Object.freeze({
-  done: { mark: MARK_DONE, tone: 'done' },
-  refused: { mark: MARK_FAILED, tone: 'failed' },
-  skipped: { mark: MARK_MUTED, tone: 'muted' },
-  waiting: { mark: MARK_WAITING, tone: 'waiting' },
-});
+export const LOOSE_CARDS_KEY = 'loose-cards';
 
 const PARAGRAPH_BREAK = /\n{2,}/;
 const KNOWN_TURN_CODES: ReadonlySet<string> = new Set(TURN_ERROR_CODES);
-
-/** The status word, then the line; the word alone is left out when the line already says it. */
-function spoken(word: string, text: string): string {
-  return text.toLowerCase().includes(word.toLowerCase()) ? text : joinLabel(word, text);
-}
-
-/** Play's receiptBadge: a done write says Done, a refused call Not done, a skipped one Skipped. */
-export function receiptBadge(receipt: Receipt): string | null {
-  if (receipt.status === 'refused') return RECEIPT_BADGES.refused;
-  if (receipt.status === 'skipped') return RECEIPT_BADGES.skipped;
-  return receipt.status === 'done' && receipt.kind === 'write' ? RECEIPT_BADGES.done : null;
-}
-
-function receiptRow(receipt: Receipt, index: number, options: ViewOptions): ReceiptRow {
-  const look = RECEIPT_LOOK[receipt.status];
-  const text = receiptLine(receipt);
-  const path = safeLink(receipt.link);
-  return {
-    key: `${index}-${receipt.action}`,
-    status: receipt.status,
-    mark: look.mark,
-    tone: look.tone,
-    text,
-    badge: receiptBadge(receipt),
-    link: path === null ? null : appRouteForWebLink(path, options.webUrl),
-    accessibilityLabel: spoken(RECEIPT_STATUS_WORDS[receipt.status], text),
-  };
-}
-
-/** 'What Auto did': null for a reply from before receipts, which shows none (receipts.tsx). */
-export function receiptsView(
-  receipts: readonly Receipt[] | undefined,
-  options: ViewOptions = {},
-): ReceiptsView | null {
-  if (!receipts) return null;
-  const note =
-    receipts.length === 0
-      ? NO_ACTIONS
-      : movedSomethingOnTheBoard([...receipts])
-        ? null
-        : NOTHING_ON_THE_BOARD;
-  return { lines: receipts.map((receipt, index) => receiptRow(receipt, index, options)), note };
-}
-
-/** One line per tool call; `streaming`: the reply is being written, so a running call spins. */
-export function toolLineRows(calls: readonly ToolCall[], streaming: boolean): ToolLineRow[] {
-  return calls.map((call) => {
-    const host = { ...call, skipped: call.skipped ?? false, waiting: call.waiting ?? false };
-    const label = toolLineLabel(host, streaming);
-    const word = TOOL_STATUS_WORDS[toolStatusOf(host, streaming)];
-    return {
-      key: call.toolCallId,
-      mark: label.mark,
-      tone: label.tone,
-      text: label.text,
-      accessibilityLabel: spoken(word, label.text),
-    };
-  });
-}
 
 /** Auto's answer as the handoff draws it: plain paragraphs (KC5). */
 export function paragraphs(text: string): string[] {
@@ -271,14 +160,20 @@ function autoRow(row: Omit<AutoRow, 'type'>): AutoRow | null {
     row.paragraphs.length === 0 &&
     row.toolLines.length === 0 &&
     row.receipts === null &&
-    row.notices.length === 0;
+    row.notices.length === 0 &&
+    row.cards.length === 0;
   return empty ? null : { type: 'auto', ...row };
 }
 
 /** A saved message; `newest`: the thread's last, which alone may offer Try again. */
-function storedRow(message: StoredMessage, newest: boolean, options: ViewOptions): ChatRow | null {
+function storedRow(
+  message: StoredMessage,
+  newest: boolean,
+  cards: readonly CardRow[],
+  options: ViewOptions,
+): ChatRow | null {
   if (message.role === 'user') return userRow(message.id, messageText(message), filesOf(message));
-  const base = { key: message.id, messageId: message.id, toolLines: [], receipts: null };
+  const base = { key: message.id, messageId: message.id, toolLines: [], receipts: null, cards };
   if (savedTurnError(message) !== null) {
     const copy = savedFailureCopy(message);
     const failed = notice(`${message.id}-failed`, 'failed', copy.text, newest && copy.canRetry);
@@ -301,7 +196,12 @@ function turnNotices(turn: TurnState): Notice[] {
 }
 
 /** The reply being written (or the one a stopped or failed turn left). */
-function liveAutoRow(turn: TurnState, streaming: boolean, options: ViewOptions): AutoRow | null {
+function liveAutoRow(
+  turn: TurnState,
+  streaming: boolean,
+  cards: readonly CardRow[],
+  options: ViewOptions,
+): AutoRow | null {
   return autoRow({
     key: LIVE_AUTO_KEY,
     messageId: null,
@@ -309,6 +209,7 @@ function liveAutoRow(turn: TurnState, streaming: boolean, options: ViewOptions):
     toolLines: toolLineRows(turn.toolCalls, streaming),
     receipts: receiptsView(turn.receipts, options),
     notices: turnNotices(turn),
+    cards,
   });
 }
 
@@ -316,7 +217,7 @@ function isRow(row: ChatRow | null): row is ChatRow {
   return row !== null;
 }
 
-function liveRows(state: ThreadState, options: ViewOptions): ChatRow[] {
+function liveRows(state: ThreadState, cards: PlacedCards, options: ViewOptions): ChatRow[] {
   const { live } = state;
   if (!live) return [];
   const { draft } = live;
@@ -329,7 +230,7 @@ function liveRows(state: ThreadState, options: ViewOptions): ChatRow[] {
     : null;
   const rows: (ChatRow | null)[] = [
     user,
-    liveAutoRow(live.turn, state.status === 'streaming', options),
+    liveAutoRow(live.turn, state.status === 'streaming', cards.live, options),
   ];
   return rows.filter(isRow);
 }
@@ -351,18 +252,25 @@ export function turnNotice(state: ThreadState): Notice | null {
   return notice(TURN_NOTICE_KEY, 'failed', copy.text, copy.canRetry && canSend(state));
 }
 
+function looseRow(cards: readonly CardRow[]): ChatRow {
+  return { type: 'cards', key: LOOSE_CARDS_KEY, cards };
+}
+
 /** Every row of the thread, oldest first; nothing while the chat is still being checked. */
 export function threadRows(state: ThreadState, options: ViewOptions = {}): ChatRow[] {
   if (state.status === 'loading') return [];
   const messages = shownMessages(state);
   const settled = state.live === null && canSend(state);
+  const cards = placedCards(state, options.webUrl);
   const saved = messages.map((message, index) =>
-    storedRow(message, settled && index === messages.length - 1, options),
+    storedRow(message, settled && index === messages.length - 1, cards.at(index), options),
   );
+  const loose = cards.loose.length > 0 ? [looseRow(cards.loose)] : [];
   const pending = turnNotice(state);
   return [
     ...saved.filter(isRow),
-    ...liveRows(state, options),
+    ...loose,
+    ...liveRows(state, cards, options),
     ...(isWorking(state) ? [{ type: 'working' as const, key: WORKING_KEY }] : []),
     ...(pending ? [{ type: 'notice' as const, key: pending.key, notice: pending }] : []),
   ];

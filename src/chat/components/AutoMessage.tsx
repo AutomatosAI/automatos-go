@@ -1,12 +1,14 @@
 // One of Auto's messages (the handoff's thread): the 20 pt ink 'A' mark and the mono 'AUTO' label,
-// then the answer as plain 14/1.55 paragraphs with no bubble (KC5), the tool lines, 'What Auto did'
-// and any notice (a limit, a file Auto could not open, a saved failure).
+// then the answer as plain 14/1.55 paragraphs with no bubble (KC5), the tool lines, 'What Auto did',
+// any notice (a limit, a file Auto could not open, a saved failure) and the cards the reply raised.
 
 import { StyleSheet, View } from 'react-native';
 
 import type { WebLinkTarget } from '../../navigation/web-links';
 import { useTokens } from '../../styles/theme';
 import { Text } from '../../ui';
+import type { SettleCard } from '../cards/model';
+import { ThreadCards } from '../cards/ThreadCards';
 import { CHAT_COPY } from '../strings';
 import type { AutoRow } from '../view-model';
 import { ReceiptsCard } from './ReceiptsCard';
@@ -44,9 +46,11 @@ export type AutoMessageProps = {
   readonly onLink: (target: WebLinkTarget) => void;
   /** Asks the last message again, for a notice that offers it. */
   readonly onRetry?: () => void;
+  /** Records what the user did with one of the reply's cards. */
+  readonly onCard: SettleCard;
 };
 
-export function AutoMessage({ row, onLink, onRetry }: AutoMessageProps) {
+export function AutoMessage({ row, onLink, onRetry, onCard }: AutoMessageProps) {
   const { spacing } = useTokens();
   return (
     <View style={{ gap: spacing.space3 }}>
@@ -62,6 +66,7 @@ export function AutoMessage({ row, onLink, onRetry }: AutoMessageProps) {
       {row.notices.map((notice) => (
         <TurnNotice key={notice.key} notice={notice} onRetry={onRetry} />
       ))}
+      <ThreadCards cards={row.cards} onSettled={onCard} onLink={onLink} />
     </View>
   );
 }

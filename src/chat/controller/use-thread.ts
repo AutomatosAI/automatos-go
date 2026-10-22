@@ -15,6 +15,7 @@ import { useLiveEvent } from '../../api/live';
 import { queryKeys } from '../../api/query-keys';
 import { useApiClient } from '../../app-state/session';
 import { fetchMessages } from '../api';
+import type { CardOutcome } from '../cards/model';
 import { buildChatRequest, type ChatRequestInput } from '../request';
 import { checkChat, isChatChangedFor } from './live-chat';
 import {
@@ -40,6 +41,8 @@ export type ThreadView = {
   /** 'New chat' (KC4): lets go of any read and starts a draft. */
   readonly newChat: () => void;
   readonly retry: () => void;
+  /** Records what the user did with one of Auto's cards, once the server agreed. */
+  readonly settleCard: (key: string, outcome: CardOutcome) => void;
 };
 
 type Queries = { readonly loadError: unknown; readonly retry: () => void };
@@ -188,5 +191,9 @@ export function useThread(cachedId: string | null): ThreadView {
     void runner.stop(latest.current.chatId).then(refresh);
   }, [latest, runner, refresh]);
   const newChat = useCallback(() => open(null), [open]);
-  return { state, loadError, send, stop, newChat, retry };
+  const settleCard = useCallback(
+    (key: string, outcome: CardOutcome) => dispatch({ type: 'card', key, outcome }),
+    [],
+  );
+  return { state, loadError, send, stop, newChat, retry, settleCard };
 }

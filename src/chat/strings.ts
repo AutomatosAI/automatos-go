@@ -100,3 +100,47 @@ export const TURN_ERROR_COPY: Readonly<Record<TurnErrorCode, FailureCopy>> = Obj
     canRetry: false,
   },
 });
+
+/**
+ * Auto's cards (D-CARDS): the Mission suggestion (the web's MissionSuggestionCard) and the plan
+ * approval (MissionApprovalWidget, with its OversightNote words). A Mission's plan is the work's
+ * plan, never a billing one; no cost or ceiling is ever shown (D8).
+ */
+export const CARD_COPY = Object.freeze({
+  suggestionEyebrow: 'Mission · Suggested',
+  suggestionBody:
+    'Auto suggests running this as a Mission: several agents working on it together, each step checked.',
+  /** AutoBrain's complexity tiers as the web names them; any other tier shows no chip. */
+  complexity: Object.freeze({ organ: 'Multi-step', organism: 'Complex multi-agent' }) as Readonly<
+    Record<string, string>
+  >,
+  fileIt: 'File it',
+  filing: 'Filing…',
+  noThanks: 'No thanks',
+  filed: '✓ Filed as a Mission',
+  openMission: 'Open it in Studio',
+  planEyebrow: 'Mission · Plan to approve',
+  tasks: Object.freeze({ one: 'task', other: 'tasks' }),
+  approve: 'Approve & run',
+  reject: 'Reject',
+  rejectReasonLabel: 'Why are you rejecting this plan?',
+  rejectReasonPlaceholder: 'Tell Auto what to change',
+  sendReject: 'Reject plan',
+  cancel: 'Cancel',
+  approved: 'Plan approved. The Mission is running.',
+  rejected: 'Plan rejected.',
+  reasonRequired: 'Say why you are rejecting this plan.',
+  reasonTooLong: (max: number) => `Keep the reason to ${max.toLocaleString('en')} characters.`,
+  /** components/widgets/oversight-note.tsx: the note's name, and each tier's words. */
+  oversight: 'Human oversight',
+  /** The agent the plan matched to a task, and when the owner picked it. */
+  matchedAgent: (agent: string) => `→ ${agent}`,
+  yourPick: '(your pick)',
+});
+
+/** oversightTierLabel: an unknown or missing tier reads as the strictest. */
+export const OVERSIGHT_TIERS = Object.freeze({
+  monitor: 'Monitored',
+  human_on_the_loop: 'Human on the loop',
+  human_in_the_loop: 'Human approval required',
+});

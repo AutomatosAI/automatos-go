@@ -2,6 +2,7 @@
 // scrolls to the end only when a row is added (a message, 'Auto is working…', a notice), never
 // while a reply grows (README 'Interactions'); the scroll waits for the new content's size, and it
 // is not animated under Reduce Motion. The header slot holds what sits above the thread on home.
+// Cards whose reply was never saved are drawn after the saved messages (their own row).
 
 import { useCallback, useLayoutEffect, useRef, type ReactElement, type RefObject } from 'react';
 import { FlatList, type ListRenderItem } from 'react-native';
@@ -9,6 +10,8 @@ import { useReducedMotion } from 'react-native-reanimated';
 
 import type { WebLinkTarget } from '../../navigation/web-links';
 import { useTokens } from '../../styles/theme';
+import type { SettleCard } from '../cards/model';
+import { ThreadCards } from '../cards/ThreadCards';
 import { shouldScrollToEnd, type ChatRow } from '../view-model';
 import { AutoMessage } from './AutoMessage';
 import { TurnNotice } from './TurnNotice';
@@ -20,22 +23,28 @@ export type MessageListProps = {
   readonly onLink: (target: WebLinkTarget) => void;
   /** Asks the last message again (a notice that offers Try again). */
   readonly onRetry?: () => void;
+  /** Records what the user did with one of Auto's cards (useThread's settleCard). */
+  readonly onCard: SettleCard;
   /** Drawn above the first message (home's needs strip). */
   readonly header?: ReactElement | null;
 };
 
-type RowProps = Pick<MessageListProps, 'onLink' | 'onRetry'> & { readonly row: ChatRow };
+type RowProps = Pick<MessageListProps, 'onLink' | 'onRetry' | 'onCard'> & {
+  readonly row: ChatRow;
+};
 
-function ThreadRow({ row, onLink, onRetry }: RowProps) {
+function ThreadRow({ row, onLink, onRetry, onCard }: RowProps) {
   switch (row.type) {
     case 'user':
       return <UserBubble row={row} />;
     case 'auto':
-      return <AutoMessage row={row} onLink={onLink} onRetry={onRetry} />;
+      return <AutoMessage row={row} onLink={onLink} onRetry={onRetry} onCard={onCard} />;
     case 'working':
       return <WorkingIndicator />;
     case 'notice':
       return <TurnNotice notice={row.notice} onRetry={onRetry} />;
+    case 'cards':
+      return <ThreadCards cards={row.cards} onSettled={onCard} onLink={onLink} />;
   }
 }
 
@@ -58,13 +67,13 @@ function useScrollOnAdd(list: RefObject<FlatList<ChatRow> | null>, count: number
 
 const keyOf = (row: ChatRow) => row.key;
 
-export function MessageList({ rows, onLink, onRetry, header }: MessageListProps) {
+export function MessageList({ rows, onLink, onRetry, onCard, header }: MessageListProps) {
   const { spacing } = useTokens();
   const list = useRef<FlatList<ChatRow>>(null);
   const onContentSizeChange = useScrollOnAdd(list, rows.length);
   const renderItem = useCallback<ListRenderItem<ChatRow>>(
-    ({ item }) => <ThreadRow row={item} onLink={onLink} onRetry={onRetry} />,
-    [onLink, onRetry],
+    ({ item }) => <ThreadRow row={item} onLink={onLink} onRetry={onRetry} onCard={onCard} />,
+    [onLink, onRetry, onCard],
   );
   return (
     <FlatList

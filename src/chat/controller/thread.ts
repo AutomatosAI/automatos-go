@@ -8,6 +8,8 @@
 // failure keeps the kit's own words (D-NO-BILLING). The turn runs detached on the server: Stop is a
 // cancel as well as an abort (turn-runner.ts), and a chat reopened mid-turn shows Auto working
 // until chat_changed or a resume brings the reply (web: frontend/lib/chat/hooks.ts, PRD-237 S7).
+// Auto's cards (cards/model.ts) are filed on the thread as frames raise them, with the user's
+// outcome, so they outlive the live turn: the saved reply carries none.
 
 import type { Frame } from '../../core/ai-sdk-stream';
 import {
@@ -19,6 +21,14 @@ import {
 } from '../../core/turn-reducer';
 import { completeRunningToolCalls } from '../../core/web/lib/chat/tool-calls';
 import { isApiError, type ApiErrorKind } from '../../api/errors';
+import {
+  fileCards,
+  raisedCards,
+  rebaseCards,
+  settleCard,
+  type CardOutcome,
+  type FiledCard,
+} from '../cards/model';
 import type { ChatFile } from '../request';
 import type { ChatThread, StoredMessage } from '../schemas';
 
@@ -60,6 +70,8 @@ export type ThreadState = {
   readonly messages: readonly StoredMessage[];
   readonly live: LiveTurn | null;
   readonly failure: ThreadFailure | null;
+  /** Auto's cards in this conversation, oldest first, each with what the user did with it. */
+  readonly cards: readonly FiledCard[];
 };
 
 export type ThreadAction =
@@ -79,7 +91,9 @@ export type ThreadAction =
   /** A draft stopped before its chat-id frame: the frame came later and names the chat. */
   | { readonly type: 'named'; readonly chatId: string }
   | { readonly type: 'refetched'; readonly messages: readonly StoredMessage[] }
-  | { readonly type: 'gaveUp' };
+  | { readonly type: 'gaveUp' }
+  /** The user acted on a card and the server agreed (or dismissed a suggestion). */
+  | { readonly type: 'card'; readonly key: string; readonly outcome: CardOutcome };
 
 type ActionOf<K extends ThreadAction['type']> = Extract<ThreadAction, { type: K }>;
 type Handler<K extends ThreadAction['type']> = (
@@ -99,6 +113,7 @@ export function createThread(chatId: string | null): ThreadState {
     messages: [],
     live: null,
     failure: null,
+    cards: [],
   };
 }
 
@@ -179,6 +194,7 @@ function loaded(state: ThreadState, action: ActionOf<'loaded'>): ThreadState {
     messages: action.messages,
     live: waiting ? liveTurn(null, action.chatId, action.messages.length) : null,
     failure: null,
+    cards: state.cards,
   };
 }
 
@@ -195,14 +211,16 @@ function send(state: ThreadState, action: ActionOf<'send'>): ThreadState {
 /** The chat-id frame names the chat; another id than ours means the server opened a new one. */
 function adoptChatId(state: ThreadState, live: LiveTurn, chatId: string): ThreadState {
   if (state.chatId === null || state.chatId === chatId) return { ...state, chatId, live };
-  return { ...state, chatId, messages: [], live: { ...live, since: 0 } };
+  const cards = rebaseCards(state.cards, live.since, 0);
+  return { ...state, chatId, messages: [], live: { ...live, since: 0 }, cards };
 }
 
 function frame(state: ThreadState, action: ActionOf<'frame'>): ThreadState {
   if (state.status !== 'streaming' || !state.live) return state;
   const live = { ...state.live, turn: turnReducer(state.live.turn, action.frame, action.at) };
   if (action.frame.kind === 'chat-id') return adoptChatId(state, live, action.frame.chatId);
-  return { ...state, live };
+  const cards = fileCards(state.cards, raisedCards(live.turn), live.since);
+  return { ...state, live, cards };
 }
 
 function finished(state: ThreadState): ThreadState {
@@ -265,6 +283,11 @@ function gaveUp(state: ThreadState): ThreadState {
   return state.status === 'working' ? { ...state, status: 'idle', live: null } : state;
 }
 
+function card(state: ThreadState, action: ActionOf<'card'>): ThreadState {
+  const cards = settleCard(state.cards, action.key, action.outcome);
+  return cards === state.cards ? state : { ...state, cards };
+}
+
 const HANDLERS: Handlers = {
   opened: (_state, action) => createThread(action.chatId),
   loaded,
@@ -277,6 +300,7 @@ const HANDLERS: Handlers = {
   named,
   refetched,
   gaveUp,
+  card,
 };
 
 export function threadReducer(state: ThreadState, action: ThreadAction): ThreadState {
