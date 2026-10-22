@@ -189,11 +189,28 @@ describe('StoredMessageSchema', () => {
   it('keeps the provenance (a saved turn error) and the attachments metadata', () => {
     const message = StoredMessageSchema.parse({
       ...REPLY,
-      source: { label: 'Auto', origin: 'turn_error', extra: 1 },
+      source: { label: 'Auto', origin: 'turn_error', code: 'trial_exhausted', extra: 1 },
       attachments: [{ ...ATTACHMENT, s3_key: 'k' }],
     });
-    expect(message.source).toEqual({ label: 'Auto', origin: 'turn_error' });
+    expect(message.source).toEqual({
+      label: 'Auto',
+      origin: 'turn_error',
+      code: 'trial_exhausted',
+    });
     expect(message.attachments).toEqual([ATTACHMENT]);
+  });
+
+  it('reads a provenance without a code, or with a code of the wrong type, as code-less', () => {
+    const without = StoredMessageSchema.parse({
+      ...REPLY,
+      source: { label: 'Error', origin: 'x' },
+    });
+    const wrong = StoredMessageSchema.parse({
+      ...REPLY,
+      source: { label: 'E', origin: 'x', code: 4 },
+    });
+    expect(without.source?.code ?? null).toBeNull();
+    expect(wrong.source).toEqual({ label: 'E', origin: 'x', code: null });
   });
 
   it('is the web’s ChatMessage, so the vendored helpers read it (proposedBrief)', () => {

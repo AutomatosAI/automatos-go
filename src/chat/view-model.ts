@@ -1,0 +1,391 @@
+// The thread as rows (US-008c), pure: what MessageList draws for a ThreadState. A saved message is
+// one row (the user's bubble, or Auto's message with its receipts); a live turn is the user's draft
+// and Auto's reply so far (text with narration already taken out by turnReducer, tool lines, the
+// receipts, the limit and attachment notices); then 'Auto is working…' while a turn runs and one
+// notice for a turn that failed, stopped or could not be stopped. Receipts and tool lines are the
+// web's words (vendored receipts.ts, Play's labels.ts) with Play's marks, and every mark has a word
+// for screen readers (§4.6). A receipt's link is mapped by the foundation's appRouteForWebLink, so
+// it opens an app screen or Studio, never another site. Every failure says the kit's own words
+// (strings.ts): the server's may name a plan (D-NO-BILLING). The components only draw these rows.
+
+import { ApiError } from '../api/errors';
+import {
+  TURN_ERROR_CODES,
+  turnErrorCode,
+  type TurnErrorCode,
+  type TurnState,
+} from '../core/turn-reducer';
+import {
+  MARK_DONE,
+  MARK_FAILED,
+  MARK_MUTED,
+  MARK_WAITING,
+  toolLineLabel,
+  toolStatusOf,
+  type LineTone,
+} from '../core/web/components/play/chat/labels';
+import { messageText, savedTurnError } from '../core/web/lib/chat/message-text';
+import {
+  NO_ACTIONS,
+  NOTHING_ON_THE_BOARD,
+  movedSomethingOnTheBoard,
+  receiptLine,
+  receiptsOf,
+  safeLink,
+} from '../core/web/lib/chat/receipts';
+import { lastTurn } from '../core/web/lib/chat/retry';
+import type { Receipt, ToolCall } from '../core/web/types';
+import { appRouteForWebLink, type WebLinkTarget } from '../navigation/web-links';
+import type { ColourName } from '../styles/tokens';
+import { joinLabel } from '../ui/paint';
+import { errorCopy } from '../ui/variants';
+import { canSend, shownMessages, type ThreadFailure, type ThreadState } from './controller/thread';
+import type { StoredMessage } from './schemas';
+import {
+  CHAT_COPY,
+  NOTICE_WORDS,
+  RECEIPT_BADGES,
+  RECEIPT_STATUS_WORDS,
+  TOOL_STATUS_WORDS,
+  TURN_ERROR_COPY,
+  type FailureCopy,
+} from './strings';
+
+export type ReceiptRow = {
+  readonly key: string;
+  readonly status: Receipt['status'];
+  readonly mark: string;
+  readonly tone: LineTone;
+  readonly text: string;
+  /** Play's tag beside the line: Done, Not done or Skipped. */
+  readonly badge: string | null;
+  readonly link: WebLinkTarget | null;
+  readonly accessibilityLabel: string;
+};
+
+export type ReceiptsView = {
+  readonly lines: readonly ReceiptRow[];
+  /** NO_ACTIONS, NOTHING_ON_THE_BOARD, or none when a card on the board moved. */
+  readonly note: string | null;
+};
+
+export type ToolLineRow = {
+  readonly key: string;
+  /** null while the call runs: the line shows a spinner. */
+  readonly mark: string | null;
+  readonly tone: LineTone;
+  readonly text: string;
+  readonly accessibilityLabel: string;
+};
+
+export type NoticeKind = keyof typeof NOTICE_WORDS;
+
+export type Notice = {
+  readonly key: string;
+  readonly kind: NoticeKind;
+  readonly mark: string;
+  readonly tone: LineTone;
+  readonly text: string;
+  readonly accessibilityLabel: string;
+  /** Only the newest failure the user can ask again offers Try again. */
+  readonly retry: boolean;
+};
+
+export type UserRow = {
+  readonly type: 'user';
+  readonly key: string;
+  readonly text: string;
+  readonly files: readonly string[];
+  readonly accessibilityLabel: string;
+};
+
+export type AutoRow = {
+  readonly type: 'auto';
+  readonly key: string;
+  /** The saved message's id (Report this); null for the reply still being written. */
+  readonly messageId: string | null;
+  readonly paragraphs: readonly string[];
+  readonly toolLines: readonly ToolLineRow[];
+  readonly receipts: ReceiptsView | null;
+  readonly notices: readonly Notice[];
+};
+
+export type ChatRow =
+  | UserRow
+  | AutoRow
+  | { readonly type: 'working'; readonly key: string }
+  | { readonly type: 'notice'; readonly key: string; readonly notice: Notice };
+
+export type ViewOptions = {
+  /** Studio's base URL for links the phone has no screen for (EXPO_PUBLIC_WEB_URL by default). */
+  readonly webUrl?: string;
+};
+
+export const LIVE_USER_KEY = 'live-user';
+export const LIVE_AUTO_KEY = 'live-auto';
+export const WORKING_KEY = 'working';
+export const TURN_NOTICE_KEY = 'turn-notice';
+
+/** The token a mark is painted in: Play's tones on Studio's colours (the handoff's markColor). */
+export const MARK_COLOURS: Readonly<Record<LineTone, ColourName>> = Object.freeze({
+  running: 'accent',
+  done: 'olive',
+  failed: 'destructive',
+  waiting: 'accent',
+  muted: 'mutedForeground',
+});
+
+const RECEIPT_LOOK: Readonly<
+  Record<Receipt['status'], { readonly mark: string; readonly tone: LineTone }>
+> = Object.freeze({
+  done: { mark: MARK_DONE, tone: 'done' },
+  refused: { mark: MARK_FAILED, tone: 'failed' },
+  skipped: { mark: MARK_MUTED, tone: 'muted' },
+  waiting: { mark: MARK_WAITING, tone: 'waiting' },
+});
+
+const PARAGRAPH_BREAK = /\n{2,}/;
+const KNOWN_TURN_CODES: ReadonlySet<string> = new Set(TURN_ERROR_CODES);
+
+/** The status word, then the line; the word alone is left out when the line already says it. */
+function spoken(word: string, text: string): string {
+  return text.toLowerCase().includes(word.toLowerCase()) ? text : joinLabel(word, text);
+}
+
+/** Play's receiptBadge: a done write says Done, a refused call Not done, a skipped one Skipped. */
+export function receiptBadge(receipt: Receipt): string | null {
+  if (receipt.status === 'refused') return RECEIPT_BADGES.refused;
+  if (receipt.status === 'skipped') return RECEIPT_BADGES.skipped;
+  return receipt.status === 'done' && receipt.kind === 'write' ? RECEIPT_BADGES.done : null;
+}
+
+function receiptRow(receipt: Receipt, index: number, options: ViewOptions): ReceiptRow {
+  const look = RECEIPT_LOOK[receipt.status];
+  const text = receiptLine(receipt);
+  const path = safeLink(receipt.link);
+  return {
+    key: `${index}-${receipt.action}`,
+    status: receipt.status,
+    mark: look.mark,
+    tone: look.tone,
+    text,
+    badge: receiptBadge(receipt),
+    link: path === null ? null : appRouteForWebLink(path, options.webUrl),
+    accessibilityLabel: spoken(RECEIPT_STATUS_WORDS[receipt.status], text),
+  };
+}
+
+/** 'What Auto did': null for a reply from before receipts, which shows none (receipts.tsx). */
+export function receiptsView(
+  receipts: readonly Receipt[] | undefined,
+  options: ViewOptions = {},
+): ReceiptsView | null {
+  if (!receipts) return null;
+  const note =
+    receipts.length === 0
+      ? NO_ACTIONS
+      : movedSomethingOnTheBoard([...receipts])
+        ? null
+        : NOTHING_ON_THE_BOARD;
+  return { lines: receipts.map((receipt, index) => receiptRow(receipt, index, options)), note };
+}
+
+/** One line per tool call; `streaming`: the reply is being written, so a running call spins. */
+export function toolLineRows(calls: readonly ToolCall[], streaming: boolean): ToolLineRow[] {
+  return calls.map((call) => {
+    const host = { ...call, skipped: call.skipped ?? false, waiting: call.waiting ?? false };
+    const label = toolLineLabel(host, streaming);
+    const word = TOOL_STATUS_WORDS[toolStatusOf(host, streaming)];
+    return {
+      key: call.toolCallId,
+      mark: label.mark,
+      tone: label.tone,
+      text: label.text,
+      accessibilityLabel: spoken(word, label.text),
+    };
+  });
+}
+
+/** Auto's answer as the handoff draws it: plain paragraphs (KC5). */
+export function paragraphs(text: string): string[] {
+  return text
+    .split(PARAGRAPH_BREAK)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+}
+
+/** A failure is marked ✕; a limit, a file Auto could not open and a stop are muted. */
+const NOTICE_LOOK: Readonly<
+  Record<NoticeKind, { readonly mark: string; readonly tone: LineTone }>
+> = Object.freeze({
+  failed: { mark: MARK_FAILED, tone: 'failed' },
+  stopFailed: { mark: MARK_FAILED, tone: 'failed' },
+  limit: { mark: MARK_MUTED, tone: 'muted' },
+  attachment: { mark: MARK_MUTED, tone: 'muted' },
+  stopped: { mark: MARK_MUTED, tone: 'muted' },
+});
+
+function notice(key: string, kind: NoticeKind, text: string, retry = false): Notice {
+  const label = joinLabel(NOTICE_WORDS[kind], text);
+  return { key, kind, ...NOTICE_LOOK[kind], text, accessibilityLabel: label, retry };
+}
+
+/** A failed turn in the kit's words: by its turn code, else by the client's error kind. */
+export function failureCopy(failure: ThreadFailure): FailureCopy {
+  if (failure.kind === 'turn') return TURN_ERROR_COPY[failure.code];
+  if (failure.code !== null && KNOWN_TURN_CODES.has(failure.code))
+    return TURN_ERROR_COPY[failure.code as TurnErrorCode];
+  // never the server's words: the error carries the kind and code only
+  const copy = errorCopy(new ApiError(failure.kind, failure.code ? { code: failure.code } : {}));
+  return { text: copy.message, canRetry: copy.canRetry };
+}
+
+/** A saved failure by its code, as a turn's (an unknown or missing one is turn_failed). */
+function savedFailureCopy(message: StoredMessage): FailureCopy {
+  return failureCopy({ kind: 'turn', code: turnErrorCode(message.source?.code ?? null) });
+}
+
+function filesOf(message: StoredMessage): string[] {
+  const named = [
+    ...message.parts.flatMap((part) => (part.type === 'file' ? [part.filename] : [])),
+    ...message.attachments.map((attachment) => attachment.filename),
+  ].filter(Boolean);
+  return [...new Set(named)];
+}
+
+function userRow(key: string, text: string, files: readonly string[]): UserRow | null {
+  const words = text.trim();
+  if (!words && files.length === 0) return null;
+  const attached = files.length > 0 ? `${CHAT_COPY.attached}: ${files.join(', ')}` : null;
+  return {
+    type: 'user',
+    key,
+    text: words,
+    files,
+    accessibilityLabel: joinLabel(CHAT_COPY.youSaid, words, attached),
+  };
+}
+
+function autoRow(row: Omit<AutoRow, 'type'>): AutoRow | null {
+  const empty =
+    row.paragraphs.length === 0 &&
+    row.toolLines.length === 0 &&
+    row.receipts === null &&
+    row.notices.length === 0;
+  return empty ? null : { type: 'auto', ...row };
+}
+
+/** A saved message; `newest`: the thread's last, which alone may offer Try again. */
+function storedRow(message: StoredMessage, newest: boolean, options: ViewOptions): ChatRow | null {
+  if (message.role === 'user') return userRow(message.id, messageText(message), filesOf(message));
+  const base = { key: message.id, messageId: message.id, toolLines: [], receipts: null };
+  if (savedTurnError(message) !== null) {
+    const copy = savedFailureCopy(message);
+    const failed = notice(`${message.id}-failed`, 'failed', copy.text, newest && copy.canRetry);
+    return autoRow({ ...base, paragraphs: [], notices: [failed] });
+  }
+  return autoRow({
+    ...base,
+    paragraphs: paragraphs(messageText(message)),
+    receipts: receiptsView(receiptsOf(message), options),
+    notices: [],
+  });
+}
+
+function turnNotices(turn: TurnState): Notice[] {
+  const limit = turn.limitReached ? [notice('limit', 'limit', CHAT_COPY.limit)] : [];
+  const files = turn.attachmentsUnavailable.map((file, index) =>
+    notice(`attachment-${index}`, 'attachment', CHAT_COPY.attachmentUnavailable(file.filename)),
+  );
+  return [...limit, ...files];
+}
+
+/** The reply being written (or the one a stopped or failed turn left). */
+function liveAutoRow(turn: TurnState, streaming: boolean, options: ViewOptions): AutoRow | null {
+  return autoRow({
+    key: LIVE_AUTO_KEY,
+    messageId: null,
+    paragraphs: [...(turn.receiptsAbove ?? []), ...paragraphs(turn.text)],
+    toolLines: toolLineRows(turn.toolCalls, streaming),
+    receipts: receiptsView(turn.receipts, options),
+    notices: turnNotices(turn),
+  });
+}
+
+function isRow(row: ChatRow | null): row is ChatRow {
+  return row !== null;
+}
+
+function liveRows(state: ThreadState, options: ViewOptions): ChatRow[] {
+  const { live } = state;
+  if (!live) return [];
+  const { draft } = live;
+  const user = draft
+    ? userRow(
+        LIVE_USER_KEY,
+        draft.text,
+        draft.files.map((file) => file.filename),
+      )
+    : null;
+  const rows: (ChatRow | null)[] = [
+    user,
+    liveAutoRow(live.turn, state.status === 'streaming', options),
+  ];
+  return rows.filter(isRow);
+}
+
+/** 'Auto is working…' while a turn runs and its answer has not started. */
+export function isWorking(state: ThreadState): boolean {
+  const running = state.status === 'streaming' || state.status === 'working';
+  return running && !state.live?.turn.text.trim();
+}
+
+/** The one notice under the thread: a stop, a stop that did not reach the server, or a failure. */
+export function turnNotice(state: ThreadState): Notice | null {
+  if (state.status === 'stopped') return notice(TURN_NOTICE_KEY, 'stopped', CHAT_COPY.stopped);
+  if (!state.failure) return null;
+  if (state.status === 'working')
+    return notice(TURN_NOTICE_KEY, 'stopFailed', CHAT_COPY.stopFailed);
+  if (state.status !== 'failed') return null;
+  const copy = failureCopy(state.failure);
+  return notice(TURN_NOTICE_KEY, 'failed', copy.text, copy.canRetry && canSend(state));
+}
+
+/** Every row of the thread, oldest first; nothing while the chat is still being checked. */
+export function threadRows(state: ThreadState, options: ViewOptions = {}): ChatRow[] {
+  if (state.status === 'loading') return [];
+  const messages = shownMessages(state);
+  const settled = state.live === null && canSend(state);
+  const saved = messages.map((message, index) =>
+    storedRow(message, settled && index === messages.length - 1, options),
+  );
+  const pending = turnNotice(state);
+  return [
+    ...saved.filter(isRow),
+    ...liveRows(state, options),
+    ...(isWorking(state) ? [{ type: 'working' as const, key: WORKING_KEY }] : []),
+    ...(pending ? [{ type: 'notice' as const, key: pending.key, notice: pending }] : []),
+  ];
+}
+
+/**
+ * Try again's words (the vendored retry.ts rule: the user's last message, asked anew): the live
+ * turn's draft when it has one, else the newest saved message of the user's; null when none.
+ */
+export function retryWords(state: ThreadState): string | null {
+  const draft = state.live?.draft?.text.trim();
+  if (draft) return draft;
+  return lastTurn(state.messages)?.content.trim() || null;
+}
+
+/** MessageList scrolls to the end only when a row is added, never as a reply grows. */
+export function shouldScrollToEnd(previousCount: number, nextCount: number): boolean {
+  return nextCount > previousCount;
+}
+
+/** The handoff's pulse (opacity 1 → 0.35 → 1 over 1.4 s); none under Reduce Motion (§4.6). */
+export const WORKING_PULSE = Object.freeze({ dimmest: 0.35, periodMs: 1400 });
+
+export function workingMotion(reduceMotion: boolean): { readonly pulse: boolean } {
+  return { pulse: !reduceMotion };
+}

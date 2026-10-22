@@ -105,13 +105,20 @@ export const StoredAttachmentSchema = z.object({
 export const MESSAGE_ROLES = ['user', 'assistant'] as const;
 export type MessageRole = (typeof MESSAGE_ROLES)[number];
 
-/** One saved message (GET /api/chat/{id}/messages); source.origin 'turn_error': a saved failure. */
+/**
+ * One saved message (GET /api/chat/{id}/messages). source.origin 'turn_error' is a saved failure
+ * and source.code its turn error code (consumers/chatbot/service.py _persist_turn_error): the
+ * thread shows the kit's words for the code, never the saved text (D-NO-BILLING).
+ */
 export const StoredMessageSchema = z.object({
   id: Id,
   role: z.enum(MESSAGE_ROLES),
   parts: nestedList(MessagePartSchema, 'message part'),
   attachments: nestedList(StoredAttachmentSchema, 'attachment'),
-  source: z.object({ label: Text, origin: Text }).nullable().catch(null),
+  source: z
+    .object({ label: Text, origin: Text, code: Text.optional().catch(null) })
+    .nullable()
+    .catch(null),
   createdAt: Text,
 });
 
