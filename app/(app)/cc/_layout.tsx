@@ -1,8 +1,9 @@
 // The Command Centre's frame (handoff §2, US-010b): the top bar (back to Auto, the live stream's
 // word), the head (the dateline in the phone's timezone, the title, the lede) and the sticky tabs
 // with their figures, over the tab's own screen. The tabs never scroll away; a ticket, a social post
-// or a Deliverable opens over the tab it came from, which the shell keeps showing. The words and
-// figures are src/cc/shell's (pure, tested); the live word reads the foundation's one stream.
+// or a Deliverable opens over the tab it came from, which the shell keeps showing; the ticket is a
+// sheet over it (SHEET_ROUTE_OPTIONS). The words and figures are src/cc/shell's (pure, tested); the
+// live word reads the foundation's one stream.
 import { Stack } from 'expo-router';
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -12,6 +13,7 @@ import { Head } from '../../../src/cc/shell/Head';
 import { TabStrip } from '../../../src/cc/shell/TabStrip';
 import { TopBar } from '../../../src/cc/shell/TopBar';
 import { useShellFigures, useShellTab } from '../../../src/cc/shell/use-shell';
+import { SHEET_ROUTE_OPTIONS } from '../../../src/cc/use-sheet-route';
 import { useTokens } from '../../../src/styles/theme';
 import { Screen } from '../../../src/ui';
 
@@ -37,7 +39,9 @@ export default function CommandCentreLayout() {
       <Head lede={lede} />
       <TabStrip active={tab} counts={counts} />
       <View style={styles.body}>
-        <Stack screenOptions={screenOptions} />
+        <Stack screenOptions={screenOptions}>
+          <Stack.Screen name="ticket/[taskId]" options={SHEET_ROUTE_OPTIONS} />
+        </Stack>
       </View>
     </Screen>
   );

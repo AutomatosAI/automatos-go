@@ -66,6 +66,20 @@ export const BoardSchema = z.object({
 
 export type Board = Readonly<z.output<typeof BoardSchema>>;
 
+/**
+ * What approving runs first (planning_data.approval_action, api/board_tasks.py
+ * _run_approval_action): publish_blog, create_blog (on a topic), else nothing. Only the type and
+ * topic are read; the rest of planning_data is never parsed.
+ */
+const ApprovalActionSchema = z.object({ type: z.string(), topic: Text }).nullable().catch(null);
+
+const PlanningSchema = z
+  .object({ approval_action: ApprovalActionSchema.optional() })
+  .nullable()
+  .catch(null);
+
+export type ApprovalAction = NonNullable<z.output<typeof ApprovalActionSchema>>;
+
 /** GET /api/v1/tasks/{task_id}: the card's fields and what the ticket sheet reads. */
 export const TicketDetailSchema = z.object({
   ...BOARD_TICKET_FIELDS,
@@ -82,18 +96,24 @@ export const TicketDetailSchema = z.object({
   times_sent_back: z.number().int().nonnegative().catch(0),
   /** The draft a failed redo keeps on the card's face (F243). */
   kept_draft: Text,
+  /** Only its approval_action: what Approve runs, named on the button. */
+  planning_data: PlanningSchema.optional().catch(null),
 });
 
 export type TicketDetail = Readonly<z.output<typeof TicketDetailSchema>>;
 
-/** POST …/approve: {success, task_id, status, action_result}; a mission card has its own shape. */
+/**
+ * POST …/approve: {success, task_id, status, action_result}. A mission's card that approves its
+ * plan answers {…, mission_id, message}: the server's own words for what happened.
+ */
 export const ApproveResultSchema = z.object({
   status: Text,
   action_result: z
-    .object({ type: Text, title: Text, warning: Text })
+    .object({ type: Text, title: Text, topic: Text, warning: Text })
     .nullable()
     .optional()
     .catch(null),
+  message: Text,
 });
 
 export type ApproveResult = Readonly<z.output<typeof ApproveResultSchema>>;

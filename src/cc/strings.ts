@@ -78,3 +78,65 @@ export const SHELL_COPY = Object.freeze({
     'Dec',
   ]),
 });
+
+/** The ticket sheet (handoff §2 'ticket sheet', D-BOARD, D31). */
+export const TICKET_COPY = Object.freeze({
+  loading: 'Loading the ticket…',
+  /** 'Ledger · updated 08:06'. */
+  updated: 'updated',
+  yesterday: 'Yesterday',
+  /** The box on a ticket blocked on a question: it opens Questions, where it is answered. */
+  question: Object.freeze({
+    title: 'Waiting for your answer',
+    link: 'Answer in Questions',
+    hint: 'Opens Questions',
+  }),
+  /** What the agent handed in, and why a failed ticket failed: plain text, cut at a length. */
+  result: 'Result',
+  failure: 'Why it failed',
+  cut: '…',
+  deliverables: 'Deliverables',
+  /** A Deliverable row: open it (D25: never Review, Approve or Request changes). */
+  open: 'Open',
+  openHint: 'Opens the Deliverable',
+  /** The Approve button names what approving does (the web's approval-effect.ts). */
+  approve: Object.freeze({
+    done: 'Approve and mark done',
+    publish: 'Approve and publish',
+    startPost: 'Approve and start the post',
+    plan: 'Approve the plan',
+  }),
+  effect: Object.freeze({
+    done: 'Approving marks the ticket done. Nothing else runs.',
+    publish: 'Approving publishes the blog post to the live site.',
+    startPost: 'Approving starts the blog post.',
+    startPostOn: (topic: string) => `Approving starts a blog post on “${topic}”.`,
+    plan: 'Approving starts the mission with this plan.',
+  }),
+  approved: Object.freeze({
+    done: (ticket: string) => `Approved. ${ticket} is done.`,
+    published: 'Approved. The post is published.',
+    publishedTitle: (title: string) => `Approved. “${title}” is published.`,
+    started: 'Approved. The blog post has started.',
+    startedOn: (topic: string) => `Approved. The blog post on “${topic}” has started.`,
+  }),
+  sendBack: 'Send back',
+  cancel: 'Cancel',
+  /** The Send back note: the agent reads it first (PRD-252 R2). */
+  note: Object.freeze({
+    label: 'What’s wrong?',
+    placeholder: 'Say what to fix. The agent reads this first.',
+    helper: 'The ticket goes back to its agent, and the redo starts from your words.',
+  }),
+  sentBack: (agent: string) => `Sent back to ${agent}. The redo starts from your note.`,
+  theAgent: 'the agent',
+  /** D-ROLES: a viewer reads a ticket in Review and is told who decides it. */
+  readOnly: 'Owners, admins and editors approve or send back tickets.',
+  /** D31: a new conversation with the ticket as its context (the chat wave renders it). */
+  askAbout: (number: string) => `Ask Auto about ${number}`,
+  askAboutThis: 'Ask Auto about this ticket',
+  askHint: 'Opens a chat with Auto about this ticket',
+  /** After DISCUSS_AFTER_REJECTS send-backs (the web's discuss hint). */
+  sentBackTimes: (times: number) =>
+    `Sent back ${times} times. Talking it through with Auto may be quicker.`,
+});

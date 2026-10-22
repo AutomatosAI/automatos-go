@@ -1,7 +1,8 @@
 // A ticket on the Board (handoff §2 'Board' card): the kind row (#number, kind icon, KIND · a raised
 // priority, the status as dot and WORD), the serif title, the reason chip from the vendored
 // ticket-stage, the tags and the agent's swatch and name. The whole card is one button that opens
-// the ticket sheet (routes.cc.ticket). Its fields are view-model.ts's; its sizes chrome.ts's.
+// the ticket sheet (routes.cc.ticket), whose head reuses the kind row and the agent. Its fields are
+// view-model.ts's; its sizes chrome.ts's.
 
 import type { LucideIcon } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -15,6 +16,7 @@ import type { TicketKind } from '../../core/web/components/activity/board/ticket
 import { useTokens } from '../../styles/theme';
 import { Card, Chip, StatusPip, Text } from '../../ui';
 import { ICON_STROKE } from '../../ui/paint';
+import type { TextLevel } from '../../ui/variants';
 import { BOARD_COPY } from '../strings';
 import { TICKET_AGENT, TICKET_CARD, TICKET_TAG } from './chrome';
 import type { TicketCardView } from './view-model';
@@ -27,7 +29,7 @@ const KIND_ICON_COMPONENTS: Readonly<Record<TicketKind, LucideIcon>> = Object.fr
   Routine: RefreshCw,
 });
 
-function KindRow({ view }: { readonly view: TicketCardView }) {
+export function KindRow({ view }: { readonly view: TicketCardView }) {
   const { colours, spacing } = useTokens();
   const Icon = KIND_ICON_COMPONENTS[view.kind];
   return (
@@ -74,7 +76,14 @@ function Tag({ label }: { readonly label: string }) {
   );
 }
 
-function Agent({ agent }: { readonly agent: TicketCardView['agent'] }) {
+export type AgentProps = {
+  readonly agent: TicketCardView['agent'];
+  /** What follows the swatch: the name on a card, 'Ledger · updated 08:06' on the sheet. */
+  readonly label?: string;
+  readonly level?: TextLevel;
+};
+
+export function Agent({ agent, label, level = TICKET_AGENT.level }: AgentProps) {
   const { colours, radii } = useTokens();
   return (
     <View style={[styles.agent, { gap: TICKET_AGENT.gap }]}>
@@ -86,8 +95,8 @@ function Agent({ agent }: { readonly agent: TicketCardView['agent'] }) {
           backgroundColor: colours[agent.swatch],
         }}
       />
-      <Text level={TICKET_AGENT.level} weight={TICKET_AGENT.weight} tone={TICKET_AGENT.tone}>
-        {agent.name}
+      <Text level={level} weight={TICKET_AGENT.weight} tone={TICKET_AGENT.tone}>
+        {label ?? agent.name}
       </Text>
     </View>
   );
