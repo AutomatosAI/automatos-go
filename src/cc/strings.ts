@@ -79,6 +79,30 @@ export const SHELL_COPY = Object.freeze({
   ]),
 });
 
+/** The Calendar (handoff §2 'Calendar', D27). Kind words are the vendored calendar-kinds.ts. */
+export const CALENDAR_COPY = Object.freeze({
+  /** An item the server sent without a name. */
+  untitled: 'Untitled',
+  /** A kind the server sent blank: it is still listed, under this word. */
+  otherKind: 'Scheduled',
+  /** A deadline whose time has passed (the server keeps a missed SLA in the feed). */
+  overdue: 'Overdue',
+  /** Between the agent and the cadence: 'Ledger · weekdays'. */
+  separator: '·',
+  /** How often it runs, lower case after the agent: 'Relay · Inbox triage · every 15 min'. */
+  cadence: Object.freeze({
+    oneOff: 'one-off',
+    recurring: 'recurring',
+    hourly: 'hourly',
+    daily: 'daily',
+    weekdays: 'weekdays',
+    weekends: 'weekends',
+    minutes: (count: number) => `every ${count} min`,
+    hours: (count: number) => `every ${count} h`,
+    days: (count: number) => `every ${count} days`,
+  }),
+});
+
 /** The ticket sheet (handoff §2 'ticket sheet', D-BOARD, D31). */
 export const TICKET_COPY = Object.freeze({
   loading: 'Loading the ticket…',

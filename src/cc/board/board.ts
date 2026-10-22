@@ -64,7 +64,8 @@ function isKnownStatus(status: string): status is BoardStatus {
 }
 
 /** 'waiting_on_host' → 'Waiting on host': an unknown status still reads as words. */
-function humanised(status: string): string {
+/** A server word this version has no word for, as a person reads it: 'waiting_on_host' → 'Waiting on host'. */
+export function humanised(status: string): string {
   const words = status.replace(/[_-]+/g, ' ').trim();
   return words ? words[0].toUpperCase() + words.slice(1) : status;
 }
