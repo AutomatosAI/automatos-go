@@ -46,7 +46,7 @@ const WEB_ADDRESS = /^(https?):\/\/(.*)$/i;
 const SCHEME_SEPARATOR = '://';
 
 /** host[:port] of an origin parseServerAddress returned. */
-function authorityOf(origin: string): string {
+export function authorityOf(origin: string): string {
   return origin.slice(origin.indexOf(SCHEME_SEPARATOR) + SCHEME_SEPARATOR.length);
 }
 

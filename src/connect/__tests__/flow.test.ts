@@ -385,7 +385,7 @@ describe('failed', () => {
   });
 
   it('ignores every other action', () => {
-    unchangedBy(PAIR_FAILED, ['back', 'edit', 'confirm']);
+    unchangedBy(PAIR_FAILED, ['back', 'edit', 'confirm', 'submit']);
   });
 });
 

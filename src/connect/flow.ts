@@ -207,10 +207,14 @@ function fromPairing(state: StateOf<'pairing'>, action: ConnectAction): ConnectS
   return failed(action.kind, state.fields, detailsOf(state));
 }
 
-/** Back or typing returns to the fields; Try again pairs again only after the card was shown. */
+/**
+ * Back or typing returns to the fields; Continue checks the server again (still only as far as
+ * the card, KC8); Try again pairs again only after the card was shown.
+ */
 function fromFailed(state: StateOf<'failed'>, action: ConnectAction): ConnectState {
   if (action.type === 'back') return entering(state.fields);
   if (action.type === 'edit') return edit(entering(state.fields), action);
+  if (action.type === 'submit') return submit(action);
   if (action.type === 'confirm' && state.details) return pairing(state.fields, state.details);
   return state;
 }

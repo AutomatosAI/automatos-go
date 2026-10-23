@@ -98,3 +98,75 @@ export const OWN_SERVER_COPY: Readonly<
       "Its operator turns pairing back on with LOCAL_REMOTE_ACCESS=paired ('Reach your install from your phone' in the self-hosting docs), then restarts it.",
   }),
 });
+
+/** Welcome (WelcomeScreen.tsx): the first run, or a phone connected nowhere (PRD-001 §4.5). */
+export const WELCOME_COPY = Object.freeze({
+  title: 'Automatos Go',
+  lead: 'Sign in to your Automatos workspace, or connect to an Automatos server you run.',
+  signIn: 'Sign in to Automatos',
+  connect: 'Connect to your own server',
+  /** A build with no hosted sign-in (src/session/auth-branch.ts hostedSignInConfigured). */
+  signInOff: AUTH_COPY.notConfiguredTitle,
+});
+
+/** Connect (ConnectScreen.tsx): the server's address and the pairing code. */
+export const CONNECT_SCREEN_COPY = Object.freeze({
+  /** The eyebrow role sets it in capitals. */
+  eyebrow: 'Automatos Go',
+  title: 'Connect to your own server',
+  lead: "Get a pairing code in Studio → Settings → Phones & devices, then scan it, or type it here with your server's address.",
+  addressLabel: 'Server address',
+  addressPlaceholder: 'https://automatos.example.com',
+  addressHelper: 'Its HTTPS address, or its address on your home network.',
+  codeLabel: 'Pairing code',
+  codePlaceholder: 'ABCD-EFGH',
+  codeHelper: 'The 8 characters Studio shows.',
+  scan: 'Scan the code in Studio',
+  continue: 'Continue',
+  /** While discovery is read: stops the check and keeps what was typed. */
+  cancel: 'Cancel',
+  /** 'hosted': this address is the Automatos hosted server. */
+  signIn: WELCOME_COPY.signIn,
+  back: 'Back',
+  checking: 'Checking the server…',
+});
+
+/** The confirm card (ConfirmCard.tsx): where this phone is about to pair (KC8). */
+export const CONFIRM_COPY = Object.freeze({
+  title: 'Pair with this server?',
+  lead: 'Check this is your server before you pair this phone with it.',
+  edition: 'Edition',
+  address: 'Address',
+  /** The discovery document's api_url, shown only when it names another address (KC5). */
+  listedAddress: 'Address the server lists',
+  listedAddressNote: 'Automatos Go uses the address above, the one that answered.',
+  pair: 'Pair',
+  pairing: 'Pairing…',
+  tryAgain: 'Try again',
+  /** A wrong or spent code: back to the fields for a new one. */
+  newCode: 'Enter a new code',
+  back: 'Back',
+});
+
+/** http:// on a private address (D-HTTPS): the card's note, in words as well as colour. */
+export const INSECURE_NOTE_COPY = Object.freeze({
+  title: 'Unencrypted home network',
+  message:
+    'This address uses http://, so what this phone and the server send is not encrypted. Anyone on the same network could read it. Pair only on a network you trust.',
+});
+
+/** Where {server} goes in DATA_NOTE_OWN_SERVER. */
+export const SERVER_PLACEHOLDER = '{server}';
+
+/**
+ * KC16's data note, the one statement this wave makes about where data goes, word for word. No copy
+ * says more (nothing like 'nothing leaves your server'): the app still reports crashes, checks for
+ * updates and may send notifications through Expo.
+ */
+export const DATA_NOTE_OWN_SERVER =
+  "Your chats, files and reports stay on {server}. Automatos Go itself sends crash reports to Automatos, checks Expo for app updates and, if this server's operator agrees, sends notifications through Expo and Apple or Google.";
+
+/** The data note for one own server. */
+export function dataNoteFor(server: string): string {
+  return DATA_NOTE_OWN_SERVER.replace(SERVER_PLACEHOLDER, server);
+}
