@@ -143,18 +143,18 @@
       "title": "The Calendar tab: day view, seven-day strip, the item sheet with Pause/Resume",
       "description": "As a user, I want today's schedule and to pause a routine (the handoff's Calendar; D-PAUSE).",
       "acceptanceCriteria": [
-        "app/(app)/cc/calendar.tsx with src/cc/calendar/{DayStrip,DayView,ItemSheet}.tsx: the strip (selected chip, today, dot), the always-on band, rows (mono time, kind label in its kind colour with an 8 px square and the kind WORD, serif title, meta); empty 'Nothing scheduled this day.'",
-        "ItemSheet: Pause/Resume for routines and scheduled tasks (role-gated 'pause'), 'Manage in Studio' (system browser via the foundation's web-link mapping) for every other kind, 'Open #n on the board' when the item has a ticket",
-        "Paused rows at reduced opacity WITH the word 'Paused'",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes",
-        "npm run check:bundle passes"
+        "app/(app)/cc/calendar.tsx with src/cc/calendar/{DayStrip,DayView,ItemSheet}.tsx: the strip (selected chip, today, dot), the always-on band, rows (mono time, kind label in its kind colour with an 8 px square and the kind WORD, serif title, meta); empty 'Nothing scheduled this day.' → DONE — 4fe7972: app/(app)/cc/calendar.tsx wires src/cc/calendar/CalendarTab.tsx (ScrollView, pull to refresh) with DayStrip.tsx (7 cells from today in the phone's zone: chosen = solid ink, today = card, accent dot when the day has rows; VoiceOver 'Thu 22 Oct, today, 6 items'), DayView.tsx (the dashed 24/7 band, a line per heartbeat ≤ 60 min 'Relay · Inbox triage … every 15 min'; rows: mono time, kind's 8 pt square + kind WORD in the vendored calendar-kinds tone (unknown kind muted), serif title (Title 5), meta (Body 6)); 'Nothing scheduled this day.' italic serif; paints in chrome.ts, views in view-model.ts (calendar-view.test.ts)",
+        "ItemSheet: Pause/Resume for routines and scheduled tasks (role-gated 'pause'), 'Manage in Studio' (system browser via the foundation's web-link mapping) for every other kind, 'Open #n on the board' when the item has a ticket → DONE — 4fe7972: ItemSheet.tsx over the tab (foundation Sheet): Pause/Resume only where pauseOffer gives a routine or a scheduled task ('Pause this routine' / 'Resume this task', the effect line, and while pausing 'may not show on this calendar; Studio lists it'); a viewer gets the read-only line (roleCan 'pause'); every other kind 'Manage in Studio' = studioUrl(studioLink) opened in the system browser (src/cc/open-studio.ts, RN Linking; a build without EXPO_PUBLIC_WEB_URL says 'Manage this in Studio on the web.'); 'Open #0427 on the board' when board_task_id is set (number from the Board's query, else 'Open the ticket on the board'): the sheet slides away, then Board + routes.cc.ticket(id); a refusal shows in the sheet (refusalMessage), success toasts the server's answer (sendPause → paused now) and invalidates queryKeys.schedule('7d') (sheet.ts, tested)",
+        "Paused rows at reduced opacity WITH the word 'Paused' → DONE — 4fe7972: a paused row or band line is drawn at PAUSED_OPACITY 0.5 (chrome.ts pausedOpacity) and its kind line and VoiceOver label carry 'Paused' (calendar-view.test.ts: three paused runs still listed, each with the word); overdue deadlines say 'Overdue' and 'Due Tue 20 Oct'",
+        "npm run typecheck passes → DONE — 4fe7972: npm run typecheck (tsc --noEmit) clean",
+        "npm run lint passes (0 errors) → DONE — 4fe7972: npm run lint: 0 errors, 0 warnings",
+        "npx vitest run passes → DONE — 4fe7972: npx vitest run: 96 files, 1477 tests passed (calendar-view.test.ts 20 new)",
+        "npm run check:bundle passes → DONE — 4fe7972: npm run check:bundle: exported .expo/bundle-check (iOS hbc 6.39 MB); gate check 'JS bundle compiles' PASS"
       ],
       "files": ["app/(app)/cc/calendar.tsx", "src/cc/calendar/"],
       "priority": 6,
-      "passes": false,
-      "notes": "Pause never applies to Playbooks or social posts (D27, PRD non-goals)."
+      "passes": true,
+      "notes": "Pause never applies to Playbooks or social posts (D27, PRD non-goals). | US-011b DONE 23 Oct (4fe7972): the item sheet is a Sheet over the Calendar (no route builder for an item); the band's heartbeats open it too (they are the routines most worth pausing); Studio is offered beside 'Open on the board' for a deadline (its kind is Studio's to manage); the Calendar tab figure is today's rows from the same schedule query (todayCount, the band uncounted); sendPause now resolves whether the item is paused per the server (heartbeat enabled, task status). SERVER TODAY (unchanged from US-011a): a paused routine or scheduled task leaves the feed after the refetch, so the sheet says Studio lists it. FOUNDATION GAP: src/navigation/web-links.ts resolves a Studio page (studioUrl, {external}) but nothing opens it; adapter src/cc/open-studio.ts openInBrowser (React Native Linking.openURL → the system browser, false on failure, shown in the sheet)."
     },
     {
       "id": "US-012a",
