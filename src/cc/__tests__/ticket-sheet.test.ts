@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createApiClient } from '../../api/client';
 import { queryKeys } from '../../api/query-keys';
 import { SERVER, fakeTransport, jsonReply } from '../../api/__tests__/fake-transport';
 import { routes } from '../../navigation/routes';
+import { SHEET_DURATION_MS } from '../../ui/overlay';
 import { TicketDetailSchema, type TicketDetail } from '../board/schemas';
 import { BOARD_COPY, TICKET_COPY } from '../strings';
 import { ticketActions } from '../ticket/actions';
@@ -14,8 +15,9 @@ import {
   linkedDeliverablesQuery,
   linkedDeliverableViews,
 } from '../ticket/linked';
-import { cutText, taskIdParam, TEXT_CUT_CHARS, ticketSheetView } from '../ticket/sheet';
+import { askAuto, cutText, taskIdParam, TEXT_CUT_CHARS, ticketSheetView } from '../ticket/sheet';
 import { updatedWord } from '../ticket/updated';
+import { testSheetRoute } from './sheet-router';
 
 const WS = '7f1c2a54-0000-4000-8000-000000000001';
 const UUID = '0b6f9d1e-1111-4a2b-8c3d-000000000042';
@@ -100,6 +102,19 @@ describe('the ticket sheet view', () => {
     expect(view.ask.href).toBe('/chat?ticket=2680');
     const unnumbered = ticketSheetView(detail({ number: null, workspace_seq: null }), CLOCK);
     expect(unnumbered.ask.label).toBe(TICKET_COPY.askAboutThis);
+  });
+
+  it('leaves the sheet route before Ask Auto about opens the chat about the row id', () => {
+    vi.useFakeTimers();
+    try {
+      const route = testSheetRoute();
+      askAuto(ticketSheetView(detail(), CLOCK), route);
+      expect(route.calls).toEqual([]);
+      vi.advanceTimersByTime(SHEET_DURATION_MS);
+      expect(route.calls).toEqual(['back', `push ${routes.chatWithTicket(2680)}`]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("shows the 'Waiting for your answer' box on a ticket blocked on a question", () => {

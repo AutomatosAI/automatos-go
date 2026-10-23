@@ -2,13 +2,15 @@
 // (#number, kind, a raised priority, the status as dot and word), the serif title, the agent and
 // when it was updated, the description, why it sits in Review or Blocked, the 'Waiting for your
 // answer' box when it is blocked on a question (it opens Questions), what it handed in or why it
-// failed, and Ask Auto about #number. The card's fields are the Board's own (view-model.ts).
+// failed, and Ask Auto about #number (the sheet route's leaving push, sheet-exit.ts). The card's
+// fields are the Board's own (view-model.ts).
 
 import { DISCUSS_AFTER_REJECTS } from '../../core/web/lib/discussion';
 import { isTaskId, routes, type RouteParams } from '../../navigation/routes';
 import { reasonChip, reasonSays } from '../board/board';
 import type { TicketDetail } from '../board/schemas';
 import { ticketCard, type TicketCardView } from '../board/view-model';
+import type { SheetExits } from '../sheet-exit';
 import { TICKET_COPY } from '../strings';
 import { updatedWord } from './updated';
 
@@ -88,4 +90,9 @@ export function ticketSheetView(ticket: TicketDetail, clock: SheetClock): Ticket
         ? TICKET_COPY.sentBackTimes(ticket.times_sent_back)
         : null,
   };
+}
+
+/** Ask Auto about: the sheet route is left first, then the chat about the ticket is pushed. */
+export function askAuto(view: Pick<TicketSheetView, 'ask'>, route: Pick<SheetExits, 'push'>): void {
+  route.push(view.ask.href);
 }
