@@ -8,6 +8,9 @@ const STYLES: Readonly<Record<StyleId, (scheme: ColourScheme) => Tokens>> = Obje
   studio: studioTokens,
 });
 
+/** Every built-in style, so a check over the looks (the AI label's contrast) covers a new one. */
+export const STYLE_IDS: readonly StyleId[] = Object.freeze(Object.keys(STYLES) as StyleId[]);
+
 export function tokensFor(style: StyleId, scheme: ColourScheme): Tokens {
   return STYLES[style](scheme);
 }

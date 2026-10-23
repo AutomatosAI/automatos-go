@@ -1,10 +1,10 @@
 // The thread drawn like the web (D72), read from the source (vitest runs no React Native renderer),
 // in the kit's style: the user's words in the grey box, never the primary slab; Auto's in its box
 // beside the sail avatar, with no 'A' tile or 'AUTO' label; the sail tinted white with both sides
-// pinned and VoiceOver's 'Auto said' on it; the list placed by threadPlaces with no flat gap, a
-// turn's notice folded into the reply it ends, the thinking pill and a notice boxed by thread-look
-// alone, and only the live rows animated; the thinking pill in words, not italics, in the label
-// face thread-look names and announced on iOS; the composer in the thread's 16/24.
+// pinned and VoiceOver's 'Auto said, Auto is an AI' on it; the list placed by threadPlaces with no
+// flat gap, a turn's notice folded into the reply it ends, the thinking pill and a notice boxed by
+// thread-look alone, and only the live rows animated; the thinking pill in words, not italics, in
+// the label face thread-look names and announced on iOS; the composer in the thread's 16/24.
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -45,8 +45,8 @@ describe('Auto’s message', () => {
     expect(avatar).toContain('resizeMode="contain"');
   });
 
-  it('is VoiceOver’s ‘Auto said’ heading and carries Report this', () => {
-    expect(avatar).toContain('accessibilityLabel={CHAT_COPY.autoSaid}');
+  it('is VoiceOver’s ‘Auto said, Auto is an AI’ heading and carries Report this', () => {
+    expect(avatar).toContain('accessibilityLabel={AUTO_AVATAR_LABEL}');
     expect(avatar).toContain('accessibilityRole="header"');
     expect(avatar).toContain('{...report}');
   });

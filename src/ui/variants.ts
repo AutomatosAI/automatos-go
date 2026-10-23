@@ -296,7 +296,10 @@ export function countPhrase(count: number, forms: PluralForms): string {
   return `${count} ${pluralForm(count, forms)}`;
 }
 
-/** The header's Command Centre button (handoff §1 Header): 36 pt high, a 15 pt icon, 12 pt label. */
+/**
+ * The Command Centre button (handoff §1 Header; since D73 HUD's, A5): 36 pt high, a 15 pt icon,
+ * 12 pt label.
+ */
 export const COMMAND_CENTRE_BUTTON = Object.freeze({
   height: ICON_BUTTON_SIZES.md.box,
   iconSize: 15,

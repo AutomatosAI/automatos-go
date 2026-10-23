@@ -4,16 +4,15 @@
 // Both sides of the mark are pinned and nothing is sized by aspect (image-size.test.ts: iOS let a
 // bundled image's own width win before). A solid disc, not the web's gradient and glow: in Studio those
 // resolve to a muddy bronze and blur at 28 pt. At the head of one of Auto's messages the disc is
-// the message's header to VoiceOver ('Auto said') and carries Report this as an accessible action;
-// beside the thinking pill, a notice or loose cards it is decoration and hidden. Play's mascot
-// replaces this in A5 (D37).
+// the message's header to VoiceOver ('Auto said, Auto is an AI': AUTO_AVATAR_LABEL, the AI label's
+// words, D73) and carries Report this as an accessible action; beside the thinking pill, a notice
+// or loose cards it is decoration and hidden. Play's mascot replaces this in A5 (D37).
 
 import { Image, View, type ViewStyle } from 'react-native';
 
 import { useTokens } from '../../styles/theme';
 import type { ReportAccessibility } from '../report/report';
-import { CHAT_COPY } from '../strings';
-import { THREAD } from './thread-look';
+import { AUTO_AVATAR_LABEL, THREAD } from './thread-look';
 
 const SAIL = require('../../../assets/brand/splash.png');
 const NO_REPORT: ReportAccessibility = Object.freeze({});
@@ -59,7 +58,7 @@ export function AutoAvatar({ role, report = NO_REPORT }: AutoAvatarProps) {
     <View
       accessible
       accessibilityRole="header"
-      accessibilityLabel={CHAT_COPY.autoSaid}
+      accessibilityLabel={AUTO_AVATAR_LABEL}
       {...report}
       style={disc}
     >

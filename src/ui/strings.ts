@@ -11,7 +11,10 @@ export const UI_COPY = Object.freeze({
   live: 'Live',
   /** The sheet's backdrop, for TalkBack (VoiceOver closes a sheet with the escape gesture). */
   closeSheet: 'Close',
-  /** The header button's word (the web's "Command Center", D-terms). */
+  /**
+   * The Command Centre's name: the header menu's row (D73) and HUD's button (the web's
+   * "Command Center", D-terms).
+   */
   commandCentre: 'Command Centre',
   /** What the button's badge counts, for VoiceOver: '1 needs you', '6 need you'. */
   needYou: Object.freeze({ one: 'needs you', other: 'need you' }),

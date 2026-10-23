@@ -1,18 +1,16 @@
 // The composer's state (US-009a): the button sends, stops or waits; a blank message with nothing
 // attached has nothing to send; Stop while a reply is in flight, the pill still open; a viewer reads
-// only, with D17's words; a hidden AI label switches every control off with the vendored paused
-// words, and before its first measurement holds them without a notice. The pill's metrics, and
-// what the composer's source may hold: the label and its fence, Return as a newline, no chips,
-// Plan toggle or voice button.
+// only, with D17's words; a role not yet read offers nothing; the AI label never holds it (D73). The
+// pill's metrics, and what the composer's source may hold: Return as a newline, no AI label or
+// fence, no chips, Plan toggle or voice button.
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
 import type { WorkspaceRole } from '../../api/workspace';
 import { ROLE_COPY } from '../../auth/strings';
-import { AI_LABEL_PAUSED_TEXT } from '../../core/web/lib/ai-label/copy';
 import {
   PILL_INPUT,
   composerButton,
@@ -27,7 +25,6 @@ const input = (over: Partial<ComposerInput> = {}): ComposerInput => ({
   text: '',
   streaming: false,
   role: 'editor',
-  aiLabelVisible: true,
   uploading: false,
   ...over,
 });
@@ -88,12 +85,6 @@ describe('composerState — switched off', () => {
     placeholder: COMPOSER_COPY.readOnlyPlaceholder,
     notice: { kind: 'viewer', text: ROLE_COPY.viewerReadOnly },
   };
-  const paused = {
-    buttonMode: 'disabled',
-    inputEditable: false,
-    placeholder: COMPOSER_COPY.placeholder,
-    notice: { kind: 'paused', text: AI_LABEL_PAUSED_TEXT },
-  };
 
   it('gives a viewer the thread read-only, with D17’s words', () => {
     expect(ROLE_COPY.viewerReadOnly).toBe(
@@ -103,30 +94,15 @@ describe('composerState — switched off', () => {
     expect(composerState(input({ role: 'viewer', streaming: true }))).toEqual(viewer);
   });
 
-  it('tells a viewer why, not the paused label', () => {
-    expect(composerState(input({ role: 'viewer', aiLabelVisible: false }))).toEqual(viewer);
-  });
-
-  it('switches every control off, Stop included, while the AI label can’t be seen', () => {
-    expect(composerState(input({ aiLabelVisible: false, text: 'hi' }))).toEqual(paused);
-    expect(composerState(input({ aiLabelVisible: false, streaming: true }))).toEqual(paused);
-    expect(
-      composerState(input({ aiLabelVisible: false, aiLabelChecked: true, attachments: 2 })),
-    ).toEqual(paused);
-  });
-
-  it('holds the composer without a notice until the label is first measured', () => {
-    expect(
-      composerState(input({ aiLabelVisible: false, aiLabelChecked: false, text: 'hi' })),
-    ).toEqual({ ...paused, notice: null });
-    expect(composerState(input({ aiLabelChecked: false, text: 'hi' })).buttonMode).toBe('send');
-  });
-
   it('offers nothing while the role is not yet read', () => {
-    const off = { ...paused, notice: null };
+    const off = {
+      buttonMode: 'disabled',
+      inputEditable: false,
+      placeholder: COMPOSER_COPY.placeholder,
+      notice: null,
+    };
     expect(composerState(input({ role: null, text: 'hi' }))).toEqual(off);
     expect(composerState(input({ role: undefined, streaming: true }))).toEqual(off);
-    expect(composerState(input({ role: null, aiLabelVisible: false }))).toEqual(paused);
   });
 });
 
@@ -178,11 +154,10 @@ describe('the composer’s source', () => {
   const code = (source: string) =>
     source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
-  it('renders the foundation’s AiLabel, tracked by the fence that feeds composerState', () => {
-    expect(composer).toMatch(/from '\.\.\/\.\.\/styles\/ai-label'/);
-    expect(composer).toMatch(/<AiLabel track=\{fence\.track\} \/>/);
-    expect(composer).toMatch(/aiLabelVisible: fence\.visible/);
-    expect(read('use-label-fence.ts')).toMatch(/useAiLabelVisible\(\)/);
+  it('is never held by the AI label (D73): no label, no fence, no paused notice', () => {
+    expect(code(read('composer-state.ts'))).not.toMatch(/aiLabel|AI_LABEL|LABEL_SETTLE_MS|paused/);
+    expect(code(composer)).not.toMatch(/AiLabel|useLabelFence|fence/);
+    expect(existsSync(path.resolve(__dirname, '..', 'composer', 'use-label-fence.ts'))).toBe(false);
   });
 
   it('keeps Return a newline: a multiline pill that never submits', () => {

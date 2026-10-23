@@ -2,8 +2,8 @@
 // rows} (automatos-ai orchestrator/services/needs_you.py; the web's hooks/use-needs-you.ts at the
 // pinned SHA). total = review + question + approval + stuck + failed, with no period; questions and
 // approvals are counted only for a workspace owner or admin (the server decides, not the app).
-// Every counter reads useNeedsYou(), so the header button (CommandCentreButton), the home strip and
-// the Command Centre share one cached response and cannot disagree. A board_changed live event
+// Every counter reads useNeedsYou(), so the header's menu button, the home strip and the Command
+// Centre share one cached response and cannot disagree. A board_changed live event
 // refetches it at once (live-events.ts); the 60 s poll is the web's, for changes no event carries.
 // Rows carry question text, so the family is never persisted (query-keys.ts). A row this version
 // cannot read is left out; the number stays the server's.

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { routes } from '../../navigation/routes';
-import { headerLine, keptChatId, newestChatId } from '../home/home';
+import { keptChatId, newestChatId } from '../home/home';
 import { HOME_HISTORY_LIMIT } from '../home/use-home';
 import { HistorySchema } from '../schemas';
 import { NEW_CHAT_ID, routeChatId } from '../screens/chat-route';
@@ -18,32 +18,6 @@ const history = (...ids: string[]) =>
       kind: index === 0 ? 'auto' : 'user',
     })),
   );
-
-describe("the home header's mono line", () => {
-  it('names the workspace and its agents, as the handoff\'s "NORTHWIND · 5 AGENTS"', () => {
-    expect(headerLine({ workspace: 'Northwind', agents: 5, working: false })).toBe(
-      'Northwind · 5 agents',
-    );
-    expect(headerLine({ workspace: 'Northwind', agents: 1, working: false })).toBe(
-      'Northwind · 1 agent',
-    );
-  });
-
-  it('says Auto is working while a turn runs, whatever the agents', () => {
-    expect(headerLine({ workspace: 'Northwind', agents: 5, working: true })).toBe(
-      'Northwind · Auto is working',
-    );
-    expect(headerLine({ workspace: 'Northwind', agents: null, working: true })).toBe(
-      'Northwind · Auto is working',
-    );
-  });
-
-  it('is the name alone until the agents are known', () => {
-    expect(headerLine({ workspace: ' Northwind ', agents: null, working: false })).toBe(
-      'Northwind',
-    );
-  });
-});
 
 describe('the home thread (KC4)', () => {
   it('reads one chat: the newest is all home needs', () => {

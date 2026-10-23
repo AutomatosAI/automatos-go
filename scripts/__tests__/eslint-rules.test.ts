@@ -172,11 +172,11 @@ describe('no colour literals outside the tokens (D-TOKENS)', () => {
     expect(await rules(code, 'src/styles/theme.ts')).toContain('no-restricted-syntax');
   });
 
-  it('allows a colour in src/styles/tokens/** and the AI label', async () => {
+  it('allows a colour only in src/styles/tokens/**', async () => {
     const code = "export const c = '#ff6b35';\nexport const d = 'rgba(0,0,0,0.5)';\n";
     expect(await rules(code, 'src/styles/tokens/colors.ts')).toEqual([]);
     expect(await rules(code, 'src/styles/tokens/studio/dark.ts')).toEqual([]);
-    expect(await rules(code, 'src/styles/ai-label.tsx')).toEqual([]);
+    expect(await rules(code, 'src/styles/ai-label.tsx')).toContain('no-restricted-syntax');
   });
 
   it('allows what is not a colour: ticket numbers, anchors, words, scripts/', async () => {

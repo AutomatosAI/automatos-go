@@ -144,7 +144,7 @@ check "no account-creation pointer anywhere in the app (LEAD-20OCT-SIGNUP)" "! a
 
 # --- FND: the shared contracts (K5) --------------------------------------------------------------
 echo ""; echo "=== FND shared contracts"
-check "tokens, theme, type, AI label" "all_exist src/styles/tokens src/styles/theme.tsx src/styles/type.ts src/styles/fonts.ts src/styles/ai-label.tsx && has 'useAiLabelVisible' src/styles/ai-label.tsx"
+check "tokens, theme, type, AI label" "all_exist src/styles/tokens src/styles/theme.tsx src/styles/type.ts src/styles/fonts.ts src/styles/ai-label.tsx && has 'aiLabelWords' src/styles/ai-label.tsx"
 check "UI primitives incl. Sheet, Toast, ReportSheet, CommandCentreButton" "all_exist src/ui/index.ts src/ui/Button.tsx src/ui/StatusPip.tsx src/ui/Sheet.tsx src/ui/Toast.tsx src/ui/ReportSheet.tsx src/ui/CommandCentreButton.tsx"
 check "ReportSheet gated on the report_content capability and the role" "grep -qE 'canReportContent' src/ui/ReportSheet.tsx && grep -qE 'roleCan' src/ui/ReportSheet.tsx"
 check "app routes incl. chatWithTicket; web-link mapping" "has 'chatWithTicket' src/navigation/routes.ts && all_exist src/navigation/web-links.ts"
@@ -154,7 +154,7 @@ check "one live connection: tasks/stream only in src/api" "[ -z \"\$(grep -rl 't
 # --- hygiene ------------------------------------------------------------------------------------
 echo ""; echo "=== Hygiene"
 check "no WebView import anywhere" "! grep -rqE \"from ['\\\"]react-native-webview\" src app 2>/dev/null"
-check "no colour literal added outside src/styles/tokens and the AI label (D-TOKENS)" "! git diff $BASE..HEAD -- src app ':!src/styles/tokens' ':!src/styles/ai-label.tsx' ':!src/core/web' ':!src/core/__fixtures__' ':!*__tests__*' ':!*.test.ts' | grep '^+' | grep -v '^+++' | grep -E \"['\\\"\\\`]#[0-9A-Fa-f]{3,8}['\\\"\\\`]|(rgba?|hsla?)\\(\" | grep -q ."
+check "no colour literal added outside src/styles/tokens (D-TOKENS)" "! git diff $BASE..HEAD -- src app ':!src/styles/tokens' ':!src/core/web' ':!src/core/__fixtures__' ':!*__tests__*' ':!*.test.ts' | grep '^+' | grep -v '^+++' | grep -E \"['\\\"\\\`]#[0-9A-Fa-f]{3,8}['\\\"\\\`]|(rgba?|hsla?)\\(\" | grep -q ."
 check "no secret-shaped string added (Clerk keys, tokens)" "! git diff $BASE..HEAD -- . ':!package-lock.json' ':!scripts/ralph' | grep '^+' | grep -qE 'pk_(live|test)_[A-Za-z0-9]{20,}|sk_(live|test)_[A-Za-z0-9]{10,}|amd_[A-Za-z0-9]{16,}'"
 check "no .env file tracked" "[ -z \"\$(git ls-files | grep -E '(^|/)\\.env(\\.local)?\$')\" ]"
 check "no expo start / run / prebuild / eas command added in product code" "! added_code | grep -qE 'expo (start|run:|prebuild)|\\beas (build|init|update|submit)'"

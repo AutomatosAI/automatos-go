@@ -1,7 +1,7 @@
 // The thread's layout and boxes (D72), pure: where each row sits and the gap above it, which rows
 // carry Auto's avatar and draw their own box, when the avatar moves above Auto's box, what Auto's
-// box holds (a turn's notice folded into the reply it ends), which rows move in, and the boxes'
-// geometry in Studio Light and Dark.
+// box holds (a turn's notice folded into the reply it ends), which rows move in, the boxes'
+// geometry in Studio Light and Dark, and what VoiceOver hears on Auto's avatar.
 
 import { describe, expect, it } from 'vitest';
 
@@ -9,6 +9,7 @@ import { tokensFor, type Tokens } from '../../styles/tokens';
 import { STUDIO_TYPE } from '../../styles/type';
 import { textRole } from '../../ui/variants';
 import {
+  AUTO_AVATAR_LABEL,
   THINKING_LABEL,
   THREAD,
   avatarPlacement,
@@ -306,5 +307,11 @@ describe('THREAD geometry', () => {
 
   it('pulses three 6 pt dots one after another', () => {
     expect(THREAD.dots).toEqual({ count: 3, size: 6, staggerMs: 150 });
+  });
+});
+
+describe('the avatar to VoiceOver (D73)', () => {
+  it('says who said it and that Auto is an AI, in the AI label’s words', () => {
+    expect(AUTO_AVATAR_LABEL).toBe('Auto said, Auto is an AI');
   });
 });

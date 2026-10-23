@@ -36,7 +36,7 @@ Write the tests each AC names (`__tests__/` beside the module, vitest, `.test.ts
 - Files 200–400 lines (never over 800); functions under 50 lines, components under 150; nesting under 4; complexity under 10.
 - Pure logic outside React with tests; screens and hooks only wire. Immutability: return new objects; never mutate props, query data or arguments.
 - No hardcoded values: EAS env (`EXPO_PUBLIC_*`) or the discovery document for URLs and keys; named constants for tunables; copy in one `strings.ts` per feature.
-- Tokens only, never literal colours (outside `src/styles/tokens/` and the AI label's fixed colours). 11 pt minimum; Dynamic Type stays on.
+- Tokens only, never literal colours (outside `src/styles/tokens/`; the AI label has no colours of its own since D73). 11 pt minimum; Dynamic Type stays on.
 - Errors never swallowed: the taxonomy in `src/api/errors.ts` and user copy that leaks no internals; `src/lib/logger.ts` is the only console user.
 - `src/core/web/**` is written ONLY by `scripts/sync-core.ts`. If vendored code does not typecheck, fix the shims or the manifest, never the copy.
 - No WebView. No sign-up, no social sign-in, no Sign in with Apple. Nothing about plans, credits or prices. Nothing that deletes an account or a workspace.

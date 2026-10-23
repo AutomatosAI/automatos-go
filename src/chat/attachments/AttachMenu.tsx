@@ -18,7 +18,7 @@ import { useAttachMenu, type AttachMenu as Menu } from './use-attach-menu';
 const TITLE_LEVEL = 4;
 
 export type AttachMenuProps = {
-  /** The composer is off (a viewer, the AI label hidden) or the message is full. */
+  /** The composer is off (a viewer, the role not yet read) or the message is full. */
   readonly disabled: boolean;
   /** How many more files this message can take. */
   readonly room: number;

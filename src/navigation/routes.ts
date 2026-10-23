@@ -120,7 +120,7 @@ export const routes = Object.freeze({
   connectScan: '/connect/scan',
   /** The pairing link, `{web_url}/go/pair?api=…&code=…` or automatos://go/pair (app/go/pair.tsx). */
   pairLink: PAIR_LINK_PATH,
-  /** Older conversations, behind the list button on home (A2). */
+  /** Older conversations, behind the header menu's Chats (D73). */
   chats: '/chats',
   /** One conversation (A2: app/(app)/chat/[id].tsx). */
   chat: (chatId: string) => `/chat/${segment(chatId, 'A chat id')}`,

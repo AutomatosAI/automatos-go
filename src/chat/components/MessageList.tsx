@@ -1,9 +1,11 @@
 // The thread (the handoff's chat column, drawn like the web's, D72): a FlatList of the view-model's
-// rows, oldest first. Each row is placed by thread-look.ts: the user's box on the right, Auto's
-// side under its sail avatar, 24 pt between turns and 8 pt within Auto's run. 'Auto is thinking'
-// takes Auto's slot until the answer replaces it there, and a turn's notice lands inside the box of
-// the reply it ends (foldNotices). Only the live rows move in (the message just sent rises, the
-// thinking pill fades); history never replays, and Reduce Motion stills both.
+// rows, oldest first. The thread opens with the AI label (D73), one muted caption line that scrolls
+// away with it (a new chat's empty thread shows it too). Each row is placed by thread-look.ts: the
+// user's box on the right, Auto's side under its sail avatar, 24 pt between turns and 8 pt within
+// Auto's run. 'Auto is thinking' takes Auto's slot until the answer replaces it there, and a turn's
+// notice lands inside the box of the reply it ends (foldNotices). Only the live rows move in (the
+// message just sent rises, the thinking pill fades); history never replays, and Reduce Motion
+// stills both.
 // The list scrolls to the end only when a row is added (a message, the thinking pill, a notice),
 // never while a reply grows (README 'Interactions'); the scroll waits for the new content's size,
 // and it is not animated under Reduce Motion. What sits above the thread on home (the needs strip)
@@ -19,10 +21,11 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
-import { FlatList, View, type ListRenderItem } from 'react-native';
+import { FlatList, StyleSheet, View, type ListRenderItem } from 'react-native';
 import Animated, { FadeIn, FadeInDown, useReducedMotion } from 'react-native-reanimated';
 
 import type { WebLinkTarget } from '../../navigation/web-links';
+import { AiLabel } from '../../styles/ai-label';
 import { useTokens } from '../../styles/theme';
 import type { SettleCard } from '../cards/model';
 import { ThreadCards } from '../cards/ThreadCards';
@@ -150,6 +153,16 @@ function useScrollOnAdd(list: RefObject<FlatList<ChatRow> | null>, count: number
 
 const keyOf = (row: ChatRow) => row.key;
 
+/** The thread's first row: the AI label, centred, 16 pt above the first message. */
+function ThreadCaption() {
+  const { spacing } = useTokens();
+  return (
+    <View style={[styles.caption, { paddingBottom: spacing.space7 }]}>
+      <AiLabel />
+    </View>
+  );
+}
+
 export function MessageList({ rows, onLink, onRetry, onCard, report }: MessageListProps) {
   const { spacing } = useTokens();
   const list = useRef<FlatList<ChatRow>>(null);
@@ -178,6 +191,7 @@ export function MessageList({ rows, onLink, onRetry, onCard, report }: MessageLi
       data={shown}
       keyExtractor={keyOf}
       renderItem={renderItem}
+      ListHeaderComponent={ThreadCaption}
       onContentSizeChange={onContentSizeChange}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
@@ -185,3 +199,7 @@ export function MessageList({ rows, onLink, onRetry, onCard, report }: MessageLi
     />
   );
 }
+
+const styles = StyleSheet.create({
+  caption: { alignItems: 'center' },
+});

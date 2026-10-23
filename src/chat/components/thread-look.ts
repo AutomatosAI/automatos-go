@@ -14,9 +14,12 @@
 
 import type { ViewStyle } from 'react-native';
 
+import { aiLabelWords } from '../../styles/ai-label-state';
 import type { FontWeight } from '../../styles/fonts';
 import type { SpaceName, Spacing, Tokens } from '../../styles/tokens';
+import { joinLabel } from '../../ui/paint';
 import type { TextLevel } from '../../ui/variants';
+import { CHAT_COPY } from '../strings';
 import {
   LIVE_AUTO_KEY,
   LIVE_USER_KEY,
@@ -44,6 +47,9 @@ export const THREAD = Object.freeze({
   /** The thinking pill's dots, pulsing one after another. */
   dots: Object.freeze({ count: 3, size: 6, staggerMs: 150 }),
 });
+
+/** VoiceOver's name for the avatar heading Auto's message: who said it, and that Auto is an AI. */
+export const AUTO_AVATAR_LABEL = joinLabel(CHAT_COPY.autoSaid, aiLabelWords(null));
 
 /** Above a row: a new turn or an Auto message, or the next part of Auto's run. */
 export const THREAD_GAPS = Object.freeze({ turn: 'space9', run: 'space3' } as const);

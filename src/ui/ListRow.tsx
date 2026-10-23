@@ -25,6 +25,8 @@ export type ListRowProps = {
   /** A control or value on the right; a pressable row without one shows a chevron. */
   readonly trailing?: ReactNode;
   readonly onPress?: () => void;
+  /** VoiceOver's name when the row says more than its title and summary (a count beside it). */
+  readonly accessibilityLabel?: string;
   readonly accessibilityHint?: string;
   readonly disabled?: boolean;
 };
@@ -35,6 +37,7 @@ export function ListRow({
   icon: Icon,
   trailing,
   onPress,
+  accessibilityLabel,
   accessibilityHint,
   disabled = false,
 }: ListRowProps) {
@@ -75,7 +78,7 @@ export function ListRow({
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
-      accessibilityLabel={joinLabel(title, summary)}
+      accessibilityLabel={accessibilityLabel ?? joinLabel(title, summary)}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled }}
       style={({ pressed }) => [

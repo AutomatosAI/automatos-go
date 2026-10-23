@@ -1,6 +1,7 @@
-// The orange count badge (the Command Centre button's needs-you number): mono figures on --accent,
-// round, at least 16 pt and growing with Dynamic Type; nothing at 0, '99+' past the cap. When it
-// stands alone it says what it counts; inside a button the button's label says it instead.
+// The orange count badge (the menu button's and the Command Centre's needs-you number): mono
+// figures on --accent, round, at least 16 pt and growing with Dynamic Type; nothing at 0, '99+' past
+// the cap. When it stands alone it says what it counts; inside a button the button's label says it
+// instead.
 
 import { StyleSheet, View } from 'react-native';
 

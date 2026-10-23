@@ -2,9 +2,10 @@
 // (US-008c's rows over useThread, US-008b) and the composer (US-009a). It only wires. The chat id
 // is checked before reuse (D-STALE-CHAT); null is a draft. Try again asks the user's last message
 // anew (retryInput); Auto's cards settle on the thread (settleCard); links open through the
-// foundation's mapping (useFollowLink). The composer is the role's and the AI label's (D-ROLES,
-// D-AI-LABEL): it sends while the thread can send and stops while it can stop, and holds the
-// send while a turn that ended waits for its saved reply (settling), the typed words kept. A
+// foundation's mapping (useFollowLink). The composer is the role's (D-ROLES): it sends while the
+// thread can send and stops while it can stop, and holds the send while a turn that ended waits
+// for its saved reply (settling), the typed words kept. The thread opens with the AI label (D73);
+// a blank draft tells the header's menu it already is New chat (menuHere). A
 // conversation about a ticket (D-ASK-AUTO) carries the ticket in every message it sends, Try again
 // included, shows the discussion bar under `above`, and holds the send until the ticket is in.
 // Files go with the words they were attached to (useAttachments, US-009b); Try again resends both.
@@ -24,6 +25,7 @@ import { DiscussionBar } from '../discussion/DiscussionBar';
 import { discussionInput } from '../discussion/discussion';
 import { useDiscussion } from '../discussion/use-discussion';
 import { HomeHeader } from '../home/HomeHeader';
+import { menuHere } from '../home/menu';
 import { useMessageReport } from '../report/use-message-report';
 import type { ChatFile } from '../request';
 import { retryInput, threadRows } from '../view-model';
@@ -84,7 +86,7 @@ export function ChatScreen({ chatId, above, onBack, ticketId = null }: ChatScree
   );
   return (
     <ChatFrame
-      header={<HomeHeader working={working} onBack={onBack} />}
+      header={<HomeHeader onBack={onBack} here={menuHere(state, ticketId)} />}
       above={
         <>
           {above}

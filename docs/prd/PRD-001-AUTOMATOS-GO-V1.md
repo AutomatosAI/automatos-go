@@ -46,6 +46,7 @@ Hosted Studio users sign in with Clerk. Self-hosted users pair their phone with 
 | D35–D37, D54–D60 | Three styles; look pages; the phone keeps its own style choice; one voice screen dressed per style; Auto the mascot in Play (clips on iOS, stills on Android); fonts bundled as TTF. |
 | D42–D50 | Repo, Apache-2.0, fresh from the academy template; runtime version `fingerprint`; Sentry EU; build-loop race fixed; Expo account personal; EAS free tier with batching. |
 | D45 | Social-post approvals on the phone (exact version shown, never from a notification). |
+| D73 | One slim header (Back on the chat route, the sail and 'automatos', one menu button with the needs-you number); the menu lists New chat, Chats, Command Centre and Settings from one list. The AI label is a small caption at the top of every thread, never a pill by the composer or a lock on it. |
 
 ## 4. What the app is made of
 
@@ -136,7 +137,7 @@ Rules every layout follows:
 - **Tokens:** the 24 Studio tokens with `--` keys (`--background`, `--foreground`, …), normalised to hex on the device with the vendored `hsl.ts` (PRD-261's endpoint returns values as the theme wrote them). Play also uses its own `--pl-*` variables from the vendored engine; HUD derives `--bg`, `--accent`, `--accent-ink`, `--accent-line`, `--accent-fill`, `--panel-fill`, `--grid` and `--glow` as its README specifies.
 - **Fonts** bundled as TTF: Geist, Geist Mono, Newsreader, Instrument Serif, Bricolage Grotesque, Fredoka (licences in automatos-ai `frontend/app/fonts/`), Rajdhani and Chakra Petch (vendor with their licence files) [D57].
 - **Auto the mascot:** the 12-state reducer (vendored); clips are HEVC-alpha `.mp4` through `expo-video` on iOS, `.png` stills on Android and under Reduce Motion; the ring is drawn by the app (mint calm, bronze busy, coral needs help, dusk asleep); Play's shell tint is a Skia colour matrix over the clip.
-- **The AI label** ("Auto is an AI" / "{agent} is an AI") sits by the composer on every chat screen and on the voice screen, in fixed colours no look can change, and the composer is disabled if it is not on screen (PRD-264 EUAI-11a).
+- **The AI label** ("Auto is an AI" / "{agent} is an AI", the vendored `copy.ts` words) is one muted caption line at the scale's smallest body size (Body 6, 11.5 pt) in the muted text token: the first row of every thread (it scrolls away with the thread), the top line of the AI-provider consent sheet, and on the voice screen. VoiceOver also hears it on Auto's avatar ("Auto said, Auto is an AI"). It never locks the composer [D73; replaces PRD-264 EUAI-11a's composer fence on the phone].
 - **Installed marketplace themes** that declare a `mobile` block appear under Studio in the style picker: the Studio layout painted with the theme's tokens, fonts and mascot from `GET /api/themes/mobile/{install_id}` (PRD-261 M-04). Themes never bring code or layouts in v1 [D58].
 - **Accessibility:** nothing below 11 pt; Dynamic Type up to the accessibility sizes with layouts that wrap; every colour status also has a word; Reduce Motion stops loops (HUD's `motion: false`, Play's glow crossfades).
 
@@ -144,7 +145,7 @@ Rules every layout follows:
 
 | Area | Screen | Notes |
 |---|---|---|
-| Home | Auto thread + needs strip | The server's needs-you rows above the thread; the morning digest arrives as Auto's message; older chats behind a list button [D28] |
+| Home | Auto thread + needs strip | The server's needs-you rows above the thread; the morning digest arrives as Auto's message; older chats, the Command Centre and Settings behind the header's menu, which carries the needs-you number [D28, D73] |
 | Chat | Thread | Streaming, receipts ("What Auto did"), Auto's cards: Mission suggestion (file it), plan approval, tool approval, task card, withdraw offer, limit and attachment notices [D30]; Stop cancels on the server |
 | Chat | Composer | Pill input, round send/stop, [+] camera, photos, files (HEIC converted to JPEG on the phone) [D29]; voice button |
 | Command Centre | Board | Every status as filters (including Failed and Cancelled) [D26]; card list sorted as the handoff; ticket sheet with Approve / Send back (note required) / Ask Auto about (ticket as context, then "Update ticket and re-queue") [D31] |
@@ -266,7 +267,7 @@ Every story: typecheck, lint and vitest pass in CI (nothing runs on a maintainer
 **Acceptance Criteria:**
 - [ ] Role drives what is shown: viewers read-only, editors and up can chat and answer [D16, D17]
 - [ ] The AI-provider consent sheet names the providers from `ai_providers` and blocks the first message until agreed; shown again when the list changes
-- [ ] The AI label component exists and is used by every chat and voice screen
+- [ ] The AI label component exists, opens every thread and is on the voice screen; it never locks the composer [D73]
 
 ### Wave A2: Studio layout and chat
 
@@ -292,7 +293,7 @@ Every story: typecheck, lint and vitest pass in CI (nothing runs on a maintainer
 **Description:** As a user, I want to see the board and act on a ticket from my phone.
 
 **Acceptance Criteria:**
-- [ ] Filters for every status including Failed and Cancelled; the server's needs-you number on the Command Centre button
+- [ ] Filters for every status including Failed and Cancelled; the server's needs-you number on the header's menu button and its Command Centre row [D26, D73]
 - [ ] Ticket sheet: Approve, Send back (note required), Ask Auto about (context + re-queue)
 - [ ] Live updates while open; refetch on resume
 
@@ -398,7 +399,7 @@ Every story: typecheck, lint and vitest pass in CI (nothing runs on a maintainer
 - FR-5: The Command Centre must offer Board, Calendar, Questions and Deliverables with the actions in §4.7, limited by role.
 - FR-6: A question notification must be answerable from an unlocked phone, after the payload signature verifies.
 - FR-7: The user must be able to flip between Studio, Play and HUD, and change Play's and HUD's looks with a live preview.
-- FR-8: No look may change the AI label's colours or hide it.
+- FR-8: The AI label uses the muted text token, which every look keeps at WCAG AA (4.5:1) on its background (tested for every built-in style, Light and Dark, `STYLE_IDS`); a theme installed later paints the label only with a muted token that passes the same check, else Studio's; no look or setting removes it.
 - FR-9: Quick-ask must use on-device speech recognition and spoken-mode replies; Auto Live must use the native LiveKit client.
 - FR-10: The app must never load web content or downloaded code for a core flow.
 - FR-11: The app must not show plans, credits, prices or purchase links.
