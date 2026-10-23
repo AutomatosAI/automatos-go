@@ -6,6 +6,7 @@ import { SERVER, fakeTransport, jsonReply } from '../../api/__tests__/fake-trans
 import { routes } from '../../navigation/routes';
 import { TicketDetailSchema, type TicketDetail } from '../board/schemas';
 import { BOARD_COPY, TICKET_COPY } from '../strings';
+import { ticketActions } from '../ticket/actions';
 import {
   fetchLinkedDeliverables,
   LINKED_DELIVERABLES_LIMIT,
@@ -89,7 +90,8 @@ describe('the ticket sheet view', () => {
     expect(view.byline).toBe(BOARD_COPY.unassigned);
   });
 
-  it('opens Ask Auto about #number as a chat with the ticket as its context', () => {
+  it('opens Ask Auto about #number, for a role that may chat, with the ticket as its context', () => {
+    expect(ticketActions(detail(), 'editor').askAuto).toBe(true);
     const view = ticketSheetView(detail(), CLOCK);
     expect(view.ask).toEqual({
       label: 'Ask Auto about #0419',

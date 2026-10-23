@@ -1,9 +1,10 @@
 // The ticket sheet (handoff §2, D-BOARD, D31): the foundation's bottom sheet over the tab the
 // ticket was opened from, with the head, the description, why it waits, the 'Waiting for your
 // answer' box (it opens Questions), what it handed in, its Deliverables, the verdict for a role
-// that may approve, and Ask Auto about #number, which opens the chat wave's new conversation with
-// the ticket as its context (routes.chatWithTicket): never a chat of its own. A route id that is
-// not a row id reads as not found; a load that fails says why, with Try again where it can help.
+// that may approve, and, for a role that may chat, Ask Auto about #number, which opens the chat
+// wave's new conversation with the ticket as its context (routes.chatWithTicket): never a chat of
+// its own. A route id that is not a row id reads as not found; a load that fails says why, with
+// Try again where it can help.
 
 import MessagesSquare from 'lucide-react-native/icons/messages-square';
 import { View } from 'react-native';
@@ -95,7 +96,7 @@ function TicketContent({ taskId, route }: { readonly taskId: string; readonly ro
         </Text>
       ) : null}
       <Verdict ticket={data} actions={actions} onDecided={route.close} />
-      <AskAuto view={view} onPress={() => route.push(view.ask.href)} />
+      {actions.askAuto ? <AskAuto view={view} onPress={() => route.push(view.ask.href)} /> : null}
     </>
   );
 }

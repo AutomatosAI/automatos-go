@@ -55,8 +55,10 @@ function detail(overrides: Record<string, unknown> = {}): TicketDetail {
   });
 }
 
+/** A writer on a ticket in Review; a viewer or an unknown role; a writer with nothing to decide. */
 const BOTH: TicketActions = { approve: true, sendBack: true, askAuto: true };
-const NONE: TicketActions = { approve: false, sendBack: false, askAuto: true };
+const NONE: TicketActions = { approve: false, sendBack: false, askAuto: false };
+const ASK_ONLY: TicketActions = { ...NONE, askAuto: true };
 
 describe('which actions the ticket sheet shows', () => {
   it('offers Approve only in Review', () => {
@@ -82,15 +84,24 @@ describe('which actions the ticket sheet shows', () => {
     expect(ticketActions(detail(), undefined)).toEqual(NONE);
   });
 
-  it('always offers Ask Auto about, for every status and every role', () => {
+  it('offers Ask Auto about to owners, admins and editors at every status, never to others', () => {
     for (const status of STATUSES) {
-      for (const role of ROLES) expect(ticketActions(detail({ status }), role).askAuto).toBe(true);
+      for (const role of ROLES) {
+        const mayChat = role !== null && WRITERS.includes(role);
+        expect(ticketActions(detail({ status }), role).askAuto).toBe(mayChat);
+      }
+    }
+  });
+
+  it('gives a writer Ask Auto about alone on a ticket it cannot decide', () => {
+    for (const role of WRITERS) {
+      expect(ticketActions(detail({ status: 'done' }), role)).toEqual(ASK_ONLY);
     }
   });
 
   it("offers Approve alone on a mission's card: the server refuses to send it back", () => {
     const card = detail({ source_type: 'orchestration', review_reason: 'mission_plan' });
-    expect(ticketActions(card, 'owner')).toEqual({ ...NONE, approve: true });
+    expect(ticketActions(card, 'owner')).toEqual({ ...ASK_ONLY, approve: true });
   });
 
   it('leaves a mission step to its mission, unless the owner asked to check it (F242)', () => {
@@ -98,7 +109,7 @@ describe('which actions the ticket sheet shows', () => {
       source_type: 'orchestration_task',
       review_reason: 'mission_checking',
     });
-    expect(ticketActions(checking, 'owner')).toEqual(NONE);
+    expect(ticketActions(checking, 'owner')).toEqual(ASK_ONLY);
     const asked = detail({ source_type: 'orchestration_task', review_reason: 'asked' });
     expect(ticketActions(asked, 'owner')).toEqual(BOTH);
   });
@@ -153,7 +164,7 @@ describe('the verdict panel', () => {
   });
 
   it("shows Approve alone on a mission's card", () => {
-    const view = verdictView({ ...NONE, approve: true }, 'idle', '', false, 'Approve the plan');
+    const view = verdictView({ ...ASK_ONLY, approve: true }, 'idle', '', false, 'Approve the plan');
     expect(view.secondary).toBeNull();
     expect(view.primary).toEqual({ label: 'Approve the plan', disabled: false });
   });

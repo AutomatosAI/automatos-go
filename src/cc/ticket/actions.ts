@@ -3,9 +3,10 @@
 // gets neither. A mission's own card approves its plan through the same route, but the server
 // refuses to send it back (its plan is turned down on the mission's page), so it offers Approve
 // alone; a mission step is its mission's to decide unless the owner asked to check it (F242), as
-// on the web (board-task-viewer.tsx missionDecides). Ask Auto about is always there: it only opens
-// a chat with the ticket as its context. The bodies are board/verdict.ts's; the words a decision
-// ends with (a toast, or the server's refusal) are here.
+// on the web (board-task-viewer.tsx missionDecides). Ask Auto about opens a chat with the ticket as
+// its context, so only a role that may chat is offered it (roleCan 'chat': owners, admins and
+// editors); a viewer, and a role not yet known, get none. The bodies are board/verdict.ts's; the
+// words a decision ends with (a toast, or the server's refusal) are here.
 
 import { isApiError, userMessage } from '../../api/errors';
 import type { WorkspaceRole } from '../../api/workspace';
@@ -27,7 +28,8 @@ const MISSION_PLAN = 'mission_plan';
 export type TicketActions = {
   readonly approve: boolean;
   readonly sendBack: boolean;
-  readonly askAuto: true;
+  /** Ask Auto about: a chat with Auto, so only for a role that may chat (D16, D17). */
+  readonly askAuto: boolean;
 };
 
 type ActionFields = Pick<TicketDetail, 'status' | 'source_type' | 'review_reason'>;
@@ -46,7 +48,7 @@ export function ticketActions(
   return {
     approve: decides,
     sendBack: decides && ticket.source_type !== MISSION_CARD,
-    askAuto: true,
+    askAuto: roleCan(role, 'chat'),
   };
 }
 
