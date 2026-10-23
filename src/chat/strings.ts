@@ -222,6 +222,32 @@ export const HOME_COPY = Object.freeze({
   working: 'Auto is working',
   settings: 'Settings',
   back: 'Back',
+  /** The list button (D28): older chats sit behind it. */
+  olderChats: 'Older chats',
+});
+
+/**
+ * Older chats (D28), in the web's words where it has them (Play's Conversations page,
+ * frontend/components/play/conversations/play-conversations.tsx and lib/play/conversations.ts).
+ */
+export const HISTORY_COPY = Object.freeze({
+  title: 'Conversations',
+  newChat: 'New chat',
+  /** A chat with no title yet (the web's UNTITLED_CONVERSATION). */
+  untitled: 'New chat',
+  loadMore: 'Load more',
+  loadingMore: 'Loading more conversations…',
+  loadMoreFailed: "More conversations didn't load.",
+  emptyTitle: 'No conversations yet',
+  emptyMessage: 'Say hello to Auto and your first one starts.',
+  /** The word on a chat Auto started unprompted (the web's 'Auto' badge, PRD-205 S7). */
+  autoMarker: 'Auto',
+  autoMarkerLabel: 'Started by Auto',
+  openHint: 'Opens this conversation',
+  justNow: 'Just now',
+  minutes: (count: number) => `${count} min`,
+  hours: (count: number) => `${count} h`,
+  yesterday: 'Yesterday',
 });
 
 /**

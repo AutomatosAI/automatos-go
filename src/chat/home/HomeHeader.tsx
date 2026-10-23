@@ -2,12 +2,14 @@
 // running up under the status bar. The brand mark from assets/brand beside 'automatos' in
 // Newsreader (the scale's 15 pt title: the handoff's 17 is not in the scale), the mono line under
 // it (home.ts headerLine), then the foundation's CommandCentreButton (the one header that shows the
-// needs-you number, D26) and the avatar chip, which opens Settings. The chat route adds Back.
+// needs-you number, D26) and the avatar chip, which opens Settings. Home adds the list button to
+// older chats (D28, routes.chats); the chat route adds Back instead.
 // FOUNDATION GAP: the session names no signed-in user (AppSession, AuthProvider), so the chip
 // shows the user icon, not the handoff's initials.
 
 import { useRouter } from 'expo-router';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
+import List from 'lucide-react-native/icons/list';
 import UserRound from 'lucide-react-native/icons/user-round';
 import { Image, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -89,6 +91,15 @@ export function HomeHeader({ working, onBack }: HomeHeaderProps) {
         />
       ) : null}
       <Brand line={line} />
+      {onBack ? null : (
+        <IconButton
+          icon={List}
+          accessibilityLabel={HOME_COPY.olderChats}
+          onPress={() => router.push(routes.chats)}
+          variant="ghost"
+          size="md"
+        />
+      )}
       <CommandCentreButton />
       <IconButton
         icon={UserRound}
