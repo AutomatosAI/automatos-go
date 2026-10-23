@@ -1,8 +1,8 @@
 // The thread's rows in order (US-008c): the receipts' closing notes and links through the
 // foundation's appRouteForWebLink, tool lines while and after a reply, Auto's answer as markdown
-// (OT-C8, a last line of only a list marker held back while it streams), the draft
-// and 'Auto is working…', Try again's message (words and files), the scroll rule and the pulse
-// under Reduce Motion.
+// (OT-C8, a last line of only a list marker held back while it streams), the draft and the
+// thinking row, Try again's message (words and files), the scroll rule and the pulse under Reduce
+// Motion.
 
 import { describe, expect, it } from 'vitest';
 
@@ -184,7 +184,7 @@ describe('a reply still streaming: a last line of only a marker waits for its wo
     expect(autoRows(threadRows(stopped))[0].answer).toBe(answerMarkdown([], text));
   });
 
-  it('keeps Auto is working while the only words are a held-back marker', () => {
+  it('keeps the thinking row while the only words are a held-back marker', () => {
     const marker = streaming({ kind: 'text', text: '- ' });
     expect(threadRows(marker).map((row) => row.key)).toEqual([LIVE_USER_KEY, WORKING_KEY]);
   });
@@ -223,14 +223,14 @@ describe('rows', () => {
     expect(threadRows(createThread(CHAT_ID))).toEqual([]);
   });
 
-  it('shows the draft and Auto is working until the answer starts', () => {
+  it('shows the draft and the thinking row until the answer starts', () => {
     const sent = streaming();
     expect(threadRows(sent).map((row) => row.key)).toEqual([LIVE_USER_KEY, WORKING_KEY]);
     const answering = apply(sent, ...frames({ kind: 'text', text: 'On it.' }));
     expect(threadRows(answering).map((row) => row.key)).toEqual([LIVE_USER_KEY, LIVE_AUTO_KEY]);
   });
 
-  it('shows Auto is working on a chat reopened while its turn runs', () => {
+  it('shows the thinking row on a chat reopened while its turn runs', () => {
     const reopened = apply(createThread(CHAT_ID), {
       type: 'loaded',
       chatId: CHAT_ID,

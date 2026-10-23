@@ -43,6 +43,22 @@ export type ShadowLayer = {
 export type ShadowName = 'hairline' | 'card' | 'active' | 'toast' | 'dialog';
 export type Shadows = Readonly<Record<ShadowName, readonly ShadowLayer[]>>;
 
+/** The chat thread's two boxes and Auto's avatar (D72), resolved opaque as #RRGGBB. */
+export type ThreadPaint = {
+  /** Auto's box: a Studio card. */
+  readonly autoFill: string;
+  /** Auto's box's 1 pt edge: the card's border. */
+  readonly autoBorder: string;
+  /** The user's box: primary at 10 % over the page (the web's bg-primary/10). */
+  readonly userFill: string;
+  /** The user's box's 1 pt edge: primary at 10 % over its fill (the web's border-primary/10). */
+  readonly userBorder: string;
+  /** The disc behind Auto's sail. */
+  readonly avatar: string;
+  /** The sail on the disc: the web's white mark. */
+  readonly sail: string;
+};
+
 export type Tokens = {
   readonly style: StyleId;
   readonly scheme: ColourScheme;
@@ -51,4 +67,5 @@ export type Tokens = {
   readonly spacing: Spacing;
   readonly shadows: Shadows;
   readonly type: TypeScale;
+  readonly thread: ThreadPaint;
 };

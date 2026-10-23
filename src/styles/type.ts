@@ -1,6 +1,9 @@
 // Studio's type scale (handoff README 'Design Tokens' → Type, and tokens/typography.css): Newsreader
 // 500 titles 28/23/21/15/14.5/14, Geist body 14/13.5/13/12.5/12/11.5, Geist Mono 600 uppercase
-// labels and tabular figures 19/17/15. Each role is a React Native text style on an embedded face's
+// labels and tabular figures 19/17/15, and the thread roles: the chat thread's words and the
+// composer at Geist 16/24 (the web's 16 px, D72), and the headings in Auto's answers at Newsreader
+// 500 19 and 17 (the web's text-lg and text-base serif, a step above the words), kept apart from
+// the title and body levels. Each role is a React Native text style on an embedded face's
 // PostScript name (fonts.ts), so no fontWeight or fontStyle is set: the face carries its weight and
 // italic on iOS and Android alike (a style on top can make Android slant an italic file again).
 // Sizes are points; tracking is the source's em times the size, as React Native's letterSpacing is
@@ -19,7 +22,10 @@ export const MIN_TEXT_SIZE = 11;
 /** Text props every Text primitive passes: Dynamic Type on, uncapped. */
 export const TEXT_SCALING = Object.freeze({ allowFontScaling: true });
 
-/** typography.css --leading-*: display, heading, body and lede (the thread's 14/1.55). */
+/**
+ * typography.css --leading-*: display, heading, body (body 2-6 and the thread's 16/24) and lede
+ * (14/1.55).
+ */
 export const LEADING = Object.freeze({ display: 1.05, heading: 1.15, body: 1.5, lede: 1.55 });
 
 /** typography.css --tracking-* (em); figures take cc-stats' -0.02em. */
@@ -46,6 +52,9 @@ export type TypeRole =
   | 'body4'
   | 'body5'
   | 'body6'
+  | 'thread'
+  | 'threadTitle1'
+  | 'threadTitle2'
   | 'eyebrow'
   | 'label'
   | 'figure1'
@@ -112,12 +121,15 @@ export const TYPE_SPECS: Readonly<Record<TypeRole, TypeSpec>> = Object.freeze({
   title4: title(15), // mission draft and Deliverable titles
   title5: title(14.5), // board card title
   title6: title(14), // digest row label, roster names
-  body1: body(14, LEADING.lede), // thread text, question text
+  body1: body(14, LEADING.lede), // default text; question text
   body2: body(13.5),
   body3: body(13), // lede and sub text
   body4: body(12.5), // tabs
   body5: body(12), // buttons and controls
   body6: body(11.5), // summaries and meta lines
+  thread: body(16, LEADING.body), // the thread's words and the composer (the web's 16 px; D72)
+  threadTitle1: title(19), // an h1 in Auto's answer (the web's 18 px serif, a step over 16)
+  threadTitle2: title(17), // an h2 in Auto's answer (the web's 16 px serif, a step over 16)
   eyebrow: mono(TRACKING.eyebrow), // 'OPERATIONS · MON 19 OCT' (10.5 px in the handoff)
   label: mono(TRACKING.label), // header status, card meta, pip words (9-10 px in the handoff)
   figure1: figure(19), // glance counts
@@ -150,7 +162,7 @@ export function toTypeStyle(spec: TypeSpec, overrides: TypeOverrides = {}): Type
   });
 }
 
-/** A role at another bundled weight or in italic (body at 500, 'Auto is working…' in italic). */
+/** A role at another bundled weight or in italic (body at 500, a title in italic). */
 export function typeStyle(role: TypeRole, overrides: TypeOverrides = {}): TypeStyle {
   return toTypeStyle(TYPE_SPECS[role], overrides);
 }

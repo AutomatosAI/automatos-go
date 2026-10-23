@@ -1,68 +1,44 @@
-// One of Auto's messages (the handoff's thread): the 20 pt ink 'A' mark and the mono 'AUTO' label,
-// then the answer as formatted text with no bubble and no box (OT-C8: markdown through marked and
-// the app's own renderer, markdown/Markdown.tsx), the tool lines, 'What Auto did', any notice (a
-// limit, a file Auto could not open, a saved failure), the tickets it filed or checked and the cards
-// the reply raised. Where Report this is offered (report.ts), a long-press anywhere on the message
-// opens it, and the header and each block of the answer carry it as an accessible action: the
-// message is not one element, so a screen reader still reaches the cards' buttons one by one. The
-// accessible action is the same object for as long as Report this is offered (it calls the newest
-// onReport), so the memoised answer is not drawn again on every frame of another reply.
+// One of Auto's messages, drawn as the web draws it (D72, Gerard 23 Oct): Auto's sail avatar, then
+// Auto's box, a Studio card with a 1 pt border the full width of the column, holding the answer as
+// formatted text (OT-C8: markdown through marked and the app's own renderer, Markdown.tsx), the
+// tool lines, a rule and 'What Auto did', and any notice (a limit, a file Auto could not open, a
+// saved failure, or the live turn's stop or failure, folded in by thread-look.ts foldNotices). The
+// tickets it filed or checked and the cards the reply raised sit below the box in the same column,
+// never a card inside a card. Where Report this is offered (report.ts), a
+// long-press anywhere on the message opens it, and the avatar and each block of the answer carry it
+// as an accessible action: the message is not one element, so a screen reader still reaches the
+// cards' buttons one by one. The accessible action is the same object for as long as Report this is
+// offered (it calls the newest onReport), so the memoised answer is not drawn again on every frame
+// of another reply.
 
 import { useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
-import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import type { WebLinkTarget } from '../../navigation/web-links';
 import { useTokens } from '../../styles/theme';
-import { Text } from '../../ui';
+import { Divider } from '../../ui';
 import type { SettleCard } from '../cards/model';
 import { TicketCards } from '../cards/TaskCard';
 import { ThreadCards } from '../cards/ThreadCards';
 import { Markdown } from '../markdown/Markdown';
 import { reportAccessibility, type ReportAccessibility } from '../report/report';
-import { CHAT_COPY } from '../strings';
 import type { AutoRow } from '../view-model';
+import { AutoColumn } from './AutoColumn';
 import { ReceiptsCard } from './ReceiptsCard';
+import { bubbleHolds, bubbleStyle } from './thread-look';
 import { ToolLines } from './ToolLines';
 import { TurnNotice } from './TurnNotice';
 
-const MARK_SIZE = 20;
-const MARK_LEVEL = 6;
-
-function AutoHeader({ report }: { readonly report: ReportAccessibility }) {
-  const { colours, radii, spacing } = useTokens();
-  return (
-    <View
-      accessible
-      accessibilityRole="header"
-      accessibilityLabel={CHAT_COPY.autoSaid}
-      {...report}
-      style={[styles.header, { gap: spacing.space2 }]}
-    >
-      <View
-        style={[styles.mark, { backgroundColor: colours.primary, borderRadius: radii.segment }]}
-      >
-        <Text variant="title" level={MARK_LEVEL} tone="inverse">
-          {CHAT_COPY.autoMark}
-        </Text>
-      </View>
-      <Text variant="mono" tone="muted">
-        {CHAT_COPY.autoLabel}
-      </Text>
-    </View>
-  );
-}
-
 type ReportPressProps = {
   readonly onReport: (() => void) | undefined;
-  readonly style: StyleProp<ViewStyle>;
   readonly children: ReactNode;
 };
 
 /** The long-press; not accessible itself, so the message's parts stay their own elements. */
-function ReportPress({ onReport, style, children }: ReportPressProps) {
-  if (!onReport) return <View style={style}>{children}</View>;
+function ReportPress({ onReport, children }: ReportPressProps) {
+  if (!onReport) return <View>{children}</View>;
   return (
-    <Pressable accessible={false} onLongPress={onReport} style={style}>
+    <Pressable accessible={false} onLongPress={onReport}>
       {children}
     </Pressable>
   );
@@ -92,30 +68,37 @@ function useReportActions(onReport: (() => void) | undefined): ReportAccessibili
   );
 }
 
-export function AutoMessage({ row, onLink, onRetry, onCard, onReport }: AutoMessageProps) {
-  const { spacing } = useTokens();
-  const report = useReportActions(onReport);
+type AutoWordsProps = Pick<AutoMessageProps, 'row' | 'onLink' | 'onRetry'> & {
+  readonly report: ReportAccessibility;
+};
+
+/** Auto's box: the answer, the tool lines, a rule and 'What Auto did', then any notice. */
+function AutoWords({ row, onLink, onRetry, report }: AutoWordsProps) {
+  const tokens = useTokens();
   return (
-    <ReportPress onReport={onReport} style={{ gap: spacing.space3 }}>
-      <AutoHeader report={report} />
+    <View style={bubbleStyle(tokens, 'auto')}>
       {row.answer ? <Markdown text={row.answer} onLink={onLink} report={report} /> : null}
       <ToolLines lines={row.toolLines} />
+      {row.answer && row.receipts ? <Divider /> : null}
       {row.receipts ? <ReceiptsCard receipts={row.receipts} onLink={onLink} /> : null}
       {row.notices.map((notice) => (
         <TurnNotice key={notice.key} notice={notice} onRetry={onRetry} />
       ))}
-      <TicketCards tickets={row.tickets} onLink={onLink} />
-      <ThreadCards cards={row.cards} onSettled={onCard} onLink={onLink} />
-    </ReportPress>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center' },
-  mark: {
-    width: MARK_SIZE,
-    height: MARK_SIZE,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+export function AutoMessage({ row, onLink, onRetry, onCard, onReport }: AutoMessageProps) {
+  const report = useReportActions(onReport);
+  return (
+    <ReportPress onReport={onReport}>
+      <AutoColumn avatar="header" report={report}>
+        {bubbleHolds(row) ? (
+          <AutoWords row={row} onLink={onLink} onRetry={onRetry} report={report} />
+        ) : null}
+        <TicketCards tickets={row.tickets} onLink={onLink} />
+        <ThreadCards cards={row.cards} onSettled={onCard} onLink={onLink} />
+      </AutoColumn>
+    </ReportPress>
+  );
+}

@@ -275,7 +275,7 @@ Every story: typecheck, lint and vitest pass in CI (nothing runs on a maintainer
 
 **Acceptance Criteria:**
 - [ ] Studio home as the handoff: header, needs strip (server rows), Auto thread, older chats list
-- [ ] Streaming replies with receipts; Stop cancels on the server; reopening a chat shows "Auto is working…" when a turn is in flight
+- [ ] Streaming replies with receipts; Stop cancels on the server; reopening a chat shows Auto's Thinking pill (D72) when a turn is in flight
 - [ ] Auto's cards work (file a Mission, approve a plan, grant or deny a tool) and refuse honestly when the role cannot act
 
 #### US-009: Composer and attachments

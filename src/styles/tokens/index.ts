@@ -24,5 +24,6 @@ export type {
   SpaceName,
   Spacing,
   StyleId,
+  ThreadPaint,
   Tokens,
 } from './types';

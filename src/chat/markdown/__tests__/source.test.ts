@@ -4,7 +4,7 @@
 // thread's onLink (never Linking or a WebView here; another site only after the reader has seen
 // its address), Auto's answer is drawn by Markdown and the user's words are not, the answer is
 // lexed incrementally and drawn memoised while it streams, and a notice and 'What Auto did' are
-// quiet blocks with no box (Gerard, 23 Oct).
+// quiet blocks that carry no box of their own; they sit inside Auto's box (D72).
 
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
@@ -123,7 +123,7 @@ describe('the thread: Auto’s answer is formatted, the user’s words are not',
   });
 });
 
-describe('a notice is a quiet line, not a box', () => {
+describe('a notice carries no box of its own', () => {
   const notice = code(read(path.join(CHAT, 'components', 'TurnNotice.tsx')));
 
   it('draws no border, card or ground', () => {

@@ -44,7 +44,7 @@ const LIGHT = tokensFor('studio', 'light');
 const DARK = tokensFor('studio', 'dark');
 const SCHEMES: readonly Tokens[] = [LIGHT, DARK];
 const HEX = /^#[0-9A-F]{6}([0-9A-F]{2})?$/;
-const VARIANTS: readonly TextVariant[] = ['title', 'body', 'mono', 'eyebrow'];
+const VARIANTS: readonly TextVariant[] = ['title', 'body', 'mono', 'eyebrow', 'thread'];
 const LEVELS: readonly (TextLevel | undefined)[] = [undefined, 1, 2, 3, 4, 5, 6];
 const BUTTON_VARIANTS = Object.keys(BUTTON_PAINTS) as ButtonVariant[];
 const BOARD_STATUSES = Object.keys(STATUS_CONFIG) as BoardStatus[];
@@ -69,8 +69,10 @@ describe('text roles', () => {
     expect(textRole('mono', 6)).toBe('figure3');
   });
 
-  it('has one Eyebrow, whatever the level', () => {
+  it('has one Eyebrow whatever the level, and the thread’s words with its two headings (D72)', () => {
     expect([textRole('eyebrow'), textRole('eyebrow', 3)]).toEqual(['eyebrow', 'eyebrow']);
+    const thread = ([undefined, 1, 2, 3, 6] as const).map((level) => textRole('thread', level));
+    expect(thread).toEqual(['thread', 'threadTitle1', 'threadTitle2', 'thread', 'thread']);
   });
 
   it('never reaches text below 11 pt (D38)', () => {
@@ -88,7 +90,7 @@ describe('text roles', () => {
     for (const tokens of SCHEMES) {
       for (const key of Object.values(TEXT_TONES)) expectColour(tokens, key);
     }
-    expect(VARIANTS.map(defaultTone)).toEqual(['default', 'default', 'default', 'muted']);
+    expect(VARIANTS.map(defaultTone).join()).toBe('default,default,default,muted,default');
   });
 });
 
@@ -100,7 +102,7 @@ describe('text faces', () => {
     expect(textFace(type, 'title2', {})).toBe(type.title2);
   });
 
-  it('takes a bundled weight or italic (button labels at 500, "Auto is working…")', () => {
+  it('takes a bundled weight or italic (button labels at 500, a title in italic)', () => {
     expect(textFace(type, 'body5', { weight: 500 }).fontFamily).toBe('Geist-Medium');
     expect(textFace(type, 'title4', { italic: true }).fontFamily).toBe(
       'Newsreader16pt16pt-MediumItalic',

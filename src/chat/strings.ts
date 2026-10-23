@@ -15,16 +15,16 @@ export type FailureCopy = { readonly text: string; readonly canRetry: boolean };
 const LIMIT_TEXT = 'Auto has reached a limit for now. Ask your workspace owner.';
 
 export const CHAT_COPY = Object.freeze({
-  /** The label beside Auto's mark (the handoff's mono 'AUTO'). */
-  autoLabel: 'Auto',
-  autoMark: 'A',
-  /** VoiceOver's name for one of Auto's messages, and for one of the user's. */
+  /** VoiceOver's name for Auto's avatar at the head of one of its messages. */
   autoSaid: 'Auto said',
+  /** VoiceOver's name for one of the user's messages. */
   youSaid: 'You said',
   /** A file the user sent with a message ('Attached: plan.pdf'). */
   attached: 'Attached',
-  /** The working indicator (the handoff's italic 'Auto is working…'). */
-  working: 'Auto is working…',
+  /** The thinking pill's word, as the web's chat shows it while Auto works (D72). */
+  thinking: 'Thinking',
+  /** VoiceOver's words for the thinking pill. */
+  thinkingLabel: 'Auto is thinking',
   /** components/play/chat/receipts.tsx RECEIPTS_TITLE and its tags. */
   receiptsTitle: 'What Auto did',
   /** components/play/chat/tool-lines.tsx TOOL_LINES_LABEL. */

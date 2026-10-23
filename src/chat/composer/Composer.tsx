@@ -3,15 +3,18 @@
 // library, files), the 'Message Auto' pill and the 42 pt round ink button, arrow-up to send and a
 // square to stop. Return inserts a newline; only the button sends. No suggestion chips, no Plan
 // toggle (D30), no voice button (A6). composerState decides everything; this only wires: the
-// label's visibility (useLabelFence) gates it, an upload holds the send, and a send hands the
-// trimmed words and the ready files up, then clears the pill and the chips.
+// label's visibility (useLabelFence) gates it, an upload holds the send, and a send taps lightly
+// (expo-haptics, in the binary since the scaffold), hands the trimmed words and the ready files up,
+// then clears the pill and the chips.
 
+import * as Haptics from 'expo-haptics';
 import ArrowUp from 'lucide-react-native/icons/arrow-up';
 import Square from 'lucide-react-native/icons/square';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import type { WorkspaceRole } from '../../api/workspace';
+import { logger } from '../../lib/logger';
 import { AiLabel, AiLabelPaused } from '../../styles/ai-label';
 import { useTokens } from '../../styles/theme';
 import { IconButton, Text } from '../../ui';
@@ -40,6 +43,13 @@ export type ComposerProps = {
 };
 
 const NO_FILES: readonly ChatFile[] = Object.freeze([]);
+
+/** A light tap as the message goes; a phone without haptics just sends. */
+function tapOnSend(): void {
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch((error: unknown) =>
+    logger.warn('send haptic failed', error),
+  );
+}
 
 function Notice({ notice }: { readonly notice: ComposerNotice | null }) {
   if (!notice) return null;
@@ -77,6 +87,7 @@ export function Composer({
     if (state.buttonMode === 'stop') {
       onStop();
     } else if (state.buttonMode === 'send') {
+      tapOnSend();
       onSend(outgoingText(text), files?.ready ?? NO_FILES);
       setText('');
       files?.sent();

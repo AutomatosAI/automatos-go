@@ -1,9 +1,11 @@
 // A notice in the thread: a limit Auto reached, a file it could not open, a stop, a stop that did
 // not reach the server, or a failed turn, always in the kit's own words (view-model.ts). Drawn as a
-// quiet line, never a box (Gerard, 23 Oct): the mark in its tone (✕ for a failure) and the words in
-// the muted ink, then Try again under the words where it is offered. Only the newest failure the
-// user can ask again offers Try again (the vendored retry.ts rule). A failure is announced as an
-// alert; screen readers hear the notice's word and its words, never the mark.
+// quiet line, never a box of its own (D72): inside Auto's box (AutoMessage; MessageList's Auto box
+// for a notice row that starts Auto's run), or bare under the thinking pill. The mark in its tone
+// (✕ for a failure) and the words in the muted ink, then Try again under the words where it is
+// offered. Only the newest failure the user can ask again offers Try again (the vendored retry.ts
+// rule). A failure is announced as an alert; screen readers hear the notice's word and its words,
+// never the mark.
 
 import { StyleSheet, View } from 'react-native';
 

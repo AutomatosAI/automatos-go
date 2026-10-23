@@ -5,11 +5,14 @@
 // lookup keeps the upright face when the family has no italic, and an italic hint does nothing):
 // the role's own family's italic at the nearest weight where it has one (Newsreader for titles),
 // else the serif family's (the body's Geist bundles none; the handoff's own italic is the serif's,
-// as in 'Auto is working…'), at the role's size. Code is the look's mono face (its label role's
+// as in its italic titles), at the role's size. Code is the look's mono face (its label role's
 // family at 400, or 600 in bold) at the surrounding text's size, with no ground behind it: a
 // ground on a run of words paints a block the line's full height on iOS (Gerard, 23 Oct: no boxes
-// in Auto's text). Headings sit on the thread's scale (body is 14 pt), a list says its marker (a
-// task item its box), and a table's columns are sized from their longest line, then scroll.
+// in Auto's text). Headings sit a step above the thread's words (the thread's words are 16 pt,
+// D72), as the web's chat draws them: h1 and h2 in Newsreader at 19 and 17, h3 to h6 the thread's
+// words at 600. Blocks are 12 pt apart, and 6 inside a list item, so a nested list sits with its
+// item. A list says its marker (a task item its box), and a table's columns are sized from their
+// longest line, then scroll.
 
 import type { TextStyle } from 'react-native';
 
@@ -20,9 +23,9 @@ import {
   type FontFamily,
   type FontWeight,
 } from '../../styles/fonts';
-import type { Colours } from '../../styles/tokens';
+import type { Colours, SpaceName } from '../../styles/tokens';
 import { TYPE_SPECS, type TypeRole, type TypeScale } from '../../styles/type';
-import { textFace, type TextLevel } from '../../ui/variants';
+import { textFace, type TextLevel, type TextVariant } from '../../ui/variants';
 import { MARKDOWN_COPY } from '../strings';
 import type { HeadingLevel, ListBlock, TableBlock } from './blocks';
 import { spansText, type InlineMark } from './inline';
@@ -42,18 +45,30 @@ export const CODE_BLOCK_MAX_WIDTH = 4000;
 /** A table cell's Body level: Body 3 (13 pt). */
 export const TABLE_TEXT_LEVEL: TextLevel = 3;
 
-/** h1 → Title 3 (21 pt), h2 → Title 4 (15), h3 → Title 5 (14.5), h4–h6 → Title 6 (14). */
-const HEADING_LEVELS: Readonly<Record<HeadingLevel, TextLevel>> = Object.freeze({
-  1: 3,
-  2: 4,
-  3: 5,
-  4: 6,
-  5: 6,
-  6: 6,
-});
+/** A heading's face: its Text variant, level and weight. */
+export type HeadingFace = {
+  readonly variant: TextVariant;
+  readonly level?: TextLevel;
+  readonly weight?: FontWeight;
+};
 
-export function headingTextLevel(level: HeadingLevel): TextLevel {
-  return HEADING_LEVELS[level];
+const H1: HeadingFace = Object.freeze({ variant: 'thread', level: 1 });
+const H2: HeadingFace = Object.freeze({ variant: 'thread', level: 2 });
+const MINOR_HEADING: HeadingFace = Object.freeze({ variant: 'thread', weight: STRONG_WEIGHT });
+
+/**
+ * h1 → the thread's Title 1 (19 pt serif), h2 → its Title 2 (17), h3–h6 → the thread's 16 pt at
+ * 600 (D72; the web's chat: text-lg and text-base serif, then text-sm semibold).
+ */
+export function headingFace(level: HeadingLevel): HeadingFace {
+  if (level === 1) return H1;
+  if (level === 2) return H2;
+  return MINOR_HEADING;
+}
+
+/** Between blocks: 12 pt at the answer's top level, 6 inside a list item (the items' own gap). */
+export function blockGap(listDepth: number): SpaceName {
+  return listDepth > 0 ? 'space2' : 'space5';
 }
 
 const WEIGHTS: readonly FontWeight[] = [400, 500, 600, 700];
@@ -90,8 +105,13 @@ export function monoFace(type: TypeScale, role: TypeRole, strong = false): TextS
   };
 }
 
-function wordsFace(type: TypeScale, role: TypeRole, marks: readonly InlineMark[]): TextStyle {
-  const weight = marks.includes('strong') ? STRONG_WEIGHT : undefined;
+function wordsFace(
+  type: TypeScale,
+  role: TypeRole,
+  marks: readonly InlineMark[],
+  blockWeight: FontWeight | undefined,
+): TextStyle {
+  const weight = marks.includes('strong') ? STRONG_WEIGHT : blockWeight;
   const upright = textFace(type, role, { weight });
   if (!marks.includes('em')) return { ...upright };
   const italic = italicFace(role, weight ?? TYPE_SPECS[role].weight);
@@ -109,6 +129,7 @@ function decoration(marks: readonly InlineMark[], link: boolean): TextStyle {
 /**
  * A run of words inside a block of `role`: its face, its line, and its paint (a link in the
  * accent; code in the mono face alone, no ground). Nothing for plain words: they take the block's.
+ * `weight` is the block's own (a minor heading's 600): a run that is not bold keeps it.
  */
 export function spanStyle(
   type: TypeScale,
@@ -116,10 +137,13 @@ export function spanStyle(
   role: TypeRole,
   marks: readonly InlineMark[],
   link: boolean,
+  weight?: FontWeight,
 ): TextStyle | null {
   if (marks.length === 0 && !link) return null;
   const code = marks.includes('code');
-  const face = code ? monoFace(type, role, marks.includes('strong')) : wordsFace(type, role, marks);
+  const face = code
+    ? monoFace(type, role, marks.includes('strong'))
+    : wordsFace(type, role, marks, weight);
   return {
     ...face,
     ...decoration(marks, link),

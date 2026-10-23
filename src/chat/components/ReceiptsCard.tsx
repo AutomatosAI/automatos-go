@@ -1,9 +1,9 @@
 // 'What Auto did' (mirroring components/play/chat/receipts.tsx, a section with no frame): the mono
 // title, one line per call with its mark (✓ olive, … waiting, ✕, –) and Play's tag, and the
-// closing note. Drawn as a quiet block under the answer, never a box (Gerard, 23 Oct: no boxes
-// around Auto's text; the handoff's card is overruled, as TurnNotice's was). A line whose call
-// touched a page opens it through the mapped link. Each line is one element to screen readers,
-// read as its status word and its words (§4.6), never as the mark.
+// closing note. Drawn as a quiet block under the answer, never a box of its own: it sits inside
+// Auto's box (AutoMessage, D72; the handoff's card is overruled, as TurnNotice's was). A line
+// whose call touched a page opens it through the mapped link. Each line is one element to screen
+// readers, read as its status word and its words (§4.6), never as the mark.
 
 import { Pressable, StyleSheet, View } from 'react-native';
 
