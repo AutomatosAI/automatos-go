@@ -276,3 +276,39 @@ export const NEEDS_COPY = Object.freeze({
   untitledPost: 'A social post',
   untitledTicket: 'A ticket',
 });
+
+/**
+ * 'Ask Auto about #0419' (D-ASK-AUTO): the bar over a conversation about a ticket and the 'Update
+ * ticket and re-queue' sheet, in the web's words (components/chatbot/discussion-bar.tsx and
+ * rebrief-dialog.tsx). `ticket` is the vendored ticketCalled: '#0419' words, or 'this ticket' for
+ * one with no number, never its row id as a number (F414). A ticket that would not load is named by
+ * the id the link carried, as the web names it, with no '#'.
+ */
+export const DISCUSSION_COPY = Object.freeze({
+  region: 'Discussion',
+  discussing: (number: string | null, title: string) =>
+    `Discussing ${number ?? 'this ticket'} — ${title}`,
+  /** A ticket the server sent without a title (the web's mapTaskToBoardTask). */
+  untitled: 'Untitled',
+  openTicketHint: 'Opens the ticket',
+  opening: 'Opening the ticket…',
+  missing: (ticketId: string) =>
+    `Ticket ${ticketId} could not be opened here. It may be in another workspace.`,
+  retry: 'Try again',
+  rebrief: 'Update ticket and re-queue',
+  /** A Mission's ticket: its plan is decided on the Mission's page (PRD-252 D4). */
+  decideMission: 'Decide on the mission →',
+  end: 'End the discussion',
+  sheetTitle: (ticket: string) => `Update ${ticket} and re-queue`,
+  sheetIntro: (agent: string) =>
+    `This brief replaces the ticket's, and ${agent} redoes the ticket from it. The old brief and the last draft stay on the ticket.`,
+  /** A ticket with no agent named. */
+  itsAgent: 'its agent',
+  briefLabel: 'The agreed brief',
+  briefPlaceholder: 'The brief you agreed with Auto.',
+  briefRequired: 'Write the brief you agreed.',
+  cancel: 'Cancel',
+  save: 'Update and re-queue',
+  saved: (ticket: string, agent: string) =>
+    `${ticket} is back with ${agent}, working from the brief you agreed.`,
+});
