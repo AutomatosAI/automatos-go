@@ -46,8 +46,35 @@ function routine(interval: number, overrides: Record<string, unknown> = {}): Sch
   });
 }
 
+// A playbook as the server sends it: next_run_at is croniter's on a UTC clock
+// (services/schedule_util.py next_run), the zone beside it; the scheduler fires it in that zone.
+function playbook(cron: string, timezone: string, nextRunAt: string): ScheduleEntry {
+  return item({
+    id: 'recipe-5',
+    playbook_id: 5,
+    name: 'Morning report',
+    type: 'recipe',
+    next_run_at: nextRunAt,
+    frequency: cron,
+    recurrence: { ...NO_RECURRENCE, cron_expression: cron, timezone },
+  });
+}
+
 function model(items: ScheduleEntry[], timeZone: string | null, selected?: string) {
   return dayModel({ items, now: NOW, timeZone, selected });
+}
+
+/** The strip's weekdays: Thursday 22 to Wednesday 28 Oct without the weekend. */
+const WEEKDAYS = ['2026-10-22', '2026-10-23', '2026-10-26', '2026-10-27', '2026-10-28'];
+
+/** Every row on the strip, day by day, as [day, time] on that phone's clock. */
+function runsOn(entry: ScheduleEntry, timeZone: string): [string, string | null][] {
+  return model([entry], timeZone).strip.flatMap((day) =>
+    model([entry], timeZone, day.key).rows.map((row): [string, string | null] => [
+      row.day,
+      row.time,
+    ]),
+  );
 }
 
 describe('the seven-day strip', () => {
@@ -156,26 +183,42 @@ describe('repeating items', () => {
   });
 
   it('holds a weekday cron at its hour in its own zone across the clock change', () => {
-    const report = item({
-      id: 'recipe-5',
-      playbook_id: 5,
-      name: 'Morning report',
-      type: 'recipe',
-      next_run_at: '2026-10-23T08:00:00+00:00',
-      frequency: '0 9 * * 1-5',
-      recurrence: { ...NO_RECURRENCE, cron_expression: '0 9 * * 1-5', timezone: 'Europe/London' },
-    });
-    const london = model([report], 'Europe/London');
-    expect(london.strip.map((day) => day.count)).toEqual([1, 1, 0, 0, 1, 1, 1]);
-    expect(london.rows.map((row) => row.time)).toEqual(['09:00']);
-    expect(model([report], 'Europe/London', '2026-10-26').rows.map((row) => row.time)).toEqual([
-      '09:00',
+    // Fri 09:00Z: the server's anchor for 09:00 London, an hour after Friday's run (08:00Z)
+    const report = playbook('0 9 * * 1-5', 'Europe/London', '2026-10-23T09:00:00+00:00');
+    expect(model([report], 'Europe/London').strip.map((day) => day.count)).toEqual([
+      1, 1, 0, 0, 1, 1, 1,
     ]);
-    expect(london.rows[0].meta).toBe('weekdays');
+    expect(runsOn(report, 'Europe/London')).toEqual(WEEKDAYS.map((day) => [day, '09:00']));
+    expect(model([report], 'Europe/London').rows[0].meta).toBe('weekdays');
     // New York keeps summer time a week longer: 04:00 before London's change, 05:00 after
-    expect(model([report], 'America/New_York').rows.map((row) => row.time)).toEqual(['04:00']);
-    expect(model([report], 'America/New_York', '2026-10-26').rows.map((row) => row.time)).toEqual([
-      '05:00',
+    expect(runsOn(report, 'America/New_York')).toEqual([
+      ['2026-10-22', '04:00'],
+      ['2026-10-23', '04:00'],
+      ['2026-10-26', '05:00'],
+      ['2026-10-27', '05:00'],
+      ['2026-10-28', '05:00'],
+    ]);
+  });
+
+  it('keeps a late Friday cron on Friday at its hour, not at midnight or on Saturday', () => {
+    // Fri 23:00Z is Saturday 00:00 in London: the server's anchor, not the run (Fri 22:00Z)
+    const late = playbook('0 23 * * 5', 'Europe/London', '2026-10-23T23:00:00+00:00');
+    expect(runsOn(late, 'Europe/London')).toEqual([['2026-10-23', '23:00']]);
+    expect(model([late], 'Europe/London').strip.map((day) => day.count)).toEqual([
+      0, 1, 0, 0, 0, 0, 0,
+    ]);
+  });
+
+  it("runs a Tokyo weekday cron at 20:00 Tokyo, shown at that moment on a London phone's clock", () => {
+    // 20:00Z is 05:00 the next morning in Tokyo: the server's anchor, not the run (11:00Z)
+    const tokyo = playbook('0 20 * * 1-5', 'Asia/Tokyo', '2026-10-22T20:00:00+00:00');
+    expect(runsOn(tokyo, 'Asia/Tokyo')).toEqual(WEEKDAYS.map((day) => [day, '20:00']));
+    expect(runsOn(tokyo, 'Europe/London')).toEqual([
+      ['2026-10-22', '12:00'],
+      ['2026-10-23', '12:00'],
+      ['2026-10-26', '11:00'],
+      ['2026-10-27', '11:00'],
+      ['2026-10-28', '11:00'],
     ]);
   });
 

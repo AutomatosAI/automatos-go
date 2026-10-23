@@ -215,6 +215,9 @@ describe('cadence and cron reading', () => {
   it('reads a cron at a fixed time on every day of the month, and nothing else', () => {
     expect([...(dailyCron('0 9 * * *')?.weekdays ?? [])]).toHaveLength(7);
     expect([...(dailyCron('30 7 * * 1,3-4')?.weekdays ?? [])]).toEqual([1, 3, 4]);
+    expect(dailyCron('30 7 * * 1,3-4')).toMatchObject({ hour: 7, minute: 30 });
+    expect(dailyCron('0 24 * * *')).toBeNull();
+    expect(dailyCron('60 9 * * *')).toBeNull();
     expect([...(dailyCron('0 9 * * 0,7')?.weekdays ?? [])]).toEqual([0]);
     for (const other of ['*/15 * * * *', '0 */2 * * *', '0 9 1 * *', '0 9 * 6 *', '0 9 * * MON']) {
       expect(dailyCron(other)).toBeNull();
