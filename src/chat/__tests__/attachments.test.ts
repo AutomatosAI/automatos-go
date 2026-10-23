@@ -9,6 +9,7 @@ import {
   AttachmentRefusedError,
   AttachmentUploadSchema,
   MAX_UPLOAD_BYTES,
+  SNIFF_BYTES,
   attachmentIdsOf,
   chatFileOf,
   convertedName,
@@ -17,6 +18,8 @@ import {
   needsReencode,
   notAttachedText,
   reencodeTarget,
+  sniffImageMime,
+  sniffedTarget,
   uploadPart,
   uploadRefusalText,
 } from '../attachments/attachments';
@@ -133,6 +136,115 @@ describe('reencodeTarget and convertedName', () => {
     expect(convertedName('IMG_0042', jpeg)).toBe('IMG_0042.jpg');
     expect(convertedName('  ', jpeg)).toBe(`${ATTACH_COPY.untitledPhoto}.jpg`);
     expect(convertedName(null, jpeg)).toBe(`${ATTACH_COPY.untitledPhoto}.jpg`);
+  });
+});
+
+/** The bytes as written: strings as ASCII, arrays as they are. */
+function bytesOf(...parts: (string | readonly number[])[]): number[] {
+  return parts.flatMap((part) =>
+    typeof part === 'string' ? Array.from(part, (char) => char.charCodeAt(0)) : [...part],
+  );
+}
+
+/** A file's first SNIFF_BYTES as upload.ts reads them: the given bytes, then the file's zeros. */
+function head(...parts: (string | readonly number[])[]): Uint8Array {
+  const bytes = bytesOf(...parts);
+  return Uint8Array.from([
+    ...bytes,
+    ...Array<number>(Math.max(0, SNIFF_BYTES - bytes.length)).fill(0),
+  ]);
+}
+
+/** An ISO-BMFF ftyp box: size 24, the major brand, minor version 0, two compatible brands. */
+const ftyp = (brand: string) => head([0, 0, 0, 24], 'ftyp', brand, [0, 0, 0, 0], 'mif1heic');
+/** A BMP's file header (size, reserved, pixel offset) and its DIB header's size, little-endian. */
+const bmp = (dibSize: number) =>
+  head('BM', [0x36, 0x10, 0, 0], [0, 0, 0, 0], [0x36, 0, 0, 0], [dibSize, 0, 0, 0]);
+
+describe('sniffImageMime: a file Files could not type is known by its first bytes', () => {
+  it.each([
+    ['JPEG FF D8 FF', head([0xff, 0xd8, 0xff, 0xe1], 'Exif'), 'image/jpeg'],
+    [
+      'PNG',
+      head([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], [0, 0, 0, 13], 'IHDR'),
+      'image/png',
+    ],
+    ["GIF 'GIF87a'", head('GIF87a', [1, 0, 1, 0]), 'image/gif'],
+    ["GIF 'GIF89a'", head('GIF89a', [1, 0, 1, 0]), 'image/gif'],
+    ["WebP 'RIFF' + 'WEBP' at 8", head('RIFF', [0x24, 0x10, 0, 0], 'WEBPVP8 '), 'image/webp'],
+    ["TIFF 'II*' + 00", head([0x49, 0x49, 0x2a, 0x00], [8, 0, 0, 0]), 'image/tiff'],
+    ["TIFF 'MM' + 00 '*'", head([0x4d, 0x4d, 0x00, 0x2a], [0, 0, 0, 8]), 'image/tiff'],
+    ["BMP 'BM' (BITMAPINFOHEADER)", bmp(40), 'image/bmp'],
+    ["BMP 'BM' (BITMAPV5HEADER)", bmp(124), 'image/bmp'],
+    ['HEIC ftyp heic', ftyp('heic'), 'image/heic'],
+    ['HEIC ftyp heix', ftyp('heix'), 'image/heic'],
+    ['HEIC ftyp heim', ftyp('heim'), 'image/heic'],
+    ['HEIC ftyp heis', ftyp('heis'), 'image/heic'],
+    ['HEIC ftyp hevc', ftyp('hevc'), 'image/heic-sequence'],
+    ['HEIC ftyp hevx', ftyp('hevx'), 'image/heic-sequence'],
+    ['HEIF ftyp mif1', ftyp('mif1'), 'image/heif'],
+    ['HEIF ftyp msf1', ftyp('msf1'), 'image/heif-sequence'],
+    ['AVIF ftyp avif', ftyp('avif'), 'image/avif'],
+  ])('%s → %s', (_label, bytes, mime) => {
+    expect(sniffImageMime(bytes)).toBe(mime);
+  });
+
+  it.each([
+    ["PDF '%PDF'", head('%PDF-1.7\n%\u00e2\u00e3')],
+    ["ZIP 'PK' (DOCX, XLSX, PPTX are ZIPs)", head('PK', [3, 4, 20, 0, 6, 0])],
+    ['plain text', Uint8Array.from(bytesOf('Meeting notes, Thursday 23 Oct.\n'))],
+    ["text that starts 'BM'", Uint8Array.from(bytesOf('BMW service: 23 Oct, 09:00 sharp'))],
+    ['an MP4 video (ftyp isom)', ftyp('isom')],
+    ['a RIFF that is not WebP (WAV)', head('RIFF', [0x24, 0x10, 0, 0], 'WAVEfmt ')],
+    ['nothing at all', new Uint8Array(0)],
+  ])('%s is no image', (_label, bytes) => {
+    expect(sniffImageMime(bytes)).toBeNull();
+  });
+
+  it.each([
+    ['JPEG', [0xff, 0xd8]],
+    ['PNG', [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a]],
+    ['GIF', bytesOf('GIF89')],
+    ['WebP', bytesOf('RIFF', [0x24, 0x10, 0, 0], 'WEB')],
+    ['TIFF', [0x49, 0x49, 0x2a]],
+    ['BMP', bytesOf('BM', [0x36, 0x10, 0, 0], [0, 0, 0, 0], [0x36, 0, 0, 0], [40, 0, 0])],
+    ['HEIC', bytesOf([0, 0, 0, 24], 'ftyp', 'he')],
+  ])('a head shorter than the %s signature is no image', (_label, bytes) => {
+    expect(sniffImageMime(Uint8Array.from(bytes))).toBeNull();
+  });
+
+  it('reads a head that is a view into a larger buffer at its own offset', () => {
+    const buffer = Uint8Array.from([0, 0, 0, 0, ...bmp(40)]);
+    expect(sniffImageMime(buffer.subarray(4))).toBe('image/bmp');
+  });
+});
+
+describe('sniffedTarget: the target from the sniffed type, HEIC to JPEG', () => {
+  it.each([
+    ['JPEG', head([0xff, 0xd8, 0xff, 0xe0]), 'jpeg', 'image/jpeg'],
+    ['HEIC', ftyp('heic'), 'jpeg', 'image/jpeg'],
+    ['HEIF', ftyp('mif1'), 'jpeg', 'image/jpeg'],
+    ['AVIF', ftyp('avif'), 'jpeg', 'image/jpeg'],
+    ['TIFF', head([0x4d, 0x4d, 0x00, 0x2a]), 'jpeg', 'image/jpeg'],
+    ['BMP', bmp(40), 'jpeg', 'image/jpeg'],
+    ['PNG', head([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), 'png', 'image/png'],
+    ['GIF', head('GIF89a'), 'png', 'image/png'],
+    ['WebP', head('RIFF', [0, 0, 0, 0], 'WEBP'), 'webp', 'image/webp'],
+  ])('a %s head is re-encoded as %s', (_label, bytes, format, mime) => {
+    expect(sniffedTarget(bytes)).toMatchObject({ format, mime });
+  });
+
+  it('gives nothing for a file that is no image: it goes as chosen', () => {
+    expect(sniffedTarget(head('%PDF-1.7'))).toBeNull();
+    expect(sniffedTarget(head('PK', [3, 4]))).toBeNull();
+  });
+
+  it("names the copy through convertedName: 'IMG_0042' → 'IMG_0042.jpg', 'x.svg' → 'x.jpg'", () => {
+    const jpeg = sniffedTarget(ftyp('heic'));
+    expect(jpeg).not.toBeNull();
+    if (!jpeg) return;
+    expect(convertedName('IMG_0042', jpeg)).toBe('IMG_0042.jpg');
+    expect(convertedName('x.svg', jpeg)).toBe('x.jpg');
   });
 });
 

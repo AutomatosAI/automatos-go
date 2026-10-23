@@ -1,6 +1,8 @@
 // One attachment's way out (US-009b): an image is re-encoded by expo-image-manipulator FIRST
 // (HEIC/HEIF to JPEG, every other image in its own or the nearest format: attachments.ts), so no
-// EXIF or GPS metadata leaves the phone; a non-image file goes as chosen. Then POST
+// EXIF or GPS metadata leaves the phone; a non-image file goes as chosen. An image is known by its
+// type or name, else by its first bytes (a JPEG in Files named 'IMG_0042' comes typed
+// octet-stream), and a file whose head cannot be read is refused, never sent unexamined. Then POST
 // /api/attachments, multipart, through the foundation's client (D-ONE-CLIENT): the client passes
 // FormData through untouched, and Expo's fetch (its transport) encodes a part that has bytes()
 // under the part's own name and type (expo/src/winter/fetch/convertFormData.ts; it takes no
@@ -18,11 +20,14 @@ import {
   AttachmentRefusedError,
   AttachmentUploadSchema,
   MAX_UPLOAD_BYTES,
+  SNIFF_BYTES,
   chatFileOf,
   convertedName,
   reencodeTarget,
+  sniffedTarget,
   uploadPart,
   type ReencodeFormat,
+  type ReencodeTarget,
 } from './attachments';
 import type { PickedFile } from './picked';
 
@@ -56,9 +61,30 @@ async function reencode(uri: string, format: ReencodeFormat, compress: number): 
   }
 }
 
+/** The file's first bytes, through a handle that is closed whatever the read does. */
+function readHead(uri: string): Uint8Array {
+  const handle = new DeviceFile(uri).open();
+  try {
+    return handle.readBytes(SNIFF_BYTES);
+  } finally {
+    handle.close();
+  }
+}
+
+/** The target its type or name gives, else the one its head shows; an unreadable head refuses. */
+function targetOf(picked: PickedFile): ReencodeTarget | null {
+  const declared = reencodeTarget(picked.mime, picked.name);
+  if (declared) return declared;
+  try {
+    return sniffedTarget(readHead(picked.uri));
+  } catch (cause) {
+    throw new AttachmentRefusedError('unreadable', { cause });
+  }
+}
+
 /** Every image re-encoded before upload; an image that cannot be drawn is refused, never sent. */
 export async function prepareForUpload(picked: PickedFile): Promise<PreparedFile> {
-  const target = reencodeTarget(picked.mime, picked.name);
+  const target = targetOf(picked);
   if (!target) return { ...picked, reencoded: false };
   try {
     const uri = await reencode(picked.uri, target.format, target.compress);

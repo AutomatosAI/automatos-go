@@ -11,6 +11,8 @@ import type { PickedFile } from '../attachments/picked';
 const native = vi.hoisted(() => ({
   log: [] as string[],
   sizes: new Map<string, number>(),
+  heads: new Map<string, Uint8Array>(),
+  failHead: false,
   failDraw: false,
   saved: 0,
 }));
@@ -45,6 +47,17 @@ vi.mock('expo-file-system', () => ({
     }
     get size() {
       return native.sizes.get(this.uri) ?? 1024;
+    }
+    open() {
+      const uri = this.uri;
+      return {
+        readBytes(length: number) {
+          native.log.push(`head ${uri} ${length}`);
+          if (native.failHead) throw new Error('UnableToReadHandleException');
+          return (native.heads.get(uri) ?? new Uint8Array(0)).slice(0, length);
+        },
+        close: () => native.log.push(`close ${uri}`),
+      };
     }
     async bytes() {
       native.log.push(`read ${this.uri}`);
@@ -84,6 +97,29 @@ const PDF: PickedFile = {
   name: 'q3-report.pdf',
   mime: 'application/pdf',
 };
+const POST = 'POST https://api.example.test/api/attachments';
+const ascii = (text: string) => Array.from(text, (char) => char.charCodeAt(0));
+/** First bytes as Files keeps them: a JPEG with its EXIF, an iPhone HEIC, a PDF. */
+const JPEG_HEAD = Uint8Array.from([0xff, 0xd8, 0xff, 0xe1, 0x00, 0x18, ...ascii('Exif')]);
+const HEIC_HEAD = Uint8Array.from([
+  0,
+  0,
+  0,
+  24,
+  ...ascii('ftypheic'),
+  0,
+  0,
+  0,
+  0,
+  ...ascii('mif1heic'),
+]);
+const PDF_HEAD = Uint8Array.from(ascii('%PDF-1.7\n%'));
+/** A JPEG Files kept with no extension: its picker types it by the name alone. */
+const UNTYPED_JPEG: PickedFile = {
+  uri: 'file:///cache/DocumentPicker/5D1F-IMG_0042',
+  name: 'IMG_0042',
+  mime: 'application/octet-stream',
+};
 
 function clientAnswering(status: number, body: unknown) {
   const transport = fakeTransport(async (request) => {
@@ -112,6 +148,8 @@ describe('upload.ts', () => {
   beforeEach(() => {
     native.log.length = 0;
     native.sizes.clear();
+    native.heads.clear();
+    native.failHead = false;
     native.failDraw = false;
     native.saved = 0;
     vi.stubGlobal('FormData', RecordingFormData);
@@ -163,6 +201,7 @@ describe('upload.ts', () => {
   });
 
   it('uploads a non-image file unchanged and deletes nothing it did not make', async () => {
+    native.heads.set(PDF.uri, PDF_HEAD);
     const { client, transport } = clientAnswering(200, {
       ...ANSWER,
       filename: 'q3-report.pdf',
@@ -172,7 +211,8 @@ describe('upload.ts', () => {
     const file = await sendAttachment(client, PDF);
 
     expect(file.mediaType).toBe('application/pdf');
-    expect(native.log).toEqual(['POST https://api.example.test/api/attachments']);
+    // only its 32-byte head is read here (no image there), the handle closed; bytes() at the POST
+    expect(native.log).toEqual([`head ${PDF.uri} 32`, `close ${PDF.uri}`, POST]);
     const [, part] = sentPart(transport.calls[0].body);
     expect(part).toMatchObject({ name: 'q3-report.pdf', type: 'application/pdf' });
   });
@@ -190,14 +230,15 @@ describe('upload.ts', () => {
     expect(transport.calls).toHaveLength(0);
   });
 
-  it('never reads or sends a file over the limit', async () => {
+  it('never loads or sends a file over the limit (its 32-byte head is all that is read)', async () => {
     native.sizes.set(PDF.uri, MAX_UPLOAD_BYTES + 1);
+    native.heads.set(PDF.uri, PDF_HEAD);
     const { client, transport } = clientAnswering(200, ANSWER);
     const refusal = sendAttachment(client, PDF);
     await expect(refusal).rejects.toBeInstanceOf(AttachmentRefusedError);
     await expect(refusal).rejects.toMatchObject({ reason: 'too_big' });
     expect(transport.calls).toHaveLength(0);
-    expect(native.log).toEqual([]);
+    expect(native.log).toEqual([`head ${PDF.uri} 32`, `close ${PDF.uri}`]);
   });
 
   it("hands the server's refusal on as the taxonomy's error, and still deletes the copy", async () => {
@@ -212,5 +253,88 @@ describe('upload.ts', () => {
       serverMessage: 'File too large: 60000000 bytes (max 52428800)',
     });
     expect(native.log.at(-1)).toBe('delete file:///cache/ImageManipulator/out-1.jpeg');
+  });
+
+  describe('a file Files could not type is judged by its first bytes', () => {
+    it("re-encodes 'IMG_0042' typed octet-stream with a JPEG head BEFORE the POST", async () => {
+      native.heads.set(UNTYPED_JPEG.uri, JPEG_HEAD);
+      const { client, transport } = clientAnswering(200, ANSWER);
+      const file = await sendAttachment(client, UNTYPED_JPEG);
+
+      expect(file).toEqual({
+        filename: 'IMG_0042.jpg',
+        mediaType: 'image/jpeg',
+        attachmentId: 'att-1',
+      });
+      expect(native.log).toEqual([
+        `head ${UNTYPED_JPEG.uri} 32`,
+        `close ${UNTYPED_JPEG.uri}`,
+        `draw ${UNTYPED_JPEG.uri}`,
+        'save jpeg 0.9',
+        'release image',
+        'release context',
+        POST,
+        'delete file:///cache/ImageManipulator/out-1.jpeg',
+      ]);
+      const [, part] = sentPart(transport.calls[0].body);
+      expect(part).toMatchObject({ name: 'IMG_0042.jpg', type: 'image/jpeg' });
+      await part.bytes();
+      expect(native.log.at(-1)).toBe('read file:///cache/ImageManipulator/out-1.jpeg');
+    });
+
+    it("sends an extension-less HEIC as 'IMG_0042.jpg' image/jpeg", async () => {
+      const heic: PickedFile = {
+        uri: 'file:///cache/DocumentPicker/IMG_0042',
+        name: 'IMG_0042',
+        mime: '',
+      };
+      native.heads.set(heic.uri, HEIC_HEAD);
+      const { client, transport } = clientAnswering(200, ANSWER);
+      await sendAttachment(client, heic);
+
+      expect(native.log.slice(2, 4)).toEqual([`draw ${heic.uri}`, 'save jpeg 0.9']);
+      const [, part] = sentPart(transport.calls[0].body);
+      expect(part).toMatchObject({ name: 'IMG_0042.jpg', type: 'image/jpeg' });
+    });
+
+    it("re-encodes a JPEG head named 'x.svg': the name does not let an image through", async () => {
+      const svg: PickedFile = {
+        uri: 'file:///cache/DocumentPicker/x.svg',
+        name: 'x.svg',
+        mime: 'image/svg+xml',
+      };
+      native.heads.set(svg.uri, JPEG_HEAD);
+      const prepared = await prepareForUpload(svg);
+
+      expect(native.log).toContain(`draw ${svg.uri}`);
+      expect(prepared).toMatchObject({ name: 'x.jpg', mime: 'image/jpeg', reencoded: true });
+    });
+
+    it('posts a PDF typed octet-stream unchanged', async () => {
+      const pdf: PickedFile = { ...PDF, mime: 'application/octet-stream' };
+      native.heads.set(pdf.uri, PDF_HEAD);
+      const { client, transport } = clientAnswering(200, ANSWER);
+      await sendAttachment(client, pdf);
+
+      expect(native.log).toEqual([`head ${pdf.uri} 32`, `close ${pdf.uri}`, POST]);
+      const [, part] = sentPart(transport.calls[0].body);
+      expect(part).toMatchObject({ name: 'q3-report.pdf', type: 'application/octet-stream' });
+    });
+
+    it("refuses a file whose head cannot be read ('unreadable'), closes it and posts nothing", async () => {
+      native.failHead = true;
+      const { client, transport } = clientAnswering(200, ANSWER);
+      const refusal = sendAttachment(client, UNTYPED_JPEG);
+      await expect(refusal).rejects.toBeInstanceOf(AttachmentRefusedError);
+      await expect(refusal).rejects.toMatchObject({ reason: 'unreadable' });
+
+      expect(transport.calls).toHaveLength(0);
+      expect(native.log).toEqual([`head ${UNTYPED_JPEG.uri} 32`, `close ${UNTYPED_JPEG.uri}`]);
+    });
+
+    it('never reads the head of a file its type or name already marks as an image', async () => {
+      await prepareForUpload(HEIC);
+      expect(native.log.some((entry) => entry.startsWith('head '))).toBe(false);
+    });
   });
 });

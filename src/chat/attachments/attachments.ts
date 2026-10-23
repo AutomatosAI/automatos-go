@@ -5,7 +5,9 @@
 // or GPS metadata is sent (lead, 20 Oct; the store privacy labels): HEIC/HEIF becomes JPEG (the
 // server's allow-list has no HEIC, D29), PNG and GIF become PNG, WebP stays WebP, every other
 // photo format becomes JPEG. SVG is vector text the manipulator cannot draw, and carries no camera
-// metadata: it goes as chosen, like every non-image file (PDF, DOCX, XLSX…).
+// metadata: it goes as chosen, like every non-image file (PDF, DOCX, XLSX…). Files types a file by
+// its extension alone, so a file its type and name do not mark is judged by its own first bytes
+// (sniffImageMime): a raster image there is re-encoded whatever it is called, '.svg' included.
 
 import { z } from 'zod';
 
@@ -124,6 +126,87 @@ export function reencodeTarget(
   if (type === null) return null;
   if (isHeic(mime, filename)) return JPEG;
   return KEEP_FORMAT[type] ?? JPEG;
+}
+
+// ── What the file's own bytes say (a file Files could not type) ───────────────────────────────
+
+/** How much of a file's head upload.ts reads: more than the longest check below needs (18). */
+export const SNIFF_BYTES = 32;
+
+type Signature = { readonly offset: number; readonly bytes: readonly number[] };
+type FixedSignature = { readonly mime: string; readonly parts: readonly Signature[] };
+
+const ascii = (text: string) => Array.from(text, (char) => char.charCodeAt(0));
+const at = (offset: number, bytes: readonly number[]): Signature => ({ offset, bytes });
+
+/** Raster images known by fixed bytes at fixed offsets: every part must match. */
+const FIXED_SIGNATURES: readonly FixedSignature[] = Object.freeze([
+  { mime: 'image/jpeg', parts: [at(0, [0xff, 0xd8, 0xff])] },
+  { mime: 'image/png', parts: [at(0, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])] },
+  { mime: 'image/gif', parts: [at(0, ascii('GIF87a'))] },
+  { mime: 'image/gif', parts: [at(0, ascii('GIF89a'))] },
+  { mime: 'image/webp', parts: [at(0, ascii('RIFF')), at(8, ascii('WEBP'))] },
+  { mime: 'image/tiff', parts: [at(0, [0x49, 0x49, 0x2a, 0x00])] },
+  { mime: 'image/tiff', parts: [at(0, [0x4d, 0x4d, 0x00, 0x2a])] },
+]);
+
+/** ISO-BMFF images (HEIC, HEIF, AVIF): 'ftyp' at 4, then the major brand at 8, by its type. */
+const FTYP = at(4, ascii('ftyp'));
+const FTYP_BRAND_OFFSET = 8;
+const FTYP_BRANDS: ReadonlyMap<string, string> = new Map([
+  ['heic', 'image/heic'],
+  ['heix', 'image/heic'],
+  ['heim', 'image/heic'],
+  ['heis', 'image/heic'],
+  ['hevc', 'image/heic-sequence'],
+  ['hevx', 'image/heic-sequence'],
+  ['mif1', 'image/heif'],
+  ['msf1', 'image/heif-sequence'],
+  ['avif', 'image/avif'],
+]);
+
+/**
+ * BMP: 'BM', and the DIB header's size (offset 14, little-endian) is a real header's, so a text
+ * file that happens to start 'BM' is not taken for an image (and refused when it cannot be drawn).
+ */
+const BMP = at(0, ascii('BM'));
+const BMP_MIME = 'image/bmp';
+const BMP_DIB_SIZE_OFFSET = 14;
+const UINT32_BYTES = 4;
+const BMP_DIB_SIZES: ReadonlySet<number> = new Set([12, 16, 40, 52, 56, 64, 108, 124]);
+
+function matches(head: Uint8Array, signature: Signature): boolean {
+  const { offset, bytes } = signature;
+  return (
+    head.length >= offset + bytes.length &&
+    bytes.every((byte, index) => head[offset + index] === byte)
+  );
+}
+
+function ftypImage(head: Uint8Array): string | null {
+  if (!matches(head, FTYP)) return null;
+  const brand = head.subarray(FTYP_BRAND_OFFSET, FTYP_BRAND_OFFSET + UINT32_BYTES);
+  return FTYP_BRANDS.get(String.fromCharCode(...brand)) ?? null;
+}
+
+function isBmp(head: Uint8Array): boolean {
+  if (!matches(head, BMP) || head.length < BMP_DIB_SIZE_OFFSET + UINT32_BYTES) return false;
+  const view = new DataView(head.buffer, head.byteOffset, head.byteLength);
+  return BMP_DIB_SIZES.has(view.getUint32(BMP_DIB_SIZE_OFFSET, true));
+}
+
+/** The raster image type a file's first bytes show; null for anything else (PDF, ZIP, text…). */
+export function sniffImageMime(head: Uint8Array): string | null {
+  const fixed = FIXED_SIGNATURES.find(({ parts }) => parts.every((part) => matches(head, part)));
+  if (fixed) return fixed.mime;
+  if (isBmp(head)) return BMP_MIME;
+  return ftypImage(head);
+}
+
+/** What a file is re-encoded as by its head alone (HEIC → JPEG); null: it goes as chosen. */
+export function sniffedTarget(head: Uint8Array): ReencodeTarget | null {
+  const mime = sniffImageMime(head);
+  return mime === null ? null : reencodeTarget(mime, null);
 }
 
 /** The re-encoded file's name: the chosen name with the new extension ('IMG_0042.HEIC' → .jpg). */
