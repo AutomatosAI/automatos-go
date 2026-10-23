@@ -315,10 +315,10 @@
       "title": "A Command Centre detail opened from outside the tabs (chat, the needs strip) leaves Board tappable and marks no tab it is not on",
       "description": "Found by the lead's seam review (23 Oct; a split verdict, then two tie-break verifiers confirmed it). Chat opens Command Centre details directly with router.push (src/chat/components/follow-link.ts:18-19): a 'What Auto did' Deliverable line through appRouteForWebLink to routes.cc.deliverable (src/navigation/web-links.ts:88-91), the needs strip and task cards to routes.cc.ticket / routes.cc.social (src/chat/home/needs-strip.ts:103,161; src/chat/cards/view-tools.ts:163). The cc stack then mounts with the detail as its only route (no initialRouteName, no withAnchor). useShellTab starts at FIRST_TAB 'board' (src/cc/shell/use-shell.ts:80, tabs.ts:26) and shellTab keeps the previous tab when tabFor(path) is null (tabs.ts:42-44), so Board shows selected, and TabStrip navigates only when !view.selected (src/cc/shell/TabStrip.tsx:75-77): tapping Board does nothing; only another tab and then Board reaches the Board. The layout's comment (app/(app)/cc/_layout.tsx:3-5) says a detail opens over the tab it came from; from chat there is none.",
       "acceptanceCriteria": [
-        "Cause: the tab strip decides a tap from the remembered tab, not the live path, and a detail with no tab under it remembers 'board' (tabs.ts:42-44, TabStrip.tsx:75-77).",
-        "Change: a tab navigates whenever the live path (usePathname) is not that tab's own screen, so Board from a detail with no tab under it reaches the Board; a tap on the tab whose screen is focused still does nothing. A detail that is the cc stack's only route (opened from outside the tabs) shows no tab selected; a detail opened over a tab keeps showing that tab, as today.",
-        "Test: src/cc/__tests__ (shell.test.ts and the tab strip's test): a detail opened from chat (/cc/deliverables/<id>, /cc/ticket/<n> as the first cc route) shows no tab selected and Board navigates; a ticket opened over Calendar still shows Calendar; tapping the focused tab's own screen does nothing.",
-        "Checks: npm run typecheck, npm run lint (0 errors), npx vitest run, npm run check:bundle and bash scripts/ralph/acceptance-prd001-cc.sh --no-ci pass."
+        "Cause: the tab strip decides a tap from the remembered tab, not the live path, and a detail with no tab under it remembers 'board' (tabs.ts:42-44, TabStrip.tsx:75-77). → DONE — confirmed: TabStrip tapped only when !view.selected and useShellTab started at FIRST_TAB board; both replaced (7f95a35)",
+        "Change: a tab navigates whenever the live path (usePathname) is not that tab's own screen, so Board from a detail with no tab under it reaches the Board; a tap on the tab whose screen is focused still does nothing. A detail that is the cc stack's only route (opened from outside the tabs) shows no tab selected; a detail opened over a tab keeps showing that tab, as today. → DONE — tabs.ts tabViews(active, counts, pathname): target from the live path (null only on the tab's own screen, /cc and /cc/board for Board); shellTab → null under a detail the shell mounted on; TabStrip reads usePathname, pressTab → router.dismissTo (back to the tab under a detail, else in its place: no duplicate gallery) (7f95a35)",
+        "Test: src/cc/__tests__ (shell.test.ts and the tab strip's test): a detail opened from chat (/cc/deliverables/<id>, /cc/ticket/<n> as the first cc route) shows no tab selected and Board navigates; a ticket opened over Calendar still shows Calendar; tapping the focused tab's own screen does nothing. → DONE — shell.test.ts \"the tab strip (P001X-SEAM-2)\": /cc/deliverables/d-1 and /cc/ticket/2680 first → no tab selected, Board dismissTo /cc/board; ticket over Calendar shows Calendar; focused tab's screen → no call; mutations (board default, tap from shown tab) fail 3 each",
+        "Checks: npm run typecheck, npm run lint (0 errors), npx vitest run, npm run check:bundle and bash scripts/ralph/acceptance-prd001-cc.sh --no-ci pass. → DONE — typecheck exit 0; lint 0 errors (pre-existing strings.ts 417-line warning); vitest 105 files/1657 tests passed; check:bundle exit 0; acceptance --no-ci all PASS but the kit-JSON checks (this story unmarked)"
       ],
       "files": [
         "src/cc/shell/",
@@ -326,8 +326,8 @@
         "src/cc/__tests__/"
       ],
       "priority": 15,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": " | SEAM-2 done (7f95a35): tab taps from the live path via dismissTo; not device-verified (Gerard: open a Deliverable from chat → no tab marked, Board reaches the Board; Deliverable over the gallery → Deliverables returns to it, Back to Auto leaves)"
     }
   ],
   "ownerTest": [
