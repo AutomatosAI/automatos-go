@@ -6,8 +6,10 @@
 // automatos://connect link), it first asks 'You're connected to {current}. Connect to {new}
 // instead?' and checks nothing without the yes (KC8). Saving a pairing moves the current server,
 // which remounts the provider tree and this screen with it: the remounted screen finds its pairing
-// signed in (connectLanding) and goes home, where the shell takes over. Thin wiring:
-// connect-view.ts and scanner/scan-state.ts decide what shows.
+// signed in (connectLanding) and goes home, where the shell takes over. Sent here by the gate after
+// the server refused this phone's token (US-006c), it opens with that server and no code, and says
+// why above the fields (edges.ts connectionEndedNote, US-006h). Thin wiring: connect-view.ts,
+// edges.ts and scanner/scan-state.ts decide what shows.
 
 import { Redirect, useRouter } from 'expo-router';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
@@ -15,6 +17,7 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { useAuthSession } from '../../auth/AuthRoot';
+import { StepNote } from '../../auth/screens/StepNote';
 import { env } from '../../lib/env';
 import { routes, type ConnectPrefill } from '../../navigation/routes';
 import { useGoBack } from '../../navigation/use-go-back';
@@ -23,6 +26,7 @@ import { useTokens } from '../../styles/theme';
 import { IconButton, Screen, Text } from '../../ui';
 import { SwitchQuestion } from '../components/SwitchQuestion';
 import { hostedServer, ownServer } from '../current-server';
+import { connectionEndedNote } from '../edges';
 import { typedFields } from '../flow';
 import { connectSwitchQuestion, serverInUse, type SwitchQuestionView } from '../scanner/scan-state';
 import { CONFIRM_COPY, CONNECT_SCREEN_COPY } from '../strings';
@@ -51,7 +55,13 @@ function Header({ view }: { readonly view: ConnectView }) {
   );
 }
 
-function ConnectFlow({ prefill }: { readonly prefill: ConnectPrefill }) {
+type FlowProps = {
+  readonly prefill: ConnectPrefill;
+  /** Why the last pairing ended, shown over the fields until the flow has words of its own. */
+  readonly endedNote: string | null;
+};
+
+function ConnectFlow({ prefill, endedNote }: FlowProps) {
   const { spacing } = useTokens();
   const router = useRouter();
   const leave = useGoBack(routes.welcome);
@@ -59,6 +69,7 @@ function ConnectFlow({ prefill }: { readonly prefill: ConnectPrefill }) {
   const view = connectView(flow.state, { hostedSignIn: hostedSignInConfigured(env) });
   if (view.screen === 'connected') return <Redirect href={routes.home} />;
   const pairing = view.screen === 'confirm' && view.pairing;
+  const ended = view.screen === 'form' && view.failure === null ? endedNote : null;
   return (
     <Screen>
       <ScrollView
@@ -75,6 +86,7 @@ function ConnectFlow({ prefill }: { readonly prefill: ConnectPrefill }) {
           />
         </View>
         <Header view={view} />
+        {ended ? <StepNote note={{ tone: 'error', text: ended }} /> : null}
         {view.screen === 'confirm' ? (
           <ConfirmCard view={view} onConfirm={flow.confirm} onBack={flow.back} />
         ) : (
@@ -98,10 +110,11 @@ type EntryProps = {
   readonly question: SwitchQuestionView | null;
   /** /go/pair already asked it and the person said yes. */
   readonly answered: boolean;
+  readonly endedNote: string | null;
 };
 
 /** The switch question when there is one, then the flow; the yes holds for this prefill only. */
-function ConnectEntry({ prefill, question, answered }: EntryProps) {
+function ConnectEntry({ prefill, question, answered, endedNote }: EntryProps) {
   const router = useRouter();
   const [agreed, setAgreed] = useState(answered);
   if (question && !agreed) {
@@ -113,7 +126,7 @@ function ConnectEntry({ prefill, question, answered }: EntryProps) {
       />
     );
   }
-  return <ConnectFlow prefill={prefill} />;
+  return <ConnectFlow prefill={prefill} endedNote={endedNote} />;
 }
 
 export type ConnectScreenProps = {
@@ -131,7 +144,9 @@ export type ConnectScreenProps = {
  */
 export function ConnectScreen({ prefill, switchAnswered = false }: ConnectScreenProps) {
   const { isSignedIn } = useAuthSession();
-  const own = ownServer(useCurrentServer());
+  const current = useCurrentServer();
+  const own = ownServer(current);
+  const ended = current.status === 'ready' ? current.ended : null;
   if (connectLanding({ own, isSignedIn, prefill })) return <Redirect href={routes.home} />;
   const inUse = serverInUse({ own, hosted: hostedServer(), isSignedIn });
   return (
@@ -140,6 +155,7 @@ export function ConnectScreen({ prefill, switchAnswered = false }: ConnectScreen
       prefill={prefill}
       question={connectSwitchQuestion(prefill, inUse)}
       answered={switchAnswered}
+      endedNote={connectionEndedNote({ ended, prefill })}
     />
   );
 }

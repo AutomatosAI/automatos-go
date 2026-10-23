@@ -1,16 +1,17 @@
 // The confirm card (KC8): where this phone is about to pair, before anything is sent. The server's
 // name, its edition in words, the address that answered (every call goes there, KC5) and the
 // address the server lists when that is another one; the unencrypted home network note over
-// http:// (D-HTTPS: a word chip and its sentence, not only a colour); KC16's data note. Then Pair
-// and Back. While POST /pair runs nothing can be pressed (its answer is the token, sent once); a
-// failed pairing shows its words and fix, never a status code, with Try again or, after a wrong or
-// spent code, Enter a new code.
+// http:// (D-HTTPS: the shell's one-line banner and its sentence, not only a colour, US-006h);
+// KC16's data note. Then Pair and Back. While POST /pair runs nothing can be pressed (its answer is
+// the token, sent once); a failed pairing shows its words and fix, never a status code, with Try
+// again or, after a wrong or spent code, Enter a new code.
 
 import { StyleSheet, View } from 'react-native';
 
 import { StepNote } from '../../auth/screens/StepNote';
 import { useTokens } from '../../styles/theme';
-import { Button, Card, Chip, Divider, Text } from '../../ui';
+import { Button, Card, Divider, Text } from '../../ui';
+import { InsecureNetworkBanner } from '../components/InsecureNetworkBanner';
 import { CONFIRM_COPY } from '../strings';
 import type { CardView, ConfirmView } from './connect-view';
 
@@ -41,7 +42,13 @@ function Row({ label, value, note }: RowProps) {
   );
 }
 
-function InsecureNote({ note }: { readonly note: NonNullable<CardView['insecureNote']> }) {
+type InsecureNoteProps = {
+  readonly note: NonNullable<CardView['insecureNote']>;
+  /** The origin being paired with (http:// here). */
+  readonly origin: string;
+};
+
+function InsecureNote({ note, origin }: InsecureNoteProps) {
   const { spacing } = useTokens();
   return (
     <View
@@ -49,7 +56,7 @@ function InsecureNote({ note }: { readonly note: NonNullable<CardView['insecureN
       accessible
       accessibilityLabel={`${note.title}. ${note.message}`}
     >
-      <Chip label={note.title} tone="warning" />
+      <InsecureNetworkBanner origin={origin} />
       <Text level={NOTE_LEVEL} tone="warning">
         {note.message}
       </Text>
@@ -85,7 +92,7 @@ function ServerDetails({ card }: { readonly card: CardView }) {
       {card.insecureNote ? (
         <>
           <Divider />
-          <InsecureNote note={card.insecureNote} />
+          <InsecureNote note={card.insecureNote} origin={card.address} />
         </>
       ) : null}
       <Divider />

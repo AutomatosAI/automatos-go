@@ -13,6 +13,7 @@ import { LiveEvents } from '../api/live';
 import type { Server } from '../api/server';
 import { useAuthSession, type AuthSession } from '../auth/AuthRoot';
 import { hostedServer, ownServer } from '../connect/current-server';
+import { ownServerInWords } from '../connect/edges';
 import { useCurrentServer } from '../connect/use-current-server';
 import { logger } from '../lib/logger';
 import { connectWith, routes } from '../navigation/routes';
@@ -27,7 +28,7 @@ import { useSignOutOnExpiry } from './use-sign-out';
 
 type LaunchProps = {
   readonly server: Server;
-  /** The server in words (an own server's name). */
+  /** The server in words (an own server's name and address, edges.ts). */
   readonly serverName: string;
   readonly session: AuthSession;
   readonly children: ReactNode;
@@ -84,7 +85,7 @@ export function AppGate({ children }: { readonly children: ReactNode }) {
     <PersistedCache ownerId={access.ownerId}>
       <Launch
         server={access.server}
-        serverName={own?.serverName ?? serverLabel(access.server)}
+        serverName={own ? ownServerInWords(own) : serverLabel(access.server)}
         session={session}
       >
         {children}

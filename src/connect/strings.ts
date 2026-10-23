@@ -1,6 +1,7 @@
 // User-facing copy for connecting to your own server (one strings module per feature). No message
 // names a status code or an internal (D-ONE-CLIENT); none points at making an account (D-SIGNIN).
 
+import { ACCOUNT_COPY, SHELL_COPY } from '../app-state/strings';
 import { AUTH_COPY } from '../auth/strings';
 import type { AddressRefusal } from './address';
 import type { PairRefusal } from './api';
@@ -200,6 +201,47 @@ export const INSECURE_NOTE_COPY = Object.freeze({
   title: 'Unencrypted home network',
   message:
     'This address uses http://, so what this phone and the server send is not encrypted. Anyone on the same network could read it. Pair only on a network you trust.',
+});
+
+/** The same note in one line, over every signed-in screen while the server is http (US-006h). */
+export const INSECURE_BANNER_COPY = Object.freeze({
+  line: (host: string) => `${INSECURE_NOTE_COPY.title} · ${host}`,
+});
+
+/** Settings → Account's server section (components/ServerSection.tsx). */
+export const SERVER_SECTION_COPY = Object.freeze({
+  eyebrow: ACCOUNT_COPY.server,
+  /** The built-in hosted server's name (discovery names every server 'Automatos'). */
+  hostedName: PAIR_LINK_COPY.hostedServer,
+  address: 'Address',
+  edition: ACCOUNT_COPY.edition,
+});
+
+/**
+ * Forget this server, asked first (components/ForgetServer.tsx): it forgets on this phone only, so
+ * the question says Studio still lists the phone (Remove this phone is US-006i).
+ */
+export const FORGET_SERVER_COPY = Object.freeze({
+  action: SHELL_COPY.forgetServer,
+  title: 'Forget this server?',
+  question: (server: string) =>
+    `This phone stops using ${server}. Studio still lists it until it is removed there.`,
+  confirm: SHELL_COPY.forgetServer,
+  cancel: 'Cancel',
+});
+
+/** An own server that does not answer (components/NotRunning.tsx, PRD-001 §4.7 Edges). */
+export const NOT_RUNNING_COPY = Object.freeze({
+  /** Beside the colour, the state in words. */
+  status: 'Not connected',
+  title: (server: string) => `Can't reach ${server}`,
+  message: "It isn't answering. It may be stopped, or this phone can't reach it from here.",
+  startTitle: 'Start a self-hosted install',
+  startStep: 'On the server, in the folder Automatos is installed in, run:',
+  reachStep:
+    'Then use this phone on the same network as the server, or publish the server at a public HTTPS address.',
+  /** Read out for the command's box. */
+  command: (command: string) => `Command: ${command}`,
 });
 
 /** Where {server} goes in DATA_NOTE_OWN_SERVER. */

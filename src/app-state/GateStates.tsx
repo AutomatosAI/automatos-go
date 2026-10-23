@@ -1,14 +1,19 @@
 // The gate's whole-screen states (AppGate.tsx; the decisions are gate.ts): loading, an error with
-// Retry, a server this app can't use, a paused workspace and an own server that does not answer.
-// Every one a signed-in person can be stuck on offers the way out: Sign out on the hosted server,
-// Forget this server on an own one (use-sign-out.ts).
+// Retry, a server this app can't use, a paused workspace and an own server that does not answer
+// (src/connect/components/NotRunning.tsx, US-006h). Every one a signed-in person can be stuck on
+// offers the way out: Sign out on the hosted server (use-sign-out.ts), Forget this server on an own
+// one, asked first (src/connect/components/ForgetServer.tsx).
 
 import type { LucideIcon } from 'lucide-react-native';
 import { type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import CirclePause from 'lucide-react-native/icons/circle-pause';
-import ServerOff from 'lucide-react-native/icons/server-off';
 
+import { ForgetServer } from '../connect/components/ForgetServer';
+import { NotRunning } from '../connect/components/NotRunning';
+import { ownServer } from '../connect/current-server';
+import { FORGET_SERVER_COPY } from '../connect/strings';
+import { useCurrentServer } from '../connect/use-current-server';
 import { useTokens } from '../styles/theme';
 import { Button, EmptyState, ErrorState, LoadingState, Screen, UI_COPY } from '../ui';
 import type { LaunchStep, LaunchView } from './gate';
@@ -35,10 +40,15 @@ export function GateMessage({ title, message, icon, action, children }: GateMess
   );
 }
 
-/** Signed in but stuck (an old app, a paused workspace, a server that refuses): a way out. */
-function LeaveButton() {
+function SignOutButton() {
   const { signOut, busy, label } = useSignOut();
   return <Button label={label} onPress={signOut} busy={busy} variant="ghost" />;
+}
+
+/** Signed in but stuck (an old app, a paused workspace, a server that refuses): a way out. */
+function LeaveButton({ serverName }: { readonly serverName: string }) {
+  if (ownServer(useCurrentServer()) === null) return <SignOutButton />;
+  return <ForgetServer question={FORGET_SERVER_COPY.question(serverName)} variant="ghost" />;
 }
 
 export function GateLoading({ label }: { readonly label?: string }) {
@@ -53,7 +63,7 @@ export function GateLoading({ label }: { readonly label?: string }) {
 
 type LaunchStateProps = {
   readonly view: Exclude<LaunchView, { readonly kind: 'ready' }>;
-  /** The server in words, for the not-running state. */
+  /** The server in words: Not running and the forget question name it. */
   readonly serverName: string;
   readonly onRetry: (step: LaunchStep) => void;
 };
@@ -62,20 +72,7 @@ type StuckProps<K extends LaunchView['kind']> = Omit<LaunchStateProps, 'view'> &
   readonly view: Extract<LaunchView, { readonly kind: K }>;
 };
 
-function NotRunningState({ view, serverName, onRetry }: StuckProps<'not_running'>) {
-  return (
-    <GateMessage
-      title={SHELL_COPY.notRunningTitle(serverName)}
-      message={SHELL_COPY.notRunningMessage}
-      icon={ServerOff}
-      action={{ label: UI_COPY.retry, onPress: () => onRetry(view.step) }}
-    >
-      <LeaveButton />
-    </GateMessage>
-  );
-}
-
-function PausedState({ view, onRetry }: StuckProps<'paused'>) {
+function PausedState({ view, serverName, onRetry }: StuckProps<'paused'>) {
   return (
     <GateMessage
       title={SHELL_COPY.pausedTitle}
@@ -83,12 +80,12 @@ function PausedState({ view, onRetry }: StuckProps<'paused'>) {
       icon={CirclePause}
       action={{ label: UI_COPY.retry, onPress: () => onRetry('workspace') }}
     >
-      <LeaveButton />
+      <LeaveButton serverName={serverName} />
     </GateMessage>
   );
 }
 
-function StepErrorState({ view, onRetry }: StuckProps<'error'>) {
+function StepErrorState({ view, serverName, onRetry }: StuckProps<'error'>) {
   const { spacing } = useTokens();
   const title =
     view.step === 'discovery' ? SHELL_COPY.discoveryErrorTitle : SHELL_COPY.workspaceErrorTitle;
@@ -96,7 +93,7 @@ function StepErrorState({ view, onRetry }: StuckProps<'error'>) {
     <Screen scroll>
       <View style={[styles.centre, { gap: spacing.space3 }]}>
         <ErrorState error={view.error} title={title} onRetry={() => onRetry(view.step)} />
-        <LeaveButton />
+        <LeaveButton serverName={serverName} />
       </View>
     </Screen>
   );
@@ -109,13 +106,13 @@ export function LaunchState({ view, serverName, onRetry }: LaunchStateProps) {
     case 'unsupported':
       return (
         <GateMessage title={view.message} message={view.detail}>
-          <LeaveButton />
+          <LeaveButton serverName={serverName} />
         </GateMessage>
       );
     case 'paused':
       return <PausedState view={view} serverName={serverName} onRetry={onRetry} />;
     case 'not_running':
-      return <NotRunningState view={view} serverName={serverName} onRetry={onRetry} />;
+      return <NotRunning server={serverName} onRetry={() => onRetry(view.step)} />;
     default:
       return <StepErrorState view={view} serverName={serverName} onRetry={onRetry} />;
   }

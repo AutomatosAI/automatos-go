@@ -1,17 +1,19 @@
-// Settings → Account, the stub (PRD-001 §4.5, §4.7): the server, edition, workspace, role and app
-// version, and Sign out. Nothing deletes an account or a workspace (D63); nothing about plans
-// (D8). Remove this phone, the policies and the other Settings pages arrive with their stories.
+// Settings → Account (PRD-001 §4.5, §4.7): the server section (src/connect/components/ServerSection:
+// the server's name, address and edition, the unencrypted home network line, and Sign out or Forget
+// this server, US-006h), then the workspace, role and app version. Nothing deletes an account or a
+// workspace (D63); nothing about plans (D8). Remove this phone, the policies and the other Settings
+// pages arrive with their stories.
 import Constants from 'expo-constants';
 import { StyleSheet, View } from 'react-native';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 
 import { accountRows, type AccountRow } from '../../../src/app-state/account';
 import { useAppSession } from '../../../src/app-state/session';
-import { ACCOUNT_COPY, SHELL_COPY } from '../../../src/app-state/strings';
-import { useSignOut } from '../../../src/app-state/use-sign-out';
+import { ACCOUNT_COPY } from '../../../src/app-state/strings';
+import { ServerSection } from '../../../src/connect/components/ServerSection';
 import { useGoBack } from '../../../src/navigation/use-go-back';
 import { useTokens } from '../../../src/styles/theme';
-import { Button, Card, Divider, IconButton, Screen, Text } from '../../../src/ui';
+import { Card, Divider, IconButton, Screen, Text } from '../../../src/ui';
 
 const TITLE_LEVEL = 2;
 const VALUE_LEVEL = 2;
@@ -32,15 +34,9 @@ function InfoRow({ row }: { readonly row: AccountRow }) {
 
 export default function AccountSettings() {
   const { server, discovery, workspace } = useAppSession();
-  const { signOut, busy } = useSignOut();
   const goBack = useGoBack();
   const { spacing } = useTokens();
-  const rows = accountRows({
-    server,
-    discovery,
-    workspace,
-    appVersion: Constants.expoConfig?.version,
-  });
+  const rows = accountRows({ workspace, appVersion: Constants.expoConfig?.version });
   return (
     <Screen scroll padding="space9">
       <View style={[styles.column, { gap: spacing.space6 }]}>
@@ -51,6 +47,7 @@ export default function AccountSettings() {
             {ACCOUNT_COPY.title}
           </Text>
         </View>
+        <ServerSection server={server} edition={discovery.edition} />
         <Card>
           {rows.map((row, index) => (
             <View key={row.label}>
@@ -59,7 +56,6 @@ export default function AccountSettings() {
             </View>
           ))}
         </Card>
-        <Button label={SHELL_COPY.signOut} variant="outline" onPress={signOut} busy={busy} />
       </View>
     </Screen>
   );

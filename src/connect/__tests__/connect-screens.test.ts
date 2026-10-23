@@ -124,6 +124,9 @@ describe('the copy (D-SIGNIN, KC16)', () => {
 
   it('puts the data note on the card', () => {
     expect(source('ConfirmCard')).toContain('{card.dataNote}');
-    expect(source('ConfirmCard')).toContain('<InsecureNote note={card.insecureNote} />');
+    expect(source('ConfirmCard')).toContain(
+      '<InsecureNote note={card.insecureNote} origin={card.address} />',
+    );
+    expect(source('ConfirmCard')).toContain('<InsecureNetworkBanner origin={origin} />');
   });
 });

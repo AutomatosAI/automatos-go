@@ -103,3 +103,9 @@ export const NOT_RUNNING_GATEWAY_STATUSES: readonly number[] = Object.freeze([50
  * `name`): text from the network, so trimmed and cut to this; blank → the server's address.
  */
 export const SERVER_NAME_MAX_LENGTH = 120;
+
+/**
+ * How a self-hosted install is started, as Not running shows it (PRD-001 §4.7): the install's own
+ * docker compose, run on the server in the folder it was installed in, detached.
+ */
+export const SELF_HOSTED_START_COMMAND = 'docker compose up -d';

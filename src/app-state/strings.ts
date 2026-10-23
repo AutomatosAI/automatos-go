@@ -12,12 +12,8 @@ export const SHELL_COPY = Object.freeze({
   discoveryErrorTitle: "Couldn't reach Automatos",
   workspaceErrorTitle: "Couldn't open your workspace",
   signOut: 'Sign out',
-  /** The way out of a paired own server (US-006d): this phone stops using it. */
+  /** The way out of a paired own server (US-006d): this phone stops using it, asked first (US-006h). */
   forgetServer: 'Forget this server',
-  /** An own server that does not answer (gate 'not_running'; US-006h gives it its own screen). */
-  notRunningTitle: (server: string) => `Can't reach ${server}`,
-  notRunningMessage:
-    'Check the server is running and this phone can reach it, on the same network or at its public HTTPS address. Then try again.',
 });
 
 /** Placeholder screens the owning kits replace (K5): home → A2, the Command Centre → A3. */
