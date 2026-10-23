@@ -101,6 +101,50 @@ export const CALENDAR_COPY = Object.freeze({
     hours: (count: number) => `every ${count} h`,
     days: (count: number) => `every ${count} days`,
   }),
+  loading: 'Loading the calendar…',
+  stripLabel: 'Choose a day',
+  today: 'today',
+  /** A strip cell's figure, said after its date: 'Fri 23 Oct, 3 items'. */
+  items: Object.freeze({ one: 'item', other: 'items' }),
+  nothingOn: 'nothing scheduled',
+  /** The always-on band (handoff §2): heartbeats every hour or faster, every day. */
+  bandMark: '24/7',
+  bandLabel: 'Always on',
+  /** An item the server sent no time for; VoiceOver hears the words. */
+  noTime: '—',
+  noTimeSaid: 'no set time',
+  /** A word beside the kind on a greyed row (every colour status has a word, §4.6). */
+  paused: 'Paused',
+  /** An overdue deadline listed today: 'Due Tue 20 Oct'. */
+  dueOn: (date: string) => `Due ${date}`,
+  empty: 'Nothing scheduled this day.',
+  /** What a row or a band line opens, said after its own label. */
+  openHint: 'Opens the item',
+  /** The item sheet (handoff §2 'Calendar' tap → sheet, D27). */
+  sheet: Object.freeze({
+    everyDay: 'Every day',
+    pause: Object.freeze({ routine: 'Pause this routine', task: 'Pause this task' }),
+    resume: Object.freeze({ routine: 'Resume this routine', task: 'Resume this task' }),
+    effect: Object.freeze({
+      routine: 'Pausing stops this routine’s heartbeat until it is resumed.',
+      task: 'Pausing holds this task’s runs until it is resumed.',
+      resume: 'Resuming starts its runs again on its schedule.',
+    }),
+    /** activity_service.py lists active items only until PRD-266 §4.9 keeps a paused one. */
+    leavesFeed: 'While it is paused it may not show on this calendar; Studio lists it.',
+    paused: (title: string) => `Paused. “${title}” will not run until it is resumed.`,
+    resumed: (title: string) => `Resumed. “${title}” runs on its schedule again.`,
+    /** D-ROLES: a viewer reads the item and is told who pauses it. */
+    readOnly: 'Owners, admins and editors pause and resume routines and scheduled tasks.',
+    /** D27: every kind but a routine and a scheduled task is managed in Studio. */
+    studio: 'Manage in Studio',
+    studioHint: 'Opens Studio in the browser',
+    studioMissing: 'Manage this in Studio on the web.',
+    studioFailed: 'Studio could not be opened on this phone.',
+    onBoard: (number: string) => `Open ${number} on the board`,
+    onBoardUnnumbered: 'Open the ticket on the board',
+    onBoardHint: 'Opens the ticket on the Board',
+  }),
 });
 
 /** The ticket sheet (handoff §2 'ticket sheet', D-BOARD, D31). */

@@ -1,16 +1,19 @@
-// The shell's hooks: they read the clock, the phone's timezone, the board and the server's needs-you
-// answer, and hand them to the pure modules beside them (dateline.ts, lede.ts, tabs.ts). The board is
-// the Board tab's own query (one cache entry); needs-you is the foundation's useNeedsYou, so the
-// lede's number is the Command Centre button's. No stream is opened here (D-LIVE).
+// The shell's hooks: they read the clock, the phone's timezone, the board, the week's calendar and
+// the server's needs-you answer, and hand them to the pure modules beside them (dateline.ts,
+// lede.ts, tabs.ts). The board and the calendar are their tabs' own queries (one cache entry each);
+// needs-you is the foundation's useNeedsYou, so the lede's number is the Command Centre button's.
+// No stream is opened here (D-LIVE).
 
 import { useQuery } from '@tanstack/react-query';
 import { useCalendars } from 'expo-localization';
 import { usePathname } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useNeedsYou } from '../../api/needs-you';
 import { useApiClient } from '../../app-state/session';
 import { boardQuery } from '../board/api';
+import { scheduleQuery } from '../calendar/api';
+import { todayCount } from '../calendar/view-model';
 import { eyebrowText, msUntilNextMinute, wallClock, zoneCity } from './dateline';
 import { boardFigures, ledeParts, tabCounts, type LedePart } from './lede';
 import { FIRST_TAB, shellTab, type CcTab, type TabCounts } from './tabs';
@@ -43,17 +46,30 @@ export type ShellFigures = {
   readonly counts: TabCounts;
 };
 
+/** How many rows today has on the Calendar, in the phone's timezone; null before it has answered. */
+function useCalendarToday(): number | null {
+  const client = useApiClient();
+  const items = useQuery(scheduleQuery(client)).data?.scheduled ?? null;
+  const now = useMinuteClock();
+  const timeZone = usePhoneTimeZone();
+  return useMemo(
+    () => (items ? todayCount({ items, now, timeZone }) : null),
+    [items, now, timeZone],
+  );
+}
+
 /** The lede and the tab figures; a source that has not answered yet shows nothing of its own. */
 export function useShellFigures(): ShellFigures {
   const client = useApiClient();
   const board = useQuery(boardQuery(client)).data?.tasks ?? null;
   const needsYou = useNeedsYou().query.data ?? null;
+  const calendarToday = useCalendarToday();
   return {
     lede: ledeParts({
       figures: board ? boardFigures(board) : null,
       needsTotal: needsYou ? needsYou.total : null,
     }),
-    counts: tabCounts({ board, needsYou: needsYou ? needsYou.counts : null }),
+    counts: tabCounts({ board, needsYou: needsYou ? needsYou.counts : null, calendarToday }),
   };
 }
 

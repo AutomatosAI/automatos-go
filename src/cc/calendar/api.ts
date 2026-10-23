@@ -67,8 +67,17 @@ export function setScheduledTaskStatus(
   });
 }
 
-/** Send the pause pauseAction decided: the routine's toggle or the task's next state. */
-export async function sendPause(client: ApiClient, action: SentPause): Promise<void> {
-  if (action.kind === 'routine') await toggleRoutine(client, action.agentId);
-  else await setScheduledTaskStatus(client, action.id, action.next);
+/**
+ * Send the pause pauseAction decided: the routine's toggle or the task's next state. Resolves with
+ * whether the item is paused now as the server answered (a heartbeat not enabled, a task 'paused'),
+ * or null when the answer did not say.
+ */
+export async function sendPause(client: ApiClient, action: SentPause): Promise<boolean | null> {
+  if (action.kind === 'routine') {
+    const { enabled } = await toggleRoutine(client, action.agentId);
+    return enabled === null ? null : !enabled;
+  }
+  const { status } = await setScheduledTaskStatus(client, action.id, action.next);
+  if (status === 'paused') return true;
+  return status === 'active' ? false : null;
 }
