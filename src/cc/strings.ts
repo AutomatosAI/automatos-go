@@ -208,3 +208,51 @@ export const TICKET_COPY = Object.freeze({
   sentBackTimes: (times: number) =>
     `Sent back ${times} times. Talking it through with Auto may be quicker.`,
 });
+
+/** Questions (handoff §2 'Questions', D-QUESTIONS, D16, D17). */
+export const QUESTIONS_COPY = Object.freeze({
+  loading: 'Loading the questions…',
+  listLabel: 'Open questions',
+  empty: Object.freeze({
+    title: 'No open questions',
+    message: 'Agents are deciding on their own.',
+  }),
+  /** A 403 on the list (owners and admins only until PRD-266 W1): the taxonomy's words follow. */
+  forbiddenTitle: 'Questions are not open to you here',
+  /** What a ticket link opens, said after its own label. */
+  ticketHint: 'Opens the ticket',
+  /** 'Blocking 2 downstream tasks', then up to six of them and '+3 more'. */
+  blocking: Object.freeze({ one: 'downstream task', other: 'downstream tasks' }),
+  blockingWord: 'Blocking',
+  more: (count: number) => `+${count} more`,
+  untitled: 'Untitled',
+  /** Shown when the question offers options; with none, the field is always open. */
+  ownWords: 'Answer in your own words instead',
+  hideOwnWords: 'Hide',
+  field: Object.freeze({ label: 'Your answer', placeholder: 'Answer…' }),
+  answer: 'Answer',
+  answerHint: 'Sends your answer to the agent',
+  optionHint: 'Sends this answer to the agent',
+  /** Refused before sending: the words are the user's to fix. */
+  answerEmpty: 'Write an answer before you send it.',
+  notOffered: 'Choose one of the answers the agent offered.',
+  dismiss: 'Dismiss',
+  keep: 'Keep the question',
+  /** What a dismiss does (api/approval_grants.py deny_approval), said before it is sent. */
+  dismissEffect: Object.freeze({
+    blocked:
+      'Dismissing leaves the ticket blocked, and the agent may ask again. To unblock it, answer “use your judgment” instead.',
+    stoppedRun:
+      'This question stopped a playbook run. Dismissing closes that run: it is cancelled and its card moves to Done.',
+  }),
+  /** The server's result, honestly: the answer route cannot tell whether the agent resumed. */
+  answered: 'Answered.',
+  alreadyAnswered: 'This question was already answered.',
+  alreadyDismissed: 'This question was already dismissed.',
+  dismissed: Object.freeze({
+    blocked: 'Dismissed. The ticket stays blocked, and the agent may ask again.',
+    stoppedRun: 'Dismissed. The run that stopped to ask is closed.',
+  }),
+  /** D-ROLES: a viewer reads the questions and is told who answers them. */
+  readOnly: 'Owners, admins and editors answer questions.',
+});
