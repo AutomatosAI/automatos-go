@@ -47,7 +47,12 @@ function Brand({ line }: { readonly line: string }) {
         accessibilityLabel={HOME_COPY.brand}
         style={[styles.lockup, { gap: spacing.space2 }]}
       >
-        <Image source={BRAND_MARK} style={styles.mark} accessibilityIgnoresInvertColors />
+        <Image
+          source={BRAND_MARK}
+          style={styles.mark}
+          resizeMode="contain"
+          accessibilityIgnoresInvertColors
+        />
         <Text variant="title" level={WORDMARK_LEVEL}>
           {HOME_COPY.wordmark}
         </Text>
@@ -117,5 +122,7 @@ const styles = StyleSheet.create({
   bar: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1 },
   brand: { flex: 1, minWidth: 0 },
   lockup: { flexDirection: 'row', alignItems: 'center' },
-  mark: { height: MARK_HEIGHT, aspectRatio: MARK_ASPECT },
+  // Both sides fixed: a bundled image's own pixel size is a default under the style, and with
+  // height + aspectRatio alone iOS let the width win (the mark drew ~290 × 358 pt on a device).
+  mark: { width: MARK_HEIGHT * MARK_ASPECT, height: MARK_HEIGHT },
 });
