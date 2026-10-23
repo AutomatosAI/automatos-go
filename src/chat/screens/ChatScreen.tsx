@@ -5,12 +5,14 @@
 // foundation's mapping (useFollowLink). The composer is the role's and the AI label's (D-ROLES,
 // D-AI-LABEL): it sends while the thread can send and stops while it can stop. A conversation
 // about a ticket (D-ASK-AUTO) carries the ticket in every message it sends, Try again included,
-// shows the discussion bar under `above`, and holds the send until the ticket is in.
+// shows the discussion bar under `above`, and holds the send until the ticket is in. Files go
+// with the words they were attached to (useAttachments, US-009b); Try again resends words only.
 
 import { useCallback, useMemo, type ReactNode } from 'react';
 
 import { useAppSession } from '../../app-state/session';
 import { ErrorState, LoadingState } from '../../ui';
+import { useAttachments } from '../attachments/use-attachments';
 import { MessageList } from '../components/MessageList';
 import { useFollowLink } from '../components/follow-link';
 import { Composer } from '../composer/Composer';
@@ -20,6 +22,7 @@ import { DiscussionBar } from '../discussion/DiscussionBar';
 import { discussionInput } from '../discussion/discussion';
 import { useDiscussion } from '../discussion/use-discussion';
 import { HomeHeader } from '../home/HomeHeader';
+import type { ChatFile } from '../request';
 import { retryWords, threadRows } from '../view-model';
 import { ChatFrame } from './ChatFrame';
 
@@ -50,6 +53,7 @@ function Thread({ thread }: { readonly thread: ThreadView }) {
 export function ChatScreen({ chatId, above, onBack, ticketId = null }: ChatScreenProps) {
   const opened = useThread(chatId);
   const discussion = useDiscussion(ticketId);
+  const files = useAttachments();
   const { workspace } = useAppSession();
   const { state, stop, send: sendTurn } = opened;
   const about = discussion.discussion;
@@ -59,7 +63,10 @@ export function ChatScreen({ chatId, above, onBack, ticketId = null }: ChatScree
   );
   const thread: ThreadView = { ...opened, send };
   const working = canStop(state);
-  const onSend = useCallback((text: string) => send({ text }), [send]);
+  const onSend = useCallback(
+    (text: string, ready: readonly ChatFile[]) => send({ text, files: ready }),
+    [send],
+  );
   return (
     <ChatFrame
       header={<HomeHeader working={working} onBack={onBack} />}
@@ -74,6 +81,7 @@ export function ChatScreen({ chatId, above, onBack, ticketId = null }: ChatScree
           role={workspace.role}
           streaming={working}
           loading={state.status === 'loading' || discussion.holds}
+          files={files}
           onSend={onSend}
           onStop={stop}
         />

@@ -8,6 +8,7 @@
 import { z } from 'zod';
 
 import { CHAT_ROUTE } from '../core/web/lib/discussion';
+import { attachmentIdsOf, filePartOf } from './attachments/attachments';
 
 /** The page key the server's page manifest gives the web's /chat. */
 export const CHAT_PAGE = 'chat';
@@ -74,21 +75,11 @@ function issueSummary(error: z.ZodError): string {
   return error.issues.map((issue) => `${issue.path.join('.')}: ${issue.code}`).join('; ');
 }
 
-function filePart(file: ChatFile) {
-  return {
-    type: 'file' as const,
-    filename: file.filename,
-    mediaType: file.mediaType,
-    ...(file.url ? { url: file.url } : {}),
-    attachment_id: file.attachmentId,
-  };
-}
-
 function messageOf(text: string, files: readonly ChatFile[]) {
   const trimmed = text.trim();
   const textPart = trimmed ? [{ type: 'text' as const, text: trimmed }] : [];
-  const parts = [...files.map(filePart), ...textPart];
-  const ids = files.map((file) => file.attachmentId);
+  const parts = [...files.map(filePartOf), ...textPart];
+  const ids = attachmentIdsOf(files);
   return { role: 'user' as const, parts, ...(ids.length > 0 ? { attachment_ids: ids } : {}) };
 }
 

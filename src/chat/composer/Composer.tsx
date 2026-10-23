@@ -1,26 +1,26 @@
 // The composer (US-009a, the handoff's 2j without its chips; D-COMPOSER, D-AI-LABEL, D-ROLES): the
-// foundation's AiLabel above a row of the [+] slot (US-009b's attachments), the 'Message Auto' pill
-// and the 42 pt round ink button, arrow-up to send and a square to stop. Return inserts a newline;
-// only the button sends. No suggestion chips, no Plan toggle (D30), no voice button (A6).
-// composerState decides everything; this only wires: the label's visibility (useLabelFence) gates
-// it, and a send hands the trimmed words up and clears the pill.
+// foundation's AiLabel, the attached files' chips (US-009b), then a row of the [+] (camera, photo
+// library, files), the 'Message Auto' pill and the 42 pt round ink button, arrow-up to send and a
+// square to stop. Return inserts a newline; only the button sends. No suggestion chips, no Plan
+// toggle (D30), no voice button (A6). composerState decides everything; this only wires: the
+// label's visibility (useLabelFence) gates it, an upload holds the send, and a send hands the
+// trimmed words and the ready files up, then clears the pill and the chips.
 
 import ArrowUp from 'lucide-react-native/icons/arrow-up';
 import Square from 'lucide-react-native/icons/square';
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import type { WorkspaceRole } from '../../api/workspace';
 import { AiLabel, AiLabelPaused } from '../../styles/ai-label';
 import { useTokens } from '../../styles/theme';
 import { IconButton, Text } from '../../ui';
+import { AttachMenu } from '../attachments/AttachMenu';
+import { AttachmentChips } from '../attachments/AttachmentChips';
+import type { AttachmentsView } from '../attachments/use-attachments';
+import type { ChatFile } from '../request';
 import { COMPOSER_COPY } from '../strings';
-import {
-  composerButton,
-  composerState,
-  outgoingText,
-  type ComposerNotice,
-} from './composer-state';
+import { composerButton, composerState, outgoingText, type ComposerNotice } from './composer-state';
 import { PillInput } from './PillInput';
 import { useLabelFence } from './use-label-fence';
 
@@ -32,15 +32,14 @@ export type ComposerProps = {
   readonly streaming: boolean;
   /** The thread is still being opened: the pill takes typing, the send waits. */
   readonly loading?: boolean;
-  readonly uploading?: boolean;
-  /** Files uploaded and ready to go with the message. */
-  readonly attachments?: number;
-  /** The trimmed words (blank when only files go); the pill clears itself. */
-  readonly onSend: (text: string) => void;
+  /** The message's attachments (useAttachments); without them there is no [+]. */
+  readonly files?: AttachmentsView;
+  /** The trimmed words (blank when only files go) and the ready files; the composer clears. */
+  readonly onSend: (text: string, files: readonly ChatFile[]) => void;
   readonly onStop: () => void;
-  /** US-009b's [+] button, before the pill. */
-  readonly attach?: ReactNode;
 };
+
+const NO_FILES: readonly ChatFile[] = Object.freeze([]);
 
 function Notice({ notice }: { readonly notice: ComposerNotice | null }) {
   if (!notice) return null;
@@ -56,11 +55,9 @@ export function Composer({
   role,
   streaming,
   loading = false,
-  uploading = false,
-  attachments = 0,
+  files,
   onSend,
   onStop,
-  attach,
 }: ComposerProps) {
   const { colours, spacing } = useTokens();
   const [text, setText] = useState('');
@@ -71,8 +68,8 @@ export function Composer({
     role,
     aiLabelVisible: fence.visible,
     aiLabelChecked: fence.checked,
-    uploading,
-    attachments,
+    uploading: files?.uploading ?? false,
+    attachments: files?.ready.length ?? 0,
     loading,
   });
   const button = composerButton(state.buttonMode);
@@ -80,8 +77,9 @@ export function Composer({
     if (state.buttonMode === 'stop') {
       onStop();
     } else if (state.buttonMode === 'send') {
-      onSend(outgoingText(text));
+      onSend(outgoingText(text), files?.ready ?? NO_FILES);
       setText('');
+      files?.sent();
     }
   };
   return (
@@ -99,8 +97,11 @@ export function Composer({
     >
       <AiLabel track={fence.track} />
       <Notice notice={state.notice} />
+      {files ? <AttachmentChips chips={files.chips} onRemove={files.remove} /> : null}
       <View style={[styles.row, { gap: spacing.space3 }]}>
-        {attach}
+        {files ? (
+          <AttachMenu disabled={!state.inputEditable} room={files.room} onPicked={files.add} />
+        ) : null}
         <PillInput
           value={text}
           onChangeText={setText}

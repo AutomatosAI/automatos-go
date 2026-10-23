@@ -312,3 +312,40 @@ export const DISCUSSION_COPY = Object.freeze({
   saved: (ticket: string, agent: string) =>
     `${ticket} is back with ${agent}, working from the brief you agreed.`,
 });
+
+/**
+ * Attachments (D-COMPOSER): the composer's [+], its sheet of Camera, Photo library and Files, the
+ * chips above the pill, and why a file did not go. Only the camera has a permission to deny: the
+ * photo library and Files are the system's own pickers, which the app reads only what you choose
+ * from. A refusal names the file and says why in the kit's words, never the server's internals.
+ */
+export const ATTACH_COPY = Object.freeze({
+  button: 'Attach',
+  buttonHint: 'Adds a photo or a file to your message',
+  sheetTitle: 'Add to your message',
+  camera: 'Camera',
+  cameraSummary: 'Take a photo',
+  library: 'Photo library',
+  librarySummary: 'Choose photos',
+  files: 'Files',
+  filesSummary: 'Choose a document',
+  cameraDeniedTitle: "Automatos Go can't use the camera",
+  cameraDenied: 'To take a photo for Auto, open Settings and allow Camera for Automatos Go.',
+  openSettings: 'Open Settings',
+  notNow: 'Not now',
+  chips: 'Attachments',
+  uploading: 'Uploading…',
+  uploadingLabel: (name: string) => `${name}, uploading`,
+  attachedLabel: (name: string) => `${name}, attached`,
+  remove: (name: string) => `Remove ${name}`,
+  notAttached: (name: string, reason: string) => `${name} wasn't attached. ${reason}`,
+  tooBig: (megabytes: number) => `Files can be up to ${megabytes} MB.`,
+  wrongType: "Auto can't take this kind of file.",
+  empty: 'The file is empty.',
+  unreadable: "The image couldn't be prepared to send.",
+  pickerFailed: "That couldn't be opened. Try again.",
+  full: (max: number) => `A message can carry up to ${max} files.`,
+  /** The name of a photo the picker gave none (the camera's, a limited library's). */
+  untitledPhoto: 'photo',
+  untitledFile: 'file',
+});
