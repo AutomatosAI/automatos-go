@@ -61,6 +61,44 @@ describe('the connect routes', () => {
   });
 });
 
+describe('Connect holds until the session has loaded (KC8, review P001N-RVW-1)', () => {
+  const connect = () => source('ConnectScreen');
+  /** The body of one top-level function in ConnectScreen.tsx, up to the next one. */
+  function body(name: string): string {
+    const start = connect().indexOf(`function ${name}(`);
+    const next = connect().indexOf('\nfunction ', start + 1);
+    return connect().slice(start, next === -1 ? undefined : next);
+  }
+
+  it('decides how it opens through connectEntry, with the session loaded or not', () => {
+    expect(connect()).toContain('const { isLoaded, isSignedIn } = useAuthSession();');
+    expect(connect()).toContain('entry={connectEntry({ prefill, isLoaded, inUse })}');
+    // the question is never read without the session's isLoaded
+    expect(connect()).not.toContain('connectSwitchQuestion(');
+  });
+
+  it("renders the foundation's LoadingState for loading, before the question or the flow", () => {
+    const entry = body('ConnectEntry');
+    expect(entry).toContain("if (entry.kind === 'loading') return <Holding />;");
+    expect(entry.indexOf('<Holding />')).toBeLessThan(entry.indexOf('<SwitchQuestion'));
+    expect(entry.indexOf('<Holding />')).toBeLessThan(entry.indexOf('<ConnectFlow'));
+    expect(body('Holding')).toContain('<LoadingState />');
+    expect(connect()).toMatch(/import \{[^}]*\bLoadingState\b[^}]*\} from '\.\.\/\.\.\/ui';/);
+  });
+
+  it('runs discovery only inside the flow, which mounts after the decision', () => {
+    expect(connect().match(/useConnect\(/g)).toHaveLength(1);
+    expect(body('ConnectFlow')).toContain('const flow = useConnect(prefill);');
+    expect(body('ConnectEntry')).not.toContain('useConnect(');
+    expect(body('ConnectScreen')).not.toContain('useConnect(');
+  });
+
+  it('keeps the yes as component state, never a route param', () => {
+    expect(body('ConnectEntry')).toContain('const [agreed, setAgreed] = useState(answered);');
+    expect(read('app/connect/index.tsx')).not.toContain('switchAnswered');
+  });
+});
+
 describe('src/connect/screens and components', () => {
   it('has the screens US-006f names', () => {
     const names = SCREENS.map((screen) => screen.name);

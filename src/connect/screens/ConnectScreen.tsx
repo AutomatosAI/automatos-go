@@ -4,12 +4,14 @@
 // straight to checking; a new one while Connect is open starts the flow again. Opened with another
 // server's address while this phone uses one (a scan, a /go/pair link, a crafted
 // automatos://connect link), it first asks 'You're connected to {current}. Connect to {new}
-// instead?' and checks nothing without the yes (KC8). Saving a pairing moves the current server,
-// which remounts the provider tree and this screen with it: the remounted screen finds its pairing
-// signed in (connectLanding) and goes home, where the shell takes over. Sent here by the gate after
-// the server refused this phone's token (US-006c), it opens with that server and no code, and says
-// why above the fields (edges.ts connectionEndedNote, US-006h). Thin wiring: connect-view.ts,
-// edges.ts and scanner/scan-state.ts decide what shows.
+// instead?' and checks nothing without the yes (KC8); until the session has loaded it holds, since
+// a hosted session still loading reads as connected nowhere (connectEntry, review P001N-RVW-1), and
+// nothing that runs discovery (useConnect) mounts before that is decided. Saving a pairing moves
+// the current server, which remounts the provider tree and this screen with it: the remounted
+// screen finds its pairing signed in (connectLanding) and goes home, where the shell takes over.
+// Sent here by the gate after the server refused this phone's token (US-006c), it opens with that
+// server and no code, and says why above the fields (edges.ts connectionEndedNote, US-006h). Thin
+// wiring: connect-view.ts, edges.ts and scanner/scan-state.ts decide what shows.
 
 import { Redirect, useRouter } from 'expo-router';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
@@ -23,12 +25,12 @@ import { routes, type ConnectPrefill } from '../../navigation/routes';
 import { useGoBack } from '../../navigation/use-go-back';
 import { hostedSignInConfigured } from '../../session/auth-branch';
 import { useTokens } from '../../styles/theme';
-import { IconButton, Screen, Text } from '../../ui';
+import { IconButton, LoadingState, Screen, Text } from '../../ui';
 import { SwitchQuestion } from '../components/SwitchQuestion';
 import { hostedServer, ownServer } from '../current-server';
 import { connectionEndedNote } from '../edges';
 import { typedFields } from '../flow';
-import { connectSwitchQuestion, serverInUse, type SwitchQuestionView } from '../scanner/scan-state';
+import { connectEntry, serverInUse, type ConnectEntryView } from '../scanner/scan-state';
 import { CONFIRM_COPY, CONNECT_SCREEN_COPY } from '../strings';
 import { useConnect } from '../use-connect';
 import { useCurrentServer } from '../use-current-server';
@@ -104,23 +106,37 @@ function ConnectFlow({ prefill, endedNote }: FlowProps) {
   );
 }
 
+function Holding() {
+  return (
+    <Screen>
+      <View style={styles.centre}>
+        <LoadingState />
+      </View>
+    </Screen>
+  );
+}
+
 type EntryProps = {
   readonly prefill: ConnectPrefill;
-  /** Asked first: the prefill names another server than the one in use (connectSwitchQuestion). */
-  readonly question: SwitchQuestionView | null;
+  /** Held while the session loads; the question when the prefill names another server. */
+  readonly entry: ConnectEntryView;
   /** /go/pair already asked it and the person said yes. */
   readonly answered: boolean;
   readonly endedNote: string | null;
 };
 
-/** The switch question when there is one, then the flow; the yes holds for this prefill only. */
-function ConnectEntry({ prefill, question, answered, endedNote }: EntryProps) {
+/**
+ * Held while the session loads, then the switch question when there is one, then the flow; the yes
+ * holds for this prefill only.
+ */
+function ConnectEntry({ prefill, entry, answered, endedNote }: EntryProps) {
   const router = useRouter();
   const [agreed, setAgreed] = useState(answered);
-  if (question && !agreed) {
+  if (entry.kind === 'loading') return <Holding />;
+  if (entry.kind === 'ask' && !agreed) {
     return (
       <SwitchQuestion
-        question={question}
+        question={entry.question}
         onConnect={() => setAgreed(true)}
         onStay={() => router.replace(routes.home)}
       />
@@ -143,7 +159,7 @@ export type ConnectScreenProps = {
  * server's address while this phone uses one, it asks first (KC8).
  */
 export function ConnectScreen({ prefill, switchAnswered = false }: ConnectScreenProps) {
-  const { isSignedIn } = useAuthSession();
+  const { isLoaded, isSignedIn } = useAuthSession();
   const current = useCurrentServer();
   const own = ownServer(current);
   const ended = current.status === 'ready' ? current.ended : null;
@@ -153,7 +169,7 @@ export function ConnectScreen({ prefill, switchAnswered = false }: ConnectScreen
     <ConnectEntry
       key={prefillKey(prefill)}
       prefill={prefill}
-      question={connectSwitchQuestion(prefill, inUse)}
+      entry={connectEntry({ prefill, isLoaded, inUse })}
       answered={switchAnswered}
       endedNote={connectionEndedNote({ ended, prefill })}
     />
@@ -163,4 +179,5 @@ export function ConnectScreen({ prefill, switchAnswered = false }: ConnectScreen
 const styles = StyleSheet.create({
   content: { flexGrow: 1 },
   back: { alignSelf: 'flex-start' },
+  centre: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });

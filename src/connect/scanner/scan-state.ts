@@ -3,7 +3,8 @@
 // scanning goes on), and what a pairing link does: Connect prefilled, or first the question
 // 'You're connected to {current}. Connect to {new} instead?' when this phone already uses a server.
 // Connect asks the same question whenever it opens with another server's address (a scan, or a
-// link that never passes /go/pair). Neither the scanner nor a link pairs: both only open Connect
+// link that never passes /go/pair), and holds until the session has loaded to know whether to ask
+// (connectEntry). Neither the scanner nor a link pairs: both only open Connect
 // with the server and the code, which stops at the confirm card (KC8). QrScanner.tsx,
 // PairLinkScreen.tsx and ConnectScreen.tsx only wire these.
 
@@ -215,6 +216,39 @@ export function connectSwitchQuestion(
   const address = parseServerAddress(prefill.origin);
   if (!address.ok || isSameOrigin(inUse.apiUrl, address.origin)) return null;
   return switchQuestion(inUse, address.origin);
+}
+
+/** What Connect shows before anything that runs discovery or pairs. */
+export type ConnectEntryView =
+  /** The session has not read what it holds yet: nothing to decide the question from. */
+  | { readonly kind: 'loading' }
+  /** Another server than the one in use: the question first, and nothing without the yes. */
+  | { readonly kind: 'ask'; readonly question: SwitchQuestionView }
+  | { readonly kind: 'flow' };
+
+export type ConnectEntryInput = {
+  readonly prefill: ConnectPrefill;
+  /** The session has read what it holds; a hosted session reads as signed out until then. */
+  readonly isLoaded: boolean;
+  readonly inUse: ServerInUse | null;
+};
+
+const LOADING_ENTRY: ConnectEntryView = Object.freeze({ kind: 'loading' });
+const FLOW_ENTRY: ConnectEntryView = Object.freeze({ kind: 'flow' });
+
+/**
+ * How Connect opens (KC8). A prefill that names a server (a link, a scan, a route prefill) waits
+ * for the session: a hosted session still loading counts as in use nowhere, so it would ask no
+ * question and a crafted automatos://connect link would reach the confirm card, whose Pair signs
+ * the hosted session out (review P001N-RVW-1). Once loaded, the question when the prefill names
+ * another server than the one in use; else the flow. Connect opened with no address (Welcome's
+ * button) names no server to switch to, so it is not held.
+ */
+export function connectEntry({ prefill, isLoaded, inUse }: ConnectEntryInput): ConnectEntryView {
+  const namesServer = (prefill.origin ?? '').trim() !== '';
+  if (!isLoaded && namesServer) return LOADING_ENTRY;
+  const question = connectSwitchQuestion(prefill, inUse);
+  return question ? Object.freeze({ kind: 'ask', question }) : FLOW_ENTRY;
 }
 
 // ── The pairing link ────────────────────────────────────────────────────────────────────────

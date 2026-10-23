@@ -98,7 +98,7 @@ describe('a scan and a link never pair (KC8)', () => {
 
   it('Connect asks the switch question itself, so a crafted automatos://connect link cannot skip it', () => {
     const connectScreen = read('src/connect/screens/ConnectScreen.tsx');
-    expect(connectScreen).toContain('question={connectSwitchQuestion(prefill, inUse)}');
+    expect(connectScreen).toContain('entry={connectEntry({ prefill, isLoaded, inUse })}');
     expect(connectScreen).toContain('<SwitchQuestion');
     expect(connectScreen).toContain('key={prefillKey(prefill)}');
     // the answer is a prop from /go/pair, never a route param: /connect's route passes the prefill only
