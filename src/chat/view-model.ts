@@ -8,8 +8,9 @@
 // lines are built by lines.ts; every notice's mark has a word for screen readers (§4.6). Every
 // failure says the kit's own words (strings.ts): the server's may name a plan (D-NO-BILLING).
 // Auto's cards sit inside the reply that raised them (cards/view.ts places them), and the tickets a
-// reply filed or checked are its own (a saved task_card part, or the live turn's). The components
-// only draw these rows.
+// reply filed or checked are its own (a saved task_card part, or the live turn's). Auto's answer is
+// kept as its markdown (OT-C8), lexed by markdown/blocks.ts where it is drawn; the user's words stay
+// plain. The components only draw these rows.
 
 import { ApiError } from '../api/errors';
 import {
@@ -74,7 +75,8 @@ export type AutoRow = {
   readonly key: string;
   /** The saved message's id (Report this); null for the reply still being written. */
   readonly messageId: string | null;
-  readonly paragraphs: readonly string[];
+  /** Auto's answer as markdown (OT-C8; markdown/Markdown.tsx draws it); '' for none. */
+  readonly answer: string;
   readonly toolLines: readonly ToolLineRow[];
   readonly receipts: ReceiptsView | null;
   readonly notices: readonly Notice[];
@@ -100,15 +102,21 @@ export const WORKING_KEY = 'working';
 export const TURN_NOTICE_KEY = 'turn-notice';
 export const LOOSE_CARDS_KEY = 'loose-cards';
 
-const PARAGRAPH_BREAK = /\n{2,}/;
 const KNOWN_TURN_CODES: ReadonlySet<string> = new Set(TURN_ERROR_CODES);
+/** Blank lines before the first words (a first line's indent is markdown: it stays). */
+const LEADING_BLANK_LINES = /^(?:[ \t]*\r?\n)+/;
+const BLOCK_BREAK = '\n\n';
 
-/** Auto's answer as the handoff draws it: plain paragraphs (KC5). */
-export function paragraphs(text: string): string[] {
-  return text
-    .split(PARAGRAPH_BREAK)
-    .map((paragraph) => paragraph.trim())
-    .filter(Boolean);
+/**
+ * Auto's answer as markdown (OT-C8): the platform's lines above a live reply, then its words, each
+ * its own block, as the saved message holds them (the vendored receipts.ts: saved, they are the
+ * top of the reply's text). Blank parts are left out; '' when nothing is left.
+ */
+export function answerMarkdown(above: readonly string[], text: string): string {
+  return [...above, text]
+    .map((part) => part.replace(LEADING_BLANK_LINES, '').trimEnd())
+    .filter(Boolean)
+    .join(BLOCK_BREAK);
 }
 
 /** A failure is marked ✕; a limit, a file Auto could not open and a stop are muted. */
@@ -165,7 +173,7 @@ function userRow(key: string, text: string, files: readonly string[]): UserRow |
 
 function autoRow(row: Omit<AutoRow, 'type'>): AutoRow | null {
   const empty =
-    row.paragraphs.length === 0 &&
+    row.answer === '' &&
     row.toolLines.length === 0 &&
     row.receipts === null &&
     row.notices.length === 0 &&
@@ -186,14 +194,14 @@ function storedRow(
   if (savedTurnError(message) !== null) {
     const copy = savedFailureCopy(message);
     const failed = notice(`${message.id}-failed`, 'failed', copy.text, newest && copy.canRetry);
-    return autoRow({ ...base, paragraphs: [], notices: [failed], tickets: [] });
+    return autoRow({ ...base, answer: '', notices: [failed], tickets: [] });
   }
   return autoRow({
     ...base,
     tickets: ticketRows(
       message.parts.flatMap((part) => (part.type === 'task_card' ? [part.card] : [])),
     ),
-    paragraphs: paragraphs(messageText(message)),
+    answer: answerMarkdown([], messageText(message)),
     receipts: receiptsView(receiptsOf(message), options),
     notices: [],
   });
@@ -217,7 +225,7 @@ function liveAutoRow(
   return autoRow({
     key: LIVE_AUTO_KEY,
     messageId: null,
-    paragraphs: [...(turn.receiptsAbove ?? []), ...paragraphs(turn.text)],
+    answer: answerMarkdown(turn.receiptsAbove ?? [], turn.text),
     toolLines: toolLineRows(turn.toolCalls, streaming),
     receipts: receiptsView(turn.receipts, options),
     notices: turnNotices(turn),

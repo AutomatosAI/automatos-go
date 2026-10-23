@@ -1,5 +1,6 @@
 // The thread's rows in order (US-008c): the receipts' closing notes and links through the
-// foundation's appRouteForWebLink, tool lines while and after a reply, Auto's paragraphs, the draft
+// foundation's appRouteForWebLink, tool lines while and after a reply, Auto's answer as markdown
+// (OT-C8), the draft
 // and 'Auto is working…', Try again's message (words and files), the scroll rule and the pulse
 // under Reduce Motion.
 
@@ -9,12 +10,13 @@ import { ApiError } from '../../api/errors';
 import { NO_ACTIONS, NOTHING_ON_THE_BOARD } from '../../core/web/lib/chat/receipts';
 import { createThread, type ThreadState } from '../controller/thread';
 import type { ChatFile } from '../request';
+import { markdownBlocks } from '../markdown/blocks';
 import type { StoredMessage } from '../schemas';
 import {
   LIVE_AUTO_KEY,
   LIVE_USER_KEY,
   WORKING_KEY,
-  paragraphs,
+  answerMarkdown,
   receiptsView,
   retryInput,
   shouldScrollToEnd,
@@ -114,18 +116,40 @@ describe('tool lines while and after the reply', () => {
   });
 });
 
-describe('Auto’s paragraphs', () => {
+const plain = (text: string) => ({ kind: 'text', text, marks: [], href: null });
+
+describe('Auto’s answer as markdown (OT-C8)', () => {
   it('splits paragraphs on blank lines and keeps single line breaks', () => {
-    expect(paragraphs('One\nline two\n\n\nThree\n\n  ')).toEqual(['One\nline two', 'Three']);
+    const answer = answerMarkdown([], '\n\nOne\nline two\n\n\nThree\n\n  ');
+    expect(answer).toBe('One\nline two\n\n\nThree');
+    expect(markdownBlocks(answer)).toEqual([
+      { kind: 'paragraph', spans: [plain('One'), { kind: 'break' }, plain('line two')] },
+      { kind: 'paragraph', spans: [plain('Three')] },
+    ]);
   });
 
-  it('puts the platform’s lines above a live reply before its words', () => {
+  it('keeps the markdown as Auto wrote it: marks, tables, a first line’s indent', () => {
+    const text = '**Two** docs:\n\n| Doc | Owner |\n|---|---|\n| Plan | Gerard |';
+    expect(answerMarkdown([], text)).toBe(text);
+    expect(markdownBlocks(answerMarkdown([], text)).map((block) => block.kind)).toEqual([
+      'paragraph',
+      'table',
+    ]);
+    expect(answerMarkdown([], '\n    indented code\n')).toBe('    indented code');
+    expect(answerMarkdown([], '  \n\n ')).toBe('');
+  });
+
+  it('puts the platform’s lines above a live reply before its words, each its own block', () => {
     const state = streaming(
       { kind: 'text', text: 'Here you go.' },
       { kind: 'receipts', receipts: [], above: ['I could not send the letter.'] },
     );
     const [auto] = autoRows(threadRows(state));
-    expect(auto.paragraphs).toEqual(['I could not send the letter.', 'Here you go.']);
+    expect(auto.answer).toBe('I could not send the letter.\n\nHere you go.');
+    expect(markdownBlocks(auto.answer)).toEqual([
+      { kind: 'paragraph', spans: [plain('I could not send the letter.')] },
+      { kind: 'paragraph', spans: [plain('Here you go.')] },
+    ]);
     expect(auto.receipts?.note).toBe(NO_ACTIONS);
   });
 });
@@ -155,7 +179,7 @@ describe('rows', () => {
       files: ['plan.pdf'],
       accessibilityLabel: 'You said, Look at this, Attached: plan.pdf',
     });
-    expect(rows[1]).toMatchObject({ messageId: 'm2', paragraphs: ['Filed.'] });
+    expect(rows[1]).toMatchObject({ messageId: 'm2', answer: 'Filed.' });
     expect(autoRows(rows)[0].receipts?.lines).toHaveLength(1);
   });
 

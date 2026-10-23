@@ -37,7 +37,7 @@
     {"id": "KC2-FOUNDATION-GAPS", "text": "The foundation's contracts are fixed for this wave. If one is missing or wrong, build the smallest feature-local adapter under src/chat/ and write 'FOUNDATION GAP: <what, where>' in the story's DONE mark; never edit a foundation file. A missing UI primitive is built feature-local under src/chat/components/.", "source": "kit"},
     {"id": "KC3-ROUTES", "text": "Every server path this wave calls is a constant in src/chat/routes.ts (the route check reads it); a route PRD-266 adds is marked pendingUpstream. App navigation uses the foundation's src/navigation/routes.ts builders only (cc.questions, cc.ticket(taskId), cc.social(postId), settings, chat(id), chats).", "source": "kit, K4"},
     {"id": "KC4-HOME-THREAD", "text": "The home thread is the newest conversation from GET /api/chat/history after the stale check, or a draft with no id; the first message of a draft creates the chat and the chat-id frame tells the app its id. 'New chat' starts a draft.", "source": "kit (D28, §4.4)"},
-    {"id": "KC5-PLAIN-TEXT", "text": "Auto's answer renders as plain text with paragraphs, as the handoff draws it (14/1.55, no bubble); a markdown renderer would be a new dependency and is not in this wave (open question for Gerard).", "source": "kit"}
+    {"id": "KC5-PLAIN-TEXT", "text": "Gerard decided OT-C8 on 23 Oct 2026: Auto's answer renders as formatted markdown, lexed by marked (one new JS dependency, pinned 18.1.1, MIT, no dependencies; ships over the air) and drawn by the app's own renderer on the look's tokens (src/chat/markdown/: blocks.ts view-model, Markdown.tsx; GFM tables, lists, code, links through the app's link handling, HTML shown literally, never a WebView), still 14/1.55 with no bubble. The user's messages stay plain text. A failed turn is a quiet line (mark + muted words), not a bordered box. Was: plain text with paragraphs, as the handoff draws it; a markdown renderer was left to Gerard (OT-C8).", "source": "kit; OT-C8 decided by Gerard 23 Oct"}
   ],
   "userStories": [
     {
@@ -507,7 +507,7 @@
     {"id": "OT-C5", "what": "Attachments: a camera photo, a HEIC from the library (arrives as JPEG), a PDF from Files; a refused type shows the server's words.", "why": "Native pickers and a live upload."},
     {"id": "OT-C6", "what": "From a ticket (after the A3 wave): 'Ask Auto about #n' opens the discussion; 'Update ticket and re-queue' re-queues it.", "why": "Crosses the two parallel waves."},
     {"id": "OT-C7", "what": "Report this on an Auto message once PRD-266 US-016 is deployed and the discovery document lists report_content.", "why": "Server dependency."},
-    {"id": "OT-C8", "what": "Decide KC5: plain text for Auto's answers (as the handoff draws it) or a markdown renderer (a new JS dependency, shippable over the air).", "why": "Open question for Gerard."},
+    {"id": "OT-C8", "what": "Decide KC5: plain text for Auto's answers (as the handoff draws it) or a markdown renderer (a new JS dependency, shippable over the air). DECIDED 23 Oct: markdown via marked + the app's own renderer (KC5).", "why": "Open question for Gerard; answered 23 Oct after TestFlight build 6 showed raw ** and table pipes."},
     {"id": "OT-C9", "what": "iPhone paired to a home server over http (the 'Unencrypted home network' bar showing): on Home and on an older chat, tap the composer — the pill input and Send sit just above the keyboard. The same on the hosted server (no bar).", "why": "Keyboard layout needs a device; seam review 23 Oct."}
   ]
 }

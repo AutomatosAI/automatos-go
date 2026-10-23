@@ -42,6 +42,12 @@ export const CHAT_COPY = Object.freeze({
   retry: 'Try again',
 });
 
+/** Auto's formatted answers (OT-C8): the marker before a list item, a bullet by how deep it sits. */
+export const MARKDOWN_COPY = Object.freeze({
+  bullets: Object.freeze(['•', '◦', '▪']) as readonly string[],
+  listNumber: (count: number) => `${count}.`,
+});
+
 /** Play's receiptBadge tags: a done write says Done, a refused call Not done, a skipped one Skipped. */
 export const RECEIPT_BADGES = Object.freeze({
   done: 'Done',
