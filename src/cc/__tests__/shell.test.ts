@@ -9,13 +9,35 @@ import {
   BOARD_SCREEN,
   CC_TABS,
   TAB_HREFS,
+  pressTab,
   shellTab,
   tabFor,
   tabViews,
+  type CcTab,
   type TabCounts,
+  type TabView,
 } from '../shell/tabs';
 
 const NO_COUNTS: TabCounts = { board: null, calendar: null, questions: null, deliverables: null };
+
+/** The tab the shell shows after these paths, from its mount on the first (useShellTab's fold). */
+function shownAfter([first, ...rest]: readonly string[]): CcTab | null {
+  return rest.reduce<CcTab | null>((shown, path) => shellTab(path, shown), shellTab(first));
+}
+
+/** What tapping each tab does on the live path: the hrefs the router was asked to dismiss to. */
+function taps(views: readonly TabView[]): Partial<Record<CcTab, readonly string[]>> {
+  const entries = views.map((view) => {
+    const calls: string[] = [];
+    pressTab(view, { dismissTo: (href) => calls.push(href) });
+    return [view.tab, calls] as const;
+  });
+  return Object.fromEntries(entries);
+}
+
+function selectedTabs(views: readonly TabView[]): CcTab[] {
+  return views.filter((view) => view.selected).map((view) => view.tab);
+}
 
 describe('the tabs', () => {
   it('are Board, Calendar, Questions and Deliverables, at the foundation builders', () => {
@@ -44,19 +66,16 @@ describe('the tabs', () => {
     expect(tabFor(routes.home)).toBeNull();
   });
 
-  it('keeps the tab a sheet or detail opened over', () => {
+  it('keeps the tab a sheet or detail opened over; none under a detail it opened on', () => {
     expect(shellTab(routes.cc.ticket(12), 'questions')).toBe('questions');
     expect(shellTab(routes.cc.calendar, 'questions')).toBe('calendar');
-    expect(shellTab(routes.cc.ticket(12))).toBe('board');
+    expect(shellTab(routes.cc.ticket(12))).toBeNull();
+    expect(shellTab(routes.cc.deliverable('d-1'), null)).toBeNull();
   });
 
   it('shows a figure beside the word, none at 0 or unknown, 99+ past the cap', () => {
-    const views = tabViews('questions', {
-      board: 2,
-      calendar: 0,
-      questions: 140,
-      deliverables: null,
-    });
+    const counts = { board: 2, calendar: 0, questions: 140, deliverables: null };
+    const views = tabViews('questions', counts, routes.cc.questions);
     expect(views.map((view) => [view.word, view.count, view.selected])).toEqual([
       ['Board', '2', false],
       ['Calendar', null, false],
@@ -72,8 +91,66 @@ describe('the tabs', () => {
   });
 
   it('marks exactly one tab selected', () => {
-    const views = tabViews('board', NO_COUNTS);
-    expect(views.filter((view) => view.selected).map((view) => view.tab)).toEqual(['board']);
+    const views = tabViews('board', NO_COUNTS, BOARD_SCREEN);
+    expect(selectedTabs(views)).toEqual(['board']);
+  });
+});
+
+describe('the tab strip (P001X-SEAM-2)', () => {
+  const fromChat = [routes.cc.deliverable('d-1'), routes.cc.ticket(2680)];
+
+  it.each(fromChat)('a detail opened from chat (%s first) shows no tab selected', (path) => {
+    const shown = shownAfter([path]);
+    expect(shown).toBeNull();
+    expect(selectedTabs(tabViews(shown, NO_COUNTS, path))).toEqual([]);
+  });
+
+  it.each(fromChat)('Board from a detail opened from chat (%s) reaches the Board', (path) => {
+    const views = tabViews(shownAfter([path]), NO_COUNTS, path);
+    expect(taps(views)).toEqual({
+      board: [BOARD_SCREEN],
+      calendar: [routes.cc.calendar],
+      questions: [routes.cc.questions],
+      deliverables: [routes.cc.deliverables],
+    });
+  });
+
+  it('shows a tab once the detail opened from chat leaves for it', () => {
+    expect(shownAfter([routes.cc.deliverable('d-1'), BOARD_SCREEN])).toBe('board');
+    expect(shownAfter([routes.cc.ticket(7), routes.cc.questions, routes.cc.ticket(8)])).toBe(
+      'questions',
+    );
+  });
+
+  it('a ticket opened over Calendar still shows Calendar', () => {
+    const path = routes.cc.ticket(12);
+    const shown = shownAfter([routes.cc.calendar, path]);
+    expect(shown).toBe('calendar');
+    expect(selectedTabs(tabViews(shown, NO_COUNTS, path))).toEqual(['calendar']);
+  });
+
+  it('the tab under a detail goes back to its screen; the rest take the detail’s place', () => {
+    const path = routes.cc.deliverable('d-1');
+    const views = tabViews(shownAfter([routes.cc.deliverables, path]), NO_COUNTS, path);
+    expect(selectedTabs(views)).toEqual(['deliverables']);
+    expect(taps(views).deliverables).toEqual([routes.cc.deliverables]);
+    expect(taps(views).board).toEqual([BOARD_SCREEN]);
+  });
+
+  it("tapping the focused tab's own screen does nothing", () => {
+    const screens: readonly (readonly [CcTab, string])[] = [
+      ['board', routes.cc.board],
+      ['board', BOARD_SCREEN],
+      ['calendar', routes.cc.calendar],
+      ['questions', `${routes.cc.questions}/`],
+      ['deliverables', `${routes.cc.deliverables}?type=document`],
+    ];
+    for (const [tab, path] of screens) {
+      const views = tabViews(shownAfter([path]), NO_COUNTS, path);
+      expect(selectedTabs(views)).toEqual([tab]);
+      expect(views.find((view) => view.tab === tab)?.target).toBeNull();
+      expect(taps(views)[tab]).toEqual([]);
+    }
   });
 });
 

@@ -1,9 +1,11 @@
 // The sticky tabs (handoff §2): Board · Calendar · Questions · Deliverables with a mono figure beside
 // each word, the active one in ink over the accent rule. They sit above the tab's screen, so they
-// never scroll away; the row scrolls sideways when large text makes it wider than the phone. A tab
-// replaces the screen under the shell (no history of tab switches to step back through).
+// never scroll away; the row scrolls sideways when large text makes it wider than the phone. A tap is
+// decided from the live path (tabs.ts pressTab): a tab goes back to its screen or takes the live
+// screen's place, so there is no history of tab switches to step back through, and Board from a
+// detail opened from chat reaches the Board.
 
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useTokens } from '../../styles/theme';
@@ -11,7 +13,7 @@ import { Text } from '../../ui';
 import { hitSlopFor } from '../../ui/paint';
 import { SHELL_COPY } from '../strings';
 import { TAB_STRIP, tabPaint } from './chrome';
-import { tabViews, type CcTab, type TabCounts, type TabView } from './tabs';
+import { pressTab, tabViews, type CcTab, type TabCounts, type TabView } from './tabs';
 
 function Tab({ view, onPress }: { readonly view: TabView; readonly onPress: () => void }) {
   const { colours, spacing } = useTokens();
@@ -45,10 +47,12 @@ function Tab({ view, onPress }: { readonly view: TabView; readonly onPress: () =
   );
 }
 
-export type TabStripProps = { readonly active: CcTab; readonly counts: TabCounts };
+/** `active` is the tab shown, or null for a detail with no tab under it. */
+export type TabStripProps = { readonly active: CcTab | null; readonly counts: TabCounts };
 
 export function TabStrip({ active, counts }: TabStripProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { colours, spacing } = useTokens();
   return (
     <View
@@ -68,14 +72,8 @@ export function TabStrip({ active, counts }: TabStripProps) {
           paddingHorizontal: spacing[TAB_STRIP.paddingX],
         }}
       >
-        {tabViews(active, counts).map((view) => (
-          <Tab
-            key={view.tab}
-            view={view}
-            onPress={() => {
-              if (!view.selected) router.replace(view.href);
-            }}
-          />
+        {tabViews(active, counts, pathname).map((view) => (
+          <Tab key={view.tab} view={view} onPress={() => pressTab(view, router)} />
         ))}
       </ScrollView>
     </View>

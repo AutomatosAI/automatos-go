@@ -2,8 +2,10 @@
 // word), the head (the dateline in the phone's timezone, the title, the lede) and the sticky tabs
 // with their figures, over the tab's own screen. The tabs never scroll away; a ticket, a social post
 // or a Deliverable opens over the tab it came from, which the shell keeps showing; the ticket and the
-// social post are sheets over it (SHEET_ROUTE_OPTIONS). The words and figures are src/cc/shell's
-// (pure, tested); the live word reads the foundation's one stream.
+// social post are sheets over it (SHEET_ROUTE_OPTIONS). One opened from outside the tabs (chat, the
+// needs strip) is this stack's first screen, with no tab under it: no tab shows selected, and every
+// tab, Board too, goes to its screen. The words and figures are src/cc/shell's (pure, tested); the
+// live word reads the foundation's one stream.
 import { Stack } from 'expo-router';
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';

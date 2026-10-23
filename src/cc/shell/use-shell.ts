@@ -17,7 +17,7 @@ import { scheduleQuery } from '../calendar/api';
 import { todayCount } from '../calendar/view-model';
 import { eyebrowText, msUntilNextMinute, wallClock, zoneCity } from './dateline';
 import { boardFigures, ledeParts, tabCounts, type LedePart } from './lede';
-import { FIRST_TAB, shellTab, type CcTab, type TabCounts } from './tabs';
+import { shellTab, type CcTab, type TabCounts } from './tabs';
 
 /** Now, re-read at the turn of every minute while the shell is mounted. */
 export function useMinuteClock(): Date {
@@ -74,10 +74,13 @@ export function useShellFigures(): ShellFigures {
   };
 }
 
-/** The tab the shell shows; a sheet or detail opened over a tab keeps that tab. */
-export function useShellTab(): CcTab {
+/**
+ * The tab the shell shows; a sheet or detail opened over a tab keeps that tab. The shell mounts with
+ * its stack, so a detail it first sees (opened from chat, the needs strip) has no tab under it: null.
+ */
+export function useShellTab(): CcTab | null {
   const pathname = usePathname();
-  const [shown, setShown] = useState<CcTab>(FIRST_TAB);
+  const [shown, setShown] = useState(() => shellTab(pathname));
   const tab = shellTab(pathname, shown);
   if (tab !== shown) setShown(tab);
   return tab;
