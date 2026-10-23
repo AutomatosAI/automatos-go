@@ -315,16 +315,16 @@ describe('threadReducer', () => {
     expect(landed).toMatchObject({ status: 'idle', live: null, failure: null });
   });
 
-  it('Stop closes running tool calls and is refused when nothing runs', () => {
+  it('Stop leaves a running tool call running, so it reads stopped; refused when nothing runs', () => {
     const running = run(
       loaded([]),
       { type: 'send', draft: DRAFT },
       frame({ kind: 'tool-start', toolCallId: 't1', toolName: 'board_list' }),
     );
     const stopped = run(running, { type: 'stopped', at: AT });
-    expect(stopped.status).toBe('stopped');
+    expect(stopped).toMatchObject({ status: 'stopped', live: running.live, failure: null });
     expect(stopped.live?.turn.toolCalls).toEqual([
-      expect.objectContaining({ state: 'completed', endedAt: AT }),
+      expect.objectContaining({ toolCallId: 't1', state: 'running' }),
     ]);
     expect(run(stopped, frame(TEXT('after')))).toBe(stopped);
     const idle = loaded([]);

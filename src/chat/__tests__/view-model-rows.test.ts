@@ -22,7 +22,7 @@ import {
   toolLineRows,
   workingMotion,
 } from '../view-model';
-import { CHAT_ID, deepFreeze, saved } from './thread-fixtures';
+import { AT, CHAT_ID, deepFreeze, saved } from './thread-fixtures';
 import {
   WEB,
   apply,
@@ -79,8 +79,14 @@ describe('tool lines while and after the reply', () => {
     expect(running).toMatchObject({ mark: null, tone: 'running' });
     expect(running.text).toBe("Searching the web: 'ferry times'");
     expect(running.accessibilityLabel).toBe("Running, Searching the web: 'ferry times'");
-    const [stopped] = toolLineRows(state.live?.turn.toolCalls ?? [], false);
-    expect(stopped).toMatchObject({ mark: '–', tone: 'muted', text: 'Stopped: searching the web' });
+    const [stopped] = autoRows(threadRows(apply(state, { type: 'stopped', at: AT })))[0].toolLines;
+    expect(stopped).toEqual({
+      key: 't1',
+      mark: '–',
+      tone: 'muted',
+      text: 'Stopped: searching the web',
+      accessibilityLabel: 'Stopped: searching the web',
+    });
   });
 
   it('says done and failed calls in words, each with its status word', () => {

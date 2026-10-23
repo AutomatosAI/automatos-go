@@ -6,7 +6,8 @@
 // would draw the turn twice. A refetch that brings the reply retires the live turn (merge by id,
 // never a duplicate); a turn the server failed (an e: line) stays until the next send, so its
 // failure keeps the kit's own words (D-NO-BILLING). The turn runs detached on the server: Stop is a
-// cancel as well as an abort (turn-runner.ts), and a chat reopened mid-turn shows Auto working
+// cancel as well as an abort (turn-runner.ts) and leaves the turn's tool calls as they are, so one
+// it cut off reads 'Stopped: …', never done; and a chat reopened mid-turn shows Auto working
 // until chat_changed or a resume brings the reply (web: frontend/lib/chat/hooks.ts, PRD-237 S7).
 // Auto's cards (cards/model.ts) are filed on the thread as frames raise them, with the user's
 // outcome, so they outlive the live turn: the saved reply carries none.
@@ -19,7 +20,6 @@ import {
   type TurnErrorCode,
   type TurnState,
 } from '../../core/turn-reducer';
-import { completeRunningToolCalls } from '../../core/web/lib/chat/tool-calls';
 import { isApiError, type ApiErrorKind } from '../../api/errors';
 import {
   fileCards,
@@ -251,18 +251,14 @@ function failed(state: ThreadState, action: ActionOf<'failed'>): ThreadState {
   return { ...state, status: 'failed', failure: failureOf(action.error) };
 }
 
-/** Nothing may keep spinning once the turn is stopped (the web's tool-calls.ts rule). */
-function stopped(state: ThreadState, action: ActionOf<'stopped'>): ThreadState {
+/**
+ * The live turn is kept as it is: a call Stop cut off stays running and, the reply no longer being
+ * written, reads 'Stopped: …' without a spinner (the web's stop, hooks.ts; only the finish frame
+ * completes running calls).
+ */
+function stopped(state: ThreadState): ThreadState {
   if (!canStop(state)) return state;
-  const live = state.live && {
-    ...state.live,
-    turn: {
-      ...state.live.turn,
-      toolCalls:
-        completeRunningToolCalls(state.live.turn.toolCalls, action.at) ?? state.live.turn.toolCalls,
-    },
-  };
-  return { ...state, status: 'stopped', live, failure: null };
+  return { ...state, status: 'stopped', failure: null };
 }
 
 /** The cancel did not reach the server, so the turn is still running there: Auto is working. */
