@@ -44,7 +44,7 @@ const Options = z
 const OwnerSchema = z
   .object({
     agent: z.object({ id: z.number().int(), name: Text }).nullable().catch(null),
-    /** The ticket it was asked on: number is '#0042' (PRD-252 R4), null on an older server. */
+    /** The ticket it was asked on: its board number, #0042 (PRD-252 R4), null on an older server. */
     ticket: z.object({ id: z.number().int(), title: Text, number: Text }).nullable().catch(null),
   })
   .nullable()
