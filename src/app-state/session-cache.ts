@@ -39,7 +39,8 @@ function belongsToWorkspace(query: Query): boolean {
 /**
  * Drops every query of the old workspace (board, questions, chats, Deliverables, …). The persist
  * subscription hears the removals and saves the smaller cache, so the old workspace's lists are
- * gone from the phone too. Screens still mounted refetch under the new id when they next render.
+ * gone from the phone too. The gate then mounts every screen afresh under the new workspace
+ * (AppGate.tsx keys them by its id), so no screen keeps the old one's local state either.
  */
 export async function forgetWorkspaceData(queryClient: QueryClient): Promise<void> {
   const filters = { predicate: belongsToWorkspace };

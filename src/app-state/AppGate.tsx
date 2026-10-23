@@ -4,7 +4,8 @@
 // persisted cache, discovery and the workspace bootstrap (useLaunch → launchView), then the
 // AI-provider consent step (shellStep, US-007c: the layout's `consent` in place of the screens
 // until this person agrees). Ready, the consent sheet and the screens get the session (session.tsx)
-// and the one live connection (LiveEvents, FND-5); any other state is a whole screen
+// and the one live connection (LiveEvents, FND-5), mounted afresh for each workspace (keyed by its
+// id, P001N-SEAM-2); any other state is a whole screen
 // (GateStates.tsx) with a way out. Every state shown to a signed-in phone sits under the layout's
 // `bar` (the unencrypted home network line, D-HTTPS): the bar takes the top safe area and what is
 // under it gets its own safe-area provider, so a screen's top inset starts below the bar and the
@@ -59,7 +60,12 @@ function Launch({ server, serverName, session, consent, bar: Bar, children }: La
         {step.kind === 'launch' ? (
           <LaunchState view={step.view} serverName={serverName} onRetry={retry} />
         ) : (
+          // keyed by the workspace: when a bootstrap resolves another one (the server falls back
+          // to the person's other workspace when X-Workspace-ID is no longer theirs), the consent
+          // step and every screen mount afresh with forgetWorkspaceData's empty cache, so none
+          // keeps the old workspace's local state (a chat id, its messages and cards) in the new one
           <AppSessionProvider
+            key={step.ready.workspace.id}
             server={server}
             discovery={step.ready.discovery}
             workspace={step.ready.workspace}
