@@ -193,3 +193,19 @@ export const TICKET_COPY = Object.freeze({
   /** The web hides an unassigned ticket's agent. */
   unassigned: 'unassigned',
 });
+
+/**
+ * The composer (D-COMPOSER): the handoff's 'Message Auto' pill and its one round button. A viewer's
+ * reason and the paused label's are not here: they are ROLE_COPY.viewerReadOnly (D17) and the
+ * vendored AI_LABEL_PAUSED_TEXT.
+ */
+export const COMPOSER_COPY = Object.freeze({
+  /** The pill's VoiceOver name and its placeholder (the handoff's aria-label). */
+  inputLabel: 'Message Auto',
+  placeholder: 'Message Auto',
+  /** A viewer's pill: read the thread, never write to it. */
+  readOnlyPlaceholder: 'Read only',
+  send: 'Send',
+  stop: 'Stop',
+  stopHint: "Stops Auto's reply",
+});
