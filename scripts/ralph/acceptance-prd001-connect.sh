@@ -32,7 +32,8 @@ warn()  { local name="$1" body="$2"; echo ""; echo "── $name"; if ( eval "$b
 KIT=scripts/ralph/prd-001-connect.json
 CI_JOBS=("typecheck · lint · test" "expo-doctor · iOS bundle")
 # KC1 (this kit's folders) + KC2 (the named foundation files, each for one purpose): the only paths this wave may add or change.
-ALLOWED='^(src/connect/|src/consent/|src/session/|src/auth/providers/(device|registry)\.ts$|src/auth/AuthRoot\.tsx$|src/auth/__tests__/|src/api/(server|discovery|errors|client|workspace)\.ts$|src/api/__tests__/|src/app-state/|src/navigation/(routes|web-links)\.ts$|src/navigation/__tests__/|app/_layout\.tsx$|app/\(app\)/_layout\.tsx$|app/\(app\)/settings/index\.tsx$|app/welcome\.tsx$|app/connect/|app/go/|scripts/ralph/(prd-001-connect\.json|PROMPT_build_prd001-connect\.md|PROMPT_review_prd001-connect\.md|acceptance-prd001-connect\.sh)$)'
+# app/+native-intent.tsx: named by P001N-SEAM-3 (incoming web links delegate to web-links.ts).
+ALLOWED='^(src/connect/|src/consent/|src/session/|src/auth/providers/(device|registry)\.ts$|src/auth/AuthRoot\.tsx$|src/auth/__tests__/|src/api/(server|discovery|errors|client|workspace)\.ts$|src/api/__tests__/|src/app-state/|src/navigation/(routes|web-links)\.ts$|src/navigation/__tests__/|app/_layout\.tsx$|app/\(app\)/_layout\.tsx$|app/\(app\)/settings/index\.tsx$|app/welcome\.tsx$|app/\+native-intent\.tsx$|app/connect/|app/go/|scripts/ralph/(prd-001-connect\.json|PROMPT_build_prd001-connect\.md|PROMPT_review_prd001-connect\.md|acceptance-prd001-connect\.sh)$)'
 # Foundation test folders KC2 lets this wave update (never delete, never fewer cases).
 FOUNDATION_TESTS="src/auth/__tests__ src/api/__tests__ src/app-state/__tests__ src/navigation/__tests__"
 WAVE_DIRS="src/connect src/consent src/session app/connect app/go"

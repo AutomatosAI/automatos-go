@@ -4,8 +4,9 @@
 // the system browser (no WebView, D-NO-WEBVIEW). Only an internal path is followed, as the web's
 // own safeLink rule says: never another site, never a scheme. Studio is the CURRENT server's
 // (src/connect/current-server.ts): an own server's links open its web_url, the hosted server's
-// EXPO_PUBLIC_WEB_URL (US-006d). Parsed by hand, not with URL: React Native's URL is a partial
-// polyfill.
+// EXPO_PUBLIC_WEB_URL (US-006d). A web link the OS hands the app (an iOS universal link or an
+// Android App Link, app.json K9) goes through appPathForSystemLink from app/+native-intent.tsx
+// (P001N-SEAM-3). Parsed by hand, not with URL: React Native's URL is a partial polyfill.
 
 import { withoutTrailingSlash } from '../api/url';
 import { currentWebUrl } from '../connect/current-server';
@@ -126,4 +127,42 @@ export function appRouteForWebLink(
   if (app !== null) return { app };
   const external = studioUrl(trimmed, webUrl);
   return external === null ? null : { external };
+}
+
+/** A universal link or App Link: https and its host (app.json K9: https://ui.automatos.app/…). */
+const APP_LINK_ORIGIN = /^https:\/\/[^/?#]*/i;
+/** app/go/** opens these itself (the pairing link, US-006g): never rewritten. */
+const OWN_ROUTE_PREFIX = '/go';
+/** No Studio address: a page the phone has no screen for is not sent to the browser from here. */
+const NO_STUDIO = '';
+
+/** The path and query of an https link, or a bare internal path as it is; null for anything else. */
+function systemLinkPath(link: string): string | null {
+  const origin = APP_LINK_ORIGIN.exec(link);
+  if (origin === null) return isInternalPath(link) ? link : null;
+  const rest = link.slice(origin[0].length);
+  return rest.startsWith('/') ? rest : `/${rest}`;
+}
+
+function isOwnRoute(path: string): boolean {
+  return path === OWN_ROUTE_PREFIX || path.startsWith(`${OWN_ROUTE_PREFIX}/`);
+}
+
+/**
+ * Where a link the OS hands the app opens (expo-router's redirectSystemPath): a web link the phone
+ * has a screen for opens that screen, by the same mapping as a link inside the app. /go and every
+ * /go/* path, an automatos:// link, a page with no screen and anything malformed go on exactly as
+ * they came. Opens nothing by itself, reads no server state and never throws. The OS hands over
+ * only the hosts app.json names, and any app can already open automatos:// paths, so the host is
+ * not checked: the result is only ever an app route.
+ */
+export function appPathForSystemLink(link: string): string {
+  try {
+    const path = systemLinkPath(link.trim());
+    if (path === null || isOwnRoute(splitLink(path).path)) return link;
+    const target = appRouteForWebLink(path, NO_STUDIO);
+    return target !== null && 'app' in target ? target.app : link;
+  } catch {
+    return link; // expo-router crashes the app on a throw here: the link goes on as it came
+  }
 }
