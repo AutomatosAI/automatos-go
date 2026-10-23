@@ -5,10 +5,6 @@
 import type { WorkspaceRole } from '../api/workspace';
 
 export const SHELL_COPY = Object.freeze({
-  /** A build made without EXPO_PUBLIC_API_URL. */
-  notConfiguredTitle: 'No server is set up in this build',
-  notConfiguredMessage:
-    "This build of Automatos Go was made without its server address, so it can't connect.",
   connecting: 'Opening your workspace…',
   /** The server offers no sign-in this version has (its words are AUTH_COPY.unsupportedServer). */
   unsupportedMessage: 'Update Automatos Go to the latest version, then open it again.',
@@ -16,6 +12,8 @@ export const SHELL_COPY = Object.freeze({
   discoveryErrorTitle: "Couldn't reach Automatos",
   workspaceErrorTitle: "Couldn't open your workspace",
   signOut: 'Sign out',
+  /** The way out of a paired own server (US-006d): this phone stops using it, asked first (US-006h). */
+  forgetServer: 'Forget this server',
 });
 
 /** Placeholder screens the owning kits replace (K5): home → A2, the Command Centre → A3. */

@@ -249,6 +249,16 @@ describe('onAuthExpired', () => {
     expect(onAuthExpired).toHaveBeenCalledTimes(2);
   });
 
+  it('is handed the 401 as an ApiError, its detail code kept', async () => {
+    const onAuthExpired = vi.fn();
+    const transport = fakeTransport(() => jsonReply(401, { detail: { code: 'device_revoked' } }));
+    const failure = await failureOf(clientWith(transport, { onAuthExpired }).request(WORKSPACE));
+    expect(onAuthExpired).toHaveBeenCalledTimes(1);
+    const handed: unknown = onAuthExpired.mock.calls[0]?.[0];
+    expect(handed).toBe(failure);
+    expect(failure).toMatchObject({ kind: 'auth', status: 401, code: 'device_revoked' });
+  });
+
   it('is not called for a 403', async () => {
     const onAuthExpired = vi.fn();
     const transport = fakeTransport(() => reply(403));

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 
-import { SERVER } from '../../api/__tests__/fake-transport';
 import { WorkspaceSchema } from '../../api/workspace';
 import { accountRows, editionLabel, serverLabel } from '../account';
 import { ACCOUNT_COPY, ROLE_LABELS } from '../strings';
@@ -15,19 +14,12 @@ const WORKSPACE = WorkspaceSchema.parse({
 });
 
 function rows(appVersion: string | null | undefined) {
-  return accountRows({
-    server: SERVER,
-    discovery: { edition: 'saas' },
-    workspace: WORKSPACE,
-    appVersion,
-  });
+  return accountRows({ workspace: WORKSPACE, appVersion });
 }
 
 describe('accountRows', () => {
-  it('shows the server, edition, workspace, role and app version, in that order', () => {
+  it('shows the workspace, role and app version, in that order (the server and edition are the server section, US-006h)', () => {
     expect(rows('1.0.0')).toEqual([
-      { label: ACCOUNT_COPY.server, value: 'api.example.test' },
-      { label: ACCOUNT_COPY.edition, value: 'Automatos cloud' },
       { label: ACCOUNT_COPY.workspace, value: "Gerard's workspace" },
       { label: ACCOUNT_COPY.role, value: 'Admin' },
       { label: ACCOUNT_COPY.version, value: '1.0.0' },

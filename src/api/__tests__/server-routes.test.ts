@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { routes } from '../routes';
-import { currentServer, hostedServerFrom } from '../server';
+import { builtInServer, hostedServerFrom, ownServerFrom } from '../server';
 
 describe('hostedServerFrom', () => {
   it('is the hosted server from the build values, without trailing slashes', () => {
@@ -22,8 +22,24 @@ describe('hostedServerFrom', () => {
     expect(hostedServerFrom({ apiUrl: 'https://api.example.test', webUrl: '' })?.webUrl).toBe('');
   });
 
-  it('reads the environment for the current server (blank in tests)', () => {
-    expect(currentServer()).toBeNull();
+  it('reads the environment for the built-in server (blank in tests)', () => {
+    expect(builtInServer()).toBeNull();
+  });
+});
+
+describe('ownServerFrom (KC4, KC5)', () => {
+  it('is the origin that answered discovery and Studio on the web, source own', () => {
+    expect(
+      ownServerFrom({ origin: 'http://192.168.1.20:8000', webUrl: 'http://192.168.1.20:3000/' }),
+    ).toEqual({
+      apiUrl: 'http://192.168.1.20:8000',
+      webUrl: 'http://192.168.1.20:3000',
+      source: 'own',
+    });
+  });
+
+  it('is frozen', () => {
+    expect(Object.isFrozen(ownServerFrom({ origin: 'https://a.example', webUrl: '' }))).toBe(true);
   });
 });
 

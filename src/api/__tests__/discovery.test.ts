@@ -40,7 +40,8 @@ const LOCAL_DOCUMENT = {
 };
 
 /** A self-hosted install connected by QR (US-006); not a ServerSource yet in this wave. */
-const PAIRED_SERVER = { ...SERVER, source: 'paired' } as unknown as Server;
+/** An own server (KC4) at the same address: K3's defaults are the built-in server's only. */
+const OWN_SERVER: Server = { ...SERVER, source: 'own' };
 
 async function failureOf(promise: Promise<unknown>): Promise<ApiError> {
   const error = await promise.then(
@@ -138,8 +139,16 @@ describe('fetchDiscovery', () => {
 
   it('treats a 404 from any other server as not found, not as hosted', async () => {
     const transport = fakeTransport(() => reply(404));
-    const error = await failureOf(fetchDiscovery(PAIRED_SERVER, { transport }));
+    const error = await failureOf(fetchDiscovery(OWN_SERVER, { transport }));
     expect(error.kind).toBe('not_found');
+  });
+
+  it("reads an own server's document at its origin, with no bearer and no workspace header", async () => {
+    const own: Server = { apiUrl: 'http://192.168.1.20:8000', webUrl: '', source: 'own' };
+    const transport = fakeTransport(() => jsonReply(200, SAAS_DOCUMENT));
+    await fetchDiscovery(own, { transport });
+    expect(transport.calls[0]?.url).toBe('http://192.168.1.20:8000/.well-known/automatos.json');
+    expect(transport.calls[0]?.headers).toEqual({});
   });
 
   it('maps a 500 to a server error, never to the defaults', async () => {

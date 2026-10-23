@@ -40,8 +40,11 @@ export type ApiClientOptions = {
   /** The workspace id read back from GET /api/workspaces/current (null until known). */
   readonly getWorkspaceId: WorkspaceIdGetter;
   readonly transport: Transport;
-  /** Called on a 401, once per token: concurrent 401s on the same token call it once. */
-  readonly onAuthExpired?: () => void;
+  /**
+   * Called on a 401 with its ApiError (the code says why: a paired phone's device_revoked), once per
+   * token: concurrent 401s on the same token call it once.
+   */
+  readonly onAuthExpired?: (error?: ApiError) => void;
   readonly timeoutMs?: number;
   readonly connectTimeoutMs?: number;
 };
@@ -78,7 +81,7 @@ type Context = {
   readonly transport: Transport;
   readonly timeoutMs: number;
   readonly connectTimeoutMs: number;
-  readonly expired: (token: string | null) => void;
+  readonly expired: (token: string | null, error: ApiError) => void;
 };
 
 type Prepared = {
@@ -93,12 +96,14 @@ function isOk(status: number): boolean {
 }
 
 /** onAuthExpired once per token: a later token (signed in again) can expire again. */
-function expiryLatch(onAuthExpired?: () => void): (token: string | null) => void {
+function expiryLatch(
+  onAuthExpired?: (error?: ApiError) => void,
+): (token: string | null, error: ApiError) => void {
   let lastExpired: string | null | undefined;
-  return (token) => {
+  return (token, error) => {
     if (token === lastExpired) return;
     lastExpired = token;
-    onAuthExpired?.();
+    onAuthExpired?.(error);
   };
 }
 
@@ -132,8 +137,9 @@ async function checked<R extends TransportResponse>(
   token: string | null,
 ): Promise<R> {
   if (isOk(response.status)) return response;
-  if (response.status === UNAUTHORIZED) ctx.expired(token);
-  throw errorFromResponse(response.status, await errorBody(response));
+  const error = errorFromResponse(response.status, await errorBody(response));
+  if (response.status === UNAUTHORIZED) ctx.expired(token, error);
+  throw error;
 }
 
 function failure(error: unknown, deadline: Deadline, call: CallOptions, timeoutMs: number) {

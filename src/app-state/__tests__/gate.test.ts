@@ -5,18 +5,25 @@ import { SERVER } from '../../api/__tests__/fake-transport';
 import { DiscoverySchema, hostedDefaults, type Discovery } from '../../api/discovery';
 import { ApiError, errorFromResponse } from '../../api/errors';
 import { queryKeys } from '../../api/query-keys';
+import type { Server } from '../../api/server';
 import { WORKSPACE_COPY } from '../../api/strings';
 import { WORKSPACE_PAUSED_DETAIL, WorkspaceSchema, type Workspace } from '../../api/workspace';
 import { AUTH_COPY } from '../../auth/strings';
+import { RECORD } from '../../connect/__tests__/paired-record';
+import { ownServerOf } from '../../connect/current-server';
+import type { DeviceRefusal } from '../../connect/expiry';
+import { OWN_SERVER_COPY } from '../../connect/strings';
 import {
   PENDING,
   accessView,
   launchView,
   serverSupported,
   stepOf,
+  type AccessInput,
   type QuerySnapshot,
   type Step,
 } from '../gate';
+import { SHELL_COPY } from '../strings';
 
 const WORKSPACE: Workspace = WorkspaceSchema.parse({
   id: '7f1c2a54-0000-4000-8000-000000000001',
@@ -25,37 +32,55 @@ const WORKSPACE: Workspace = WorkspaceSchema.parse({
 });
 const HOSTED: Discovery = hostedDefaults(SERVER);
 /** A server that signs in only with modes this version does not have yet. */
-const DEVICE_ONLY: Discovery = DiscoverySchema.parse({
+const UNKNOWN_MODES: Discovery = DiscoverySchema.parse({
   schema: 'automatos-discovery/v1',
   edition: 'local',
   api_url: 'http://192.168.1.20:8000',
   web_url: 'http://192.168.1.20:3000',
-  auth: { modes: ['device', 'passkey-v2'], clerk: null },
+  auth: { modes: ['oidc', 'passkey-v2'], clerk: null },
 });
+/** A paired self-hosted install: 'device' is registered since US-006c. */
+const DEVICE_ONLY: Discovery = { ...UNKNOWN_MODES, auth: { modes: ['device'], clerk: null } };
+/** The same install taking paired phones (LOCAL_REMOTE_ACCESS=paired): W1 discovery.py. */
+const PAIRING_ON: Discovery = { ...DEVICE_ONLY, pairing: { enabled: true } };
+
+/** This phone's paired own server (KC4): its origin, Studio, name and device. */
+const OWN = ownServerOf(RECORD);
+const OWN_SERVER: Server = OWN.server;
 
 const ok = <T>(data: T): Step<T> => ({ status: 'success', data });
 const failed = (error: unknown): Step<never> => ({ status: 'error', error });
 const PAUSED = errorFromResponse(403, JSON.stringify({ detail: WORKSPACE_PAUSED_DETAIL }));
 const OFFLINE = new ApiError('network');
+const NOT_FOUND = new ApiError('not_found', { status: 404 });
 
-const SIGNED_IN = { server: SERVER, isLoaded: true, isSignedIn: true, ownerId: 'user_2abc' };
+const SIGNED_IN: AccessInput = {
+  own: null,
+  ended: null,
+  hosted: SERVER,
+  isLoaded: true,
+  isSignedIn: true,
+  ownerId: 'user_2abc',
+};
+const SIGNED_OUT: AccessInput = { ...SIGNED_IN, isSignedIn: false, ownerId: null };
+/** A paired phone's device session (src/auth/AuthRoot.tsx DeviceSession). */
+const PAIRED: AccessInput = { ...SIGNED_IN, own: OWN, ownerId: OWN.deviceId };
+const REVOKED: DeviceRefusal = { reason: 'revoked', serverName: 'Home NAS', origin: RECORD.origin };
 
-describe('accessView: the build, then the session', () => {
-  it('shows the honest state for a build without a server, before anything else', () => {
-    expect(accessView({ ...SIGNED_IN, server: null })).toEqual({ kind: 'not_configured' });
-    expect(accessView({ server: null, isLoaded: false, isSignedIn: false, ownerId: null })).toEqual(
-      { kind: 'not_configured' },
-    );
+describe('accessView: the server, then the session', () => {
+  it('opens Welcome in a build without a hosted server: Connect still works there', () => {
+    expect(accessView({ ...SIGNED_IN, hosted: null })).toEqual({ kind: 'welcome' });
+    expect(accessView({ ...SIGNED_OUT, hosted: null, isLoaded: false })).toEqual({
+      kind: 'welcome',
+    });
   });
 
   it('waits while Clerk reads its stored client', () => {
     expect(accessView({ ...SIGNED_IN, isLoaded: false })).toEqual({ kind: 'loading' });
   });
 
-  it('sends a signed-out person to sign-in', () => {
-    expect(accessView({ ...SIGNED_IN, isSignedIn: false, ownerId: null })).toEqual({
-      kind: 'signed_out',
-    });
+  it('sends a signed-out person to Welcome (hosted sign-in is its first choice)', () => {
+    expect(accessView(SIGNED_OUT)).toEqual({ kind: 'welcome' });
   });
 
   it('waits for the owner of a signed-in session before the cache is opened for them', () => {
@@ -72,15 +97,74 @@ describe('accessView: the build, then the session', () => {
   });
 });
 
-describe('launchView: discovery, a supported sign-in, then the workspace', () => {
-  it('waits for discovery first, whatever the workspace step says', () => {
-    expect(launchView({ discovery: PENDING, workspace: ok(WORKSPACE) })).toEqual({
-      kind: 'loading',
+describe('accessView: your own server (US-006d, KC4)', () => {
+  it('opens a paired own server with its device session, the device as the cache owner', () => {
+    const view = { kind: 'signed_in', server: OWN_SERVER, ownerId: RECORD.deviceId };
+    expect(accessView(PAIRED)).toEqual(view);
+    expect(accessView({ ...PAIRED, hosted: null })).toEqual(view);
+    expect(OWN_SERVER).toEqual({
+      apiUrl: RECORD.origin,
+      webUrl: RECORD.webUrl,
+      source: 'own',
     });
   });
 
+  it('sends a paired server with no token back to Connect, for that server', () => {
+    expect(accessView({ ...PAIRED, isSignedIn: false, ownerId: null })).toEqual({
+      kind: 'connect',
+      origin: RECORD.origin,
+      serverName: RECORD.serverName,
+      reason: null,
+    });
+  });
+
+  it('waits while the device session loads or names its owner', () => {
+    expect(accessView({ ...PAIRED, isLoaded: false })).toEqual({ kind: 'loading' });
+    expect(accessView({ ...PAIRED, ownerId: null })).toEqual({ kind: 'loading' });
+  });
+
+  it('after a refusal (US-006c), Connect carries the reason and the server that refused', () => {
+    for (const reason of ['revoked', 'pairing_required', 'ended'] as const) {
+      expect(accessView({ ...SIGNED_OUT, ended: { ...REVOKED, reason } })).toEqual({
+        kind: 'connect',
+        origin: RECORD.origin,
+        serverName: 'Home NAS',
+        reason,
+      });
+    }
+  });
+
+  it('goes to Connect after a refusal without waiting for Clerk, or for a hosted server', () => {
+    const view = {
+      kind: 'connect',
+      origin: RECORD.origin,
+      serverName: 'Home NAS',
+      reason: 'revoked',
+    };
+    expect(accessView({ ...SIGNED_OUT, isLoaded: false, ended: REVOKED })).toEqual(view);
+    expect(accessView({ ...SIGNED_OUT, hosted: null, ended: REVOKED })).toEqual(view);
+  });
+
+  it('lets a hosted sign-in made since the refusal through', () => {
+    expect(accessView({ ...SIGNED_IN, ended: REVOKED })).toEqual({
+      kind: 'signed_in',
+      server: SERVER,
+      ownerId: 'user_2abc',
+    });
+  });
+});
+
+function launch(discovery: Step<Discovery>, workspace: Step<Workspace>, server = SERVER) {
+  return launchView({ server, discovery, workspace });
+}
+
+describe('launchView: discovery, a supported sign-in, then the workspace', () => {
+  it('waits for discovery first, whatever the workspace step says', () => {
+    expect(launch(PENDING, ok(WORKSPACE))).toEqual({ kind: 'loading' });
+  });
+
   it('shows a discovery failure with the step to retry', () => {
-    expect(launchView({ discovery: failed(OFFLINE), workspace: PENDING })).toEqual({
+    expect(launch(failed(OFFLINE), PENDING)).toEqual({
       kind: 'error',
       step: 'discovery',
       error: OFFLINE,
@@ -88,20 +172,21 @@ describe('launchView: discovery, a supported sign-in, then the workspace', () =>
   });
 
   it('tells a server with no sign-in this app has that it needs a newer Automatos Go', () => {
-    expect(launchView({ discovery: ok(DEVICE_ONLY), workspace: PENDING })).toEqual({
+    expect(launch(ok(UNKNOWN_MODES), PENDING)).toEqual({
       kind: 'unsupported',
       message: AUTH_COPY.unsupportedServer,
+      detail: SHELL_COPY.unsupportedMessage,
     });
     expect(AUTH_COPY.unsupportedServer).toBe('This server needs a newer Automatos Go');
   });
 
   it('runs on the hosted defaults when the server has no discovery document yet (K3)', () => {
     expect(serverSupported(ok(HOSTED))).toBe(true);
-    expect(launchView({ discovery: ok(HOSTED), workspace: PENDING })).toEqual({ kind: 'loading' });
+    expect(launch(ok(HOSTED), PENDING)).toEqual({ kind: 'loading' });
   });
 
   it('opens the app once the workspace is read', () => {
-    expect(launchView({ discovery: ok(HOSTED), workspace: ok(WORKSPACE) })).toEqual({
+    expect(launch(ok(HOSTED), ok(WORKSPACE))).toEqual({
       kind: 'ready',
       discovery: HOSTED,
       workspace: WORKSPACE,
@@ -109,7 +194,7 @@ describe('launchView: discovery, a supported sign-in, then the workspace', () =>
   });
 
   it('shows a workspace failure with the step to retry', () => {
-    expect(launchView({ discovery: ok(HOSTED), workspace: failed(OFFLINE) })).toEqual({
+    expect(launch(ok(HOSTED), failed(OFFLINE))).toEqual({
       kind: 'error',
       step: 'workspace',
       error: OFFLINE,
@@ -117,7 +202,7 @@ describe('launchView: discovery, a supported sign-in, then the workspace', () =>
   });
 
   it('says a paused workspace is paused, in its own words (D8)', () => {
-    expect(launchView({ discovery: ok(HOSTED), workspace: failed(PAUSED) })).toEqual({
+    expect(launch(ok(HOSTED), failed(PAUSED))).toEqual({
       kind: 'paused',
       message: WORKSPACE_COPY.paused,
     });
@@ -126,7 +211,75 @@ describe('launchView: discovery, a supported sign-in, then the workspace', () =>
   it('bootstraps only for a server that takes a sign-in this app has', () => {
     expect(serverSupported(PENDING)).toBe(false);
     expect(serverSupported(failed(OFFLINE))).toBe(false);
-    expect(serverSupported(ok(DEVICE_ONLY))).toBe(false);
+    expect(serverSupported(ok(UNKNOWN_MODES))).toBe(false);
+    expect(serverSupported(ok(DEVICE_ONLY))).toBe(true);
+  });
+});
+
+describe('launchView: your own server (US-006d)', () => {
+  it('an own server that does not answer is Not running, naming the step to retry', () => {
+    expect(launch(failed(OFFLINE), PENDING, OWN_SERVER)).toEqual({
+      kind: 'not_running',
+      server: OWN_SERVER,
+      step: 'discovery',
+    });
+    expect(launch(ok(PAIRING_ON), failed(OFFLINE), OWN_SERVER)).toEqual({
+      kind: 'not_running',
+      server: OWN_SERVER,
+      step: 'workspace',
+    });
+  });
+
+  it('a gateway that cannot reach it is Not running too; a server that answers is not', () => {
+    for (const status of [502, 504]) {
+      const view = launch(failed(errorFromResponse(status, '')), PENDING, OWN_SERVER);
+      expect(view.kind).toBe('not_running');
+    }
+    for (const status of [500, 503]) {
+      const view = launch(failed(errorFromResponse(status, '')), PENDING, OWN_SERVER);
+      expect(view.kind).toBe('error');
+    }
+  });
+
+  it("an own server's 404 says it can't pair phones yet (K3 is the built-in server's only)", () => {
+    expect(launch(failed(NOT_FOUND), PENDING, OWN_SERVER)).toEqual({
+      kind: 'unsupported',
+      ...OWN_SERVER_COPY.no_discovery,
+    });
+    expect(OWN_SERVER_COPY.no_discovery.message).toBe(
+      "This server's version of Automatos can't pair phones yet. Update it.",
+    );
+    expect(launch(failed(NOT_FOUND), PENDING).kind).toBe('error');
+  });
+
+  it("an own server must still take paired phones: 'device' in auth.modes and pairing on", () => {
+    expect(launch(ok(HOSTED), PENDING, OWN_SERVER)).toEqual({
+      kind: 'unsupported',
+      message: AUTH_COPY.unsupportedServer,
+      detail: SHELL_COPY.unsupportedMessage,
+    });
+    expect(launch(ok(DEVICE_ONLY), PENDING, OWN_SERVER)).toEqual({
+      kind: 'unsupported',
+      ...OWN_SERVER_COPY.pairing_off,
+    });
+    expect(OWN_SERVER_COPY.pairing_off.detail).toContain('LOCAL_REMOTE_ACCESS=paired');
+    expect(launch(ok(PAIRING_ON), PENDING, OWN_SERVER)).toEqual({ kind: 'loading' });
+  });
+
+  it('opens a paired server once its workspace is read; a paused one says so (D8)', () => {
+    expect(launch(ok(PAIRING_ON), ok(WORKSPACE), OWN_SERVER)).toEqual({
+      kind: 'ready',
+      discovery: PAIRING_ON,
+      workspace: WORKSPACE,
+    });
+    expect(launch(ok(PAIRING_ON), failed(PAUSED), OWN_SERVER).kind).toBe('paused');
+  });
+
+  it('bootstraps an own server only once it takes paired phones', () => {
+    expect(serverSupported(ok(PAIRING_ON), 'own')).toBe(true);
+    expect(serverSupported(ok(DEVICE_ONLY), 'own')).toBe(false);
+    expect(serverSupported(ok(HOSTED), 'own')).toBe(false);
+    expect(serverSupported(failed(OFFLINE), 'own')).toBe(false);
   });
 });
 

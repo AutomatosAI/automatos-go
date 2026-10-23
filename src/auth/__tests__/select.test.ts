@@ -16,9 +16,12 @@ describe('selectProvider (D-AUTH-PROVIDER)', () => {
     expect(selectProvider(discoveryWith(['clerk']))).toEqual({ unsupported: false, mode: 'clerk' });
   });
 
-  it("'device' is known but unregistered until US-006", () => {
+  it("picks device for a server that offers 'device' (a paired self-hosted install, US-006)", () => {
     expect(AUTH_MODES).toContain('device');
-    expect(selectProvider(discoveryWith(['device']))).toEqual(UNSUPPORTED);
+    expect(selectProvider(discoveryWith(['device']))).toEqual({
+      unsupported: false,
+      mode: 'device',
+    });
   });
 
   it("'oidc' is known but unregistered until PRD-257", () => {
@@ -39,15 +42,21 @@ describe('selectProvider (D-AUTH-PROVIDER)', () => {
       unsupported: false,
       mode: 'clerk',
     });
+    expect(selectProvider(discoveryWith(['oidc', 'device', 'clerk']))).toEqual({
+      unsupported: false,
+      mode: 'device',
+    });
   });
 
   it('the copy is the strings module', () => {
     expect(AUTH_COPY.unsupportedServer).toBe(UNSUPPORTED.message);
   });
 
-  it("registers 'clerk' only in this wave, and nothing outside the known modes", () => {
-    expect(Object.keys(PROVIDER_FACTORIES)).toEqual(['clerk']);
+  it("registers 'clerk' and 'device' (not 'oidc'), and nothing outside the known modes", () => {
+    expect(Object.keys(PROVIDER_FACTORIES)).toEqual(['clerk', 'device']);
     expect(isRegisteredMode('clerk')).toBe(true);
+    expect(isRegisteredMode('device')).toBe(true);
+    expect(isRegisteredMode('oidc')).toBe(false);
     expect(isRegisteredMode('constructor')).toBe(false);
   });
 });
