@@ -149,19 +149,19 @@
       "title": "The composer: pill input, round send/stop, Return for a newline, the AI label fence",
       "description": "As a user, I want to write to Auto in a pill composer whose button sends or stops (D-COMPOSER), with the AI label always beside it (D-AI-LABEL).",
       "acceptanceCriteria": [
-        "src/chat/composer/composer-state.ts (pure): composerState({text, streaming, role, aiLabelVisible, uploading}) → {buttonMode 'send' | 'stop' | 'disabled', inputEditable, placeholder, notice}; send disabled when the text is blank and nothing is attached; stop while streaming; viewer → disabled with the D17 copy; label not visible → disabled with the vendored AI_LABEL_PAUSED_TEXT",
-        "src/chat/composer/Composer.tsx: a multiline pill TextField where Return inserts a newline (no submit on Return), the 42 px round button (arrow-up / square icons from lucide), a [+] button slot for US-009b, and the foundation's AiLabel rendered beside it with useAiLabelVisible feeding composerState",
-        "No suggestion chips, no Plan toggle, no voice button (A6) in the composer",
-        "src/chat/__tests__/composer-state.test.ts covers every branch above",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes",
-        "npm run check:bundle passes"
+        "src/chat/composer/composer-state.ts (pure): composerState({text, streaming, role, aiLabelVisible, uploading}) → {buttonMode 'send' | 'stop' | 'disabled', inputEditable, placeholder, notice}; send disabled when the text is blank and nothing is attached; stop while streaming; viewer → disabled with the D17 copy; label not visible → disabled with the vendored AI_LABEL_PAUSED_TEXT → DONE — src/chat/composer/composer-state.ts composerState → {buttonMode, inputEditable, placeholder, notice}: blank + no attachments → disabled; streaming → stop (pill editable); uploading/loading → send held; viewer → off with ROLE_COPY.viewerReadOnly; label hidden → off (Stop too) with vendored AI_LABEL_PAUSED_TEXT; held without a notice until first measured (aiLabelChecked); role unknown → off, no notice",
+        "src/chat/composer/Composer.tsx: a multiline pill TextField where Return inserts a newline (no submit on Return), the 42 px round button (arrow-up / square icons from lucide), a [+] button slot for US-009b, and the foundation's AiLabel rendered beside it with useAiLabelVisible feeding composerState → DONE — src/chat/composer/Composer.tsx: PillInput (multiline, submitBehavior=\"newline\", no onSubmitEditing) + IconButton size lg round primary with lucide-react-native/icons/arrow-up | square + `attach` slot before the pill + <AiLabel track={fence.track} /> above the row; useLabelFence (over useAiLabelVisible) feeds composerState",
+        "No suggestion chips, no Plan toggle, no voice button (A6) in the composer → DONE — composer-state.test.ts source scan: no Chip/SegmentedControl/suggestion, no planMode/missionMode/Plan, no Mic/voice in Composer.tsx or PillInput.tsx code",
+        "src/chat/__tests__/composer-state.test.ts covers every branch above → DONE — src/chat/__tests__/composer-state.test.ts: 23 tests, every branch (send, attachments-only, roles, uploading, loading, stop, viewer, paused, held, unknown role, button, trim, pill metrics, source)",
+        "npm run typecheck passes → DONE — npm run typecheck: tsc --noEmit clean (df7692a)",
+        "npm run lint passes (0 errors) → DONE — npm run lint: eslint . 0 errors, 0 warnings (df7692a)",
+        "npx vitest run passes → DONE — npx vitest run: 101 files, 1475 tests passed (df7692a)",
+        "npm run check:bundle passes → DONE — npm run check:bundle: Exported: .expo/bundle-check (df7692a)"
       ],
       "files": ["src/chat/composer/", "src/chat/__tests__/"],
       "priority": 6,
-      "passes": false,
-      "notes": "The handoff's 2j composer minus the chips. The AI label's colours are fixed by the foundation; never restyle it."
+      "passes": true,
+      "notes": "The handoff's 2j composer minus the chips. The AI label's colours are fixed by the foundation; never restyle it. | Built df7692a. Order is the web's: viewer (D17 copy) before the hidden label, which turns every control off, Stop included (ai-label-fence.tsx); a role not yet read is off with no notice; while streaming the pill takes the next message. Composer owns its text, hands up the trimmed words (blank when only files go) and clears; screens pass streaming = canStop and loading = status 'loading' (US-008f). FOUNDATION GAP: src/ui/TextField has no pill shape (6 pt radius, multiline from 80, no style prop) — src/chat/composer/PillInput.tsx paints the pill with the foundation's fieldPaint. FOUNDATION GAP: useAiLabelVisible (src/styles/ai-label.tsx) reads false before its first measurement as well as when hidden, so the paused alert would flash on every mount — src/chat/composer/use-label-fence.ts adds `checked` (seen, or 400 ms after first layout, the web's widget settle)."
     },
     {
       "id": "US-008f",
