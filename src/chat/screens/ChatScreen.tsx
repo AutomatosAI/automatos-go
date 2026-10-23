@@ -7,11 +7,12 @@
 // about a ticket (D-ASK-AUTO) carries the ticket in every message it sends, Try again included,
 // shows the discussion bar under `above`, and holds the send until the ticket is in. Files go
 // with the words they were attached to (useAttachments, US-009b); Try again resends words only.
+// Report this on Auto's messages opens the foundation's one ReportSheet (useMessageReport, US-009c).
 
 import { useCallback, useMemo, type ReactNode } from 'react';
 
 import { useAppSession } from '../../app-state/session';
-import { ErrorState, LoadingState } from '../../ui';
+import { ErrorState, LoadingState, ReportSheet } from '../../ui';
 import { useAttachments } from '../attachments/use-attachments';
 import { MessageList } from '../components/MessageList';
 import { useFollowLink } from '../components/follow-link';
@@ -22,6 +23,7 @@ import { DiscussionBar } from '../discussion/DiscussionBar';
 import { discussionInput } from '../discussion/discussion';
 import { useDiscussion } from '../discussion/use-discussion';
 import { HomeHeader } from '../home/HomeHeader';
+import { useMessageReport } from '../report/use-message-report';
 import type { ChatFile } from '../request';
 import { retryWords, threadRows } from '../view-model';
 import { ChatFrame } from './ChatFrame';
@@ -40,6 +42,7 @@ export type ChatScreenProps = {
 function Thread({ thread }: { readonly thread: ThreadView }) {
   const { state, send, settleCard, loadError, retry } = thread;
   const follow = useFollowLink();
+  const { report, sheet } = useMessageReport();
   const rows = useMemo(() => threadRows(state), [state]);
   const askAgain = useCallback(() => {
     const words = retryWords(state);
@@ -47,7 +50,18 @@ function Thread({ thread }: { readonly thread: ThreadView }) {
   }, [state, send]);
   if (loadError) return <ErrorState error={loadError} onRetry={retry} />;
   if (state.status === 'loading') return <LoadingState />;
-  return <MessageList rows={rows} onLink={follow} onRetry={askAgain} onCard={settleCard} />;
+  return (
+    <>
+      <MessageList
+        rows={rows}
+        onLink={follow}
+        onRetry={askAgain}
+        onCard={settleCard}
+        report={report}
+      />
+      <ReportSheet {...sheet} />
+    </>
+  );
 }
 
 export function ChatScreen({ chatId, above, onBack, ticketId = null }: ChatScreenProps) {

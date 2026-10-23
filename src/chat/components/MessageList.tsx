@@ -3,7 +3,7 @@
 // while a reply grows (README 'Interactions'); the scroll waits for the new content's size, and it
 // is not animated under Reduce Motion. What sits above the thread on home (the needs strip) stays
 // outside the list, as the handoff draws it. Cards whose reply was never saved are drawn after the
-// saved messages (their own row).
+// saved messages (their own row). Report this goes only to the Auto messages report.ts names.
 
 import { useCallback, useLayoutEffect, useRef, type RefObject } from 'react';
 import { FlatList, type ListRenderItem } from 'react-native';
@@ -13,6 +13,7 @@ import type { WebLinkTarget } from '../../navigation/web-links';
 import { useTokens } from '../../styles/theme';
 import type { SettleCard } from '../cards/model';
 import { ThreadCards } from '../cards/ThreadCards';
+import { reportTarget, type ThreadReport } from '../report/report';
 import { shouldScrollToEnd, type ChatRow } from '../view-model';
 import { AutoMessage } from './AutoMessage';
 import { TurnNotice } from './TurnNotice';
@@ -26,18 +27,31 @@ export type MessageListProps = {
   readonly onRetry?: () => void;
   /** Records what the user did with one of Auto's cards (useThread's settleCard). */
   readonly onCard: SettleCard;
+  /** Report this on Auto's messages (useMessageReport). */
+  readonly report: ThreadReport;
 };
 
-type RowProps = Pick<MessageListProps, 'onLink' | 'onRetry' | 'onCard'> & {
+type RowProps = Pick<MessageListProps, 'onLink' | 'onRetry' | 'onCard' | 'report'> & {
   readonly row: ChatRow;
 };
 
-function ThreadRow({ row, onLink, onRetry, onCard }: RowProps) {
+function ThreadRow({ row, onLink, onRetry, onCard, report }: RowProps) {
   switch (row.type) {
     case 'user':
       return <UserBubble row={row} />;
-    case 'auto':
-      return <AutoMessage row={row} onLink={onLink} onRetry={onRetry} onCard={onCard} />;
+    case 'auto': {
+      const target = reportTarget(row, report.allowed);
+      const onReport = target ? () => report.open(target) : undefined;
+      return (
+        <AutoMessage
+          row={row}
+          onLink={onLink}
+          onRetry={onRetry}
+          onCard={onCard}
+          onReport={onReport}
+        />
+      );
+    }
     case 'working':
       return <WorkingIndicator />;
     case 'notice':
@@ -66,13 +80,15 @@ function useScrollOnAdd(list: RefObject<FlatList<ChatRow> | null>, count: number
 
 const keyOf = (row: ChatRow) => row.key;
 
-export function MessageList({ rows, onLink, onRetry, onCard }: MessageListProps) {
+export function MessageList({ rows, onLink, onRetry, onCard, report }: MessageListProps) {
   const { spacing } = useTokens();
   const list = useRef<FlatList<ChatRow>>(null);
   const onContentSizeChange = useScrollOnAdd(list, rows.length);
   const renderItem = useCallback<ListRenderItem<ChatRow>>(
-    ({ item }) => <ThreadRow row={item} onLink={onLink} onRetry={onRetry} onCard={onCard} />,
-    [onLink, onRetry, onCard],
+    ({ item }) => (
+      <ThreadRow row={item} onLink={onLink} onRetry={onRetry} onCard={onCard} report={report} />
+    ),
+    [onLink, onRetry, onCard, report],
   );
   return (
     <FlatList
