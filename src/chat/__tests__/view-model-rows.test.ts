@@ -22,7 +22,7 @@ import {
   toolLineRows,
   workingMotion,
 } from '../view-model';
-import { AT, CHAT_ID, deepFreeze, saved } from './thread-fixtures';
+import { AT, CHAT_ID, afterTurn, deepFreeze, saved } from './thread-fixtures';
 import {
   WEB,
   apply,
@@ -197,6 +197,7 @@ function failedAfterQuestion(text: string, files: readonly ChatFile[]): ThreadSt
     earlier,
     { type: 'send', draft: { text, files, sentAt: null } },
     { type: 'failed', error: new ApiError('network') },
+    ...afterTurn(earlier.messages),
   );
 }
 

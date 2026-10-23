@@ -20,7 +20,7 @@ import {
   type ThreadState,
 } from '../controller/thread';
 import { threadRows, turnNotice } from '../view-model';
-import { AT, CHAT_ID, deepFreeze, saved } from './thread-fixtures';
+import { AT, CHAT_ID, afterTurn, deepFreeze, saved } from './thread-fixtures';
 
 const DRAFT: ThreadDraft = { text: 'File a ticket for the login bug', files: [], sentAt: AT };
 const ASKED = saved('m-1', 'user', DRAFT.text);
@@ -80,7 +80,7 @@ describe('a read that broke mid-turn (P001C-RVW-5, D-STOP)', () => {
   });
 
   it('not in flight: the failure stays, with Try again', () => {
-    const failed = broken(new ApiError('stream'));
+    const failed = run(broken(new ApiError('stream')), ...afterTurn([ASKED]));
     const settled = run(failed, SETTLED);
     expect(settled).toBe(failed);
     expect(canSend(settled)).toBe(true);

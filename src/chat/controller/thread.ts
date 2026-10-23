@@ -7,12 +7,15 @@
 // never a duplicate); a reply saved before the read ends (the server's memory step runs with the
 // stream still open) is held back while it streams and retires the turn when the read settles
 // (finished, failed, stopped); a turn the server failed (an e: line) stays until the next send, so
-// its failure keeps the kit's own words (D-NO-BILLING). The turn runs detached on the server: Stop
-// is a cancel as well as an abort (turn-runner.ts) and leaves the turn's tool calls as they are, so
-// one it cut off reads 'Stopped: …', never done; a chat reopened mid-turn shows Auto working until
-// chat_changed or a resume brings the reply (web: frontend/lib/chat/hooks.ts, PRD-237 S7); and a
-// read that broke (iOS suspends the app mid-turn) is a failure only until GET /api/chat/{id} says
-// the turn runs on: then Auto is working, never 'interrupted, Try again' (a second turn).
+// its failure keeps the kit's own words (D-NO-BILLING). A turn that ended in a named chat without
+// retiring is settling until the after-turn refetch answers (settled): no send before it, since the
+// next turn would start ahead of this one's saved messages and its reply would retire that turn.
+// The turn runs detached on the server: Stop is a cancel as well as an abort (turn-runner.ts) and
+// leaves the turn's tool calls as they are, so one it cut off reads 'Stopped: …', never done; a
+// chat reopened mid-turn shows Auto working until chat_changed or a resume brings the reply (web:
+// frontend/lib/chat/hooks.ts, PRD-237 S7); and a read that broke (iOS suspends the app mid-turn)
+// is a failure only until GET /api/chat/{id} says the turn runs on: then Auto is working, never
+// 'interrupted, Try again' (a second turn).
 // Auto's cards (cards/model.ts) are filed on the thread as frames raise them, with the user's
 // outcome, so they outlive the live turn: the saved reply carries none.
 
@@ -76,6 +79,8 @@ export type ThreadState = {
   readonly failure: ThreadFailure | null;
   /** Auto's cards in this conversation, oldest first, each with what the user did with it. */
   readonly cards: readonly FiledCard[];
+  /** A turn ended unretired: no send until the after-turn refetch has answered (settled). */
+  readonly settling: boolean;
 };
 
 export type ThreadAction =
@@ -95,6 +100,8 @@ export type ThreadAction =
   /** A draft stopped before its chat-id frame: the frame came later and names the chat. */
   | { readonly type: 'named'; readonly chatId: string }
   | { readonly type: 'refetched'; readonly messages: readonly StoredMessage[] }
+  /** The after-turn refetch answered (or failed): `messages`, the saved list left in the cache. */
+  | { readonly type: 'settled'; readonly messages: readonly StoredMessage[] }
   | { readonly type: 'gaveUp' }
   /** GET /api/chat/{id}'s answer after a read broke mid-turn (awaitsDetachedCheck). */
   | { readonly type: 'detached'; readonly turnInFlight: boolean }
@@ -122,11 +129,12 @@ export function createThread(chatId: string | null): ThreadState {
     live: null,
     failure: null,
     cards: [],
+    settling: false,
   };
 }
 
 export function canSend(state: ThreadState): boolean {
-  return SENDABLE.has(state.status);
+  return SENDABLE.has(state.status) && !state.settling;
 }
 
 export function canStop(state: ThreadState): boolean {
@@ -232,6 +240,7 @@ function loaded(state: ThreadState, action: ActionOf<'loaded'>): ThreadState {
     live: waiting ? liveTurn(null, action.chatId, action.messages.length) : null,
     failure: null,
     cards: state.cards,
+    settling: false,
   };
 }
 
@@ -276,21 +285,30 @@ function retireIfReplied(state: ThreadState): ThreadState {
     live !== null &&
     state.messages.slice(live.since).some((message) => message.role === 'assistant');
   return replied && mayRetire(state)
-    ? { ...state, status: 'idle', live: null, failure: null }
+    ? { ...state, status: 'idle', live: null, failure: null, settling: false }
     : state;
+}
+
+/**
+ * A turn's end (finished, failed, stopped): retired by a reply already saved, or settling until the
+ * after-turn refetch answers. A draft never named has nothing saved to wait for.
+ */
+function ended(state: ThreadState): ThreadState {
+  const next = retireIfReplied(state);
+  return next.live !== null && next.chatId !== null ? { ...next, settling: true } : next;
 }
 
 function finished(state: ThreadState): ThreadState {
   if (state.status !== 'streaming') return state;
   const error = state.live?.turn.error;
-  if (!error) return retireIfReplied({ ...state, status: 'idle' });
+  if (!error) return ended({ ...state, status: 'idle' });
   const failure = { kind: 'turn', code: turnErrorCode(error.code) } as const;
-  return retireIfReplied({ ...state, status: 'failed', failure });
+  return ended({ ...state, status: 'failed', failure });
 }
 
 function failed(state: ThreadState, action: ActionOf<'failed'>): ThreadState {
   if (state.status !== 'streaming') return state;
-  return retireIfReplied({ ...state, status: 'failed', failure: failureOf(action.error) });
+  return ended({ ...state, status: 'failed', failure: failureOf(action.error) });
 }
 
 /**
@@ -300,7 +318,7 @@ function failed(state: ThreadState, action: ActionOf<'failed'>): ThreadState {
  */
 function stopped(state: ThreadState): ThreadState {
   if (!canStop(state)) return state;
-  return retireIfReplied({ ...state, status: 'stopped', failure: null });
+  return ended({ ...state, status: 'stopped', failure: null });
 }
 
 /** The cancel did not reach the server, so the turn is still running there: Auto is working. */
@@ -320,6 +338,13 @@ function refetched(state: ThreadState, action: ActionOf<'refetched'>): ThreadSta
   if (state.status === 'loading') return state;
   const messages = mergeById(state.messages, action.messages);
   return retireIfReplied(messages === state.messages ? state : { ...state, messages });
+}
+
+/** The after-turn refetch's answer: merged as a refetch is, and the thread may send again. */
+function settled(state: ThreadState, action: ActionOf<'settled'>): ThreadState {
+  if (!state.settling) return state;
+  const messages = mergeById(state.messages, action.messages);
+  return retireIfReplied({ ...state, messages, settling: false });
 }
 
 function gaveUp(state: ThreadState): ThreadState {
@@ -351,6 +376,7 @@ const HANDLERS: Handlers = {
   stopFailed,
   named,
   refetched,
+  settled,
   gaveUp,
   detached,
   card,

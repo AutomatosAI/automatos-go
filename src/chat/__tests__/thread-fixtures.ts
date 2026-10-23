@@ -1,7 +1,8 @@
 // Fixtures for the chat controller's tests: saved messages, stream lines, a client over a fake
 // transport that answers by route, a body whose chunks the test hands over one at a time, a
-// store that folds dispatched actions through threadReducer, and the saved list's answers as
-// use-thread.ts opens a chat on them. Nothing touches the network.
+// store that folds dispatched actions through threadReducer, the saved list's answers as
+// use-thread.ts opens a chat on them, and what it dispatches once a turn's read has ended.
+// Nothing touches the network.
 
 import {
   SERVER,
@@ -145,6 +146,14 @@ export function answerSaved(state: ThreadState, list: ReturnType<typeof savedLis
   const opening = state.status === 'loading' ? loadedAction(IN_FLIGHT, openingList(list)) : null;
   const refetched: ThreadAction = { type: 'refetched', messages: list.data };
   return [...(opening ? [opening] : []), refetched].reduce(threadReducer, state);
+}
+
+/** use-thread.ts once a turn's read has ended: the refetch's answer, then the turn settled. */
+export function afterTurn(messages: readonly StoredMessage[] = []): ThreadAction[] {
+  return [
+    { type: 'refetched', messages },
+    { type: 'settled', messages },
+  ];
 }
 
 /** Lets pending reads, writes and timers run (a few turns of the event loop). */

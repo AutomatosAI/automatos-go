@@ -13,7 +13,7 @@ import {
 import type { ThreadState } from '../controller/thread';
 import { CARD_COPY } from '../strings';
 import { LOOSE_CARDS_KEY, threadRows } from '../view-model';
-import { CHAT_ID, OTHER_CHAT_ID, saved } from './thread-fixtures';
+import { CHAT_ID, OTHER_CHAT_ID, afterTurn, saved } from './thread-fixtures';
 import { WEB, apply, autoRows, frames, opened, streaming } from './view-model-fixtures';
 
 const MISSION_ID = '5b0e4c1d-0000-4000-8000-0000000000a1';
@@ -118,11 +118,10 @@ describe('the cards a turn raises (D-CARDS)', () => {
 
   it('draws a card after the saved messages when its reply was never saved', () => {
     const stopped = apply(streaming(PLAN), { type: 'stopped', at: '2026-10-21T08:31:00Z' });
-    const next = apply(
-      stopped,
-      { type: 'refetched', messages: [ASKED] },
-      { type: 'send', draft: { text: 'Go on', files: [], sentAt: null } },
-    );
+    const next = apply(stopped, ...afterTurn([ASKED]), {
+      type: 'send',
+      draft: { text: 'Go on', files: [], sentAt: null },
+    });
     const rows = threadRows(next);
     const loose = rows.find((row) => row.type === 'cards');
     expect(loose).toMatchObject({ key: LOOSE_CARDS_KEY });

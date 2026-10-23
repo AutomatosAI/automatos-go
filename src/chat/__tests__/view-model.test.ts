@@ -10,7 +10,7 @@ import { TURN_ERROR_CODES } from '../../core/turn-reducer';
 import type { StoredMessage } from '../schemas';
 import { CHAT_COPY, RECEIPT_STATUS_WORDS, TURN_ERROR_COPY } from '../strings';
 import { receiptsView, threadRows } from '../view-model';
-import { AT, saved } from './thread-fixtures';
+import { AT, afterTurn, saved } from './thread-fixtures';
 import {
   allText,
   apply,
@@ -166,6 +166,7 @@ describe('notices', () => {
     const failed = apply(
       streaming({ kind: 'error', message: 'Your trial credit is spent: upgrade', code }),
       { type: 'finished' },
+      ...afterTurn(),
     );
     const [notice] = notices(threadRows(failed));
     expect(notice).toMatchObject({
@@ -183,7 +184,7 @@ describe('notices', () => {
 
   it('says a request that failed by its kind, or by a turn code it carries', () => {
     const failWith = (error: unknown) =>
-      notices(threadRows(apply(streaming(), { type: 'failed', error })))[0];
+      notices(threadRows(apply(streaming(), { type: 'failed', error }, ...afterTurn())))[0];
     expect(failWith(new ApiError('network'))).toMatchObject({
       text: API_ERROR_COPY.network,
       retry: true,

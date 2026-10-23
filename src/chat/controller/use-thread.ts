@@ -3,6 +3,7 @@
 // check and says whether a turn is in flight; GET /api/chat/{id}/messages (chat.messages) is the
 // saved list, refetched after every turn, on chat_changed for this chat (the foundation's one live
 // stream, useLiveEvent) and when the app comes back to the foreground (the stream replays nothing).
+// The after-turn refetch's answer settles the turn (thread.ts settled), a failed refetch included.
 // A read that broke mid-turn asks GET /api/chat/{id} again whether the turn runs on (D-STOP).
 // Both families stay in memory (D-CACHE, query-keys.ts); nothing here writes to the phone.
 
@@ -19,6 +20,7 @@ import { logger } from '../../lib/logger';
 import { fetchMessages } from '../api';
 import type { CardOutcome } from '../cards/model';
 import { buildChatRequest, type ChatRequestInput } from '../request';
+import type { StoredMessage } from '../schemas';
 import { checkChat, isChatChangedFor } from './live-chat';
 import {
   AWAITING_REPLY_GUARD_MS,
@@ -124,11 +126,11 @@ function onForegroundReturn(onReturn: () => void): () => void {
 }
 
 /** chat_changed for this chat, or a return to the foreground, refetches the saved list. */
-function useThreadRefresh(chatId: string | null, refresh: () => void): void {
+function useThreadRefresh(chatId: string | null, refresh: () => Promise<void>): void {
   useLiveEvent('chat_changed', (data) => {
-    if (isChatChangedFor(chatId, data)) refresh();
+    if (isChatChangedFor(chatId, data)) void refresh();
   });
-  useEffect(() => onForegroundReturn(refresh), [refresh]);
+  useEffect(() => onForegroundReturn(() => void refresh()), [refresh]);
 }
 
 /**
@@ -171,6 +173,27 @@ function useAwaitGuard(status: ThreadState['status'], dispatch: Dispatch<ThreadA
   }, [status, dispatch]);
 }
 
+/**
+ * After a turn: the saved list is refetched and, once that has answered (a failure included), its
+ * cached copy settles the turn. Not when another chat opened meanwhile: the answer is not its.
+ */
+function useSettle(
+  latest: { readonly current: ThreadState },
+  refresh: () => Promise<void>,
+  dispatch: Dispatch<ThreadAction>,
+): () => Promise<void> {
+  const queryClient = useQueryClient();
+  return useCallback(async () => {
+    const chatId = latest.current.chatId;
+    await refresh();
+    if (latest.current.chatId !== chatId) return;
+    const cached = chatId
+      ? queryClient.getQueryData<readonly StoredMessage[]>(queryKeys.chat.messages(chatId))
+      : undefined;
+    dispatch({ type: 'settled', messages: cached ?? [] });
+  }, [latest, refresh, dispatch, queryClient]);
+}
+
 /** One runner per screen; leaving the screen lets go of the read and never cancels the turn. */
 function useTurnRunner(client: ApiClient, dispatch: Dispatch<ThreadAction>): TurnRunner {
   const runner = useMemo(() => createTurnRunner({ client, dispatch }), [client, dispatch]);
@@ -202,9 +225,11 @@ export function useThread(cachedId: string | null): ThreadView {
   const { loadError, retry } = useThreadQueries(client, state, dispatch);
   const refresh = useCallback(() => {
     const chatId = latest.current.chatId;
-    if (chatId) void queryClient.invalidateQueries({ queryKey: queryKeys.chat.messages(chatId) });
+    if (!chatId) return Promise.resolve();
+    return queryClient.invalidateQueries({ queryKey: queryKeys.chat.messages(chatId) });
   }, [latest, queryClient]);
   useThreadRefresh(state.chatId, refresh);
+  const settle = useSettle(latest, refresh, dispatch);
   useDetachedCheck(client, awaitsDetachedCheck(state) ? state.chatId : null, dispatch);
   useAwaitGuard(state.status, dispatch);
   const open = useCallback(
@@ -225,14 +250,14 @@ export function useThread(cachedId: string | null): ThreadView {
         files: input.files ?? [],
         sentAt: new Date().toISOString(),
       };
-      void runner.send(body, draft).then(refresh);
+      void runner.send(body, draft).then(settle);
     },
-    [latest, runner, refresh],
+    [latest, runner, settle],
   );
   const stop = useCallback(() => {
     if (!canStop(latest.current)) return;
-    void runner.stop(latest.current.chatId).then(refresh);
-  }, [latest, runner, refresh]);
+    void runner.stop(latest.current.chatId).then(settle);
+  }, [latest, runner, settle]);
   const newChat = useCallback(() => open(null), [open]);
   const settleCard = useCallback(
     (key: string, outcome: CardOutcome) => dispatch({ type: 'card', key, outcome }),

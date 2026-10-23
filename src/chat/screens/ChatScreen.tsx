@@ -3,10 +3,11 @@
 // is checked before reuse (D-STALE-CHAT); null is a draft. Try again asks the user's last message
 // anew (retryInput); Auto's cards settle on the thread (settleCard); links open through the
 // foundation's mapping (useFollowLink). The composer is the role's and the AI label's (D-ROLES,
-// D-AI-LABEL): it sends while the thread can send and stops while it can stop. A conversation
-// about a ticket (D-ASK-AUTO) carries the ticket in every message it sends, Try again included,
-// shows the discussion bar under `above`, and holds the send until the ticket is in. Files go
-// with the words they were attached to (useAttachments, US-009b); Try again resends both.
+// D-AI-LABEL): it sends while the thread can send and stops while it can stop, and holds the
+// send while a turn that ended waits for its saved reply (settling), the typed words kept. A
+// conversation about a ticket (D-ASK-AUTO) carries the ticket in every message it sends, Try again
+// included, shows the discussion bar under `above`, and holds the send until the ticket is in.
+// Files go with the words they were attached to (useAttachments, US-009b); Try again resends both.
 // Report this on Auto's messages opens the foundation's one ReportSheet (useMessageReport, US-009c).
 
 import { useCallback, useMemo, type ReactNode } from 'react';
@@ -94,7 +95,7 @@ export function ChatScreen({ chatId, above, onBack, ticketId = null }: ChatScree
         <Composer
           role={workspace.role}
           streaming={working}
-          loading={state.status === 'loading' || discussion.holds}
+          loading={state.status === 'loading' || state.settling || discussion.holds}
           files={files}
           onSend={onSend}
           onStop={stop}

@@ -26,6 +26,7 @@ import {
   AT,
   CHAT_ID,
   OTHER_CHAT_ID,
+  afterTurn,
   answerSaved,
   callsTo,
   clientWith,
@@ -114,7 +115,7 @@ describe('the chat controller (US-008b)', () => {
     expect(canStop(thread.state())).toBe(true);
 
     await runner.stop(CHAT_ID);
-    await turn;
+    await turn.then(() => afterTurn([EARLIER]).forEach(thread.dispatch));
 
     expect(callsTo(transport, 'POST', `/api/chat/${CHAT_ID}/cancel`)).toHaveLength(1);
     expect(callsTo(transport, 'POST', '/api/chat')[0]?.signal.aborted).toBe(true);
@@ -220,8 +221,7 @@ describe('threadReducer', () => {
   it('opens a cached id as loading (checked first) and no id as a ready draft', () => {
     expect(createThread(CHAT_ID)).toMatchObject({ chatId: CHAT_ID, status: 'loading' });
     expect(createThread(null)).toMatchObject({ chatId: null, status: 'idle' });
-    expect(canSend(createThread(CHAT_ID))).toBe(false);
-    expect(canSend(createThread(null))).toBe(true);
+    expect([canSend(createThread(CHAT_ID)), canSend(createThread(null))]).toEqual([false, true]);
   });
 
   it('loads idle, or working when a turn is in flight and the reply is not saved yet', () => {
@@ -290,7 +290,7 @@ describe('threadReducer', () => {
       status: 'failed',
       failure: { kind: 'turn', code: 'turn_failed' },
     });
-    const refetched = run(failed, { type: 'refetched', messages: [ASKED, REPLIED] });
+    const refetched = run(failed, ...afterTurn([ASKED, REPLIED]));
     expect(refetched.live).not.toBeNull();
     expect(shownMessages(refetched)).toEqual([]);
     const next = run(refetched, { type: 'send', draft: DRAFT });
