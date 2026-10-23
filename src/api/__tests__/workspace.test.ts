@@ -81,6 +81,15 @@ describe('WorkspaceSchema', () => {
     expect(workspace.ai_providers).toEqual([{ id: 'anthropic', name: 'Anthropic' }]);
   });
 
+  it('reads ai_providers null (the server could not read its list) or malformed as absent', () => {
+    // services/workspace_view.py ai_providers_or_none answers null; the bootstrap must still read
+    expect(WorkspaceSchema.parse({ ...CURRENT, ai_providers: null }).ai_providers).toBeUndefined();
+    expect(WorkspaceSchema.parse({ ...CURRENT, ai_providers: [{ id: 1 }] }).ai_providers).toBe(
+      undefined,
+    );
+    expect(WorkspaceSchema.parse(CURRENT).ai_providers).toBeUndefined();
+  });
+
   it('reads a local install: no plan, no slug, unrestricted exposure', () => {
     const workspace = WorkspaceSchema.parse({
       ...CURRENT,

@@ -44,8 +44,12 @@ export const WorkspaceSchema = z.object({
   plan: z.string().nullable().optional(),
   role: RoleSchema,
   exposure: ExposureSchema.default(NO_EXPOSURE),
-  /** The providers Auto uses, for the consent sheet (PRD-266 US-017; absent until it lands). */
-  ai_providers: z.array(AiProviderSchema).optional(),
+  /**
+   * The providers Auto uses, for the consent sheet (PRD-266 US-017; absent before it). The server
+   * answers null when it cannot read its list (services/workspace_view.py ai_providers_or_none):
+   * that, or a malformed list, reads as absent, so it never fails the bootstrap.
+   */
+  ai_providers: z.array(AiProviderSchema).optional().catch(undefined),
 });
 
 export type Workspace = Readonly<z.output<typeof WorkspaceSchema>>;

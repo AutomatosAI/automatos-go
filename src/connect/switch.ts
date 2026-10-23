@@ -24,7 +24,7 @@ import type { DeviceStore, PairedRecord } from './device-store';
 export type ConsentPort = {
   /** Drops what the consent step holds in memory. */
   readonly resetMemory: () => void;
-  /** Removes the consent records kept for a server, each by its own key. */
+  /** Removes the consent records kept for a server (its one key, src/consent/store.ts). */
   readonly forgetServer: (origin: string) => Promise<void>;
 };
 

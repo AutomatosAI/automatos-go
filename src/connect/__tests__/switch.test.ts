@@ -15,6 +15,7 @@ import {
 import { queryKeys } from '../../api/query-keys';
 import { hostedServerFrom } from '../../api/server';
 import type { AuthProvider } from '../../auth/providers/types';
+import { consentKeyFor, createConsentStore, type ConsentRecord } from '../../consent/store';
 import { createWorkspaceIdRegistry } from '../../session/workspace-ids';
 import { memoryStorage } from '../../storage/encrypted-storage';
 import { createCurrentServerStore, ownServerOf } from '../current-server';
@@ -24,8 +25,15 @@ import { OTHER_RECORD, RECORD } from './paired-record';
 
 const HOSTED = hostedServerFrom({ apiUrl: 'https://api.example.test', webUrl: '' });
 const HOSTED_WORKSPACE = '11111111-1111-4111-8111-111111111111';
-/** Another MMKV item of the app's store, kept beside the cache (a consent record, US-007b). */
-const NEIGHBOUR_KEY = 'automatos.consent.v1|http://192.168.1.20:8000|ws';
+/** Another MMKV item of the app's store, kept beside the cache (a server's consent records, US-007b). */
+const NEIGHBOUR_KEY = consentKeyFor('https://neighbour.example.test');
+
+const AGREED: ConsentRecord = Object.freeze({
+  fingerprint: '1|unlisted',
+  providerNames: [],
+  agreedAt: '2026-10-23T09:00:00.000Z',
+  copyVersion: 1,
+});
 
 type Kind = AuthProvider['kind'];
 
@@ -159,7 +167,7 @@ describe('connectTo(record): from the hosted server to an own one', () => {
 });
 
 describe('connectTo(record): from one own server to another', () => {
-  it("also removes the left server's consent records, by their own key", async () => {
+  it("also removes the left server's consent records, under that server's one key", async () => {
     const { log, keychain, deps } = await setup({ kind: 'device', paired: RECORD });
     await createServerSwitch(deps).connectTo(OTHER_RECORD);
     expect(log).toEqual([
@@ -197,6 +205,20 @@ describe('forgetServer()', () => {
     await createServerSwitch(deps).forgetServer();
     expect(storage.getItem(QUERY_CACHE_STORAGE_KEY)).toBeNull();
     expect(storage.getItem(NEIGHBOUR_KEY)).toBe('agreed');
+  });
+
+  it("over the consent store: the forgotten server's records go, the hosted server's stay", async () => {
+    const { storage, deps } = await setup({ kind: 'device', paired: RECORD });
+    const consent = createConsentStore({ storage: () => storage });
+    const own = { origin: RECORD.origin, workspaceId: RECORD.workspaceId };
+    const hosted = { origin: HOSTED?.apiUrl ?? '', workspaceId: HOSTED_WORKSPACE };
+    consent.write(own, AGREED);
+    consent.write(hosted, AGREED);
+    const port = { resetMemory: () => undefined, forgetServer: consent.forgetServer };
+    await createServerSwitch({ ...deps, consent: port }).forgetServer();
+    expect(consent.read(own)).toBeNull();
+    expect(storage.getItem(consentKeyFor(RECORD.origin))).toBeNull();
+    expect(consent.read(hosted)).toEqual(AGREED);
   });
 
   it('keeps the server when the cache cannot be cleared, and says so', async () => {
