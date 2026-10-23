@@ -209,3 +209,44 @@ export const COMPOSER_COPY = Object.freeze({
   stop: 'Stop',
   stopHint: "Stops Auto's reply",
 });
+
+/**
+ * The home's header (the handoff's §1 Header): the wordmark beside the brand mark, the mono line
+ * under it ('NORTHWIND · 5 AGENTS', 'NORTHWIND · AUTO IS WORKING' while a turn runs) and the
+ * avatar chip that opens Settings.
+ */
+export const HOME_COPY = Object.freeze({
+  wordmark: 'automatos',
+  brand: 'Automatos',
+  agents: Object.freeze({ one: 'agent', other: 'agents' }),
+  working: 'Auto is working',
+  settings: 'Settings',
+  back: 'Back',
+});
+
+/**
+ * The needs strip (the handoff's 2a): 'NEEDS YOU · N' and 'Command Centre →' over one card per
+ * row the server listed; each card's status has a word (§4.6) and a mono meta line ('QUESTION ·
+ * #0419'). The fallback titles are the web's (needs-you-widget.tsx) where it has one.
+ */
+export const NEEDS_COPY = Object.freeze({
+  heading: (total: number) => `Needs you · ${total}`,
+  commandCentre: 'Command Centre →',
+  commandCentreLabel: 'Open the Command Centre',
+  opensStudio: 'Opens Studio in your browser',
+  /** Each kind's mono meta word and the word beside its status dot. */
+  kinds: Object.freeze({
+    question: Object.freeze({ meta: 'Question', word: 'Needs an answer' }),
+    approval: Object.freeze({ meta: 'Approval', word: 'Needs approval' }),
+    plan: Object.freeze({ meta: 'Mission plan', word: 'Needs approval' }),
+    social: Object.freeze({ meta: 'Social post', word: 'To approve' }),
+    review: Object.freeze({ meta: 'Review', word: 'To review' }),
+    stuck: Object.freeze({ meta: 'Stuck', word: 'Stuck' }),
+    failed: Object.freeze({ meta: 'Failed', word: 'Failed' }),
+  }),
+  untitledQuestion: 'An agent has a question',
+  untitledApproval: 'An approval',
+  untitledPlan: 'A mission plan',
+  untitledPost: 'A social post',
+  untitledTicket: 'A ticket',
+});

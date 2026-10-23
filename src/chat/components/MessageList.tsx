@@ -1,10 +1,11 @@
 // The thread (the handoff's chat column): a FlatList of the view-model's rows, oldest first. It
 // scrolls to the end only when a row is added (a message, 'Auto is working…', a notice), never
 // while a reply grows (README 'Interactions'); the scroll waits for the new content's size, and it
-// is not animated under Reduce Motion. The header slot holds what sits above the thread on home.
-// Cards whose reply was never saved are drawn after the saved messages (their own row).
+// is not animated under Reduce Motion. What sits above the thread on home (the needs strip) stays
+// outside the list, as the handoff draws it. Cards whose reply was never saved are drawn after the
+// saved messages (their own row).
 
-import { useCallback, useLayoutEffect, useRef, type ReactElement, type RefObject } from 'react';
+import { useCallback, useLayoutEffect, useRef, type RefObject } from 'react';
 import { FlatList, type ListRenderItem } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
@@ -25,8 +26,6 @@ export type MessageListProps = {
   readonly onRetry?: () => void;
   /** Records what the user did with one of Auto's cards (useThread's settleCard). */
   readonly onCard: SettleCard;
-  /** Drawn above the first message (home's needs strip). */
-  readonly header?: ReactElement | null;
 };
 
 type RowProps = Pick<MessageListProps, 'onLink' | 'onRetry' | 'onCard'> & {
@@ -67,7 +66,7 @@ function useScrollOnAdd(list: RefObject<FlatList<ChatRow> | null>, count: number
 
 const keyOf = (row: ChatRow) => row.key;
 
-export function MessageList({ rows, onLink, onRetry, onCard, header }: MessageListProps) {
+export function MessageList({ rows, onLink, onRetry, onCard }: MessageListProps) {
   const { spacing } = useTokens();
   const list = useRef<FlatList<ChatRow>>(null);
   const onContentSizeChange = useScrollOnAdd(list, rows.length);
@@ -81,7 +80,6 @@ export function MessageList({ rows, onLink, onRetry, onCard, header }: MessageLi
       data={rows}
       keyExtractor={keyOf}
       renderItem={renderItem}
-      ListHeaderComponent={header}
       onContentSizeChange={onContentSizeChange}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
