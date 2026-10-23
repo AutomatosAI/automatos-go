@@ -2,7 +2,7 @@
 // (HEIC/HEIF to JPEG, every other image in its own or the nearest format: attachments.ts), so no
 // EXIF or GPS metadata leaves the phone; a non-image file goes as chosen. Then POST
 // /api/attachments, multipart, through the foundation's client (D-ONE-CLIENT): the client passes
-// FormData through untouched, and expo/fetch (its transport) encodes a part that has bytes()
+// FormData through untouched, and Expo's fetch (its transport) encodes a part that has bytes()
 // under the part's own name and type (expo/src/winter/fetch/convertFormData.ts; it takes no
 // React Native {uri} part). The bytes are read with expo-file-system, after a size check, so a
 // file over the server's limit is never loaded. The re-encoded copy is deleted once it is sent.
@@ -78,7 +78,7 @@ export async function postAttachment(
   if (file.size > MAX_UPLOAD_BYTES) throw new AttachmentRefusedError('too_big');
   const part = uploadPart(prepared.name, prepared.mime || UNKNOWN_TYPE, () => file.bytes());
   const body = new FormData();
-  // the DOM typing knows only Blob; expo/fetch encodes any part with bytes() (convertFormData.ts)
+  // the DOM typing knows only Blob; Expo's fetch encodes any part with bytes() (convertFormData.ts)
   body.append(UPLOAD_FIELD, part as unknown as Blob);
   const upload = await client.request(CHAT_ROUTES.attachments, {
     body,
