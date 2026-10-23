@@ -5,11 +5,16 @@
 // AI-provider consent step (shellStep, US-007c: the layout's `consent` in place of the screens
 // until this person agrees). Ready, the consent sheet and the screens get the session (session.tsx)
 // and the one live connection (LiveEvents, FND-5); any other state is a whole screen
-// (GateStates.tsx) with a way out. Signed out, or sent back to Connect, the phone forgets the
+// (GateStates.tsx) with a way out. Every state shown to a signed-in phone sits under the layout's
+// `bar` (the unencrypted home network line, D-HTTPS): the bar takes the top safe area and what is
+// under it gets its own safe-area provider, so a screen's top inset starts below the bar and the
+// bar never covers its header. Signed out, or sent back to Connect, the phone forgets the
 // session's cached data and workspace id (session-cache.ts).
 
 import { Redirect } from 'expo-router';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, type ComponentType, type ReactNode } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { LiveEvents } from '../api/live';
 import type { Server } from '../api/server';
@@ -36,27 +41,35 @@ type LaunchProps = {
   readonly session: AuthSession;
   /** The consent step's screen (the AI-provider consent sheet), shown in place of `children`. */
   readonly consent: ReactNode;
+  /** Drawn above every state Launch shows, for this server. */
+  readonly bar: ComponentType<{ readonly server: Server }>;
   readonly children: ReactNode;
 };
 
-function Launch({ server, serverName, session, consent, children }: LaunchProps) {
+function Launch({ server, serverName, session, consent, bar: Bar, children }: LaunchProps) {
   const { view, client, retry } = useLaunch(server, session.clientAuth);
   const record = useConsentRecord(server.apiUrl, view.kind === 'ready' ? view.workspace.id : null);
   useSignOutOnExpiry(session.provider);
   const step = shellStep(view, record);
-  if (step.kind === 'launch') {
-    return <LaunchState view={step.view} serverName={serverName} onRetry={retry} />;
-  }
   return (
-    <AppSessionProvider
-      server={server}
-      discovery={step.ready.discovery}
-      workspace={step.ready.workspace}
-      client={client}
-    >
-      <LiveEvents />
-      {step.kind === 'consent' ? consent : children}
-    </AppSessionProvider>
+    <View style={styles.fill}>
+      <Bar server={server} />
+      <SafeAreaProvider style={styles.fill}>
+        {step.kind === 'launch' ? (
+          <LaunchState view={step.view} serverName={serverName} onRetry={retry} />
+        ) : (
+          <AppSessionProvider
+            server={server}
+            discovery={step.ready.discovery}
+            workspace={step.ready.workspace}
+            client={client}
+          >
+            <LiveEvents />
+            {step.kind === 'consent' ? consent : children}
+          </AppSessionProvider>
+        )}
+      </SafeAreaProvider>
+    </View>
   );
 }
 
@@ -74,10 +87,12 @@ function useForgetWhenSignedOut(signedOut: boolean): void {
 export type AppGateProps = {
   /** What the consent step shows (app/(app)/_layout.tsx: the AI-provider consent sheet). */
   readonly consent: ReactNode;
+  /** What sits above every state shown to a signed-in phone (the layout: the http line). */
+  readonly bar: ComponentType<{ readonly server: Server }>;
   readonly children: ReactNode;
 };
 
-export function AppGate({ consent, children }: AppGateProps) {
+export function AppGate({ consent, bar, children }: AppGateProps) {
   const session = useAuthSession();
   const current = useCurrentServer();
   const own = ownServer(current);
@@ -101,9 +116,14 @@ export function AppGate({ consent, children }: AppGateProps) {
         serverName={own ? ownServerInWords(own) : serverLabel(access.server)}
         session={session}
         consent={consent}
+        bar={bar}
       >
         {children}
       </Launch>
     </PersistedCache>
   );
 }
+
+const styles = StyleSheet.create({
+  fill: { flex: 1 },
+});

@@ -39,6 +39,11 @@ export function insecureNetworkLine(origin: string): string | null {
   return INSECURE_BANNER_COPY.line(serverLabel({ apiUrl: text }));
 }
 
+/** The signed-in shell's line: an own server's while it is http; never the built-in hosted one's. */
+export function shellNetworkLine(server: Pick<Server, 'source' | 'apiUrl'>): string | null {
+  return server.source === 'own' ? insecureNetworkLine(server.apiUrl) : null;
+}
+
 // ── Settings → Account ──────────────────────────────────────────────────────────────────────
 
 export type ServerSectionInput = {

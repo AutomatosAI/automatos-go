@@ -1,8 +1,10 @@
 // The unencrypted home network in one line (D-HTTPS, US-006h): 'Unencrypted home network · {host}'
 // while the server is http://, nothing over https. In words beside its icon, not only a colour;
-// tokens only. 'top' is the signed-in shell's bar (app/(app)/_layout.tsx): it takes the top safe
-// area itself and sits above the screens, which start under it, so it never covers a screen's own
-// header. 'inline' is the same line inside a card (Account's server section, the confirm card).
+// tokens only. 'top' is the signed-in shell's bar: app/(app)/_layout.tsx hands it to the gate
+// (src/app-state/AppGate.tsx), which draws it once above every state it shows a signed-in phone
+// (its own states, the consent sheet, the screens); it takes the top safe area itself and what is
+// under it starts below it, so it never covers a screen's own header. 'inline' is the same line
+// inside a card (Account's server section, the confirm card).
 
 import ShieldAlert from 'lucide-react-native/icons/shield-alert';
 import { StyleSheet, View } from 'react-native';

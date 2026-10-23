@@ -19,6 +19,7 @@ import {
   ownServerInWords,
   serverInWords,
   serverSectionView,
+  shellNetworkLine,
 } from '../edges';
 import type { DeviceRefusal, DeviceRefusalReason } from '../expiry';
 import { startConnect } from '../flow';
@@ -60,6 +61,13 @@ describe('the unencrypted home network line (D-HTTPS)', () => {
   it("is the paired record's state: on for the http record, off for the https one", () => {
     expect(insecureNetworkLine(OWN.server.apiUrl)).not.toBeNull();
     expect(insecureNetworkLine(ownServerOf(OTHER_RECORD).server.apiUrl)).toBeNull();
+  });
+
+  it("in the signed-in shell: an own server's line over http, none over https or when hosted", () => {
+    expect(shellNetworkLine(OWN.server)).toBe(insecureNetworkLine(OWN.server.apiUrl));
+    expect(shellNetworkLine(ownServerOf(OTHER_RECORD).server)).toBeNull();
+    expect(shellNetworkLine(SERVER)).toBeNull();
+    expect(shellNetworkLine({ ...SERVER, apiUrl: 'http://192.168.1.5:8000' })).toBeNull();
   });
 });
 
@@ -228,13 +236,19 @@ describe('Connection ended (reason → copy)', () => {
 });
 
 describe('the wiring', () => {
-  it('renders the banner above every signed-in screen, which get their own safe area under it', () => {
+  it('renders the banner above every signed-in state, which get their own safe area under it', () => {
+    // the layout hands the bar to the gate; the gate draws it once, above its own states, the
+    // consent sheet and the screens (rendered: src/app-state/__tests__/shell-bar.test.ts)
     const layout = read('app/(app)/_layout.tsx');
     expect(layout).toContain('<InsecureNetworkBanner origin={server.apiUrl} placement="top" />');
-    expect(layout.indexOf('<InsecureNetworkBanner')).toBeLessThan(
-      layout.indexOf('<SafeAreaProvider'),
-    );
-    expect(layout.indexOf('<SafeAreaProvider')).toBeLessThan(layout.indexOf('<Stack'));
+    expect(layout).toContain('if (shellNetworkLine(server) === null) return null;');
+    expect(layout).toContain('<AppGate consent={<ConsentSheet />} bar={NetworkBar}>');
+    expect(layout).not.toContain('<SafeAreaProvider');
+    const gate = read('src/app-state/AppGate.tsx');
+    expect(gate.indexOf('<Bar server={server} />')).toBeGreaterThan(-1);
+    expect(gate.indexOf('<Bar server={server} />')).toBeLessThan(gate.indexOf('<SafeAreaProvider'));
+    expect(gate.indexOf('<SafeAreaProvider')).toBeLessThan(gate.indexOf('<LaunchState'));
+    expect(gate.indexOf('<SafeAreaProvider')).toBeLessThan(gate.indexOf('<AppSessionProvider'));
   });
 
   it('puts the server section on Account, with the banner line and the way out', () => {
