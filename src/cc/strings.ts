@@ -256,3 +256,81 @@ export const QUESTIONS_COPY = Object.freeze({
   /** D-ROLES: a viewer reads the questions and is told who answers them. */
   readOnly: 'Owners, admins and editors answer questions.',
 });
+
+/** A social post awaiting approval (D-SOCIAL, D45): the words the web's approval view uses. */
+export const SOCIAL_COPY = Object.freeze({
+  loading: 'Loading the post…',
+  untitled: 'Untitled post',
+  /** modules/socials SOCIAL_POST_STATUSES, as the web's socials-status.ts names them. */
+  status: Object.freeze({
+    draft: 'Draft',
+    rendering: 'Rendering',
+    needs_approval: 'Needs approval',
+    changes_requested: 'Changes requested',
+    approved: 'Approved',
+    scheduled: 'Scheduled',
+    publishing: 'Publishing',
+    published: 'Published',
+    partially_published: 'Partially published',
+    failed: 'Failed',
+    missed: 'Missed',
+    archived: 'Archived',
+  } as Readonly<Record<string, string>>),
+  format: Object.freeze({
+    video: 'Video',
+    image: 'Image',
+    carousel: 'Carousel',
+    fact_card: 'Fact card',
+    infographic: 'Infographic',
+    text: 'Text',
+  } as Readonly<Record<string, string>>),
+  /** The seeded channels (channel_adapters.py labels); another toolkit is named from its slug. */
+  channels: Object.freeze({
+    linkedin: 'LinkedIn',
+    twitter: 'X',
+    instagram: 'Instagram',
+    tiktok: 'TikTok',
+    youtube: 'YouTube',
+  } as Readonly<Record<string, string>>),
+  /** F256: with no channel nothing would post, so Approve waits for one. */
+  noChannel: 'Nothing would post: no channel is chosen. Add one in Studio, then approve it.',
+  publishes: (when: string) => `Publishes ${when}`,
+  planned: (when: string) => `Planned for ${when}`,
+  notScheduled: 'Not scheduled yet',
+  media: 'Media',
+  mediaFailed: 'This file could not be loaded.',
+  mediaLoading: 'Loading the file…',
+  /** A media entry with no file name (a Deliverable id an edit set) is not served by the post. */
+  elsewhere: Object.freeze({ one: 'more file is in Studio', other: 'more files are in Studio' }),
+  video: (name: string) => `Video ${name}`,
+  image: (name: string) => `Image ${name}`,
+  approve: 'Approve',
+  requestChanges: 'Request changes',
+  send: 'Send request',
+  cancel: 'Cancel',
+  /** What approving does: it binds this exact version (D6). */
+  effect: Object.freeze({
+    slot: (when: string) => `Approving schedules this exact version for ${when}.`,
+    noSlot: 'Approving locks this exact version. It publishes once it is scheduled.',
+  }),
+  comment: Object.freeze({
+    label: 'What needs to change?',
+    placeholder: 'Say what to change. This goes on the post.',
+    helper: 'The post goes back for changes with your comment.',
+  }),
+  commentRequired: 'Say what needs to change before you send it.',
+  commentTooLong: (max: number) => `Keep the comment under ${max} characters.`,
+  approved: 'Approved.',
+  approvedScheduled: 'Approved and scheduled.',
+  changesRequested: 'Changes requested. Your comment is on the post.',
+  /** A 409 on Approve: the post was reloaded, and this is the version now on screen. */
+  changed:
+    'This post changed while you were reviewing it. The new version is on screen: review it, then approve.',
+  /** D-ROLES: a viewer reads the post and is told who decides it. */
+  readOnly: 'Owners, admins and editors approve social posts.',
+  notAwaiting: (status: string) => `This post is ${status.toLowerCase()}: nothing waits on you.`,
+  studio: 'Open in Studio',
+  studioHint: 'Opens the post in Studio in the browser',
+  studioMissing: 'Open this post in Studio on the web.',
+  studioFailed: 'Studio could not be opened on this phone.',
+});

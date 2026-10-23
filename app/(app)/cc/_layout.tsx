@@ -1,9 +1,9 @@
 // The Command Centre's frame (handoff §2, US-010b): the top bar (back to Auto, the live stream's
 // word), the head (the dateline in the phone's timezone, the title, the lede) and the sticky tabs
 // with their figures, over the tab's own screen. The tabs never scroll away; a ticket, a social post
-// or a Deliverable opens over the tab it came from, which the shell keeps showing; the ticket is a
-// sheet over it (SHEET_ROUTE_OPTIONS). The words and figures are src/cc/shell's (pure, tested); the
-// live word reads the foundation's one stream.
+// or a Deliverable opens over the tab it came from, which the shell keeps showing; the ticket and the
+// social post are sheets over it (SHEET_ROUTE_OPTIONS). The words and figures are src/cc/shell's
+// (pure, tested); the live word reads the foundation's one stream.
 import { Stack } from 'expo-router';
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -41,6 +41,7 @@ export default function CommandCentreLayout() {
       <View style={styles.body}>
         <Stack screenOptions={screenOptions}>
           <Stack.Screen name="ticket/[taskId]" options={SHEET_ROUTE_OPTIONS} />
+          <Stack.Screen name="social/[postId]" options={SHEET_ROUTE_OPTIONS} />
         </Stack>
       </View>
     </Screen>
