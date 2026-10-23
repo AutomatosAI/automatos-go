@@ -280,9 +280,9 @@ export const NEEDS_COPY = Object.freeze({
 /**
  * 'Ask Auto about #0419' (D-ASK-AUTO): the bar over a conversation about a ticket and the 'Update
  * ticket and re-queue' sheet, in the web's words (components/chatbot/discussion-bar.tsx and
- * rebrief-dialog.tsx). `ticket` is the vendored ticketCalled: the number as words (#0419), or 'this ticket' for
- * one with no number, never its row id as a number (F414). A ticket that would not load is named by
- * the id the link carried, as the web names it, with no '#'.
+ * rebrief-dialog.tsx). `ticket` is the vendored ticketCalled: the number as words (#0419), or
+ * 'this ticket' for one with no number, never its row id as a number (F414). A ticket that would
+ * not load is named by the id the link carried, as the web names it, with no '#'.
  */
 export const DISCUSSION_COPY = Object.freeze({
   region: 'Discussion',
