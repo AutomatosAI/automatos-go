@@ -1,7 +1,8 @@
 // The shell's hooks: they read the clock, the phone's timezone, the board, the week's calendar and
 // the server's needs-you answer, and hand them to the pure modules beside them (dateline.ts,
 // lede.ts, tabs.ts). The board and the calendar are their tabs' own queries (one cache entry each);
-// needs-you is the foundation's useNeedsYou, so the lede's number is the Command Centre button's.
+// needs-you is the foundation's useNeedsYou, so the lede's number and the Board tab's figure are the
+// Command Centre button's.
 // No stream is opened here (D-LIVE).
 
 import { useQuery } from '@tanstack/react-query';
@@ -69,7 +70,7 @@ export function useShellFigures(): ShellFigures {
       figures: board ? boardFigures(board) : null,
       needsTotal: needsYou ? needsYou.total : null,
     }),
-    counts: tabCounts({ board, needsYou: needsYou ? needsYou.counts : null, calendarToday }),
+    counts: tabCounts({ needsYou, calendarToday }),
   };
 }
 

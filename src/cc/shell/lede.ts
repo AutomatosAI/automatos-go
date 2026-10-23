@@ -4,12 +4,14 @@
 // are the board's, counted as the server's activity stats count them (services/activity_service.py
 // at the pinned SHA): distinct agents holding an in-progress ticket, and the tickets in Inbox or
 // Assigned, mission steps included. A source that has not answered leaves its clause out rather
-// than show a 0 it does not know. Tabs: Board = the cards in Review or Blocked (the handoff's),
-// Questions = needs-you counts.question (the server's), Calendar and Deliverables from their data.
+// than show a 0 it does not know. Tabs: Board = needs-you's total, the server's one number (D26,
+// the web's PRD-252 R5: 'the one Needs-you number sits on Board'), the same figure as the lede's
+// needs clause; Questions = needs-you counts.question (the server's); Calendar and Deliverables
+// from their data.
 
-import type { NeedsYouCounts } from '../../api/needs-you';
+import type { NeedsYou } from '../../api/needs-you';
 import { pluralForm } from '../../ui/variants';
-import { boardColumn, topLevelTickets } from '../board/board';
+import { boardColumn } from '../board/board';
 import type { BoardTicket } from '../board/schemas';
 import { SHELL_COPY } from '../strings';
 import type { TabCounts } from './tabs';
@@ -17,8 +19,6 @@ import type { TabCounts } from './tabs';
 export type BoardFigures = { readonly working: number; readonly queued: number };
 
 const QUEUED: ReadonlySet<string> = new Set(['inbox', 'assigned']);
-/** The Board tab's figure: the cards that wait on a person (the handoff's blocked + review). */
-const WAITING_ON_YOU: ReadonlySet<string> = new Set(['review', 'blocked']);
 
 export function boardFigures(tickets: readonly BoardTicket[]): BoardFigures {
   const working = new Set(
@@ -89,26 +89,20 @@ export function ledeText(parts: readonly LedePart[]): string {
 }
 
 export type TabCountInput = {
-  /** The board's tickets, or null before it has answered. */
-  readonly board: readonly BoardTicket[] | null;
-  /** needs-you's counts as served, or null before it has answered. */
-  readonly needsYou: NeedsYouCounts | null;
+  /** needs-you's answer as served (total and counts), or null before it has answered. */
+  readonly needsYou: NeedsYou | null;
   /** Today's items on the calendar (US-011), or null. */
   readonly calendarToday?: number | null;
   /** The Deliverables tab's figure from its own data (US-013), or null. */
   readonly deliverables?: number | null;
 };
 
+/** Board is the server's needs-you total, never a count of the board's cards (D26). */
 export function tabCounts(input: TabCountInput): TabCounts {
-  const board = input.board
-    ? topLevelTickets(input.board).filter((ticket) =>
-        WAITING_ON_YOU.has(boardColumn(ticket.status)),
-      ).length
-    : null;
   return {
-    board,
+    board: input.needsYou ? input.needsYou.total : null,
     calendar: input.calendarToday ?? null,
-    questions: input.needsYou ? input.needsYou.question : null,
+    questions: input.needsYou ? input.needsYou.counts.question : null,
     deliverables: input.deliverables ?? null,
   };
 }

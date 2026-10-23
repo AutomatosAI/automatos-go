@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { NeedsYouSchema } from '../../api/needs-you';
+import { boardColumn, topLevelTickets } from '../board/board';
 import { BoardSchema, type BoardTicket } from '../board/schemas';
 import {
   boardFigures,
@@ -141,18 +142,31 @@ describe('the tab figures', () => {
     ticket(4, 'in_progress'),
     ticket(5, 'failed'),
   ];
+  const reviewOrBlocked = topLevelTickets(board).filter((each) =>
+    ['review', 'blocked'].includes(boardColumn(each.status)),
+  ).length;
 
-  it("Board counts the cards in Review or Blocked; Questions is needs-you's question count", () => {
-    const counts = tabCounts({ board, needsYou: needsYou(9, { question: 3, review: 6 }).counts });
-    expect(counts).toEqual({ board: 2, calendar: null, questions: 3, deliverables: null });
+  it("Board is needs-you's total as served, not the board's Review and Blocked cards (D26)", () => {
+    expect(reviewOrBlocked).toBe(2);
+    const counts = tabCounts({ needsYou: needsYou(9, { question: 3, review: 1, failed: 1 }) });
+    expect(counts).toEqual({ board: 9, calendar: null, questions: 3, deliverables: null });
   });
 
-  it('a mission step nests under its card, so it is not counted twice', () => {
-    expect(tabCounts({ board, needsYou: null }).board).toBe(2);
+  it('no needs-you answer is no Board figure, even when the board has answered', () => {
+    expect(boardFigures(board)).toEqual({ working: 1, queued: 0 });
+    expect(tabCounts({ needsYou: null }).board).toBeNull();
+  });
+
+  it("the lede's needs figure and the Board figure are the same number for one answer", () => {
+    const served = needsYou(6, { review: 1, question: 2, stuck: 3 });
+    const parts = ledeParts({ figures: boardFigures(board), needsTotal: served.total });
+    const needsFigure = parts.find((part) => part.needs && part.figure)?.text;
+    expect(needsFigure).toBe('6');
+    expect(String(tabCounts({ needsYou: served }).board)).toBe(needsFigure);
   });
 
   it('a source that has not answered has no figure', () => {
-    expect(tabCounts({ board: null, needsYou: null })).toEqual({
+    expect(tabCounts({ needsYou: null })).toEqual({
       board: null,
       calendar: null,
       questions: null,
@@ -161,7 +175,7 @@ describe('the tab figures', () => {
   });
 
   it('takes the Calendar and Deliverables figures from their own data', () => {
-    const counts = tabCounts({ board: [], needsYou: null, calendarToday: 4, deliverables: 12 });
-    expect(counts).toEqual({ board: 0, calendar: 4, questions: null, deliverables: 12 });
+    const counts = tabCounts({ needsYou: needsYou(0), calendarToday: 4, deliverables: 12 });
+    expect(counts).toEqual({ board: 0, calendar: 4, questions: 0, deliverables: 12 });
   });
 });
