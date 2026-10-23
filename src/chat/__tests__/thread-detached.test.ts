@@ -1,7 +1,8 @@
 // P001C-RVW-5: a read that broke while the turn runs on (D-STOP: iOS suspends the app mid-turn) is
 // a failure only until GET /api/chat/{id} answers. turnInFlight shows Auto working, never 'The
-// reply was interrupted. Try again.' (a second turn into the running one). Every state and action
-// is deep-frozen on the way through, so a mutation throws.
+// reply was interrupted. Try again.' (a second turn into the running one). P001C-RVW-8: while Auto
+// works on (that read, or a Stop the server never heard) a call it still runs reads running, never
+// 'Stopped: …'. Every state and action is deep-frozen on the way through, so a mutation throws.
 
 import { describe, expect, it } from 'vitest';
 
@@ -19,7 +20,8 @@ import {
   type ThreadDraft,
   type ThreadState,
 } from '../controller/thread';
-import { threadRows, turnNotice } from '../view-model';
+import { CHAT_COPY } from '../strings';
+import { threadRows, turnNotice, type ToolLineRow } from '../view-model';
 import { AT, CHAT_ID, afterTurn, deepFreeze, saved } from './thread-fixtures';
 
 const DRAFT: ThreadDraft = { text: 'File a ticket for the login bug', files: [], sentAt: AT };
@@ -106,7 +108,10 @@ describe('a read that broke mid-turn (P001C-RVW-5, D-STOP)', () => {
       frame({ kind: 'error', message: 'No', code: 'turn_failed' }),
       { type: 'finished' },
     );
-    const unnamed = run(createThread(null), SEND, { type: 'failed', error: new ApiError('stream') });
+    const unnamed = run(createThread(null), SEND, {
+      type: 'failed',
+      error: new ApiError('stream'),
+    });
     const refused = broken(new ApiError('server', { status: 402 }));
     const stopped = run(createThread(null), SEND, NAMED, { type: 'stopped', at: AT });
     const stopFailed = run(stopped, { type: 'stopFailed', error: new ApiError('network') });
@@ -130,5 +135,52 @@ describe('a read that broke mid-turn (P001C-RVW-5, D-STOP)', () => {
       expect(awaitsDetachedCheck(state)).toBe(false);
       expect(run(state, IN_FLIGHT)).toBe(state);
     }
+  });
+});
+
+const LOOKING = frame({ kind: 'text', text: 'Let me look.' });
+const SEARCH = frame({ kind: 'tool-start', toolCallId: 't1', toolName: 'platform_web_search' });
+const RUNNING: ToolLineRow = {
+  key: 't1',
+  mark: null,
+  tone: 'running',
+  text: 'Searching the web',
+  accessibilityLabel: 'Running, Searching the web',
+};
+const CUT_OFF: ToolLineRow = {
+  key: 't1',
+  mark: '–',
+  tone: 'muted',
+  text: 'Stopped: searching the web',
+  accessibilityLabel: 'Stopped: searching the web',
+};
+
+const toolLines = (state: ThreadState) =>
+  threadRows(state).flatMap((row) => (row.type === 'auto' ? row.toolLines : []));
+
+describe('a tool call while Auto works on (P001C-RVW-8)', () => {
+  it('a read that broke mid-turn: the call reads running once the turn is in flight', () => {
+    expect(toolLines(run(createThread(null), SEND, NAMED, LOOKING, SEARCH))).toEqual([RUNNING]);
+    const failed = broken(new ApiError('stream'), LOOKING, SEARCH);
+    expect(toolLines(failed)).toEqual([CUT_OFF]);
+
+    const working = run(failed, IN_FLIGHT);
+    expect(working.status).toBe('working');
+    expect(toolLines(working)).toEqual([RUNNING]);
+    expect(rowTypes(working)).toEqual(['user', 'auto']);
+  });
+
+  it('a Stop the server never heard: the call reads running beside the notice', () => {
+    const stop: ThreadAction = { type: 'stopped', at: AT };
+    const stopped = run(createThread(null), SEND, NAMED, LOOKING, SEARCH, stop);
+    expect(toolLines(stopped)).toEqual([CUT_OFF]);
+
+    const stopFailed = run(stopped, { type: 'stopFailed', error: new ApiError('network') });
+    expect(stopFailed.status).toBe('working');
+    expect(toolLines(stopFailed)).toEqual([RUNNING]);
+    expect(turnNotice(stopFailed)).toMatchObject({
+      kind: 'stopFailed',
+      text: CHAT_COPY.stopFailed,
+    });
   });
 });

@@ -2,11 +2,14 @@
 // one row (the user's bubble, or Auto's message with its receipts); a live turn is the user's draft
 // and Auto's reply so far (text with narration already taken out by turnReducer, tool lines, the
 // receipts, the limit and attachment notices); then 'Auto is working…' while a turn runs and one
-// notice for a turn that failed, stopped or could not be stopped. Receipts and tool lines are built
-// by lines.ts; every notice's mark has a word for screen readers (§4.6). Every failure says the
-// kit's own words (strings.ts): the server's may name a plan (D-NO-BILLING). Auto's cards sit inside
-// the reply that raised them (cards/view.ts places them), and the tickets a reply filed or checked
-// are its own (a saved task_card part, or the live turn's). The components only draw these rows.
+// notice for a turn that failed, stopped or could not be stopped. A turn the server still runs
+// (being read, or 'working': a read that broke mid-turn, a Stop the server never heard) keeps its
+// running calls running; only a stopped or failed turn reads them 'Stopped: …'. Receipts and tool
+// lines are built by lines.ts; every notice's mark has a word for screen readers (§4.6). Every
+// failure says the kit's own words (strings.ts): the server's may name a plan (D-NO-BILLING).
+// Auto's cards sit inside the reply that raised them (cards/view.ts places them), and the tickets a
+// reply filed or checked are its own (a saved task_card part, or the live turn's). The components
+// only draw these rows.
 
 import { ApiError } from '../api/errors';
 import {
@@ -227,6 +230,11 @@ function isRow(row: ChatRow | null): row is ChatRow {
   return row !== null;
 }
 
+/** The server still runs the turn: read as it streams, or 'working' (detached, or Stop unheard). */
+function turnRuns(state: ThreadState): boolean {
+  return state.status === 'streaming' || state.status === 'working';
+}
+
 function liveRows(state: ThreadState, cards: PlacedCards, options: ViewOptions): ChatRow[] {
   const { live } = state;
   if (!live) return [];
@@ -240,15 +248,14 @@ function liveRows(state: ThreadState, cards: PlacedCards, options: ViewOptions):
     : null;
   const rows: (ChatRow | null)[] = [
     user,
-    liveAutoRow(live.turn, state.status === 'streaming', cards.live, options),
+    liveAutoRow(live.turn, turnRuns(state), cards.live, options),
   ];
   return rows.filter(isRow);
 }
 
 /** 'Auto is working…' while a turn runs and its answer has not started. */
 export function isWorking(state: ThreadState): boolean {
-  const running = state.status === 'streaming' || state.status === 'working';
-  return running && !state.live?.turn.text.trim();
+  return turnRuns(state) && !state.live?.turn.text.trim();
 }
 
 /** The one notice under the thread: a stop, a stop that did not reach the server, or a failure. */
