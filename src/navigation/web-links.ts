@@ -15,7 +15,10 @@ import { chatWithTicket, isTaskId, isUsableId, routes } from './routes';
 export type WebLinkTarget =
   /** A route in this app (routes.ts), for router.push. */
   | { readonly app: string }
-  /** A page of Studio, for the system browser. */
+  /**
+   * A page for the system browser: Studio's (every link this module maps), or another site's from
+   * Auto's answer once the reader has seen its address and chosen Open (chat/markdown/links.ts).
+   */
   | { readonly external: string };
 
 type Query = ReadonlyMap<string, string>;

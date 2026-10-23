@@ -4,9 +4,11 @@
 // limit, a file Auto could not open, a saved failure), the tickets it filed or checked and the cards
 // the reply raised. Where Report this is offered (report.ts), a long-press anywhere on the message
 // opens it, and the header and each block of the answer carry it as an accessible action: the
-// message is not one element, so a screen reader still reaches the cards' buttons one by one.
+// message is not one element, so a screen reader still reaches the cards' buttons one by one. The
+// accessible action is the same object for as long as Report this is offered (it calls the newest
+// onReport), so the memoised answer is not drawn again on every frame of another reply.
 
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import type { WebLinkTarget } from '../../navigation/web-links';
@@ -77,9 +79,22 @@ export type AutoMessageProps = {
   readonly onReport?: () => void;
 };
 
+/** Report this as accessible actions, one object while it is offered, calling the newest onReport. */
+function useReportActions(onReport: (() => void) | undefined): ReportAccessibility {
+  const latest = useRef(onReport);
+  useLayoutEffect(() => {
+    latest.current = onReport;
+  });
+  const offered = onReport !== undefined;
+  return useMemo(
+    () => reportAccessibility(offered ? () => latest.current?.() : undefined),
+    [offered],
+  );
+}
+
 export function AutoMessage({ row, onLink, onRetry, onCard, onReport }: AutoMessageProps) {
   const { spacing } = useTokens();
-  const report = reportAccessibility(onReport);
+  const report = useReportActions(onReport);
   return (
     <ReportPress onReport={onReport} style={{ gap: spacing.space3 }}>
       <AutoHeader report={report} />

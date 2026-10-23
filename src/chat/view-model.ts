@@ -106,6 +106,18 @@ const KNOWN_TURN_CODES: ReadonlySet<string> = new Set(TURN_ERROR_CODES);
 /** Blank lines before the first words (a first line's indent is markdown: it stays). */
 const LEADING_BLANK_LINES = /^(?:[ \t]*\r?\n)+/;
 const BLOCK_BREAK = '\n\n';
+/** A last line of only '-', '=', '*' or '+' (a list or a setext underline just begun). */
+const UNFINISHED_LAST_LINE = /(?:^|\r?\n)[ \t]*(?:-+|=+|[*+])[ \t]*$/;
+
+/**
+ * A reply's words while they stream, its last line held back while it is only a list marker or a
+ * setext underline ('-', '- ', '=', '*'): marked reads 'found:\n-' as the line above it made a
+ * heading, and a lone '-' as an empty bullet, until the next character arrives. The line shows as
+ * soon as a word or a newline follows it; a saved reply is never cut.
+ */
+export function streamingText(text: string): string {
+  return text.replace(UNFINISHED_LAST_LINE, '');
+}
 
 /**
  * Auto's answer as markdown (OT-C8): the platform's lines above a live reply, then its words, each
@@ -225,7 +237,10 @@ function liveAutoRow(
   return autoRow({
     key: LIVE_AUTO_KEY,
     messageId: null,
-    answer: answerMarkdown(turn.receiptsAbove ?? [], turn.text),
+    answer: answerMarkdown(
+      turn.receiptsAbove ?? [],
+      streaming ? streamingText(turn.text) : turn.text,
+    ),
     toolLines: toolLineRows(turn.toolCalls, streaming),
     receipts: receiptsView(turn.receipts, options),
     notices: turnNotices(turn),
@@ -261,9 +276,9 @@ function liveRows(state: ThreadState, cards: PlacedCards, options: ViewOptions):
   return rows.filter(isRow);
 }
 
-/** 'Auto is working…' while a turn runs and its answer has not started. */
+/** 'Auto is working…' while a turn runs and its answer has not started (a held-back line aside). */
 export function isWorking(state: ThreadState): boolean {
-  return turnRuns(state) && !state.live?.turn.text.trim();
+  return turnRuns(state) && !streamingText(state.live?.turn.text ?? '').trim();
 }
 
 /** The one notice under the thread: a stop, a stop that did not reach the server, or a failure. */

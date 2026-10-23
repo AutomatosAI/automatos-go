@@ -1,6 +1,6 @@
 // The thread's rows in order (US-008c): the receipts' closing notes and links through the
 // foundation's appRouteForWebLink, tool lines while and after a reply, Auto's answer as markdown
-// (OT-C8), the draft
+// (OT-C8, a last line of only a list marker held back while it streams), the draft
 // and 'Auto is working…', Try again's message (words and files), the scroll rule and the pulse
 // under Reduce Motion.
 
@@ -20,6 +20,7 @@ import {
   receiptsView,
   retryInput,
   shouldScrollToEnd,
+  streamingText,
   threadRows,
   toolLineRows,
   workingMotion,
@@ -151,6 +152,41 @@ describe('Auto’s answer as markdown (OT-C8)', () => {
       { kind: 'paragraph', spans: [plain('Here you go.')] },
     ]);
     expect(auto.receipts?.note).toBe(NO_ACTIONS);
+  });
+});
+
+describe('a reply still streaming: a last line of only a marker waits for its words', () => {
+  it('holds back a lone list marker or setext underline, and nothing else', () => {
+    expect(streamingText('Here is what I found:\n-')).toBe('Here is what I found:');
+    expect(streamingText('found:\n- ')).toBe('found:');
+    expect(streamingText('Title\n==')).toBe('Title');
+    expect(streamingText('One.\n\n*')).toBe('One.\n');
+    expect(streamingText('-')).toBe('');
+    for (const kept of ['found:\n- one', 'found:\n---\n', 'a - b', 'x\n**', 'x\n1.', 'plain']) {
+      expect(streamingText(kept), kept).toBe(kept);
+    }
+  });
+
+  it('never reads the line above a marker as a heading while it streams; saved, the text is whole', () => {
+    const text = 'Two tickets are blocked.\nHere is what I found:\n- ';
+    const live = streaming({ kind: 'text', text });
+    const [auto] = autoRows(threadRows(live));
+    expect(auto.answer).toBe('Two tickets are blocked.\nHere is what I found:');
+    expect(markdownBlocks(auto.answer).map((block) => block.kind)).toEqual(['paragraph']);
+    // the next word shows the list
+    const grown = apply(live, ...frames({ kind: 'text', text: 'one' }));
+    expect(markdownBlocks(autoRows(threadRows(grown))[0].answer).map((b) => b.kind)).toEqual([
+      'paragraph',
+      'list',
+    ]);
+    // a stopped reply is not streaming: nothing is held back
+    const stopped = apply(live, { type: 'stopped', at: AT });
+    expect(autoRows(threadRows(stopped))[0].answer).toBe(answerMarkdown([], text));
+  });
+
+  it('keeps Auto is working while the only words are a held-back marker', () => {
+    const marker = streaming({ kind: 'text', text: '- ' });
+    expect(threadRows(marker).map((row) => row.key)).toEqual([LIVE_USER_KEY, WORKING_KEY]);
   });
 });
 

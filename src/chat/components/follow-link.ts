@@ -1,6 +1,8 @@
 // Opens a link the foundation's appRouteForWebLink mapped (D-NO-WEBVIEW): an app route through
-// expo-router, a Studio page in the system browser. The mapping is the foundation's; only the
-// opening is here, because nothing in src/navigation opens a WebLinkTarget.
+// expo-router, a Studio page in the system browser; and a link in Auto's answer to another site,
+// which reaches here only after the reader confirmed its address (markdown/InlineText.tsx). The
+// mapping is the foundation's; only the opening is here, because nothing in src/navigation opens a
+// WebLinkTarget.
 
 import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
@@ -20,7 +22,7 @@ export function useFollowLink(): FollowLink {
         return;
       }
       Linking.openURL(target.external).catch((error: unknown) => {
-        logger.warn('[chat] the system browser did not open a Studio link', error);
+        logger.warn('[chat] the system did not open a link in the browser or mail app', error);
       });
     },
     [router],

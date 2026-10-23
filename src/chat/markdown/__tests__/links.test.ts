@@ -1,10 +1,11 @@
 // Where a link in Auto's answer opens (OT-C8): through the foundation's web-link mapping for the
-// app's own pages and Studio's, the system's own app for any other web page or an email address,
-// and nowhere for anything else (the words show as plain text). Never a WebView.
+// app's own pages and Studio's (one tap), the system's own app for any other web page or an email
+// address (after the reader sees its host and address: markdownLink's site), and nowhere for
+// anything else (the words show as plain text). Never a WebView.
 
 import { describe, expect, it } from 'vitest';
 
-import { markdownLinkTarget } from '../links';
+import { markdownLink, markdownLinkTarget } from '../links';
 
 const WEB = 'https://ui.automatos.app';
 
@@ -78,5 +79,45 @@ describe('markdownLinkTarget', () => {
     expect(markdownLinkTarget('https://example.com', '')).toEqual({
       external: 'https://example.com',
     });
+  });
+});
+
+describe('markdownLink: another site is named before it opens', () => {
+  it('opens an app screen or a Studio page at once: no site to confirm', () => {
+    expect(markdownLink('/command-center?tab=board&task_id=42', WEB)).toEqual({
+      target: { app: '/cc/ticket/42' },
+      site: null,
+    });
+    expect(markdownLink(`${WEB}/agents`, WEB)).toEqual({
+      target: { external: `${WEB}/agents` },
+      site: null,
+    });
+  });
+
+  it('names another site by its host, lower-cased, port kept, with the full address', () => {
+    const phishing = 'https://ui-automatos.app.Evil.example:8443/login?next=/board#x';
+    expect(markdownLink(phishing, WEB)).toEqual({
+      target: { external: phishing },
+      site: { host: 'ui-automatos.app.evil.example:8443', address: phishing },
+    });
+    // a host that only starts like Studio's is another site, and is named as one
+    expect(markdownLink(`${WEB}.evil.example/x`, WEB)?.site?.host).toBe(
+      'ui.automatos.app.evil.example',
+    );
+    expect(markdownLink('http://example.com', WEB)?.site?.host).toBe('example.com');
+  });
+
+  it('names an email link by its address', () => {
+    expect(markdownLink('mailto:hi@automatos.app', WEB)).toEqual({
+      target: { external: 'mailto:hi@automatos.app' },
+      site: { host: 'hi@automatos.app', address: 'mailto:hi@automatos.app' },
+    });
+  });
+
+  it('is no link where markdownLinkTarget is none', () => {
+    for (const href of ['javascript:alert(1)', '//evil.example/x', '#anchor', '']) {
+      expect(markdownLink(href, WEB), href).toBeNull();
+    }
+    expect(markdownLink('/agents', '')).toBeNull();
   });
 });

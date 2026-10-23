@@ -1,20 +1,26 @@
-// Auto's answer as formatted text (OT-C8, decided 23 Oct): blocks.ts lexes the markdown (marked,
-// GFM) into blocks once per text, and this draws them on the look's tokens: paragraphs in the
-// thread's Body 1 (14/1.55), headings on the Title scale, lists with their markers (nested lists
+// Auto's answer as formatted text (OT-C8, decided 23 Oct): lex.ts lexes the markdown (marked, GFM)
+// into blocks once per text, and as a reply streams only the text after its settled blocks, and
+// this draws them on the look's tokens: paragraphs in the thread's Body 1 (14/1.55), headings on
+// the Title scale, lists with their markers (a task item's box ticked or not; nested lists
 // indent), code blocks and tables (their own files), quotes behind a rule in the border token, and
 // a rule as the Divider. No bubble and no box around the words, as the handoff draws Auto's
-// answer. Every block's words stay selectable and carry Report this where it is offered.
+// answer. Every block's words stay selectable and carry Report this where it is offered. A settled
+// block is the same object frame after frame and each block view is memoised, so while a reply
+// streams only its last block is drawn again; Markdown itself is memoised, so a saved message is
+// not drawn again while another one streams.
 
-import { useMemo } from 'react';
+import { memo, useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import type { WebLinkTarget } from '../../navigation/web-links';
 import { useTokens } from '../../styles/theme';
 import { Divider, Text } from '../../ui';
 import type { ReportAccessibility } from '../report/report';
-import { markdownBlocks, type Block, type ListBlock, type QuoteBlock } from './blocks';
+import { MARKDOWN_COPY } from '../strings';
+import type { Block, ListBlock, QuoteBlock } from './blocks';
 import { CodeBlockView } from './CodeBlockView';
 import { InlineText } from './InlineText';
+import { lexMarkdown, type MarkdownLex } from './lex';
 import { headingTextLevel, listMarker } from './look';
 import { TableView } from './TableView';
 
@@ -33,23 +39,30 @@ function ListView({ list, listDepth, ...shared }: Shared & { readonly list: List
   const { spacing } = useTokens();
   return (
     <View style={{ gap: spacing.space2 }}>
-      {list.items.map((item, index) => (
-        // a list's items never reorder; a streaming list only adds them
-        <View key={index} style={[styles.item, { gap: spacing.space3 }]}>
-          <Text
-            tone="muted"
-            selectable={false}
-            style={styles.marker}
-            importantForAccessibility={list.ordered ? 'auto' : 'no'}
-            accessibilityElementsHidden={!list.ordered}
-          >
-            {listMarker(list, index, listDepth)}
-          </Text>
-          <View style={styles.itemBody}>
-            <BlockList blocks={item.blocks} listDepth={listDepth + 1} {...shared} />
+      {list.items.map((item, index) => {
+        // a number and a task's box are heard ('Done', 'Not done'); a bullet is not
+        const heard = list.ordered || item.checked !== null;
+        return (
+          // a list's items never reorder; a streaming list only adds them
+          <View key={index} style={[styles.item, { gap: spacing.space3 }]}>
+            <Text
+              tone="muted"
+              selectable={false}
+              style={styles.marker}
+              importantForAccessibility={heard ? 'auto' : 'no'}
+              accessibilityElementsHidden={!heard}
+              accessibilityLabel={
+                item.checked === null ? undefined : MARKDOWN_COPY.taskWords(item.checked)
+              }
+            >
+              {listMarker(list, index, listDepth, item.checked)}
+            </Text>
+            <View style={styles.itemBody}>
+              <BlockList blocks={item.blocks} listDepth={listDepth + 1} {...shared} />
+            </View>
           </View>
-        </View>
-      ))}
+        );
+      })}
     </View>
   );
 }
@@ -63,7 +76,11 @@ function QuoteView({ quote, ...shared }: Shared & { readonly quote: QuoteBlock }
   );
 }
 
-function BlockView({ block, ...shared }: Shared & { readonly block: Block }) {
+/** Memoised: a settled block keeps its object while a reply streams, so it is not drawn again. */
+const BlockView = memo(function BlockView({
+  block,
+  ...shared
+}: Shared & { readonly block: Block }) {
   const { onLink, report } = shared;
   switch (block.kind) {
     case 'paragraph':
@@ -90,7 +107,7 @@ function BlockView({ block, ...shared }: Shared & { readonly block: Block }) {
     case 'rule':
       return <Divider />;
   }
-}
+});
 
 function BlockList({ blocks, ...shared }: Shared & { readonly blocks: readonly Block[] }) {
   const { spacing } = useTokens();
@@ -113,11 +130,29 @@ export type MarkdownProps = {
   readonly report?: ReportAccessibility;
 };
 
-export function Markdown({ text, onLink, report = NO_REPORT }: MarkdownProps) {
-  const blocks = useMemo(() => markdownBlocks(text), [text]);
+/**
+ * The text's blocks, lexed once per text; as the text grows, only after what the last lex settled
+ * (lex.ts). The last lex is only a head start: the blocks are the same with or without it.
+ */
+function useBlocks(text: string): readonly Block[] {
+  const last = useRef<MarkdownLex | null>(null);
+  const lexed = useMemo(() => lexMarkdown(text, last.current), [text]);
+  useEffect(() => {
+    last.current = lexed;
+  }, [lexed]);
+  return lexed.blocks;
+}
+
+/** Memoised: a saved message's answer is not drawn again while another reply streams. */
+export const Markdown = memo(function Markdown({
+  text,
+  onLink,
+  report = NO_REPORT,
+}: MarkdownProps) {
+  const blocks = useBlocks(text);
   if (blocks.length === 0) return null;
   return <BlockList blocks={blocks} onLink={onLink} report={report} listDepth={0} />;
-}
+});
 
 const styles = StyleSheet.create({
   item: { flexDirection: 'row', alignItems: 'flex-start' },

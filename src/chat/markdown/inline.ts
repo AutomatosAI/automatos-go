@@ -2,8 +2,9 @@
 // codespan, del, link, br, and what else may sit in a line) become runs of words, each carrying
 // every mark around it and the link it opens. Flat, not a tree, because the phone draws a mark
 // with a font face: bold inside italic is one face (Geist 600 italic, or its nearest), not two
-// nested styles that would undo each other. HTML stays its literal text, never interpreted; an
-// image is its alt text, never fetched (the web's Play rule for untrusted model output); a token
+// nested styles that would undo each other. HTML stays its literal text, never interpreted (a
+// '<br>' alone is the line break a table cell needs, the one tag read); an image is its alt text,
+// never fetched (the web's Play rule for untrusted model output); a token
 // this module does not know is its raw text, so no words ever vanish. Nothing here throws on a
 // malformed token: each field is read defensively.
 
@@ -31,6 +32,8 @@ type Frame = { readonly marks: readonly InlineMark[]; readonly href: string | nu
 
 const PLAIN: Frame = Object.freeze({ marks: [], href: null });
 const BREAK: BreakSpan = Object.freeze({ kind: 'break' });
+/** '<br>', '<br/>', '<BR />': the line break a GFM table cell can only write as HTML. */
+export const LINE_BREAK_TAG = /^<br\s*\/?>$/i;
 
 // ── reading a token defensively ─────────────────────────────────────────────────────────────
 
@@ -139,9 +142,13 @@ const INLINE: ReadonlyMap<string, InlineHandler> = new Map<string, InlineHandler
   ],
   // an image is never fetched: a URL loaded with no click could carry the chat to any host
   ['image', (token, frame) => words(textOf(token), frame)],
-  // HTML is shown as Auto wrote it, never interpreted
-  ['html', (token, frame) => words(textOf(token), frame)],
-  // a task item's box: the item reads as plain words
+  // HTML is shown as Auto wrote it, never interpreted; '<br>' alone is a line break
+  [
+    'html',
+    (token, frame) =>
+      LINE_BREAK_TAG.test(textOf(token).trim()) ? [BREAK] : words(textOf(token), frame),
+  ],
+  // a task item's box: the list draws it as the item's marker (blocks.ts ListItem.checked)
   ['checkbox', () => []],
 ]);
 
@@ -158,15 +165,29 @@ function sameLook(a: TextSpan, b: TextSpan): boolean {
   return a.href === b.href && a.marks.join() === b.marks.join();
 }
 
-/** Neighbouring words with the same marks and link as one span. */
+/**
+ * Neighbouring words with the same marks and link as one span. Linear: a run of same-look words is
+ * joined once, not copied span by span (a long streamed paragraph holds hundreds of spans).
+ */
 export function mergeSpans(spans: readonly Span[]): Span[] {
-  return spans.reduce<Span[]>((merged, span) => {
-    const last = merged.at(-1);
-    if (last?.kind === 'text' && span.kind === 'text' && sameLook(last, span)) {
-      return [...merged.slice(0, -1), { ...last, text: last.text + span.text }];
-    }
-    return [...merged, span];
-  }, []);
+  const merged: Span[] = [];
+  let index = 0;
+  while (index < spans.length) {
+    const span = spans[index];
+    let end = index + 1;
+    while (span.kind === 'text' && end < spans.length && sameRun(span, spans[end])) end += 1;
+    merged.push(end - index > 1 ? joined(spans.slice(index, end) as TextSpan[]) : span);
+    index = end;
+  }
+  return merged;
+}
+
+function sameRun(first: TextSpan, next: Span): boolean {
+  return next.kind === 'text' && sameLook(first, next);
+}
+
+function joined(run: readonly TextSpan[]): TextSpan {
+  return { ...run[0], text: run.map((span) => span.text).join('') };
 }
 
 /** A block's inline tokens as spans: words, marks, links and line breaks. */

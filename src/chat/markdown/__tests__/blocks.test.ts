@@ -88,7 +88,10 @@ describe('blocks', () => {
         kind: 'list',
         ordered: false,
         start: 1,
-        items: [{ blocks: [para(text('one'))] }, { blocks: [para(text('two'))] }],
+        items: [
+          { blocks: [para(text('one'))], checked: null },
+          { blocks: [para(text('two'))], checked: null },
+        ],
       },
     ]);
     const numbered = only<ListBlock>('3. three\n4. four');
@@ -106,17 +109,12 @@ describe('blocks', () => {
         kind: 'list',
         ordered: false,
         start: 1,
-        items: [{ blocks: [para(text('nested'))] }, { blocks: [para(text('more'))] }],
+        items: [
+          { blocks: [para(text('nested'))], checked: null },
+          { blocks: [para(text('more'))], checked: null },
+        ],
       },
       para(text('after')),
-    ]);
-  });
-
-  it('reads a task item as plain words: no box, nothing lost', () => {
-    const list = only<ListBlock>('- [ ] write the brief\n- [x] **send** it');
-    expect(list.items.map((item) => item.blocks)).toEqual([
-      [para(text('write the brief'))],
-      [para(text('send', ['strong']), text(' it'))],
     ]);
   });
 
@@ -178,7 +176,7 @@ describe('blocks', () => {
             kind: 'list',
             ordered: false,
             start: 1,
-            items: [{ blocks: [para(text('and a list'))] }],
+            items: [{ blocks: [para(text('and a list'))], checked: null }],
           },
         ],
       },

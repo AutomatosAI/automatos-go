@@ -1,15 +1,18 @@
 // How Auto's markdown is dressed (OT-C8), from the look's tokens only: each mark's face (bold,
-// italic or its hint, the mono face for code at the text's size), a link's and code's paint, the
-// heading scale, list markers, and table columns sized from their longest line.
+// italic always a bundled italic face, since iOS never slants an upright one; the mono face for
+// code at the text's size, no ground), a link's paint, the heading scale, list markers (a task
+// item's box), the code block's widest line, and table columns sized from their longest line.
 
 import { describe, expect, it } from 'vitest';
 
+import { FONT_FACES } from '../../../styles/fonts';
 import { tokensFor } from '../../../styles/tokens';
-import { STUDIO_TYPE, MIN_TEXT_SIZE } from '../../../styles/type';
+import { STUDIO_TYPE, MIN_TEXT_SIZE, TYPE_SPECS, type TypeRole } from '../../../styles/type';
 import { MARKDOWN_COPY } from '../../strings';
 import type { Cell } from '../blocks';
-import type { Span } from '../inline';
+import type { InlineMark, Span } from '../inline';
 import {
+  CODE_BLOCK_MAX_WIDTH,
   CODE_BLOCK_ROLE,
   TABLE_COLUMNS,
   columnWidths,
@@ -24,6 +27,10 @@ const DARK = tokensFor('studio', 'dark').colours;
 
 const cell = (words: string): Cell => [{ kind: 'text', text: words, marks: [], href: null }];
 
+/** The bundled face a style's fontFamily names (its PostScript name), if any. */
+const faceNamed = (fontFamily: unknown) =>
+  [...FONT_FACES.values()].find((face) => face.postscriptName === fontFamily);
+
 describe('spanStyle', () => {
   it('leaves plain words to the block', () => {
     expect(spanStyle(type, colours, 'body1', [], false)).toBeNull();
@@ -36,37 +43,47 @@ describe('spanStyle', () => {
     expect(style?.lineHeight).toBe(STUDIO_TYPE.body1.lineHeight);
   });
 
-  it('draws italic in a bundled italic face, else the upright face with the italic hint', () => {
-    // Newsreader (titles) bundles 500 italic; Geist (body) bundles no italic
+  it('draws italic in a bundled italic face (iOS never slants an upright one), no hint on top', () => {
+    // Newsreader (titles) bundles 400 and 500 italic; Geist (body) bundles none: the serif's
     expect(spanStyle(type, colours, 'title4', ['em'], false)).toMatchObject({
       fontFamily: 'Newsreader16pt16pt-MediumItalic',
+      fontSize: STUDIO_TYPE.title4.fontSize,
     });
-    expect(spanStyle(type, colours, 'title4', ['em'], false)?.fontStyle).toBeUndefined();
     expect(spanStyle(type, colours, 'body1', ['em'], false)).toMatchObject({
-      fontFamily: 'Geist-Regular',
-      fontStyle: 'italic',
+      fontFamily: 'Newsreader16pt16pt-Italic',
+      fontSize: STUDIO_TYPE.body1.fontSize,
+      lineHeight: STUDIO_TYPE.body1.lineHeight,
     });
+    // bold and italic together: the nearest bundled italic weight, never an upright face
+    expect(spanStyle(type, colours, 'body1', ['strong', 'em'], false)?.fontFamily).toBe(
+      'Newsreader16pt16pt-MediumItalic',
+    );
+    expect(spanStyle(type, colours, 'title4', ['strong', 'em'], false)?.fontFamily).toBe(
+      'Newsreader16pt16pt-MediumItalic',
+    );
   });
 
-  it('keeps bold when bold and italic have no face together', () => {
-    expect(spanStyle(type, colours, 'body1', ['strong', 'em'], false)).toMatchObject({
-      fontFamily: 'Geist-SemiBold',
-      fontStyle: 'italic',
-    });
-    expect(spanStyle(type, colours, 'title4', ['strong', 'em'], false)).toMatchObject({
-      fontFamily: 'Newsreader16pt16pt-SemiBold',
-      fontStyle: 'italic',
-    });
+  it('gives every role a face that really is italic for em, with or without bold', () => {
+    const roles = Object.keys(TYPE_SPECS) as TypeRole[];
+    const markSets: InlineMark[][] = [['em'], ['strong', 'em'], ['em', 'del']];
+    for (const role of roles) {
+      for (const marks of markSets) {
+        const style = spanStyle(type, colours, role, marks, false);
+        expect(faceNamed(style?.fontFamily)?.style, `${role} ${marks.join('+')}`).toBe('italic');
+        expect(style?.fontStyle, role).toBeUndefined();
+        expect(style?.fontSize, role).toBe(STUDIO_TYPE[role].fontSize);
+      }
+    }
   });
 
-  it('draws code in the look’s mono face at the text’s size, on the secondary ground', () => {
+  it('draws code in the look’s mono face at the text’s size, with no ground behind it', () => {
     const style = spanStyle(type, colours, 'body1', ['code'], false);
     expect(style).toMatchObject({
       fontFamily: 'GeistMono-Regular',
       fontSize: STUDIO_TYPE.body1.fontSize,
       letterSpacing: 0,
-      backgroundColor: colours.secondary,
     });
+    expect(style?.backgroundColor).toBeUndefined();
     expect(style?.textTransform).toBeUndefined();
     expect(spanStyle(type, colours, 'body1', ['strong', 'code'], false)?.fontFamily).toBe(
       'GeistMono-SemiBold',
@@ -99,6 +116,14 @@ describe('monoFace', () => {
     });
     expect(face.fontSize).toBeGreaterThanOrEqual(MIN_TEXT_SIZE);
   });
+
+  it('caps a code block’s width under the iOS layer limit (16,384 px at 3x)', () => {
+    const SCREEN_SCALE = 3;
+    const TEXTURE_LIMIT_PX = 16_384;
+    expect(CODE_BLOCK_MAX_WIDTH * SCREEN_SCALE).toBeLessThan(TEXTURE_LIMIT_PX);
+    // still wide enough that ordinary code scrolls sideways rather than wraps
+    expect(CODE_BLOCK_MAX_WIDTH).toBeGreaterThan(200 * 8);
+  });
 });
 
 describe('headings', () => {
@@ -113,6 +138,18 @@ describe('listMarker', () => {
   it('numbers from the list’s start', () => {
     const list = { ordered: true, start: 3 };
     expect([0, 1, 2].map((index) => listMarker(list, index, 0))).toEqual(['3.', '4.', '5.']);
+  });
+
+  it('draws a task item’s box, ticked or not, in place of its bullet or number', () => {
+    const bulleted = { ordered: false, start: 1 };
+    expect(listMarker(bulleted, 0, 0, true)).toBe(MARKDOWN_COPY.taskMarks.done);
+    expect(listMarker(bulleted, 1, 2, false)).toBe(MARKDOWN_COPY.taskMarks.open);
+    expect(listMarker({ ordered: true, start: 1 }, 0, 0, false)).toBe(MARKDOWN_COPY.taskMarks.open);
+    expect(MARKDOWN_COPY.taskMarks.done).not.toBe(MARKDOWN_COPY.taskMarks.open);
+    expect([MARKDOWN_COPY.taskWords(true), MARKDOWN_COPY.taskWords(false)]).toEqual([
+      'Done',
+      'Not done',
+    ]);
   });
 
   it('bullets by depth, cycling past the last shape', () => {
@@ -146,9 +183,7 @@ describe('columnWidths', () => {
     const long: Cell = cell('x'.repeat(400));
     expect(columnWidths({ header: [long], rows: [] }, 1, padding)).toEqual([TABLE_COLUMNS.max]);
     expect(columnWidths({ header: [long], rows: [] }, 2, padding)).toEqual([TABLE_COLUMNS.max * 2]);
-    expect(columnWidths({ header: [cell('')], rows: [] }, 1, padding)).toEqual([
-      TABLE_COLUMNS.min,
-    ]);
+    expect(columnWidths({ header: [cell('')], rows: [] }, 1, padding)).toEqual([TABLE_COLUMNS.min]);
   });
 
   it('measures a cell with a line break by its longest line', () => {
