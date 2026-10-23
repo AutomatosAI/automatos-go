@@ -263,15 +263,15 @@
       "title": "Ask Auto about is offered only to a role that may chat",
       "description": "src/cc/ticket/actions.ts:30 (askAuto: true) and :49 make Ask Auto about unconditional, so src/cc/ticket/TicketSheet.tsx:98 shows it to a viewer and to a role not yet known; src/cc/__tests__/ticket.test.ts:59 and :87 assert it for every status x role. The foundation's role policy (src/auth/role.ts:1-2, :14) gives chat to owners, admins and editors only and a viewer a read-only app (D16, D17, D-ROLES), and US-010d AC4 itself says 'viewer sees none'. A viewer who taps it is sent into a conversation with Auto that their role does not hold.",
       "acceptanceCriteria": [
-        "Cause: ticketActions returns askAuto: true for every role and ignores roleCan(role, 'chat') (src/auth/role.ts).",
-        "Change: src/cc/ticket/actions.ts TicketActions.askAuto becomes a boolean, roleCan(role, 'chat'); src/cc/ticket/TicketSheet.tsx renders AskAuto (and its discuss hint) only when it is offered; the comment at actions.ts:6 says who may ask. Approve and Send back keep their rules, the viewer's read-only note stays, and Ask Auto about still only pushes routes.chatWithTicket(row id).",
-        "Test: src/cc/__tests__/ticket.test.ts — owner, admin and editor get Ask Auto about at every status; viewer and an unknown role (null) get none; the BOTH/NONE fixtures and the every-status x role assertion (ticket.test.ts:58-59, :87) follow the role; ticket-sheet.test.ts still finds /chat?ticket=<row id> for an allowed role.",
-        "Checks: npm run typecheck, npm run lint (0 errors), npx vitest run, npm run check:bundle and bash scripts/ralph/acceptance-prd001-cc.sh --no-ci pass (the kit-JSON checks pass once this story is marked)."
+        "Cause: ticketActions returns askAuto: true for every role and ignores roleCan(role, 'chat') (src/auth/role.ts). → DONE — bffc4a1: ticketActions ignored roleCan(role, 'chat'); askAuto now follows it.",
+        "Change: src/cc/ticket/actions.ts TicketActions.askAuto becomes a boolean, roleCan(role, 'chat'); src/cc/ticket/TicketSheet.tsx renders AskAuto (and its discuss hint) only when it is offered; the comment at actions.ts:6 says who may ask. Approve and Send back keep their rules, the viewer's read-only note stays, and Ask Auto about still only pushes routes.chatWithTicket(row id). → DONE — bffc4a1: TicketActions.askAuto: boolean = roleCan(role, 'chat'); TicketSheet renders AskAuto (with its discuss hint) only when actions.askAuto; actions.ts header says owners, admins and editors may ask, a viewer and an unknown role get none; Approve/Send back, the read-only note and the routes.chatWithTicket(row id) push unchanged.",
+        "Test: src/cc/__tests__/ticket.test.ts — owner, admin and editor get Ask Auto about at every status; viewer and an unknown role (null) get none; the BOTH/NONE fixtures and the every-status x role assertion (ticket.test.ts:58-59, :87) follow the role; ticket-sheet.test.ts still finds /chat?ticket=<row id> for an allowed role. → DONE — bffc4a1: ticket.test.ts NONE = askAuto false (viewer, null, undefined), ASK_ONLY for a writer with nothing to decide, every status x role asserts askAuto = owner/admin/editor, mission card/step fixtures follow the role; ticket-sheet.test.ts: an editor is offered it and the sheet still pushes /chat?ticket=2680.",
+        "Checks: npm run typecheck, npm run lint (0 errors), npx vitest run, npm run check:bundle and bash scripts/ralph/acceptance-prd001-cc.sh --no-ci pass (the kit-JSON checks pass once this story is marked). → DONE — typecheck clean; lint 0 errors (1 existing warning: src/cc/strings.ts 417 lines); vitest 104 files / 1639 tests passed; check:bundle exported; acceptance --no-ci red only on the kit-JSON checks while RVW-3 is open."
       ],
       "files": ["src/cc/ticket/", "src/cc/__tests__/"],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": " | P001X-RVW-2 DONE (bffc4a1): Ask Auto about is offered only to owners, admins and editors (roleCan 'chat'); viewers and an unknown role see none. No foundation gap."
     },
     {
       "id": "P001X-RVW-3",
