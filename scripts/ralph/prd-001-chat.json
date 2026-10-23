@@ -253,19 +253,19 @@
       "title": "Report this on Auto's messages",
       "description": "As a user, I want to report an Auto message (D15). The foundation's ReportSheet does the work; this story mounts it on Auto's messages.",
       "acceptanceCriteria": [
-        "A long-press (and an accessible action) on an Auto message offers 'Report this', opening the foundation's ReportSheet with target_type 'message' and the message id; nothing on the user's own messages",
-        "Hidden when the foundation's gate says no (capability report_content absent — true until PRD-266 US-016 deploys — or the role cannot report); never a second report implementation (no POST /api/v1/reports in src/chat)",
-        "src/chat/__tests__/report.test.ts: the action appears only on Auto messages and only when the gate allows",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes",
-        "npm run check:bundle passes",
-        "bash scripts/ralph/acceptance-prd001-chat.sh --no-ci passes"
+        "A long-press (and an accessible action) on an Auto message offers 'Report this', opening the foundation's ReportSheet with target_type 'message' and the message id; nothing on the user's own messages → DONE — A long-press on a saved Auto message (AutoMessage's ReportPress: a Pressable with accessible={false}, so VoiceOver still reaches the cards' buttons) and a 'Report this' accessibilityAction on its header and each paragraph (reportAccessibility) open the foundation's ReportSheet with {target_type: 'message', target_id: <message id>} (reportTarget); UserBubble has neither; the reply still being written (no saved id), a saved failure (the kit's words), notices and loose cards offer nothing",
+        "Hidden when the foundation's gate says no (capability report_content absent — true until PRD-266 US-016 deploys — or the role cannot report); never a second report implementation (no POST /api/v1/reports in src/chat) → DONE — useMessageReport gates on the foundation's canReport(discovery, workspace.role) (report_content listed and roleCan 'report'); while it is closed MessageList gives no row an onReport, so no long-press and no action, and the sheet's target is null. src/chat holds no reports route, reportContent or buildReportPayload (report.test.ts scans every non-test file; the gate's 'no second report call' check PASS)",
+        "src/chat/__tests__/report.test.ts: the action appears only on Auto messages and only when the gate allows → DONE — src/chat/__tests__/report.test.ts (14 tests): only the saved Auto message of a thread with user messages, a saved failure and a live reply is offered; for every gate (report_content listed, absent, no capabilities, discovery loading) and role (owner, admin, editor, viewer, null) it is offered exactly when canReport says so; the accessible action opens the sheet on 'report' alone; no report call in src/chat",
+        "npm run typecheck passes → DONE — npm run typecheck exit 0",
+        "npm run lint passes (0 errors) → DONE — npm run lint exit 0 (0 errors, 0 warnings)",
+        "npx vitest run passes → DONE — npx vitest run: 111 files, 1631 tests passed",
+        "npm run check:bundle passes → DONE — npm run check:bundle exit 0 (the gate's 'JS bundle compiles' PASS)",
+        "bash scripts/ralph/acceptance-prd001-chat.sh --no-ci passes → DONE — run at c562262: every product, KC1 and contract check PASS (typecheck, lint, vitest 111/1631, check:bundle, check:core, check:routes, KC1 allowlist, D-NATIVE-ONCE, US-009c uses ReportSheet, no second report call); the two kit checks pass with this mark, re-run green at completion before the CI commit"
       ],
       "files": ["src/chat/components/AutoMessage.tsx", "src/chat/report/", "src/chat/__tests__/"],
       "priority": 11,
-      "passes": false,
-      "notes": "The device check that the report reaches the owner and the moderation inbox is an ownerTest after PRD-266 W3."
+      "passes": true,
+      "notes": "The device check that the report reaches the owner and the moderation inbox is an ownerTest after PRD-266 W3. | Built c562262. The sheet is the foundation's, mounted once per thread in ChatScreen's Thread beside MessageList; the long-press opens it directly (the sheet, titled 'Report this message', has its own Cancel), no menu step: RN core has no context menu, and an action sheet presented then dismissed under a Modal is the same iOS presentation race US-009b met. An id over the server's 64-character target_id is never offered (buildReportPayload would throw). Device checks (Gerard, OT-C7 once report_content is listed): a long-press on a paragraph, which is selectable, may start iOS text selection instead of the report (the header, receipts and gaps between parts always reach it); VoiceOver lists 'Report this' in the actions rotor on the 'Auto said' header and each paragraph. No foundation gap."
     }
   ],
   "ownerTest": [
