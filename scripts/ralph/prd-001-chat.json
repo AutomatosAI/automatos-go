@@ -273,13 +273,13 @@
       "title": "A chat reopened while its turn is in flight shows 'Auto is working…' even when its saved list is cached",
       "description": "D-STALE-CHAT breaks when the saved list is in the in-memory cache. src/chat/controller/use-thread.ts:72-78 useSaved has no freshness gate, while useCheck (:59-69) only answers once isFetchedAfterMount && isSuccess. :89-94 dispatches loadedAction(checked, saved.data) as soon as the check answers, and saved.data is then the CACHED list (chat.messages stays in memory for QUERY_GC_TIME_MS = 24 h, src/api/query-client.ts:27). src/chat/controller/thread.ts:183-198 awaitsReply is false when that stale list ends on Auto's earlier reply, so turnInFlight is ignored and the status is idle; thread.ts:271-280 refetched never sets working, so the fresh list (ending on the user's message) only merges. Scenario: open an older chat (its list ends on Auto's reply), send, tap Back while Auto streams (release(): the turn runs on, by design), reopen the chat from Older chats: GET /api/chat/{id} answers turnInFlight true, yet there is no 'Auto is working…', no Stop, and the composer sends a second message into the running turn. Reproduced at reducer level (review probe): loadedAction({turnInFlight: true}, [user, assistant]) → idle; refetched([user, assistant, user]) → still idle, live null.",
       "acceptanceCriteria": [
-        "Cause: the first `loaded` of a visit takes the saved list from the cache before this visit's GET /api/chat/{id}/messages answers (use-thread.ts:89-94), so turnInFlight is judged against a stale list and the reopened turn is never shown.",
-        "Change: the opening list is gated as the check is: only a saved list fetched after mount (isFetchedAfterMount && isSuccess) reaches loadedAction. The gate is a pure helper beside loadedAction in src/chat/controller/thread.ts (e.g. openingList({isFetchedAfterMount, isSuccess, data}) → data | undefined) and use-thread.ts only wires it; refetches after the open still dispatch refetched as today; nothing is persisted (D-CACHE).",
-        "Test: src/chat/__tests__/thread.test.ts — the helper gives undefined for a cached list not fetched since mount and the list once it has been; a cached list ending on Auto's reply never reaches loadedAction, and the fresh list ending on the user's message with turnInFlight true opens working (a live turn with no draft), which chat_changed's refetched with Auto's reply retires; dropping the gate turns a test red.",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes",
-        "npm run check:bundle passes"
+        "Cause: the first `loaded` of a visit takes the saved list from the cache before this visit's GET /api/chat/{id}/messages answers (use-thread.ts:89-94), so turnInFlight is judged against a stale list and the reopened turn is never shown. → DONE — Confirmed: use-thread.ts dispatched loadedAction(checked, saved.data) with whatever the cache held; the review's reducer probe is now the D-STALE-CHAT test in thread.test.ts.",
+        "Change: the opening list is gated as the check is: only a saved list fetched after mount (isFetchedAfterMount && isSuccess) reaches loadedAction. The gate is a pure helper beside loadedAction in src/chat/controller/thread.ts (e.g. openingList({isFetchedAfterMount, isSuccess, data}) → data | undefined) and use-thread.ts only wires it; refetches after the open still dispatch refetched as today; nothing is persisted (D-CACHE). → DONE — openingList(query) in thread.ts beside loadedAction (isFetchedAfterMount && isSuccess ? data : undefined); use-thread.ts wires it into the opening effect only, the refetched effect is unchanged; nothing persisted. Also useSaved staleTime: 0 (use-home.ts's idiom): TanStack fetches on a key switch ('' → the id once the check answers) only when the query is stale, so without it a list cached under 30 s ago never refetches and the gated open would wait forever.",
+        "Test: src/chat/__tests__/thread.test.ts — the helper gives undefined for a cached list not fetched since mount and the list once it has been; a cached list ending on Auto's reply never reaches loadedAction, and the fresh list ending on the user's message with turnInFlight true opens working (a live turn with no draft), which chat_changed's refetched with Auto's reply retires; dropping the gate turns a test red. → DONE — thread.test.ts 'reopened mid-turn, a chat opens on this visit’s list, never the cached one (D-STALE-CHAT)', over thread-fixtures.ts IN_FLIGHT / savedList / answerSaved (use-thread.ts's two effects): cached [EARLIER] → undefined and the thread stays loading; fresh [EARLIER, ASKED] → working, live {draft: null, since: 2}; refetched with REPLIED → idle, live null. openingList returning data unconditionally turns it red (seen).",
+        "npm run typecheck passes → DONE — exit 0",
+        "npm run lint passes (0 errors) → DONE — 0 problems (thread.test.ts at the 400-line target)",
+        "npx vitest run passes → DONE — 111 files, 1632 tests passed",
+        "npm run check:bundle passes → DONE — exported .expo/bundle-check"
       ],
       "files": [
         "src/chat/controller/thread.ts",
@@ -287,8 +287,8 @@
         "src/chat/__tests__/thread.test.ts"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Fixed bc61d22. The gate alone would hang: useSaved needed staleTime: 0 so a key switch fetches a fresh-but-cached list (query-core 5.104.5 shouldFetchOptionally → isStale); thread-fixtures.ts gained the opening fixtures to keep thread.test.ts at 400 lines."
     },
     {
       "id": "P001C-RVW-2",
