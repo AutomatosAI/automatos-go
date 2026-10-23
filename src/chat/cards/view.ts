@@ -4,16 +4,21 @@
 // the Mission's page through the vendored missionHref and the foundation's appRouteForWebLink
 // (Studio in the system browser: the phone has no Mission screen). The plan shows its goal, its
 // numbered tasks with the agent each runs on, and the oversight note (PRD-181 S5), never a cost
-// (D8). A dismissed suggestion is not drawn at all (the web returns null).
+// (D8). A dismissed suggestion is not drawn at all (the web returns null). The tool approval, the
+// withdraw offer (an offer's requests drawn as one card) and the ticket card are view-tools.ts's.
 
 import type { MissionApprovalTask } from '../../core/web/components/widgets/types';
-import { CONTEXT_MESSAGES_KEPT, recentMessages } from '../../core/web/lib/chat/suggestion';
+import {
+  CONTEXT_MESSAGES_KEPT,
+  recentMessages,
+  type MissionSuggestion,
+} from '../../core/web/lib/chat/suggestion';
 import { missionHref } from '../../core/web/lib/ticket-links';
 import { appRouteForWebLink, type WebLinkTarget } from '../../navigation/web-links';
 import { joinLabel } from '../../ui/paint';
 import { countPhrase } from '../../ui/variants';
 import { shownMessages, type ThreadState } from '../controller/thread';
-import { CARD_COPY, OVERSIGHT_TIERS } from '../strings';
+import { CARD_COPY } from '../strings';
 import { missionCreateBody, type ContextMessage, type MissionCreateBody } from './actions';
 import {
   placeCards,
@@ -22,6 +27,11 @@ import {
   type FiledCard,
   type ThreadCard,
 } from './model';
+import { oversightView, ownWord, type OversightView } from './oversight';
+import { toolRow, withdrawRow, type ToolApprovalRow, type WithdrawRow } from './view-tools';
+
+export { oversightView, type OversightView } from './oversight';
+export type { TicketRow, ToolApprovalRow, WithdrawRequestRow, WithdrawRow } from './view-tools';
 
 export type SuggestionRow = {
   readonly kind: 'suggestion';
@@ -46,8 +56,6 @@ export type PlanTaskRow = {
   readonly accessibilityLabel: string;
 };
 
-export type OversightView = { readonly title: string; readonly rationale: string | null };
-
 export type PlanRow = {
   readonly kind: 'plan';
   readonly key: string;
@@ -61,7 +69,7 @@ export type PlanRow = {
   readonly decided: string | null;
 };
 
-export type CardRow = SuggestionRow | PlanRow;
+export type CardRow = SuggestionRow | PlanRow | ToolApprovalRow | WithdrawRow;
 
 export type CardContext = {
   readonly chatId: string | null;
@@ -87,10 +95,6 @@ export function threadContext(state: ThreadState): ContextMessage[] {
     ...(asked ? [{ role: 'user', content: asked }] : []),
     ...(answered ? [{ role: 'assistant', content: answered }] : []),
   ].slice(-CONTEXT_MESSAGES_KEPT);
-}
-
-function ownWord(words: Readonly<Record<string, string>>, key: string | undefined): string | null {
-  return key !== undefined && Object.prototype.hasOwnProperty.call(words, key) ? words[key] : null;
 }
 
 function missionLink(outcome: CardOutcome, webUrl: string | undefined): WebLinkTarget | null {
@@ -122,17 +126,6 @@ function taskRow(task: MissionApprovalTask, index: number): PlanTaskRow {
   };
 }
 
-/** The oversight note when the plan carries a tier or a reason (the web's condition). */
-export function oversightView(plan: Plan): OversightView | null {
-  if (!plan.risk_tier && !plan.oversight_rationale) return null;
-  const tier = ownWord(OVERSIGHT_TIERS, plan.risk_tier) ?? OVERSIGHT_TIERS.human_in_the_loop;
-  const riskClass = plan.risk_class?.replace(/_/g, ' ').trim();
-  return {
-    title: riskClass ? `${tier} · ${riskClass}` : tier,
-    rationale: plan.oversight_rationale?.trim() || null,
-  };
-}
-
 const DECIDED: Readonly<Partial<Record<CardOutcome['state'], string>>> = Object.freeze({
   approved: CARD_COPY.approved,
   rejected: CARD_COPY.rejected,
@@ -152,10 +145,12 @@ function planRow(card: FiledCard, plan: Plan): PlanRow {
   };
 }
 
-function cardRow(card: FiledCard, context: CardContext): CardRow | null {
-  if (card.card.kind === 'plan') return planRow(card, card.card.plan);
+function suggestionRow(
+  card: FiledCard,
+  suggestion: MissionSuggestion,
+  context: CardContext,
+): SuggestionRow | null {
   if (card.outcome.state === 'dismissed') return null;
-  const { suggestion } = card.card;
   return {
     kind: 'suggestion',
     key: card.key,
@@ -167,9 +162,33 @@ function cardRow(card: FiledCard, context: CardContext): CardRow | null {
   };
 }
 
-/** The cards in one place of the thread, as drawn (a dismissed suggestion left out). */
+/** One card's row; a withdraw request is drawn with the rest of its offer (cardRows). */
+function cardRow(card: FiledCard, context: CardContext): CardRow | null {
+  switch (card.card.kind) {
+    case 'plan':
+      return planRow(card, card.card.plan);
+    case 'tool':
+      return toolRow(card, card.card.tool);
+    case 'suggestion':
+      return suggestionRow(card, card.card.suggestion, context);
+    case 'withdraw':
+      return null;
+  }
+}
+
+const isWithdraw = (card: FiledCard) => card.card.kind === 'withdraw';
+
+/**
+ * The cards in one place of the thread, as drawn: a dismissed suggestion left out, and an offer's
+ * requests as one card where its first request sits.
+ */
 export function cardRows(cards: readonly FiledCard[], context: CardContext): CardRow[] {
-  return cards.flatMap((card) => cardRow(card, context) ?? []);
+  const rowOf = (card: FiledCard): CardRow | null => {
+    if (!isWithdraw(card)) return cardRow(card, context);
+    const offer = cards.filter((other) => isWithdraw(other) && other.since === card.since);
+    return offer[0] === card ? withdrawRow(offer) : null;
+  };
+  return cards.flatMap((card) => rowOf(card) ?? []);
 }
 
 /** The cards for each place in the thread: inside a saved reply, the live reply, or after both. */

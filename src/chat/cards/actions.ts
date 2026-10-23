@@ -4,14 +4,16 @@
 // needs the reason MissionRejectRequest requires (1-2000 characters), refused here before any call.
 // Who may act is src/auth/role.ts (D16, D17): a viewer sees the card read-only with the D17 words
 // and never a button the server would refuse. A refusal shows the server's own sentence only when
-// it is one a person wrote for people; otherwise, and always for a status, the taxonomy's words.
+// it is one a person wrote for people; otherwise, and always for a status, the taxonomy's words. A
+// grant's refusal (api/approval_grants.py answers 422 for a card that can no longer run) also says
+// what a decided card was decided as, and keeps a sentence that names its expiry time.
 
 import { ApiError, isApiError, userMessage, type ApiErrorKind } from '../../api/errors';
 import type { WorkspaceRole } from '../../api/workspace';
 import { roleCan, type RoleAction } from '../../auth/role';
 import { ROLE_COPY } from '../../auth/strings';
 import { CONTEXT_MESSAGES_KEPT } from '../../core/web/lib/chat/suggestion';
-import { CARD_COPY } from '../strings';
+import { CARD_COPY, GRANT_COPY } from '../strings';
 
 /** MissionCreateRequest.goal (api/missions.py). */
 export const MISSION_GOAL_MAX_CHARS = 10_000;
@@ -122,4 +124,32 @@ export function refusalText(error: unknown): string {
   if (mayShowServerWords(error)) return (error.serverMessage ?? '').trim();
   // the taxonomy by kind, never the server's words (userMessage shows a conflict's own)
   return userMessage(new ApiError(error.kind, { status: error.status, code: error.code }));
+}
+
+/** /grant and /deny refuse a card that can no longer run with a 422 (a 409 from a later server). */
+const GRANT_REFUSALS: ReadonlySet<number> = new Set([409, 422]);
+/** approval_grant_lapses.py NOT_PENDING and the /deny refusal: the server's words for a decided card. */
+const NOT_PENDING = /^Grant is not pending \(status: ([a-z_]+)\)\.?$/;
+/** A clock time ('expired at 05:12 on 15 Oct') is a person's words, not an identifier. */
+const CLOCK = /\b\d{1,2}:\d{2}\b/g;
+
+function alreadyDecided(status: string): string {
+  const words = GRANT_COPY.alreadyDecided;
+  return Object.prototype.hasOwnProperty.call(words, status)
+    ? words[status]
+    : GRANT_COPY.alreadyAnswered;
+}
+
+/**
+ * What a refused grant or deny says: a decided card in the kit's words for its status, the server's
+ * sentence when a person wrote it (expired, replaced, already decided), else refusalText's.
+ */
+export function grantRefusalText(error: unknown): string {
+  const refused =
+    isApiError(error) && error.status !== undefined && GRANT_REFUSALS.has(error.status);
+  if (!refused) return refusalText(error);
+  const words = (error.serverMessage ?? '').trim();
+  const decided = NOT_PENDING.exec(words);
+  if (decided) return alreadyDecided(decided[1]);
+  return isUserSentence(words.replace(CLOCK, '')) ? words : refusalText(error);
 }

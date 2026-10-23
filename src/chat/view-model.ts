@@ -5,7 +5,8 @@
 // notice for a turn that failed, stopped or could not be stopped. Receipts and tool lines are built
 // by lines.ts; every notice's mark has a word for screen readers (§4.6). Every failure says the
 // kit's own words (strings.ts): the server's may name a plan (D-NO-BILLING). Auto's cards sit inside
-// the reply that raised them (cards/view.ts places them). The components only draw these rows.
+// the reply that raised them (cards/view.ts places them), and the tickets a reply filed or checked
+// are its own (a saved task_card part, or the live turn's). The components only draw these rows.
 
 import { ApiError } from '../api/errors';
 import {
@@ -20,7 +21,8 @@ import { receiptsOf } from '../core/web/lib/chat/receipts';
 import { lastTurn } from '../core/web/lib/chat/retry';
 import { joinLabel } from '../ui/paint';
 import { errorCopy } from '../ui/variants';
-import { placedCards, type CardRow, type PlacedCards } from './cards/view';
+import { placedCards, type CardRow, type PlacedCards, type TicketRow } from './cards/view';
+import { ticketRows } from './cards/view-tools';
 import { canSend, shownMessages, type ThreadFailure, type ThreadState } from './controller/thread';
 import {
   receiptsView,
@@ -72,7 +74,9 @@ export type AutoRow = {
   readonly toolLines: readonly ToolLineRow[];
   readonly receipts: ReceiptsView | null;
   readonly notices: readonly Notice[];
-  /** Auto's cards this reply raised (a Mission suggestion, a plan to approve). */
+  /** The tickets this reply filed or checked ('#0431: filed to Inbox'). */
+  readonly tickets: readonly TicketRow[];
+  /** Auto's cards this reply raised (a Mission suggestion, a plan or a tool to approve, …). */
   readonly cards: readonly CardRow[];
 };
 
@@ -161,6 +165,7 @@ function autoRow(row: Omit<AutoRow, 'type'>): AutoRow | null {
     row.toolLines.length === 0 &&
     row.receipts === null &&
     row.notices.length === 0 &&
+    row.tickets.length === 0 &&
     row.cards.length === 0;
   return empty ? null : { type: 'auto', ...row };
 }
@@ -177,10 +182,13 @@ function storedRow(
   if (savedTurnError(message) !== null) {
     const copy = savedFailureCopy(message);
     const failed = notice(`${message.id}-failed`, 'failed', copy.text, newest && copy.canRetry);
-    return autoRow({ ...base, paragraphs: [], notices: [failed] });
+    return autoRow({ ...base, paragraphs: [], notices: [failed], tickets: [] });
   }
   return autoRow({
     ...base,
+    tickets: ticketRows(
+      message.parts.flatMap((part) => (part.type === 'task_card' ? [part.card] : [])),
+    ),
     paragraphs: paragraphs(messageText(message)),
     receipts: receiptsView(receiptsOf(message), options),
     notices: [],
@@ -209,6 +217,7 @@ function liveAutoRow(
     toolLines: toolLineRows(turn.toolCalls, streaming),
     receipts: receiptsView(turn.receipts, options),
     notices: turnNotices(turn),
+    tickets: ticketRows(turn.taskCards),
     cards,
   });
 }

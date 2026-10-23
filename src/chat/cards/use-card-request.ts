@@ -1,18 +1,21 @@
 // One card action at a time (D-CARDS): busy while the call is out, the refusal's words when the
-// server says no (refusalText: never a status code), and the outcome handed to the thread when it
-// agrees, so the card keeps it however often it is drawn again. Who may act comes from the session's
-// role (cardAccess). It only wires: the payloads, the gate and the words are actions.ts.
+// server says no (refusalText, or a grant card's grantRefusalText: never a status code), and the
+// outcome handed to the thread when it agrees, so the card keeps it however often it is drawn
+// again. Who may act comes from the session's role (cardAccess). It only wires: the payloads, the
+// gate and the words are actions.ts and grants.ts.
 
 import { useCallback, useRef, useState } from 'react';
 
-import type { ApiClient } from '../../api/client';
 import type { RoleAction } from '../../auth/role';
 import { useApiClient, useAppSession } from '../../app-state/session';
 import { logger } from '../../lib/logger';
 import { cardAccess, refusalText, type CardAccess } from './actions';
-import type { CardOutcome, SettleCard } from './model';
+import type { CardCall, SettleCard } from './model';
 
-export type CardCall = (client: ApiClient) => Promise<CardOutcome>;
+export type { CardCall } from './model';
+
+/** The words a refused card action shows. */
+export type RefusalWords = (error: unknown) => string;
 
 export type CardRequest = {
   readonly busy: boolean;
@@ -26,7 +29,11 @@ export function useCardAccess(action: RoleAction): CardAccess {
   return cardAccess(useAppSession().workspace.role, action);
 }
 
-export function useCardRequest(key: string, onSettled: SettleCard): CardRequest {
+export function useCardRequest(
+  key: string,
+  onSettled: SettleCard,
+  refusal: RefusalWords = refusalText,
+): CardRequest {
   const client = useApiClient();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,14 +49,14 @@ export function useCardRequest(key: string, onSettled: SettleCard): CardRequest 
         .then((outcome) => onSettled(key, outcome))
         .catch((caught: unknown) => {
           logger.warn('[chat] a card action was refused', caught);
-          setError(refusalText(caught));
+          setError(refusal(caught));
         })
         .finally(() => {
           out.current = false;
           setBusy(false);
         });
     },
-    [client, key, onSettled],
+    [client, key, onSettled, refusal],
   );
   return { busy, error, run };
 }

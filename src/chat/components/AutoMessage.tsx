@@ -1,6 +1,7 @@
 // One of Auto's messages (the handoff's thread): the 20 pt ink 'A' mark and the mono 'AUTO' label,
 // then the answer as plain 14/1.55 paragraphs with no bubble (KC5), the tool lines, 'What Auto did',
-// any notice (a limit, a file Auto could not open, a saved failure) and the cards the reply raised.
+// any notice (a limit, a file Auto could not open, a saved failure), the tickets it filed or checked
+// and the cards the reply raised.
 
 import { StyleSheet, View } from 'react-native';
 
@@ -8,6 +9,7 @@ import type { WebLinkTarget } from '../../navigation/web-links';
 import { useTokens } from '../../styles/theme';
 import { Text } from '../../ui';
 import type { SettleCard } from '../cards/model';
+import { TicketCards } from '../cards/TaskCard';
 import { ThreadCards } from '../cards/ThreadCards';
 import { CHAT_COPY } from '../strings';
 import type { AutoRow } from '../view-model';
@@ -66,6 +68,7 @@ export function AutoMessage({ row, onLink, onRetry, onCard }: AutoMessageProps) 
       {row.notices.map((notice) => (
         <TurnNotice key={notice.key} notice={notice} onRetry={onRetry} />
       ))}
+      <TicketCards tickets={row.tickets} onLink={onLink} />
       <ThreadCards cards={row.cards} onSettled={onCard} onLink={onLink} />
     </View>
   );

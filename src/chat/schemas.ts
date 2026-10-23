@@ -180,9 +180,26 @@ export const MissionRunSchema = z.object({ id: Id, goal: Words, state: Text });
 
 export type MissionRun = Readonly<z.output<typeof MissionRunSchema>>;
 
+/**
+ * What an approval click ran (details.executed_result, PRD-193 S4): /grant answers 200 whenever the
+ * yes is recorded, and the resumed call's result rides on the grant (the web's lib/grant-outcome.ts).
+ */
+export const GrantRunSchema = z.object({
+  success: maybe(z.boolean()),
+  error: maybe(z.string().nullable()),
+  requires_confirmation: maybe(z.boolean()),
+  resumed_via: maybe(z.string()),
+});
+
+export type GrantRun = Readonly<z.output<typeof GrantRunSchema>>;
+
 /** POST /api/v1/approval-grants/{id}/grant and /deny answer {grant: ApprovalGrant.to_dict()}. */
 export const GrantResultSchema = z.object({
-  grant: z.object({ id: z.number().int(), status: z.string() }),
+  grant: z.object({
+    id: z.number().int(),
+    status: z.string(),
+    details: maybe(z.object({ executed_result: maybe(GrantRunSchema.nullable()) }).nullable()),
+  }),
 });
 
 export type GrantResult = Readonly<z.output<typeof GrantResultSchema>>;

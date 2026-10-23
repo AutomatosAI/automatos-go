@@ -98,7 +98,11 @@ describe('the cards a turn raises (D-CARDS)', () => {
     expect(landed.live).toBeNull();
     const [reply] = autoRows(threadRows(landed));
     expect(reply?.messageId).toBe(REPLIED.id);
-    expect(reply?.cards.map((card) => [card.kind, card.outcome.state])).toEqual([
+    const states = reply?.cards.map((card) => [
+      card.kind,
+      'outcome' in card ? card.outcome.state : null,
+    ]);
+    expect(states).toEqual([
       ['suggestion', 'open'],
       ['plan', 'approved'],
     ]);

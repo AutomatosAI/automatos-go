@@ -10,49 +10,19 @@ import { StyleSheet, View } from 'react-native';
 
 import { useTokens } from '../../styles/theme';
 import { Button, Text, TextField } from '../../ui';
-import { joinLabel } from '../../ui/paint';
-import { tonePaint } from '../../ui/variants';
 import { CARD_COPY } from '../strings';
 import { REJECT_REASON_MAX_CHARS, rejectBody, type CardAccess } from './actions';
 import { approveMission, rejectMission } from './api';
 import { ReadOnlyNote, RefusalText } from './CardNotes';
 import type { SettleCard } from './model';
 import { MissionFrame } from './MissionFrame';
+import { OversightNote } from './OversightNote';
 import { useCardAccess, useCardRequest, type CardRequest } from './use-card-request';
-import type { OversightView, PlanRow, PlanTaskRow } from './view';
+import type { PlanRow, PlanTaskRow } from './view';
 
 const ROW_LEVEL = 4;
 const NOTE_LEVEL = 6;
 const NUMBER_WIDTH = 18;
-
-function OversightNote({ view }: { readonly view: OversightView }) {
-  const { colours, radii, spacing } = useTokens();
-  const { backgroundColor, color } = tonePaint(colours, 'warning');
-  return (
-    <View
-      accessible
-      accessibilityRole="text"
-      accessibilityLabel={joinLabel(CARD_COPY.oversight, view.title, view.rationale)}
-      style={{
-        backgroundColor,
-        borderRadius: radii.control,
-        padding: spacing.space4,
-        marginHorizontal: spacing.space6,
-        marginBottom: spacing.space4,
-        gap: spacing.space1,
-      }}
-    >
-      <Text level={NOTE_LEVEL} weight={600} style={{ color }}>
-        {view.title}
-      </Text>
-      {view.rationale ? (
-        <Text level={NOTE_LEVEL} tone="muted">
-          {view.rationale}
-        </Text>
-      ) : null}
-    </View>
-  );
-}
 
 function TaskLine({ task }: { readonly task: PlanTaskRow }) {
   const { colours, spacing } = useTokens();

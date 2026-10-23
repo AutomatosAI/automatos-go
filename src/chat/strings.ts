@@ -5,7 +5,7 @@
 // screen (D-NO-BILLING, D8).
 
 import type { TurnErrorCode } from '../core/turn-reducer';
-import type { ToolStatus } from '../core/web/components/play/chat/labels';
+import { WAITING_FOR_YOU, type ToolStatus } from '../core/web/components/play/chat/labels';
 import type { Receipt } from '../core/web/types';
 
 /** Words a failed turn shows, and whether asking again can help. */
@@ -143,4 +143,53 @@ export const OVERSIGHT_TIERS = Object.freeze({
   monitor: 'Monitored',
   human_on_the_loop: 'Human on the loop',
   human_in_the_loop: 'Human approval required',
+});
+
+/**
+ * The tool approval (the web's ToolApprovalWidget, with lib/grant-outcome.ts's honest line for what
+ * the click ran) and the withdraw offer (withdraw-offer-card.tsx), in the web's words. A click on a
+ * card someone already decided says what it was decided as (the server's 'Grant is not pending').
+ */
+export const GRANT_COPY = Object.freeze({
+  toolEyebrow: 'Action · Approval needed',
+  approve: 'Approve & run',
+  deny: 'Deny',
+  /** The open card, as its tool line and receipt say it: waiting, never failed. */
+  waiting: `${WAITING_FOR_YOU}.`,
+  paramsLabel: 'What it will run with',
+  approved: 'Approved.',
+  ran: 'Approved — the action ran.',
+  requeued: 'Approved — the blocked ticket was re-queued.',
+  askedAgain: 'Approved, but the action asked for approval again.',
+  failed: 'Approved, but the action failed.',
+  failedBecause: (reason: string) => `Approved, but the action failed: ${reason}`,
+  denied: 'Denied — the action will not run.',
+  withdrawEyebrow: 'Withdraw request',
+  withdraw: 'Withdraw',
+  keep: 'Keep it',
+  withdrawn: 'Withdrawn.',
+  kept: 'Kept — it still waits for your yes.',
+  /** A request with no reason or action of its own (the web's 'Request #N'). */
+  request: (grantId: number) => `Request #${grantId}`,
+  /** By the decided grant's status; any other status reads as alreadyAnswered. */
+  alreadyDecided: Object.freeze({
+    granted: 'This request was already approved.',
+    denied: 'This request was already denied.',
+    expired: 'This request expired before anyone answered it.',
+    revoked: 'This request was already withdrawn.',
+  }) as Readonly<Record<string, string>>,
+  alreadyAnswered: 'This request was already answered.',
+});
+
+/** A ticket the reply filed or checked (the web's TaskCard; the handoff's '#0431: filed to Inbox'). */
+export const TICKET_COPY = Object.freeze({
+  /** The headline of a ticket with no number: a row id is never shown as one. */
+  unnumbered: 'Ticket',
+  filedToInbox: 'filed to Inbox',
+  openOnBoard: 'Open on the board',
+  lastTool: (tool: string) => `last tool: ${tool}`,
+  filesTouched: Object.freeze({ one: 'file touched', other: 'files touched' }),
+  exit: (reason: string) => `exit: ${reason}`,
+  /** The web hides an unassigned ticket's agent. */
+  unassigned: 'unassigned',
 });

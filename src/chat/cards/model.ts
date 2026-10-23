@@ -1,19 +1,31 @@
-// Auto's cards in a thread (D-CARDS), pure: what a turn raises (the Mission suggestion frame and
-// each mission_approval tool-data card, read by the vendored suggestion.ts and approvals.ts), filed
-// on the thread as they arrive with the outcome the user gave them. The saved reply carries no card
-// (api/chat.py saves text, receipts and task cards only), so a card outlives its live turn here:
-// it stays inside the reply that raised it, keeps its outcome when it moves from the live reply to
-// the saved one, and sits after the thread when its reply was never saved (Play's loose approvals,
+// Auto's cards in a thread (D-CARDS), pure: what a turn raises (the Mission suggestion frame, each
+// mission_approval and tool_approval tool-data card, read by the vendored suggestion.ts and
+// approvals.ts, and each request of a withdraw_offer frame), filed on the thread as they arrive with
+// the outcome the user gave them. The saved reply carries no card (api/chat.py saves text, receipts
+// and task cards only), so a card outlives its live turn here: it stays inside the reply that
+// raised it, keeps its outcome when it moves from the live reply to the saved one, and sits after
+// the thread when its reply was never saved (Play's loose approvals,
 // components/play/chat/approval-cards.tsx). Nothing here is persisted (D-CACHE).
 
+import type { ApiClient } from '../../api/client';
 import type { TurnState } from '../../core/turn-reducer';
-import type { MissionApprovalWidgetData } from '../../core/web/components/widgets/types';
+import type {
+  MissionApprovalWidgetData,
+  ToolApprovalWidgetData,
+} from '../../core/web/components/widgets/types';
 import type { MissionSuggestion } from '../../core/web/lib/chat/suggestion';
-import type { MissionRun, StoredMessage } from '../schemas';
+import type { WithdrawOffer } from '../../core/web/types';
+import type { GrantRun, MissionRun, StoredMessage } from '../schemas';
+
+/** One request of a withdraw offer: a grant still waiting on a yes. */
+export type WithdrawRequest = WithdrawOffer['requests'][number];
 
 export type ThreadCard =
   | { readonly kind: 'suggestion'; readonly suggestion: MissionSuggestion }
-  | { readonly kind: 'plan'; readonly plan: MissionApprovalWidgetData };
+  | { readonly kind: 'plan'; readonly plan: MissionApprovalWidgetData }
+  | { readonly kind: 'tool'; readonly tool: ToolApprovalWidgetData }
+  /** One request of a withdraw offer; the view draws an offer's requests as one card. */
+  | { readonly kind: 'withdraw'; readonly message: string; readonly request: WithdrawRequest };
 
 /** open: waiting on the user; the rest are what the user did with it (the server agreed). */
 export type CardOutcome =
@@ -21,7 +33,16 @@ export type CardOutcome =
   | { readonly state: 'dismissed' }
   | { readonly state: 'filed'; readonly mission: MissionRun }
   | { readonly state: 'approved' }
-  | { readonly state: 'rejected' };
+  | { readonly state: 'rejected' }
+  /** The yes is recorded; `run` is what the resumed call did (null: the grant carried none). */
+  | { readonly state: 'granted'; readonly run: GrantRun | null }
+  | { readonly state: 'denied' }
+  | { readonly state: 'withdrawn' }
+  /** Keep it: nothing was sent, the request still waits on the server. */
+  | { readonly state: 'kept' };
+
+/** One card action against the server: the outcome it settles the card with once it agrees. */
+export type CardCall = (client: ApiClient) => Promise<CardOutcome>;
 
 export type FiledCard = {
   readonly key: string;
@@ -38,21 +59,44 @@ export type SettleCard = (key: string, outcome: CardOutcome) => void;
 export type CardPlace = number | 'live' | 'loose';
 
 export const OPEN: CardOutcome = Object.freeze({ state: 'open' });
+export const DENIED: CardOutcome = Object.freeze({ state: 'denied' });
+export const WITHDRAWN: CardOutcome = Object.freeze({ state: 'withdrawn' });
+export const KEPT: CardOutcome = Object.freeze({ state: 'kept' });
 
-/** A suggestion is one per turn; a plan is one per Mission, however often it is raised. */
+/** The tool approval's key: the vendored approvals.ts names it by its grant. */
+export const toolCardKey = (grantId: number) => `tool-${grantId}`;
+
+/**
+ * A suggestion is one per turn; a plan one per Mission and a tool approval one per grant, however
+ * often they are raised; a withdraw request one per grant in the turn that offered it.
+ */
 function keyOf(card: ThreadCard, since: number): string {
-  return card.kind === 'suggestion' ? `suggestion-${since}` : `mission-${card.plan.mission_id}`;
+  switch (card.kind) {
+    case 'suggestion':
+      return `suggestion-${since}`;
+    case 'plan':
+      return `mission-${card.plan.mission_id}`;
+    case 'tool':
+      return toolCardKey(card.tool.grant_id);
+    case 'withdraw':
+      return `withdraw-${since}-${card.request.grant_id}`;
+  }
 }
 
-/** The cards a turn has raised so far: its suggestion, then each plan, in arrival order. */
+function withdrawCards(offer: WithdrawOffer | null): ThreadCard[] {
+  if (!offer) return [];
+  return offer.requests.map((request) => ({ kind: 'withdraw', message: offer.message, request }));
+}
+
+/** The cards a turn has raised so far: its suggestion, each approval in arrival order, the offer. */
 export function raisedCards(turn: TurnState): ThreadCard[] {
   const suggestion: ThreadCard[] = turn.missionSuggestion
     ? [{ kind: 'suggestion', suggestion: turn.missionSuggestion }]
     : [];
-  const plans = turn.approvals.flatMap((card): ThreadCard[] =>
-    card.kind === 'mission' ? [{ kind: 'plan', plan: card.data }] : [],
+  const approvals = turn.approvals.map((card): ThreadCard =>
+    card.kind === 'mission' ? { kind: 'plan', plan: card.data } : { kind: 'tool', tool: card.data },
   );
-  return [...suggestion, ...plans];
+  return [...suggestion, ...approvals, ...withdrawCards(turn.withdrawOffer)];
 }
 
 /** `filed` with each raised card it does not hold yet, open, under `since`; the same array if none. */
@@ -68,16 +112,40 @@ export function fileCards(
   return fresh.length === 0 ? filed : [...filed, ...fresh];
 }
 
-/** `filed` with one card's outcome; a card that is not open any more keeps the one it has. */
+/** The grant a card acts on: a tool approval's, a withdraw request's; none for a Mission's cards. */
+function grantOf(card: ThreadCard): number | null {
+  if (card.kind === 'tool') return card.tool.grant_id;
+  return card.kind === 'withdraw' ? card.request.grant_id : null;
+}
+
+/** Denying a grant withdraws it and withdrawing it denies it: the other cards on it say so too. */
+function siblingOutcome(card: ThreadCard, outcome: CardOutcome): CardOutcome | null {
+  if (outcome.state !== 'denied' && outcome.state !== 'withdrawn') return null;
+  return card.kind === 'tool' ? DENIED : WITHDRAWN;
+}
+
+/**
+ * `filed` with one card's outcome, and a refused grant's other open cards settled with it; a card
+ * that is not open any more keeps the one it has.
+ */
 export function settleCard(
   filed: readonly FiledCard[],
   key: string,
   outcome: CardOutcome,
 ): readonly FiledCard[] {
-  const settles = (card: FiledCard) => card.key === key && card.outcome.state === 'open';
-  return filed.some(settles)
-    ? filed.map((card) => (settles(card) ? { ...card, outcome } : card))
-    : filed;
+  const target = filed.find((card) => card.key === key && card.outcome.state === 'open');
+  if (!target) return filed;
+  const grant = grantOf(target.card);
+  const next = (card: FiledCard): CardOutcome | null => {
+    if (card.outcome.state !== 'open') return null;
+    if (card.key === key) return outcome;
+    const sameGrant = grant !== null && grantOf(card.card) === grant;
+    return sameGrant ? siblingOutcome(card.card, outcome) : null;
+  };
+  return filed.map((card) => {
+    const settled = next(card);
+    return settled ? { ...card, outcome: settled } : card;
+  });
 }
 
 /**
