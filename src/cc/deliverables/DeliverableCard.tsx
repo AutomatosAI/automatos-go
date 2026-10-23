@@ -42,7 +42,12 @@ const KIND_ICONS: Readonly<Record<DeliverableKind, LucideIcon>> = Object.freeze(
   file: FileIcon,
 });
 
-function TypeRow({ view }: { readonly view: DeliverableCardView }) {
+/** The type's icon and word, and 'Run failed' as dot and word: the card's first row and the page's. */
+export function TypeRow({
+  view,
+}: {
+  readonly view: Pick<DeliverableCardView, 'kind' | 'typeWord' | 'failed'>;
+}) {
   const { colours } = useTokens();
   const Icon = KIND_ICONS[view.kind];
   return (

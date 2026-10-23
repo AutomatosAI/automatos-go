@@ -388,3 +388,30 @@ export const DELIVERABLES_COPY = Object.freeze({
   emptyType: (types: string) => `No ${types.toLowerCase()} yet`,
   emptyTypeMessage: 'Files of this type land here as your agents write them.',
 });
+
+/** One Deliverable's page (US-013b, D25): read, opened or reported; never approved. */
+export const DELIVERABLE_COPY = Object.freeze({
+  loading: 'Loading the Deliverable…',
+  back: 'Deliverables',
+  backLabel: 'Back to the Deliverables',
+  summary: 'Summary',
+  /** content_truncated: the server sends a file's first megabyte inline. */
+  truncated: 'This is the first part of the file. Studio has all of it.',
+  open: Object.freeze({
+    pdf: 'Open the PDF',
+    docx: 'Open the document',
+    xlsx: 'Open the spreadsheet',
+  }),
+  openHint: "Downloads the file and shows it in the phone's viewer",
+  viewerFailed: 'This file could not be opened on this phone.',
+  image: (title: string) => `Image: ${title}`,
+  imageFailed: 'This image could not be loaded.',
+  notShown: 'The phone cannot show this file. Studio can.',
+  unreadable: 'The workspace could not read this file. Try it in Studio.',
+  noFile: 'This Deliverable has no file the phone can open.',
+  emptyFile: 'Nothing is written in this file yet.',
+  studio: 'Open in Studio',
+  studioHint: 'Opens the Deliverable in Studio in the browser',
+  studioMissing: 'Open this Deliverable in Studio on the web.',
+  studioFailed: 'Studio could not be opened on this phone.',
+});
