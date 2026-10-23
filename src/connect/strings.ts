@@ -1,9 +1,11 @@
 // User-facing copy for connecting to your own server (one strings module per feature). No message
 // names a status code or an internal (D-ONE-CLIENT); none points at making an account (D-SIGNIN).
 
+import { AUTH_COPY } from '../auth/strings';
 import type { AddressRefusal } from './address';
 import type { PairRefusal } from './api';
 import type { DeviceRefusalReason } from './expiry';
+import type { ConnectFailure } from './flow';
 import type { PairCodeRefusal } from './pair-code';
 import type { OwnServerRefusal } from './server-support';
 
@@ -36,7 +38,7 @@ const PAIR_AGAIN = 'Pair it again from Studio → Settings → Phones & devices.
 export const PAIR_REFUSAL_COPY: Readonly<Record<PairRefusal, string>> = Object.freeze({
   bad_code: `That code didn't work. Codes last 10 minutes and work once. ${NEW_CODE}`,
   pairing_off:
-    "This server isn't taking phones yet. Its operator turns pairing on with LOCAL_REMOTE_ACCESS=paired, then restarts it.",
+    "This server isn't taking phones yet. Its operator turns pairing on with LOCAL_REMOTE_ACCESS=paired ('Reach your install from your phone' in the self-hosting docs), then restarts it.",
   too_many: 'Too many pairing tries from this network. Wait a few minutes, then try again.',
   busy: "The server couldn't pair this phone just now. Try again in a minute.",
   unreachable:
@@ -44,6 +46,24 @@ export const PAIR_REFUSAL_COPY: Readonly<Record<PairRefusal, string>> = Object.f
   invalid_response:
     "This server answered in a way this version of Automatos Go can't read. Update the app, then try again.",
   refused: `This server didn't pair this phone. ${NEW_CODE}`,
+});
+
+/**
+ * Why Connect stopped short (flow.ts): discovery's answer, the step it leads to, or the pairing.
+ * Each says what to do next; 'hosted' sends the person to Sign in to Automatos.
+ */
+export const CONNECT_FAILURE_COPY: Readonly<Record<ConnectFailure, string>> = Object.freeze({
+  ...PAIR_REFUSAL_COPY,
+  no_discovery:
+    "This address doesn't answer like an Automatos server that pairs phones. Check the address; if it's right, update the server's Automatos.",
+  not_automatos:
+    "This address didn't answer like an Automatos server. Check the address, or update Automatos Go, then try again.",
+  discovery_failed: "The server couldn't say what it is just now. Try again in a minute.",
+  hosted: 'This is the Automatos hosted server. Use Sign in to Automatos instead.',
+  unsupported: `${AUTH_COPY.unsupportedServer}. Update the app, then try again.`,
+  keychain: "Automatos Go couldn't use this phone's keychain. Unlock your phone, then try again.",
+  not_saved:
+    "This phone paired, but couldn't switch to the server. Make a new code in Studio → Settings → Phones & devices, then pair again.",
 });
 
 /** This phone's name in Studio's Phones & devices (device-info.ts). */

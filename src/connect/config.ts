@@ -97,3 +97,9 @@ export const DEVICE_PAIRING_REQUIRED = 'device_pairing_required';
  * Not 503: the server itself answers that while running.
  */
 export const NOT_RUNNING_GATEWAY_STATUSES: readonly number[] = Object.freeze([502, 504]);
+
+/**
+ * The server's name as Connect, Settings and the refusal copy show it (the discovery document's
+ * `name`): text from the network, so trimmed and cut to this; blank → the server's address.
+ */
+export const SERVER_NAME_MAX_LENGTH = 120;

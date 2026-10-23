@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ADDRESS_COPY,
+  CONNECT_FAILURE_COPY,
   DEVICE_NAME_COPY,
   DEVICE_REFUSAL_COPY,
   PAIR_CODE_COPY,
@@ -12,6 +13,7 @@ const MESSAGES = [
   ...Object.values(ADDRESS_COPY),
   ...Object.values(PAIR_CODE_COPY),
   ...Object.values(PAIR_REFUSAL_COPY),
+  ...Object.values(CONNECT_FAILURE_COPY),
   ...Object.values(DEVICE_NAME_COPY),
   ...Object.values(DEVICE_REFUSAL_COPY).map((words) => words('Home NAS')),
 ];
@@ -29,6 +31,22 @@ describe('connect copy', () => {
     expect(PAIR_REFUSAL_COPY.pairing_off).toMatch(/LOCAL_REMOTE_ACCESS=paired/);
     for (const message of Object.values(PAIR_REFUSAL_COPY)) {
       expect(message).toMatch(/try again|Studio|LOCAL_REMOTE_ACCESS|Update the app/i);
+    }
+  });
+
+  it("says how to turn pairing on, naming the setting and the self-hosting docs' heading", () => {
+    for (const message of [PAIR_REFUSAL_COPY.pairing_off, CONNECT_FAILURE_COPY.pairing_off]) {
+      expect(message).toMatch(/LOCAL_REMOTE_ACCESS=paired/);
+      expect(message).toMatch(/'Reach your install from your phone'/);
+    }
+  });
+
+  it('gives every way Connect stops short its words, with what to do next', () => {
+    expect(CONNECT_FAILURE_COPY.unsupported).toMatch(/^This server needs a newer Automatos Go\./);
+    expect(CONNECT_FAILURE_COPY.hosted).toMatch(/Sign in to Automatos/);
+    expect(CONNECT_FAILURE_COPY.not_saved).toMatch(/new code in Studio/);
+    for (const message of Object.values(CONNECT_FAILURE_COPY)) {
+      expect(message).toMatch(/try again|Studio|LOCAL_REMOTE_ACCESS|update|instead/i);
     }
   });
 
