@@ -128,20 +128,20 @@
       "title": "Auto's cards II: tool approval, task card, withdraw offer",
       "description": "As an owner, admin or editor, I want to grant or deny a tool Auto asks for, open the ticket Auto filed, and withdraw a request I no longer want (D-CARDS).",
       "acceptanceCriteria": [
-        "src/chat/cards/ToolApprovalCard.tsx: the tool_approval card (action, message, permission level, risk); Grant → POST /api/v1/approval-grants/{grant_id}/grant, Deny → /deny; the waiting state from the tool-end 'waiting' frame is drawn as waiting, not failed; a 409 'already answered' shows the server's honest words",
-        "src/chat/cards/TaskCard.tsx: '#0431: filed to Inbox' style card with a link to the foundation's cc.ticket(taskId)",
-        "src/chat/cards/WithdrawOfferCard.tsx: each request with Withdraw (= deny the grant) and Keep it (no call); settled states 'Withdrawn.' / 'Kept — it still waits for your yes.' (frontend/components/chatbot/withdraw-offer-card.tsx)",
-        "Role gating and refusal copy as US-008d (shared helpers in src/chat/cards/actions.ts)",
-        "src/chat/__tests__/cards-tools.test.ts: grant/deny payloads, waiting vs failed, withdraw calls deny and keep calls nothing, viewer read-only",
-        "npm run check:routes passes",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes"
+        "src/chat/cards/ToolApprovalCard.tsx: the tool_approval card (action, message, permission level, risk); Grant → POST /api/v1/approval-grants/{grant_id}/grant, Deny → /deny; the waiting state from the tool-end 'waiting' frame is drawn as waiting, not failed; a 409 'already answered' shows the server's honest words → DONE — cab73e5: cards/ToolApprovalCard.tsx draws question/message, the call, permission chip, OversightNote and params; Approve & run → grantCall (POST …/{id}/grant, no body), Deny → denyCall (…/deny); open card line 'Waiting for you.' (toolLine), never failed; 422/409 decided → grantRefusalText words (cards-tools.test.ts)",
+        "src/chat/cards/TaskCard.tsx: '#0431: filed to Inbox' style card with a link to the foundation's cc.ticket(taskId) → DONE — cab73e5: cards/TaskCard.tsx '#0431: filed to Inbox' (view-tools.ts ticketRow), 'Open on the board →' → { app: routes.cc.ticket(id) }; saved task_card parts and live taskCards, each once (cards-tickets.test.ts)",
+        "src/chat/cards/WithdrawOfferCard.tsx: each request with Withdraw (= deny the grant) and Keep it (no call); settled states 'Withdrawn.' / 'Kept — it still waits for your yes.' (frontend/components/chatbot/withdraw-offer-card.tsx) → DONE — cab73e5: cards/WithdrawOfferCard.tsx, one card per offer; Withdraw = withdrawAction('withdraw') → POST …/deny, Keep it = settle KEPT with no call; 'Withdrawn.' / 'Kept — it still waits for your yes.' per request",
+        "Role gating and refusal copy as US-008d (shared helpers in src/chat/cards/actions.ts) → DONE — cab73e5: useCardAccess('approve') + cardAccess (actions.ts) gate every button, viewer reads the D17 note; grantRefusalText added to actions.ts beside refusalText (403 'Workspace admin only' → forbidden copy)",
+        "src/chat/__tests__/cards-tools.test.ts: grant/deny payloads, waiting vs failed, withdraw calls deny and keep calls nothing, viewer read-only → DONE — cab73e5: src/chat/__tests__/cards-tools.test.ts, 23 tests: grant/deny no-body payloads, waiting vs failed (tool-end waiting frame folded through the thread), withdraw calls deny / keep calls nothing, viewer read-only, refusal words; plus cards-tickets.test.ts, 4 tests (the commit body says 22/5: misstated, these are the counts seen)",
+        "npm run check:routes passes → DONE — npm run check:routes: 19 routes, 17 on the server at the pin, 2 pendingUpstream, 0 missing",
+        "npm run typecheck passes → DONE — npm run typecheck: tsc --noEmit clean",
+        "npm run lint passes (0 errors) → DONE — npm run lint: eslint . 0 problems",
+        "npx vitest run passes → DONE — npx vitest run: 100 files, 1452 tests passed"
       ],
       "files": ["src/chat/cards/", "src/chat/__tests__/"],
       "priority": 5,
-      "passes": false,
-      "notes": "Today the approval-grant verbs are owner/admin only on the server (PRD-266 W1 opens them to editors, D16). Gate the UI on roleCan; the server's 403 for an editor before W1 deploys renders the taxonomy's forbidden copy."
+      "passes": true,
+      "notes": "Today the approval-grant verbs are owner/admin only on the server (PRD-266 W1 opens them to editors, D16). Gate the UI on roleCan; the server's 403 for an editor before W1 deploys renders the taxonomy's forbidden copy. | Built cab73e5. The server refuses an already-decided grant with 422, not 409 (api/approval_grants.py, approval_grant_lapses.py): grantRefusalText maps 'Grant is not pending (status: X)' to the kit's words for X and shows a sentence a person wrote (already decided, expired at a clock time, replaced), for 409 and 422 alike. /grant answers 200 whenever the yes is recorded, so the approved line reads grant.details.executed_result (GrantRunSchema): ran, re-queued, asked again, or failed. Tool approvals and withdraw requests are filed cards (model.ts, keys tool-{grant} and withdraw-{since}-{grant}); withdrawing a request denies the same grant's tool card and denying the card withdraws it. Ticket cards are the reply's own (AutoRow.tickets), not filed cards. OversightNote/oversightView moved to cards/OversightNote.tsx and cards/oversight.ts (view.ts re-exports). cards-thread.test.ts reads `outcome` only where a row has one (a WithdrawRow has per-request outcomes)."
     },
     {
       "id": "US-009a",
