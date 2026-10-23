@@ -2,11 +2,13 @@
 // (automatos-ai frontend/lib/ticket-links.ts at the pinned SHA). The ones the phone has a screen for
 // open that screen; every other internal path (an agent, a mission, the Watchlist) opens Studio in
 // the system browser (no WebView, D-NO-WEBVIEW). Only an internal path is followed, as the web's
-// own safeLink rule says: never another site, never a scheme. Parsed by hand, not with URL: React
-// Native's URL is a partial polyfill.
+// own safeLink rule says: never another site, never a scheme. Studio is the CURRENT server's
+// (src/connect/current-server.ts): an own server's links open its web_url, the hosted server's
+// EXPO_PUBLIC_WEB_URL (US-006d). Parsed by hand, not with URL: React Native's URL is a partial
+// polyfill.
 
 import { withoutTrailingSlash } from '../api/url';
-import { env } from '../lib/env';
+import { currentWebUrl } from '../connect/current-server';
 import { chatWithTicket, isTaskId, isUsableId, routes } from './routes';
 
 export type WebLinkTarget =
@@ -102,8 +104,8 @@ const MAPPERS: ReadonlyMap<string, Mapper> = new Map<string, Mapper>([
   ['/chat', chatRoute],
 ]);
 
-/** Studio's page for a path, or null when this build has no web URL to open it on. */
-export function studioUrl(path: string, webUrl: string = env.webUrl): string | null {
+/** Studio's page for a path, or null when the current server has no web URL to open it on. */
+export function studioUrl(path: string, webUrl: string = currentWebUrl()): string | null {
   const base = withoutTrailingSlash(webUrl.trim());
   return base && isInternalPath(path) ? `${base}${path}` : null;
 }
@@ -111,11 +113,11 @@ export function studioUrl(path: string, webUrl: string = env.webUrl): string | n
 /**
  * Where a web link opens: an app route when the phone has the screen, Studio in the system browser
  * for any other internal path, and null for anything that is not an internal path (or an
- * external page when the build has no EXPO_PUBLIC_WEB_URL).
+ * external page when the current server has no Studio address).
  */
 export function appRouteForWebLink(
   link: string,
-  webUrl: string = env.webUrl,
+  webUrl: string = currentWebUrl(),
 ): WebLinkTarget | null {
   const trimmed = link.trim();
   if (!isInternalPath(trimmed)) return null;

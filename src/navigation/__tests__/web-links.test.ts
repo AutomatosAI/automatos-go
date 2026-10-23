@@ -11,6 +11,8 @@ import {
   questionIdHref,
   ticketHref,
 } from '../../core/web/lib/ticket-links';
+import { RECORD } from '../../connect/__tests__/paired-record';
+import { currentServers } from '../../connect/current-server';
 import { chatWithTicket, routes } from '../routes';
 import { appRouteForWebLink, parseQuery, studioUrl } from '../web-links';
 
@@ -153,5 +155,22 @@ describe('studioUrl', () => {
     expect(studioUrl('/settings', WEB)).toBe(`${WEB}/settings`);
     expect(studioUrl('/settings', '  ')).toBeNull();
     expect(studioUrl('//evil.example', WEB)).toBeNull();
+  });
+});
+
+describe("Studio is the current server's (US-006d)", () => {
+  it("opens a paired own server's Studio (its web_url) in the system browser", () => {
+    currentServers.connected(RECORD);
+    expect(studioUrl('/settings')).toBe(`${RECORD.webUrl}/settings`);
+    expect(appRouteForWebLink(missionHref('m-7'))).toEqual({
+      external: `${RECORD.webUrl}/missions/m-7`,
+    });
+  });
+
+  it("goes back to the built-in server's once the own server is forgotten (none in a test build)", () => {
+    currentServers.connected(RECORD);
+    currentServers.forgotten();
+    expect(studioUrl('/settings')).toBeNull();
+    expect(appRouteForWebLink(missionHref('m-7'))).toBeNull();
   });
 });

@@ -5,6 +5,7 @@ import type { AddressRefusal } from './address';
 import type { PairRefusal } from './api';
 import type { DeviceRefusalReason } from './expiry';
 import type { PairCodeRefusal } from './pair-code';
+import type { OwnServerRefusal } from './server-support';
 
 /** Why a typed server address was refused (address.ts). */
 export const ADDRESS_COPY: Readonly<Record<AddressRefusal, string>> = Object.freeze({
@@ -58,4 +59,22 @@ export const DEVICE_REFUSAL_COPY: Readonly<
   revoked: (server: string) => `This phone was removed from ${server}. ${PAIR_AGAIN}`,
   pairing_required: (server: string) => `${server} only answers paired phones. ${PAIR_AGAIN}`,
   ended: (server: string) => `This phone's connection to ${server} ended. ${PAIR_AGAIN}`,
+});
+
+/** Why a paired phone's own server can't be opened (server-support.ts): the title and what to do. */
+export const OWN_SERVER_COPY: Readonly<
+  Record<
+    Exclude<OwnServerRefusal, 'no_device'>,
+    { readonly message: string; readonly detail: string }
+  >
+> = Object.freeze({
+  no_discovery: Object.freeze({
+    message: "This server's version of Automatos can't pair phones yet. Update it.",
+    detail: 'Once the server is updated, open Automatos Go again.',
+  }),
+  pairing_off: Object.freeze({
+    message: 'This server has stopped taking phones',
+    detail:
+      "Its operator turns pairing back on with LOCAL_REMOTE_ACCESS=paired ('Reach your install from your phone' in the self-hosting docs), then restarts it.",
+  }),
 });

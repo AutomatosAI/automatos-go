@@ -1,20 +1,23 @@
-// The gate's two queries, wired (the decision is gate.ts): the server's discovery document, then,
-// once the server takes a sign-in this app has, GET /api/workspaces/current. Both are persisted
-// families, so a restored discovery document opens the gate at once while it refetches; the
-// workspace is read again on every launch (staleTime 0, and only data fetched since this launch
-// counts), because the server silently replaces a workspace header the user can no longer use.
+// The gate's two queries, wired (the decision is gate.ts): the current server's discovery document
+// (at an own server's origin, with no bearer), then, once the server takes a sign-in this app has,
+// GET /api/workspaces/current. Both are persisted families, so a restored discovery document opens
+// the gate at once while it refetches; the workspace is read again on every launch (staleTime 0,
+// and only data fetched since this launch counts), because the server silently replaces a
+// workspace header the user can no longer use. The client is rebuilt whenever the server or the
+// session changes, each server with its own workspace-id holder (US-006d).
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 
-import { createApiClient, type ApiClient } from '../api/client';
+import type { ApiClient } from '../api/client';
 import { fetchDiscovery } from '../api/discovery';
 import { queryKeys } from '../api/query-keys';
 import type { Server } from '../api/server';
 import { expoTransport } from '../api/transport';
-import { workspaceIdStore } from '../api/workspace';
 import type { ClientAuth } from '../auth/providers/binding';
+import { workspaceIds } from '../session/workspace-ids';
 import { launchView, serverSupported, stepOf, type LaunchStep, type LaunchView } from './gate';
+import { createLaunchClient } from './launch-client';
 import { launchBootstrap } from './session-cache';
 
 /** Every launch reads the workspace again, however recent the restored copy is. */
@@ -29,15 +32,10 @@ export type Launch = {
 export function useLaunch(server: Server, clientAuth: ClientAuth): Launch {
   const queryClient = useQueryClient();
   const [launchedAt] = useState(Date.now);
+  const ids = useMemo(() => workspaceIds.forServer(server), [server]);
   const client = useMemo(
-    () =>
-      createApiClient({
-        server,
-        ...clientAuth,
-        getWorkspaceId: workspaceIdStore.get,
-        transport: expoTransport,
-      }),
-    [server, clientAuth],
+    () => createLaunchClient({ server, clientAuth, workspaceIds: ids, transport: expoTransport }),
+    [server, clientAuth, ids],
   );
 
   const discovery = useQuery({
@@ -48,8 +46,8 @@ export function useLaunch(server: Server, clientAuth: ClientAuth): Launch {
 
   const workspace = useQuery({
     queryKey: queryKeys.workspace(),
-    queryFn: ({ signal }) => launchBootstrap(client, queryClient, { signal }),
-    enabled: serverSupported(discoveryStep),
+    queryFn: ({ signal }) => launchBootstrap(client, queryClient, { store: ids, signal }),
+    enabled: serverSupported(discoveryStep, server.source),
     staleTime: WORKSPACE_STALE_TIME_MS,
   });
 
@@ -60,6 +58,10 @@ export function useLaunch(server: Server, clientAuth: ClientAuth): Launch {
     [refetchDiscovery, refetchWorkspace],
   );
 
-  const view = launchView({ discovery: discoveryStep, workspace: stepOf(workspace, launchedAt) });
+  const view = launchView({
+    server,
+    discovery: discoveryStep,
+    workspace: stepOf(workspace, launchedAt),
+  });
   return { view, client, retry };
 }

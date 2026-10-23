@@ -18,6 +18,7 @@
 // required or ended: src/connect/expiry.ts) and the listeners hear it ONCE, however many calls
 // fail together.
 
+import { pairingOf } from '../../connect/current-server';
 import type { DeviceStore, PairedRecord } from '../../connect/device-store';
 import { classifyDeviceRefusal, type DeviceRefusal } from '../../connect/expiry';
 import { logger } from '../../lib/logger';
@@ -70,11 +71,6 @@ function report(onRefused: DeviceProviderDeps['onRefused'], refusal: DeviceRefus
   } catch (error) {
     logger.error('[auth] the device refusal listener failed', error);
   }
-}
-
-/** A pairing: the server, the device row on it, and when this phone paired to it. */
-function pairingOf(record: PairedRecord): string {
-  return `${record.deviceId}@${record.origin}#${record.pairedAt}`;
 }
 
 /** The provider's one pairing: the first record it reads, and whether its token has gone out. */

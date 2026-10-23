@@ -90,3 +90,10 @@ export const INSTALL_MARKER_VALUE = 'checked';
 /** The device lane's 401 codes (automatos-ai core/auth/device.py, core/auth/bearer_registry.py). */
 export const DEVICE_REVOKED = 'device_revoked';
 export const DEVICE_PAIRING_REQUIRED = 'device_pairing_required';
+
+/**
+ * An own server's answers that mean it is not running (US-006d 'not_running'), beside no answer at
+ * all: a reverse proxy in front of it that cannot reach it (502 Bad Gateway, 504 Gateway Timeout).
+ * Not 503: the server itself answers that while running.
+ */
+export const NOT_RUNNING_GATEWAY_STATUSES: readonly number[] = Object.freeze([502, 504]);

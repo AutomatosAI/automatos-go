@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
+import { ADDRESS_MAX_LENGTH, PAIR_CODE_INPUT_MAX_LENGTH } from '../../connect/config';
 import {
+  CONNECT_CODE_PARAM,
+  CONNECT_ORIGIN_PARAM,
   QUESTION_PARAM,
   TICKET_PARAM,
   chatWithTicket,
+  connectPrefillFromParams,
+  connectWith,
   isTaskId,
   isUsableId,
   questionFromTicketParams,
@@ -106,5 +111,64 @@ describe('chatWithTicket (D31: a new conversation with the ticket as context)', 
     expect(ticketFromChatParams({ ticket: ['419', '7'] })).toBe('419');
     expect(ticketFromChatParams({ ticket: [] })).toBeNull();
     expect(ticketFromChatParams({ ticket: ' 419 ' })).toBe('419');
+  });
+});
+
+describe("Connect's routes and prefill (US-006d)", () => {
+  it('has the connect paths: Welcome, Connect, the scanner and the pairing link', () => {
+    expect(routes.welcome).toBe('/welcome');
+    expect(routes.connect).toBe('/connect');
+    expect(routes.connectScan).toBe('/connect/scan');
+    expect(routes.pairLink).toBe('/go/pair');
+    expect(routes.connectWith).toBe(connectWith);
+  });
+
+  it('is plain /connect with nothing to prefill', () => {
+    expect(connectWith()).toBe('/connect');
+    expect(connectWith({ origin: '  ', code: '' })).toBe('/connect');
+  });
+
+  it('carries the server and the code, URI-encoded, as origin and code', () => {
+    const href = connectWith({ origin: 'http://192.168.1.20:8000', code: 'ABCD-2345' });
+    expect(href).toBe('/connect?origin=http%3A%2F%2F192.168.1.20%3A8000&code=ABCD-2345');
+    expect(paramsOf(href)).toEqual({
+      [CONNECT_ORIGIN_PARAM]: 'http://192.168.1.20:8000',
+      [CONNECT_CODE_PARAM]: 'ABCD-2345',
+    });
+  });
+
+  it('decodes what it encodes, either value alone', () => {
+    const both = { origin: 'https://nas.example.com/a?b=c&d', code: 'abcd 2345' };
+    expect(connectPrefillFromParams(paramsOf(connectWith(both)))).toEqual(both);
+    expect(connectPrefillFromParams(paramsOf(connectWith({ origin: 'nas.local' })))).toEqual({
+      origin: 'nas.local',
+    });
+    expect(connectPrefillFromParams(paramsOf(connectWith({ code: 'ABCD2345' })))).toEqual({
+      code: 'ABCD2345',
+    });
+  });
+
+  it('keeps no value longer than any real one, or blank, from untrusted params', () => {
+    const long = {
+      origin: `https://${'a'.repeat(ADDRESS_MAX_LENGTH)}`,
+      code: 'A'.repeat(PAIR_CODE_INPUT_MAX_LENGTH + 1),
+    };
+    expect(connectWith(long)).toBe('/connect');
+    expect(connectPrefillFromParams(long)).toEqual({});
+    expect(connectPrefillFromParams({ origin: '   ', code: '' })).toEqual({});
+  });
+
+  it('reads the first value of a repeated param, trimmed, and ignores every other param', () => {
+    expect(
+      connectPrefillFromParams({
+        origin: [' nas.local ', 'evil.example'],
+        code: ['ABCD-2345'],
+        token: 'x',
+      }),
+    ).toEqual({ origin: 'nas.local', code: 'ABCD-2345' });
+  });
+
+  it('is frozen', () => {
+    expect(Object.isFrozen(connectPrefillFromParams({ origin: 'nas.local' }))).toBe(true);
   });
 });

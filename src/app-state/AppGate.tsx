@@ -1,119 +1,44 @@
 // The signed-in gate (PRD-001 §4.4, §4.5): app/(app)/_layout.tsx renders its screens through it.
-// Thin wiring over gate.ts (the decision, tested): the build and the session first (accessView),
-// then, under the persisted cache, discovery and the workspace bootstrap (useLaunch → launchView).
-// Ready, the screens get the session (session.tsx) and the one live connection (LiveEvents, FND-5);
-// any other state is a whole screen, and every one a signed-in person can be stuck on offers Sign
-// out. Signed out, the phone forgets the session's cached data (session-cache.ts) and goes to
-// sign-in.
+// Thin wiring over gate.ts (the decision, tested): the current server and the session first
+// (accessView: Welcome, Connect with the server and the reason, or signed in), then, under the
+// persisted cache, discovery and the workspace bootstrap (useLaunch → launchView). Ready, the
+// screens get the session (session.tsx) and the one live connection (LiveEvents, FND-5); any other
+// state is a whole screen (GateStates.tsx) with a way out. Signed out, or sent back to Connect, the
+// phone forgets the session's cached data and workspace id (session-cache.ts).
 
-import type { LucideIcon } from 'lucide-react-native';
 import { Redirect } from 'expo-router';
-import { useEffect, useMemo, type ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
-import CirclePause from 'lucide-react-native/icons/circle-pause';
-import ServerOff from 'lucide-react-native/icons/server-off';
+import { useEffect, type ReactNode } from 'react';
 
 import { LiveEvents } from '../api/live';
-import { currentServer, type Server } from '../api/server';
+import type { Server } from '../api/server';
 import { useAuthSession, type AuthSession } from '../auth/AuthRoot';
+import { hostedServer, ownServer } from '../connect/current-server';
+import { useCurrentServer } from '../connect/use-current-server';
 import { logger } from '../lib/logger';
-import { routes } from '../navigation/routes';
-import { useTokens } from '../styles/theme';
-import { Button, EmptyState, ErrorState, LoadingState, Screen, UI_COPY } from '../ui';
-import { accessView, type LaunchStep, type LaunchView } from './gate';
+import { connectWith, routes } from '../navigation/routes';
+import { serverLabel } from './account';
+import { accessView } from './gate';
+import { GateLoading, LaunchState } from './GateStates';
 import { appPersister, appQueryClient, PersistedCache } from './query-root';
 import { AppSessionProvider } from './session';
 import { forgetSession } from './session-cache';
-import { SHELL_COPY } from './strings';
 import { useLaunch } from './use-launch';
-import { useSignOut, useSignOutOnExpiry } from './use-sign-out';
-
-type GateMessageProps = {
-  readonly title: string;
-  readonly message?: string;
-  readonly icon?: LucideIcon;
-  readonly action?: { readonly label: string; readonly onPress: () => void };
-  readonly children?: ReactNode;
-};
-
-function GateMessage({ title, message, icon, action, children }: GateMessageProps) {
-  const { spacing } = useTokens();
-  return (
-    <Screen scroll>
-      <View style={[styles.centre, { gap: spacing.space3 }]}>
-        <EmptyState title={title} message={message} icon={icon} action={action} />
-        {children}
-      </View>
-    </Screen>
-  );
-}
-
-/** Signed in but stuck (an old app, a paused workspace, a server that refuses): a way out. */
-function SignOutButton() {
-  const { signOut, busy } = useSignOut();
-  return <Button label={SHELL_COPY.signOut} onPress={signOut} busy={busy} variant="ghost" />;
-}
-
-function GateLoading({ label }: { readonly label?: string }) {
-  return (
-    <Screen>
-      <View style={styles.centre}>
-        <LoadingState label={label} />
-      </View>
-    </Screen>
-  );
-}
-
-type LaunchStateProps = {
-  readonly view: Exclude<LaunchView, { readonly kind: 'ready' }>;
-  readonly onRetry: (step: LaunchStep) => void;
-};
-
-function LaunchState({ view, onRetry }: LaunchStateProps) {
-  const { spacing } = useTokens();
-  if (view.kind === 'loading') return <GateLoading label={SHELL_COPY.connecting} />;
-  if (view.kind === 'unsupported') {
-    return (
-      <GateMessage title={view.message} message={SHELL_COPY.unsupportedMessage}>
-        <SignOutButton />
-      </GateMessage>
-    );
-  }
-  if (view.kind === 'paused') {
-    const action = { label: UI_COPY.retry, onPress: () => onRetry('workspace') };
-    return (
-      <GateMessage
-        title={SHELL_COPY.pausedTitle}
-        message={view.message}
-        icon={CirclePause}
-        action={action}
-      >
-        <SignOutButton />
-      </GateMessage>
-    );
-  }
-  const title =
-    view.step === 'discovery' ? SHELL_COPY.discoveryErrorTitle : SHELL_COPY.workspaceErrorTitle;
-  return (
-    <Screen scroll>
-      <View style={[styles.centre, { gap: spacing.space3 }]}>
-        <ErrorState error={view.error} title={title} onRetry={() => onRetry(view.step)} />
-        <SignOutButton />
-      </View>
-    </Screen>
-  );
-}
+import { useSignOutOnExpiry } from './use-sign-out';
 
 type LaunchProps = {
   readonly server: Server;
+  /** The server in words (an own server's name). */
+  readonly serverName: string;
   readonly session: AuthSession;
   readonly children: ReactNode;
 };
 
-function Launch({ server, session, children }: LaunchProps) {
+function Launch({ server, serverName, session, children }: LaunchProps) {
   const { view, client, retry } = useLaunch(server, session.clientAuth);
   useSignOutOnExpiry(session.provider);
-  if (view.kind !== 'ready') return <LaunchState view={view} onRetry={retry} />;
+  if (view.kind !== 'ready') {
+    return <LaunchState view={view} serverName={serverName} onRetry={retry} />;
+  }
   return (
     <AppSessionProvider
       server={server}
@@ -140,35 +65,30 @@ function useForgetWhenSignedOut(signedOut: boolean): void {
 
 export function AppGate({ children }: { readonly children: ReactNode }) {
   const session = useAuthSession();
-  const server = useMemo(currentServer, []);
+  const current = useCurrentServer();
+  const own = ownServer(current);
   const access = accessView({
-    server,
+    own,
+    ended: current.status === 'ready' ? current.ended : null,
+    hosted: hostedServer(),
     isLoaded: session.isLoaded,
     isSignedIn: session.isSignedIn,
     ownerId: session.ownerId,
   });
-  useForgetWhenSignedOut(access.kind === 'signed_out');
+  useForgetWhenSignedOut(access.kind === 'welcome' || access.kind === 'connect');
 
-  if (access.kind === 'not_configured') {
-    return (
-      <GateMessage
-        title={SHELL_COPY.notConfiguredTitle}
-        message={SHELL_COPY.notConfiguredMessage}
-        icon={ServerOff}
-      />
-    );
-  }
   if (access.kind === 'loading') return <GateLoading />;
-  if (access.kind === 'signed_out') return <Redirect href={routes.signIn} />;
+  if (access.kind === 'welcome') return <Redirect href={routes.welcome} />;
+  if (access.kind === 'connect') return <Redirect href={connectWith({ origin: access.origin })} />;
   return (
     <PersistedCache ownerId={access.ownerId}>
-      <Launch server={access.server} session={session}>
+      <Launch
+        server={access.server}
+        serverName={own?.serverName ?? serverLabel(access.server)}
+        session={session}
+      >
         {children}
       </Launch>
     </PersistedCache>
   );
 }
-
-const styles = StyleSheet.create({
-  centre: { flexGrow: 1, alignItems: 'center', justifyContent: 'center' },
-});

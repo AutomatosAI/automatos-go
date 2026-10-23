@@ -3,8 +3,9 @@
 // several workspaces stays in the one they were in, then reads GET /api/workspaces/current; if the
 // server resolved another workspace, everything cached for the old one is dropped before the new id
 // is stored. Signed out (Sign out, an expired session, or one ended elsewhere), the phone forgets
-// the workspace id and every cached query, in memory and on disk. Pure over its ports; AppGate
-// wires the app's QueryClient and persister.
+// the workspace id and every cached query, in memory and on disk. Each server's client and
+// bootstrap get that server's own workspace-id holder (src/session/workspace-ids.ts, US-006d).
+// Pure over its ports; AppGate wires the app's QueryClient and persister.
 
 import type { Query, QueryClient } from '@tanstack/react-query';
 import type { Persister } from '@tanstack/react-query-persist-client';
@@ -13,6 +14,7 @@ import { z } from 'zod';
 import type { ApiClient } from '../api/client';
 import { clearQueryCache } from '../api/query-client';
 import { matchesFamily, queryKeys, type KeyFamilyName } from '../api/query-keys';
+import { workspaceIds } from '../session/workspace-ids';
 import {
   bootstrapWorkspace,
   workspaceIdStore,
@@ -78,8 +80,8 @@ export function launchBootstrap(
 export async function forgetSession(
   queryClient: QueryClient,
   persister: Persister,
-  store: WorkspaceIdStore = workspaceIdStore,
+  ids: Pick<WorkspaceIdStore, 'clear'> = workspaceIds,
 ): Promise<void> {
-  store.clear();
+  ids.clear();
   await clearQueryCache(queryClient, persister);
 }
