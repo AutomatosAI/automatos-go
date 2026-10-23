@@ -209,20 +209,20 @@
       "title": "Ask Auto about a ticket: the discussion conversation and 'Update ticket and re-queue'",
       "description": "As a user, I want 'Ask Auto about #0419' (from the Command Centre's ticket sheet, wave A3) to open a conversation about that ticket and let me re-queue it with the agreed brief (D-ASK-AUTO). The foundation's routes.chatWithTicket(taskId) is the contract both waves use.",
       "acceptanceCriteria": [
-        "app/(app)/chat/[id].tsx (id 'new' with the ticket param decoded by the foundation's helper) loads the ticket (GET /api/v1/tasks/{task_id}), builds the vendored discussionOf(task) and sends every message of that conversation with context.selected = discussionSelection(discussion) (vendored lib/discussion.ts)",
-        "src/chat/discussion/DiscussionBar.tsx: 'Discussing #0419 — <title>' with 'Update ticket and re-queue' and End; a missing ticket shows 'Ticket #… could not be opened here. It may be in another workspace.'",
-        "src/chat/discussion/RebriefSheet.tsx: the brief prefilled with the vendored proposedBrief(messages), capped at the vendored MAX_BRIEF_CHARS; Save → POST /api/v1/tasks/{task_id}/rebrief {brief}; role-gated ('approve')",
-        "src/chat/__tests__/discussion.test.ts: the request carries the selection, the brief cap, rebrief payload, missing ticket copy",
-        "npm run check:routes passes",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes",
-        "npm run check:bundle passes"
+        "app/(app)/chat/[id].tsx (id 'new' with the ticket param decoded by the foundation's helper) loads the ticket (GET /api/v1/tasks/{task_id}), builds the vendored discussionOf(task) and sends every message of that conversation with context.selected = discussionSelection(discussion) (vendored lib/discussion.ts) → DONE — app/(app)/chat/[id].tsx passes routeTicketId(params) (ticketFromChatParams, drafts only) to ChatScreen; app/(app)/chat/index.tsx serves routes.chatWithTicket's /chat?ticket=… with the same screen; useDiscussion loads GET /api/v1/tasks/{id} (ticket.ts fetchTicket → BoardTask), discussionOf it, and ChatScreen sends every message, Try again included, through discussionInput (context.selected = discussionSelection)",
+        "src/chat/discussion/DiscussionBar.tsx: 'Discussing #0419 — <title>' with 'Update ticket and re-queue' and End; a missing ticket shows 'Ticket #… could not be opened here. It may be in another workspace.' → DONE — DiscussionBar.tsx: 'Discussing #0419 — <title>' (opens routes.cc.ticket), 'Update ticket and re-queue' for an approver, 'Decide on the mission →' on a Mission's ticket (missionHref via appRouteForWebLink), End (clears the ticket param); a 404 shows 'Ticket 419 could not be opened here. It may be in another workspace.' (the link's row id, no '#', as the web and F414)",
+        "src/chat/discussion/RebriefSheet.tsx: the brief prefilled with the vendored proposedBrief(messages), capped at the vendored MAX_BRIEF_CHARS; Save → POST /api/v1/tasks/{task_id}/rebrief {brief}; role-gated ('approve') → DONE — RebriefSheet.tsx: opens on rebriefPrefill = proposedBrief(saved messages), field maxLength MAX_BRIEF_CHARS (8000); Save → rebriefTicket POST /api/v1/tasks/{task_id}/rebrief {brief}; canRebrief = roleCan('approve') + a non-blank brief",
+        "src/chat/__tests__/discussion.test.ts: the request carries the selection, the brief cap, rebrief payload, missing ticket copy → DONE — discussion.test.ts (23 tests): selection on the draft and later messages (board number, Mission, row id fallback, none after End), brief cap and fenced block, rebrief payload and refusal words, missing-ticket copy, bar per role, composer hold",
+        "npm run check:routes passes → DONE — npm run check:routes: 19 routes, 17 at the pin, 2 pendingUpstream, 0 missing",
+        "npm run typecheck passes → DONE — npm run typecheck: tsc --noEmit clean",
+        "npm run lint passes (0 errors) → DONE — npm run lint: eslint . 0 errors, 0 warnings",
+        "npx vitest run passes → DONE — npx vitest run: 106 files, 1550 tests passed",
+        "npm run check:bundle passes → DONE — npm run check:bundle: Exported .expo/bundle-check (ios hbc 6.41 MB)"
       ],
       "files": ["app/(app)/chat/", "src/chat/discussion/", "src/chat/__tests__/"],
       "priority": 9,
-      "passes": false,
-      "notes": "Web reference: frontend/components/chatbot/discussion-bar.tsx and rebrief-dialog.tsx; on a Mission's ticket the web points at the Mission instead (D4 of PRD-252) — mirror that with the vendored missionHref and the foundation's appRouteForWebLink."
+      "passes": true,
+      "notes": "Web reference: frontend/components/chatbot/discussion-bar.tsx and rebrief-dialog.tsx; on a Mission's ticket the web points at the Mission instead (D4 of PRD-252) — mirror that with the vendored missionHref and the foundation's appRouteForWebLink. | Built b7a87db. routes.chatWithTicket is /chat?ticket=<row id>, which no [id] segment matches, so app/(app)/chat/index.tsx re-exports the [id] screen; a ticket param counts on a draft only. The send is held while the ticket loads or failed (a 404 lets the chat go on with no ticket), so no message about it goes out without its selection. The web's agent hint is left out: the phone's composer has no agent picker. A saved rebrief toasts, refetches LIVE_INVALIDATIONS.board_changed and ends the discussion; refusals use refusalText (409 'is running' and 422 'Assign an agent' are shown as written). FOUNDATION GAP: queryKeys.ticket(taskId) is one key for a record each kit parses into its own shape (A3's ticket sheet, this discussion), so src/chat/discussion/use-discussion.ts reads the ticket under [...queryKeys.ticket(id), 'discussion'], inside the ticket family (board_changed still refetches it)."
     },
     {
       "id": "US-009b",
