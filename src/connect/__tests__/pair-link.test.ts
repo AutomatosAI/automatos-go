@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { parsePairLink } from '../pair-link';
+import type { RouteParams } from '../../navigation/routes';
+import { pairLinkFromParams, parsePairLink } from '../pair-link';
 
 const STUDIO = 'https://studio.example.test';
 const CODE = 'ABCD-EFGH';
@@ -113,5 +114,60 @@ describe('parsePairLink: the QR code from Studio and the /go/pair link', () => {
 
   it('returns a frozen result', () => {
     expect(Object.isFrozen(parsePairLink(serverLink('https://api.example.test')))).toBe(true);
+  });
+});
+
+describe('pairLinkFromParams: the link expo-router opened at /go/pair, for parsePairLink', () => {
+  /** expo-router hands the screen its query decoded, one string per name or an array when repeated. */
+  const opened = (params: RouteParams) => parsePairLink(pairLinkFromParams(params));
+
+  it('rebuilds a link the server built from its decoded params', () => {
+    expect(opened({ api: 'https://a.test', code: CODE })).toEqual({
+      apiOrigin: 'https://a.test',
+      insecure: false,
+      code: CODE,
+    });
+    expect(pairLinkFromParams({ api: 'https://a.test', code: CODE })).toBe(
+      `automatos://go/pair?${QUERY}`,
+    );
+  });
+
+  it("reads a home install's http API and a code typed with a space", () => {
+    expect(opened({ api: 'http://192.168.1.20:8000', code: 'abcd efgh' })).toEqual({
+      apiOrigin: 'http://192.168.1.20:8000',
+      insecure: true,
+      code: CODE,
+    });
+  });
+
+  it('drops every other param, as parsePairLink ignores them', () => {
+    const link = pairLinkFromParams({ api: 'https://a.test', code: CODE, utm_source: 'mail' });
+    expect(link).not.toContain('utm_source');
+    expect(parsePairLink(link)?.code).toBe(CODE);
+  });
+
+  it('still refuses a missing, blank or repeated api or code', () => {
+    const refused: readonly RouteParams[] = [
+      {},
+      { api: 'https://a.test' },
+      { code: CODE },
+      { api: '', code: CODE },
+      { api: ['https://a.test', 'https://evil.test'], code: CODE },
+      { api: 'https://a.test', code: [CODE, 'WXYZ-2345'] },
+    ];
+    for (const params of refused) {
+      expect(opened(params), JSON.stringify(params)).toBeNull();
+    }
+  });
+
+  it('keeps each value as text: an api that smuggles a second param stays one value, and is refused', () => {
+    const smuggled = { api: 'https://a.test&code=WXYZ-2345', code: CODE };
+    expect(pairLinkFromParams(smuggled)).toContain('api=https%3A%2F%2Fa.test%26code%3DWXYZ-2345');
+    expect(opened(smuggled)).toBeNull();
+  });
+
+  it('refuses what any link refuses: an http API on a public host, another scheme', () => {
+    expect(opened({ api: 'http://203.0.113.9', code: CODE })).toBeNull();
+    expect(opened({ api: 'javascript:alert(1)', code: CODE })).toBeNull();
   });
 });

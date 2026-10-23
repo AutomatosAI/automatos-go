@@ -114,7 +114,8 @@ export const CONNECT_SCREEN_COPY = Object.freeze({
   /** The eyebrow role sets it in capitals. */
   eyebrow: 'Automatos Go',
   title: 'Connect to your own server',
-  lead: "Get a pairing code in Studio → Settings → Phones & devices, then scan it, or type it here with your server's address.",
+  /** KC13: the phone's own Camera opens the server's web page, not this app. */
+  lead: "Get a pairing code in Studio → Settings → Phones & devices. Scan it with Automatos Go, or type it here with your server's address.",
   addressLabel: 'Server address',
   addressPlaceholder: 'https://automatos.example.com',
   addressHelper: 'Its HTTPS address, or its address on your home network.',
@@ -130,6 +131,52 @@ export const CONNECT_SCREEN_COPY = Object.freeze({
   back: 'Back',
   checking: 'Checking the server…',
 });
+
+/** The QR scanner (scanner/QrScanner.tsx): the camera, its permission, and what it read. */
+export const SCAN_COPY = Object.freeze({
+  /** The eyebrow role sets it in capitals. */
+  eyebrow: 'Automatos Go',
+  title: 'Scan the pairing code',
+  hint: 'Point the camera at the QR code in Studio → Settings → Phones & devices.',
+  asking: 'Automatos Go is asking to use the camera.',
+  invalid:
+    "That QR code isn't a pairing code from Studio. Scan the code in Studio → Settings → Phones & devices, or type it instead.",
+  denied:
+    'Automatos Go needs the camera to scan the code. You can allow it in Settings, or type the code instead.',
+  cameraFailed: "The camera didn't start. Type the code instead.",
+  /** Read out for the camera's preview. */
+  camera: 'Camera, scanning for the pairing code',
+  allowCamera: 'Allow the camera',
+  openSettings: 'Open Settings',
+  typeCode: 'Type the code',
+  back: 'Back',
+});
+
+/** Where {current} and {new} go in PAIR_LINK_COPY.switchQuestion. */
+export const CURRENT_SERVER_PLACEHOLDER = '{current}';
+export const NEW_SERVER_PLACEHOLDER = '{new}';
+
+/** A pairing link opened on this phone (scanner/PairLinkScreen.tsx, app/go/pair.tsx). */
+export const PAIR_LINK_COPY = Object.freeze({
+  /** The hosted server as {current}: the 'Sign in to Automatos' one. */
+  hostedServer: 'Automatos',
+  switchTitle: 'Connect to another server?',
+  switchQuestion: "You're connected to {current}. Connect to {new} instead?",
+  switchNote: 'Nothing changes until you check the new server and pair with it.',
+  switchConnect: 'Connect instead',
+  switchStay: 'Stay connected',
+  invalidTitle: "This pairing link didn't work",
+  invalidMessage:
+    "It isn't complete, or it isn't a link Studio made. Get a new code in Studio → Settings → Phones & devices, then scan it with Automatos Go.",
+  invalidAction: 'Continue',
+});
+
+/** The switch question: the server in use and the one the link names, each put in as plain text. */
+export function switchQuestionFor(current: string, next: string): string {
+  return PAIR_LINK_COPY.switchQuestion
+    .replace(CURRENT_SERVER_PLACEHOLDER, () => current)
+    .replace(NEW_SERVER_PLACEHOLDER, () => next);
+}
 
 /** The confirm card (ConfirmCard.tsx): where this phone is about to pair (KC8). */
 export const CONFIRM_COPY = Object.freeze({

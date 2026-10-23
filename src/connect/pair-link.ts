@@ -2,8 +2,11 @@
 // app: `{web_url}/go/pair?api=<API address>&code=<code>` (automatos-ai services/mobile/pairing.py)
 // or automatos://go/pair?…. The link's own host is never contacted, so any http(s) host serves (a
 // home install's web address is often http://, even localhost): only its api parameter is, after
-// parseServerAddress, and only once the person confirms (KC8). Pure.
+// parseServerAddress, and only once the person confirms (KC8). app/go/pair.tsx gets the link as
+// expo-router's params, so pairLinkFromParams puts them back into one link for the same parser.
+// Pure.
 
+import type { RouteParams } from '../navigation/routes';
 import {
   hasOnlySafeCharacters,
   hostKind,
@@ -86,4 +89,25 @@ export function parsePairLink(text: string): PairLink | null {
   const code = normalizePairCode(params.code);
   if (!api.ok || !code.ok) return null;
   return Object.freeze({ apiOrigin: api.origin, insecure: api.insecure, code: code.code });
+}
+
+/** A route param's values: none, one, or each of a repeated name (which parsePairLink refuses). */
+function valuesOf(params: RouteParams, name: string): readonly string[] {
+  const value = params[name];
+  if (value === undefined) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+/**
+ * The pairing link expo-router opened at /go/pair (https://<host>/go/pair?… or automatos://go/pair?…),
+ * rebuilt from its decoded params as automatos://go/pair?api=…&code=…: every api and code value
+ * kept, so a repeated one is still refused; any other param dropped, as parsePairLink ignores it.
+ */
+export function pairLinkFromParams(params: RouteParams): string {
+  const query = [PAIR_LINK_API_PARAM, PAIR_LINK_CODE_PARAM]
+    .flatMap((name) =>
+      valuesOf(params, name).map((value) => `${name}=${encodeURIComponent(value)}`),
+    )
+    .join('&');
+  return `${APP_PAIR_LINK}?${query}`;
 }
