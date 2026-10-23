@@ -1,6 +1,7 @@
 // The edges of a connected phone (US-006h): the unencrypted line only for an http origin, the
 // server section on Account, Not running naming the server, the forget question, and Connect's
-// words after a device refusal (reason → copy), with the gate's redirect that opens it.
+// words after a device refusal (reason → copy), with the gate's redirect that opens it, told once:
+// a hosted sign-in since drops it, so its sign-out opens Welcome (P001N-RVW-3).
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -8,10 +9,10 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { SERVER } from '../../api/__tests__/fake-transport';
-import { accessView } from '../../app-state/gate';
+import { accessView, refusalLeftBehind, type AccessInput } from '../../app-state/gate';
 import { connectPrefillFromParams, connectWith } from '../../navigation/routes';
 import { SELF_HOSTED_START_COMMAND } from '../config';
-import { ownServerOf } from '../current-server';
+import { createCurrentServerStore, ownServerOf, type CurrentServerStore } from '../current-server';
 import {
   connectionEndedNote,
   insecureNetworkLine,
@@ -235,6 +236,69 @@ describe('Connection ended (reason → copy)', () => {
   });
 });
 
+describe('a refusal is told once (P001N-RVW-3)', () => {
+  const refusal: DeviceRefusal = {
+    reason: 'revoked',
+    serverName: RECORD.serverName,
+    origin: RECORD.origin,
+  };
+  const SIGNED_OUT: AccessInput = {
+    own: null,
+    ended: null,
+    hosted: SERVER,
+    isLoaded: true,
+    isSignedIn: false,
+    ownerId: null,
+  };
+  const HOSTED_IN: AccessInput = { ...SIGNED_OUT, isSignedIn: true, ownerId: 'user_2abc' };
+
+  /** One gate pass as AppGate makes it: the store's refusal, the view, then the dismissal. */
+  function gatePass(servers: CurrentServerStore, session: AccessInput) {
+    const snapshot = servers.getSnapshot();
+    const ended = snapshot.status === 'ready' ? snapshot.ended : null;
+    const access = accessView({ ...session, ended });
+    if (refusalLeftBehind(access, ended)) servers.dismissEnded();
+    return access;
+  }
+
+  it('refused → hosted signed in → dismissed → signed out opens Welcome, with no old words', () => {
+    const servers = createCurrentServerStore();
+    servers.refused(refusal);
+    expect(gatePass(servers, HOSTED_IN)).toEqual({
+      kind: 'signed_in',
+      server: SERVER,
+      ownerId: 'user_2abc',
+    });
+    expect(gatePass(servers, SIGNED_OUT)).toEqual({ kind: 'welcome' });
+    expect(servers.getSnapshot()).toEqual({ status: 'ready', own: null, ended: null });
+    expect(gatePass(servers, { ...SIGNED_OUT, isLoaded: false })).toEqual({ kind: 'loading' });
+    expect(connectionEndedNote({ ended: null, prefill: { origin: RECORD.origin } })).toBeNull();
+  });
+
+  it('refused → still signed out stays on Connect with the reason and the server', () => {
+    const servers = createCurrentServerStore();
+    servers.refused(refusal);
+    for (const session of [SIGNED_OUT, SIGNED_OUT, { ...SIGNED_OUT, isLoaded: false }]) {
+      expect(gatePass(servers, session)).toEqual({
+        kind: 'connect',
+        origin: RECORD.origin,
+        serverName: RECORD.serverName,
+        reason: 'revoked',
+      });
+    }
+    expect(servers.getSnapshot()).toMatchObject({ status: 'ready', ended: refusal });
+  });
+
+  it('only a hosted session leaves it behind: not an own server, loading or Connect', () => {
+    const own = { ...HOSTED_IN, own: OWN, ownerId: OWN.deviceId };
+    expect(refusalLeftBehind(accessView(own), refusal)).toBe(false);
+    expect(refusalLeftBehind({ kind: 'loading' }, refusal)).toBe(false);
+    expect(refusalLeftBehind(accessView({ ...SIGNED_OUT, ended: refusal }), refusal)).toBe(false);
+    expect(refusalLeftBehind(accessView({ ...HOSTED_IN, ended: refusal }), refusal)).toBe(true);
+    expect(refusalLeftBehind(accessView(HOSTED_IN), null)).toBe(false);
+  });
+});
+
 describe('the wiring', () => {
   it('renders the banner above every signed-in state, which get their own safe area under it', () => {
     // the layout hands the bar to the gate; the gate draws it once, above its own states, the
@@ -275,6 +339,12 @@ describe('the wiring', () => {
     expect(forget).toContain('onPress={() => setAsking(true)}');
     expect(forget).toMatch(/const forget = \(\) => \{\s*setAsking\(false\);\s*signOut\(\);/);
     expect(forget).toContain('onPress={forget}');
+  });
+
+  it('drops the refusal once a hosted session is signed in since it', () => {
+    const gate = read('src/app-state/AppGate.tsx');
+    expect(gate).toContain('useDismissEndedOnceLeftBehind(refusalLeftBehind(access, ended));');
+    expect(gate).toContain('if (leftBehind) currentServers.dismissEnded();');
   });
 
   it("shows the refusal's words on Connect", () => {

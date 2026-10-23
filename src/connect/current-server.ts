@@ -1,11 +1,12 @@
 // The current server (KC4, US-006d): an own server exactly when this phone holds a paired record,
 // otherwise the build's built-in hosted server (env, K3). There is no other persisted choice. The
-// record is read once at launch (src/auth/AuthRoot.tsx), then only three things move it: a pairing
-// saved or a server forgotten (switch.ts), and a refusal of the token (the device provider's
-// onRefused, US-006c), which also keeps why, so the gate can send the person to Connect with the
-// reason and the server. The snapshot never holds the token: it stays in device-store.ts. No React
-// and no native module here (the device store is a port), so navigation's helpers read the current
-// Studio address in plain TS.
+// record is read once at launch (src/auth/AuthRoot.tsx), then only these move it: a pairing saved
+// or a server forgotten (switch.ts), and a refusal of the token (the device provider's onRefused,
+// US-006c), which also keeps why, so the gate can send the person to Connect with the reason and
+// the server, until a hosted session signs in after it (dismissEnded: the refusal is told once).
+// The snapshot never holds the token: it stays in device-store.ts. No React and no native module
+// here (the device store is a port), so navigation's helpers read the current Studio address in
+// plain TS.
 
 import { builtInServer, ownServerFrom, type Server } from '../api/server';
 import { logger } from '../lib/logger';
@@ -50,6 +51,8 @@ export type CurrentServerStore = {
   readonly forgotten: () => void;
   /** The server stopped accepting the token; its record is already cleared (US-006c). */
   readonly refused: (refusal: DeviceRefusal) => void;
+  /** A hosted session signed in since the refusal: drop it, keep the server (AppGate). */
+  readonly dismissEnded: () => void;
 };
 
 /** A pairing: the device row, the server, and when this phone paired to it (US-006c). */
@@ -77,6 +80,17 @@ function ready(own: OwnServer | null, ended: DeviceRefusal | null): CurrentServe
   return Object.freeze({ status: 'ready', own, ended: ended && Object.freeze({ ...ended }) });
 }
 
+/** Tells each listener; one that throws stops no other. */
+function tell(listeners: readonly (() => void)[]): void {
+  for (const listener of listeners) {
+    try {
+      listener();
+    } catch (error) {
+      logger.error('[connect] a current-server listener failed', error);
+    }
+  }
+}
+
 export function createCurrentServerStore(): CurrentServerStore {
   let snapshot = LOADING;
   let listeners: readonly (() => void)[] = [];
@@ -86,13 +100,7 @@ export function createCurrentServerStore(): CurrentServerStore {
 
   const publish = (next: CurrentServerSnapshot) => {
     snapshot = next;
-    for (const listener of listeners) {
-      try {
-        listener();
-      } catch (error) {
-        logger.error('[connect] a current-server listener failed', error);
-      }
-    }
+    tell(listeners);
   };
   const move = (next: CurrentServerSnapshot) => {
     generation += 1;
@@ -129,6 +137,9 @@ export function createCurrentServerStore(): CurrentServerStore {
     connected: (record: PairedRecord) => move(ready(ownServerOf(record), null)),
     forgotten: () => move(ready(null, null)),
     refused: (refusal: DeviceRefusal) => move(ready(null, refusal)),
+    dismissEnded: () => {
+      if (snapshot.status === 'ready' && snapshot.ended) move(ready(snapshot.own, null));
+    },
   });
 }
 

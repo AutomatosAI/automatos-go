@@ -9,7 +9,8 @@
 // `bar` (the unencrypted home network line, D-HTTPS): the bar takes the top safe area and what is
 // under it gets its own safe-area provider, so a screen's top inset starts below the bar and the
 // bar never covers its header. Signed out, or sent back to Connect, the phone forgets the
-// session's cached data and workspace id (session-cache.ts).
+// session's cached data and workspace id (session-cache.ts). A hosted sign-in after an own server
+// refused this phone drops the refusal (refusalLeftBehind), so it is told once.
 
 import { Redirect } from 'expo-router';
 import { useEffect, type ComponentType, type ReactNode } from 'react';
@@ -19,14 +20,14 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { LiveEvents } from '../api/live';
 import type { Server } from '../api/server';
 import { useAuthSession, type AuthSession } from '../auth/AuthRoot';
-import { hostedServer, ownServer } from '../connect/current-server';
+import { currentServers, hostedServer, ownServer } from '../connect/current-server';
 import { ownServerInWords } from '../connect/edges';
 import { useCurrentServer } from '../connect/use-current-server';
 import { useConsentRecord } from '../consent/use-consent';
 import { logger } from '../lib/logger';
 import { connectWith, routes } from '../navigation/routes';
 import { serverLabel } from './account';
-import { accessView, shellStep } from './gate';
+import { accessView, refusalLeftBehind, shellStep } from './gate';
 import { GateLoading, LaunchState } from './GateStates';
 import { appPersister, appQueryClient, PersistedCache } from './query-root';
 import { AppSessionProvider } from './session';
@@ -84,6 +85,13 @@ function useForgetWhenSignedOut(signedOut: boolean): void {
   }, [signedOut]);
 }
 
+/** Signed in to the hosted server since the refusal: it has been told, so it goes. */
+function useDismissEndedOnceLeftBehind(leftBehind: boolean): void {
+  useEffect(() => {
+    if (leftBehind) currentServers.dismissEnded();
+  }, [leftBehind]);
+}
+
 export type AppGateProps = {
   /** What the consent step shows (app/(app)/_layout.tsx: the AI-provider consent sheet). */
   readonly consent: ReactNode;
@@ -96,15 +104,17 @@ export function AppGate({ consent, bar, children }: AppGateProps) {
   const session = useAuthSession();
   const current = useCurrentServer();
   const own = ownServer(current);
+  const ended = current.status === 'ready' ? current.ended : null;
   const access = accessView({
     own,
-    ended: current.status === 'ready' ? current.ended : null,
+    ended,
     hosted: hostedServer(),
     isLoaded: session.isLoaded,
     isSignedIn: session.isSignedIn,
     ownerId: session.ownerId,
   });
   useForgetWhenSignedOut(access.kind === 'welcome' || access.kind === 'connect');
+  useDismissEndedOnceLeftBehind(refusalLeftBehind(access, ended));
 
   if (access.kind === 'loading') return <GateLoading />;
   if (access.kind === 'welcome') return <Redirect href={routes.welcome} />;

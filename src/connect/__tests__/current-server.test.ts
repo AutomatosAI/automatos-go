@@ -1,5 +1,6 @@
 // The current server (KC4): an own server exactly when a paired record exists, else the built-in
-// hosted server; moved only by a pairing, a forget and a refusal; never holding the token.
+// hosted server; moved only by a pairing, a forget, a refusal and the refusal's dismissal (told
+// once: P001N-RVW-3); never holding the token.
 
 import { describe, expect, it, vi } from 'vitest';
 
@@ -114,6 +115,44 @@ describe('the current-server store', () => {
     servers.refused(REFUSAL);
     servers.connected(OTHER_RECORD);
     expect(ready(servers.getSnapshot()).ended).toBeNull();
+  });
+
+  it('dismissEnded drops the refusal and keeps the server, telling each listener', () => {
+    const servers = createCurrentServerStore();
+    servers.refused(REFUSAL);
+    const listener = vi.fn();
+    servers.subscribe(listener);
+    servers.dismissEnded();
+    expect(ready(servers.getSnapshot())).toEqual({ status: 'ready', own: null, ended: null });
+    expect(currentServer(servers.getSnapshot())).toBe(builtInServer());
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('dismissEnded moves nothing when no refusal is held, or before the record is read', () => {
+    const servers = createCurrentServerStore();
+    const listener = vi.fn();
+    servers.subscribe(listener);
+    servers.dismissEnded();
+    expect(servers.getSnapshot()).toEqual({ status: 'loading' });
+    servers.connected(RECORD);
+    const paired = servers.getSnapshot();
+    servers.dismissEnded();
+    expect(servers.getSnapshot()).toBe(paired);
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('a read started before dismissEnded does not bring the refusal, or a record, back', async () => {
+    const servers = createCurrentServerStore();
+    const { store, resolve } = deferredStore();
+    const loading = servers.load(store);
+    servers.refused(REFUSAL);
+    servers.dismissEnded();
+    resolve(RECORD);
+    await loading;
+    expect(ready(servers.getSnapshot())).toEqual({ status: 'ready', own: null, ended: null });
+    await servers.load(store);
+    expect(ready(servers.getSnapshot()).ended).toBeNull();
+    expect(store.load).toHaveBeenCalledTimes(1);
   });
 
   it('a read that started before a move never overwrites it', async () => {

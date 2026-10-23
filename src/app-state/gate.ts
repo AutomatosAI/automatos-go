@@ -2,9 +2,10 @@
 // First the server and the session (accessView): a paired own server (KC4) opens with its device
 // session, or goes back to Connect with the server when it holds no token; otherwise the built-in
 // hosted server: loading while Clerk reads its stored client, the app once signed in; a phone whose
-// own server just refused its token goes to Connect with the reason and that server (US-006c); one
-// connected nowhere goes to Welcome (hosted sign-in, or Connect). A build that cannot sign in to its
-// hosted server still opens Welcome: its not-configured state covers the hosted sign-in only.
+// own server just refused its token goes to Connect with the reason and that server (US-006c),
+// until a hosted sign-in leaves the refusal behind (refusalLeftBehind); one connected nowhere goes
+// to Welcome (hosted sign-in, or Connect). A build that cannot sign in to its hosted server still
+// opens Welcome: its not-configured state covers the hosted sign-in only.
 // Then, signed in (launchView): the server's discovery document (K3: the built-in server's 404 is
 // already hostedDefaults; an own server's is 'unsupported') → a sign-in this app has (an own server
 // must still take paired phones) → GET /api/workspaces/current, read again on every launch → the
@@ -140,6 +141,16 @@ function hostedAccess({ hosted, ended, isLoaded, isSignedIn, ownerId }: AccessIn
 /** The first half of the gate: the server, then the session. */
 export function accessView(input: AccessInput): AccessView {
   return input.own ? ownAccess(input.own, input) : hostedAccess(input);
+}
+
+/**
+ * Whether the refusal held since an own server ended (`ended`) has been left behind: a hosted
+ * session signed in after it, so the person moved on. AppGate then drops it (current-server.ts
+ * dismissEnded), and a later hosted sign-out or 401 opens Welcome instead of the old server's
+ * Connect and its words. A refused phone signed in nowhere since keeps it.
+ */
+export function refusalLeftBehind(access: AccessView, ended: DeviceRefusal | null): boolean {
+  return ended !== null && access.kind === 'signed_in' && access.server.source === 'hosted';
 }
 
 /** Which step a Retry tries again. */
