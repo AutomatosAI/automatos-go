@@ -296,13 +296,13 @@
       "title": "Try again after a files-only message repeats that message, never an older question",
       "description": "src/chat/view-model.ts:292-296 retryWords: `const draft = state.live?.draft?.text.trim(); if (draft) return draft;` treats a files-only draft (the composer sends blank words with files) as no draft and falls through to lastTurn(state.messages): the saved list from before the send, so it returns the user's PREVIOUS question. src/chat/screens/ChatScreen.tsx:47-50 askAgain then sends those words, without files. The failure notice offers Try again for any retryable failure (view-model.ts:261). Scenario: a chat whose last user message is 'summarise the board'; the user sends a photo with no words; the request fails on the network; Try again re-asks 'summarise the board' and the photo is gone. Where the server had already saved the photo message (a broken stream), retryWords is null and Try again silently does nothing. Reproduced at reducer level (review probe): send {text: '', files: [photo]} → failed(network) → retryWords = 'summarise the board'.",
       "acceptanceCriteria": [
-        "Cause: retryWords reads a live draft with blank words as no draft (view-model.ts:293-294) and Try again carries words only (ChatScreen.tsx:49), so a files-only failure retries an older message.",
-        "Change: Try again repeats the failed draft whenever the thread holds one: its words AND its files (each ChatFile keeps its attachment_id; the server's attachments are request-scoped for 7 days and resolved by id, automatos-ai orchestrator/api/chat.py _with_attachments, so nothing re-uploads). Only with no live draft (a saved turn_error message) does it fall back to the vendored lastTurn's words. retryWords becomes retryInput(state) → {text, files} | null in src/chat/view-model.ts; ChatScreen's askAgain sends it through the same discussion-wrapped send (a ticket's selection stays on it); the failure notice offers Try again only when retryInput(state) is not null.",
-        "Test: src/chat/__tests__/view-model-rows.test.ts — a files-only draft failed on the network gives '' and that draft's files, never the earlier question; a draft with words and files gives both; no live draft (a saved turn_error) gives lastTurn's words and no files; a live draft with neither gives null and a notice with no Try again.",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes",
-        "npm run check:bundle passes"
+        "Cause: retryWords reads a live draft with blank words as no draft (view-model.ts:293-294) and Try again carries words only (ChatScreen.tsx:49), so a files-only failure retries an older message. → DONE — Confirmed: retryWords did `state.live?.draft?.text.trim()` and fell through to lastTurn(state.messages) on blank words; askAgain sent `{ text: words }` only. The old rule returns 'summarise the board' for a failed photo-only draft (seen red).",
+        "Change: Try again repeats the failed draft whenever the thread holds one: its words AND its files (each ChatFile keeps its attachment_id; the server's attachments are request-scoped for 7 days and resolved by id, automatos-ai orchestrator/api/chat.py _with_attachments, so nothing re-uploads). Only with no live draft (a saved turn_error message) does it fall back to the vendored lastTurn's words. retryWords becomes retryInput(state) → {text, files} | null in src/chat/view-model.ts; ChatScreen's askAgain sends it through the same discussion-wrapped send (a ticket's selection stays on it); the failure notice offers Try again only when retryInput(state) is not null. → DONE — retryInput(state) in view-model.ts: the live draft whenever present ({text trimmed, files: draft.files}, null when both are empty), else lastTurn words with files []; RetryInput type beside it. ChatScreen askAgain: `const again = retryInput(state); if (again) send(again);` through the discussion-wrapped send. turnNotice retry = canRetry && canSend && retryInput !== null; threadRows' askable gates the saved failure the same way.",
+        "Test: src/chat/__tests__/view-model-rows.test.ts — a files-only draft failed on the network gives '' and that draft's files, never the earlier question; a draft with words and files gives both; no live draft (a saved turn_error) gives lastTurn's words and no files; a live draft with neither gives null and a notice with no Try again. → DONE — view-model-rows.test.ts describe 'Try again' (4 tests, failedAfterQuestion fixture): files-only → {text: '', files: [PHOTO]} and the notice retries; words+files → both; saved turn_error → {text: 'First', files: []}; blank draft with no files → null and notice retry false. Reverting to the old rule turns 3 red (seen).",
+        "npm run typecheck passes → DONE — exit 0",
+        "npm run lint passes (0 errors) → DONE — exit 0, 0 problems",
+        "npx vitest run passes → DONE — 111 files, 1635 tests passed",
+        "npm run check:bundle passes → DONE — exported .expo/bundle-check"
       ],
       "files": [
         "src/chat/view-model.ts",
@@ -310,8 +310,8 @@
         "src/chat/__tests__/view-model-rows.test.ts"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Fixed c03fc6f. retryInput also gates a saved failure's Try again (threadRows' askable), so a files-only saved message with a saved turn_error offers none rather than a button that does nothing."
     },
     {
       "id": "P001C-RVW-3",
