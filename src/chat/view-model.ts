@@ -31,6 +31,7 @@ import {
   type ReceiptsView,
   type ToolLineRow,
 } from './lines';
+import type { ChatFile } from './request';
 import type { StoredMessage } from './schemas';
 import { CHAT_COPY, NOTICE_WORDS, TURN_ERROR_COPY, type FailureCopy } from './strings';
 
@@ -258,7 +259,8 @@ export function turnNotice(state: ThreadState): Notice | null {
     return notice(TURN_NOTICE_KEY, 'stopFailed', CHAT_COPY.stopFailed);
   if (state.status !== 'failed') return null;
   const copy = failureCopy(state.failure);
-  return notice(TURN_NOTICE_KEY, 'failed', copy.text, copy.canRetry && canSend(state));
+  const retry = copy.canRetry && canSend(state) && retryInput(state) !== null;
+  return notice(TURN_NOTICE_KEY, 'failed', copy.text, retry);
 }
 
 function looseRow(cards: readonly CardRow[]): ChatRow {
@@ -269,10 +271,10 @@ function looseRow(cards: readonly CardRow[]): ChatRow {
 export function threadRows(state: ThreadState, options: ViewOptions = {}): ChatRow[] {
   if (state.status === 'loading') return [];
   const messages = shownMessages(state);
-  const settled = state.live === null && canSend(state);
+  const askable = state.live === null && canSend(state) && retryInput(state) !== null;
   const cards = placedCards(state, options.webUrl);
   const saved = messages.map((message, index) =>
-    storedRow(message, settled && index === messages.length - 1, cards.at(index), options),
+    storedRow(message, askable && index === messages.length - 1, cards.at(index), options),
   );
   const loose = cards.loose.length > 0 ? [looseRow(cards.loose)] : [];
   const pending = turnNotice(state);
@@ -285,14 +287,23 @@ export function threadRows(state: ThreadState, options: ViewOptions = {}): ChatR
   ];
 }
 
+/** What Try again sends: the failed message's words and files (files only: blank words). */
+export type RetryInput = { readonly text: string; readonly files: readonly ChatFile[] };
+
 /**
- * Try again's words (the vendored retry.ts rule: the user's last message, asked anew): the live
- * turn's draft when it has one, else the newest saved message of the user's; null when none.
+ * Try again's message (the vendored retry.ts rule: the user's last message, asked anew): the live
+ * turn's draft whenever it has one, its words AND its files (each keeps its attachment_id, which
+ * the server resolves, so nothing uploads again); with no live draft (a saved turn_error), the
+ * newest saved message of the user's, its words only. null when there is nothing to ask again.
  */
-export function retryWords(state: ThreadState): string | null {
-  const draft = state.live?.draft?.text.trim();
-  if (draft) return draft;
-  return lastTurn(state.messages)?.content.trim() || null;
+export function retryInput(state: ThreadState): RetryInput | null {
+  const draft = state.live?.draft;
+  if (draft) {
+    const text = draft.text.trim();
+    return text || draft.files.length > 0 ? { text, files: draft.files } : null;
+  }
+  const words = lastTurn(state.messages)?.content.trim();
+  return words ? { text: words, files: [] } : null;
 }
 
 /** MessageList scrolls to the end only when a row is added, never as a reply grows. */

@@ -1,12 +1,12 @@
 // One conversation on screen, shared by home and app/(app)/chat/[id].tsx: the header, the thread
 // (US-008c's rows over useThread, US-008b) and the composer (US-009a). It only wires. The chat id
-// is checked before reuse (D-STALE-CHAT); null is a draft. Try again asks the user's last words
-// anew (retryWords); Auto's cards settle on the thread (settleCard); links open through the
+// is checked before reuse (D-STALE-CHAT); null is a draft. Try again asks the user's last message
+// anew (retryInput); Auto's cards settle on the thread (settleCard); links open through the
 // foundation's mapping (useFollowLink). The composer is the role's and the AI label's (D-ROLES,
 // D-AI-LABEL): it sends while the thread can send and stops while it can stop. A conversation
 // about a ticket (D-ASK-AUTO) carries the ticket in every message it sends, Try again included,
 // shows the discussion bar under `above`, and holds the send until the ticket is in. Files go
-// with the words they were attached to (useAttachments, US-009b); Try again resends words only.
+// with the words they were attached to (useAttachments, US-009b); Try again resends both.
 // Report this on Auto's messages opens the foundation's one ReportSheet (useMessageReport, US-009c).
 
 import { useCallback, useMemo, type ReactNode } from 'react';
@@ -25,7 +25,7 @@ import { useDiscussion } from '../discussion/use-discussion';
 import { HomeHeader } from '../home/HomeHeader';
 import { useMessageReport } from '../report/use-message-report';
 import type { ChatFile } from '../request';
-import { retryWords, threadRows } from '../view-model';
+import { retryInput, threadRows } from '../view-model';
 import { ChatFrame } from './ChatFrame';
 
 export type ChatScreenProps = {
@@ -45,8 +45,8 @@ function Thread({ thread }: { readonly thread: ThreadView }) {
   const { report, sheet } = useMessageReport();
   const rows = useMemo(() => threadRows(state), [state]);
   const askAgain = useCallback(() => {
-    const words = retryWords(state);
-    if (words) send({ text: words });
+    const again = retryInput(state);
+    if (again) send(again);
   }, [state, send]);
   if (loadError) return <ErrorState error={loadError} onRetry={retry} />;
   if (state.status === 'loading') return <LoadingState />;
