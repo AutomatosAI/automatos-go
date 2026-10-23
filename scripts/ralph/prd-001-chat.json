@@ -190,18 +190,18 @@
       "title": "Older chats: the list behind the list button",
       "description": "As a user, I want to reopen an older conversation (D28: older chats behind a list button; PRD open question 3: newest 50, paged).",
       "acceptanceCriteria": [
-        "app/(app)/chats.tsx: newest first, 50 per page, 'Load more'; each row title, last-message preview, relative time; 'New chat' → routes.chat('new'); a row → routes.chat(id); reached from a list button in the home header",
-        "src/chat/history/history.ts (pure): page merging with dedupe by id and an end-of-list rule that also stops when the server ignored starting_after (no new ids)",
-        "src/chat/__tests__/history.test.ts: merge, dedupe, the ignored-cursor stop",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes",
-        "npm run check:bundle passes"
+        "app/(app)/chats.tsx: newest first, 50 per page, 'Load more'; each row title, last-message preview, relative time; 'New chat' → routes.chat('new'); a row → routes.chat(id); reached from a list button in the home header → DONE — 6417737: app/(app)/chats.tsx → src/chat/history/ChatsScreen.tsx: useInfiniteQuery on GET /api/chat/history, 50 a page (HISTORY_PAGE_SIZE), starting_after = the last id; the server's order (newest activity first); a 'Load more' footer (spinner while loading, its own failure line + Try again); ChatRow shows the one-line title, the 'Auto' word on kind 'auto', the relative time (the web's Play relativeTime: 'Just now', '2 min', '3 h', 'Yesterday', 'Mon', '9 Oct') and a two-line preview, all in one VoiceOver label; 'New chat' (header, and the empty state) → routes.chat('new'); a row → routes.chat(id); HomeHeader shows a list button ('Older chats') → routes.chats on home (the chat route keeps Back)",
+        "src/chat/history/history.ts (pure): page merging with dedupe by id and an end-of-list rule that also stops when the server ignored starting_after (no new ids) → DONE — 6417737: mergePage/mergePages dedupe by id across and within pages (first-seen order) and set done on a short page or a page that adds no new id (an ignored starting_after); done is sticky; nextCursor = the last id, null once done; plus historyState (a loaded list stays when a refetch fails) and historyFooter",
+        "src/chat/__tests__/history.test.ts: merge, dedupe, the ignored-cursor stop → DONE — history.test.ts 17 tests: page append, short/empty page ends, no chats, no mutation, dedupe of a chat that moved up and of a repeated id in one page, the ignored-cursor stop (the same page again → done, null cursor) and that it stays ended; list state and footer. history-rows.test.ts 13 tests: relative times, last active, title/preview, the row view and its label, both kinds, the routes",
+        "npm run typecheck passes → DONE — tsc --noEmit exit 0",
+        "npm run lint passes (0 errors) → DONE — eslint . exit 0, 0 errors",
+        "npx vitest run passes → DONE — 105 files / 1527 tests passed",
+        "npm run check:bundle passes → DONE — expo export --platform ios exit 0 (Exported: .expo/bundle-check)"
       ],
       "files": ["app/(app)/chats.tsx", "src/chat/history/", "src/chat/home/HomeHeader.tsx", "src/chat/__tests__/"],
       "priority": 8,
-      "passes": false,
-      "notes": "History rows carry kind 'user' | 'auto' (Auto's unprompted threads); show both."
+      "passes": true,
+      "notes": "History rows carry kind 'user' | 'auto' (Auto's unprompted threads); show both. | Built 6417737. Paging is useInfiniteQuery under queryKeys.chat.history(50) (in memory, D-CACHE), refetched each time the list opens (the web's refetchOnMount). Until PRD-266 §4.9 the server ignores starting_after, so 'Load more' brings back the newest page, adds nothing and the list ends: chats past the newest 50 are not reachable until the cursor lands. FOUNDATION GAP: ListRow takes no accessibilityLabel and leaves its trailing slot out of the label (src/ui/ListRow.tsx), so the time and the Auto word would not reach VoiceOver: ChatRow is feature-local under src/chat/history/ (KC2)."
     },
     {
       "id": "US-008h",
