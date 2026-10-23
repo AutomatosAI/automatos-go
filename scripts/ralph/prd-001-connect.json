@@ -533,6 +533,70 @@
       "priority": 12,
       "passes": true,
       "notes": "Server facts: services/mobile/pairing.py rotate_after = paired_at + MOBILE_TOKEN_ROTATE_DAYS (config.py, default 30, minimum 1); MOBILE_TOKEN_ROTATION_OVERLAP_SECONDS 600. W1 US-003c's ACs: rotate is 'the device lane on its OWN device only: a new token once'; DELETE is 'the device's owner, or a workspace owner/admin: status revoked … the token hash is KEPT so the lane can answer 401 device_revoked'. The answer shapes exist in no committed file on 20 Oct: read them from W1's code when this story runs. The three routes stay pendingUpstream until the re-pin (KC3). | US-006i baa88c9: foundation files changed (KC2): src/auth/providers/device.ts (header comments only: rotation keeps the pairing; Remove this phone runs before signOut). No FOUNDATION GAP. Server facts re-read on W1 13018990d match the notes; additions: rotate refuses a rotated-out token with 409 {code: token_superseded} (never re-sent); the device lane accepts no X-Workspace-ID (none is sent); a paused workspace makes rotate/DELETE 403 (rotate retried later, Remove still forgets). Security review (no HIGH/CRITICAL), for Gerard: MEDIUM a rotate answer lost after the server rotated (app suspended mid-call) cannot be recovered client-side: the retry is 409 token_superseded and the phone re-pairs once the 10-minute overlap ends (server design, PRD-266: a superseded token may not rotate); MEDIUM-LOW write/remove race in device-store: already ordered by src/lib/secure-keys.ts serialQueue (test added); LOW previous_token_valid_until is required as W1 sends it but unused; LOW a 401 for a call carrying the pre-rotation token after its overlap ends the pairing (the client callback carries no token; rare); LOW src/api/transport.ts follows redirects (foundation, cross-cutting: consider redirect 'manual' for the bearer); LOW after a successful DELETE an in-flight 401 device_revoked can flash Connect before forget lands on Welcome."
+    },
+    {
+      "id": "P001N-RVW-1",
+      "prdStory": "review",
+      "title": "Connect waits for the hosted session before it decides the switch question (KC8)",
+      "description": "MEDIUM (KC8, US-006g). src/connect/screens/ConnectScreen.tsx:145-159 decides the switch question from useAuthSession().isSignedIn without checking isLoaded: serverInUse (src/connect/scanner/scan-state.ts:168-176) counts the hosted server as in use only when isSignedIn, and connectSwitchQuestion (scan-state.ts:210-218) returns null when inUse is null; ClerkSession reports isSignedIn false until Clerk has loaded (src/auth/AuthRoot.tsx:93). So while ClerkProvider is still loading (a cold start from a link, or Clerk's Frontend API unreachable), a crafted automatos://connect?origin=https://other.example&code=ABCD-EFGH opened on a phone signed in to hosted Studio mounts ConnectFlow with no question: discovery runs against the link's origin, the confirm card shows, and Pair runs connectTo, which signs Clerk out and pairs to the link's server without the 'You're connected to {current}. Connect to {new} instead?' yes KC8 requires. PairLinkScreen already holds while the session loads (PairLinkScreen.tsx:74-81 → pairLinkIntake, scan-state.ts:253); /connect is the one entry that does not. Found by both the code-reviewer and the security-reviewer runs.",
+      "acceptanceCriteria": [
+        "Cause: ConnectScreen reads isSignedIn before the session has loaded, so a hosted session still loading reads as connected nowhere and connectSwitchQuestion returns null (ConnectScreen.tsx:146-156, scan-state.ts:168-176, 210-218)",
+        "Change: a pure helper in src/connect/scanner/scan-state.ts (for example connectEntry({prefill, isLoaded, inUse}) → loading | ask {question} | flow): loading while !isLoaded and the prefill carries an origin (a link, a scan or a route prefill); once loaded, the question when the prefill names another server than the one in use; else the flow. ConnectScreen renders the foundation's LoadingState for loading and mounts nothing that runs discovery (no useConnect) until it is decided; a Connect opened with no prefill (Welcome's button) is not held. The yes stays component state (switchAnswered), never a route param",
+        "Test: src/connect/__tests__/scan-state.test.ts tables the helper: !isLoaded + a prefill origin → loading (fails on the current code, which mounts the flow); !isLoaded + no prefill → flow; loaded + signed in to hosted + another origin → the question; loaded + an own server + another origin → the question; loaded + connected nowhere → flow; the server in use → flow. src/connect/__tests__/connect-screens.test.ts (or scanner-screens.test.ts) reads ConnectScreen and asserts it goes through the helper and renders LoadingState for loading",
+        "Checks: npm run typecheck, npm run lint (0 errors), npx vitest run, npm run check:bundle and bash scripts/ralph/acceptance-prd001-connect.sh --no-ci pass"
+      ],
+      "files": [
+        "src/connect/screens/ConnectScreen.tsx",
+        "src/connect/scanner/scan-state.ts",
+        "src/connect/__tests__/"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P001N-RVW-2",
+      "prdStory": "review",
+      "title": "The unencrypted home network line on every signed-in state: the consent sheet and the gate's own states (D-HTTPS)",
+      "description": "MEDIUM (D-HTTPS, US-006h AC2: 'one line rendered by app/(app)/_layout.tsx above every signed-in screen'; PRD-001 §4.5 'a persistent unencrypted home network note'). The line is rendered only by SignedInScreens (app/(app)/_layout.tsx:25-35), which is the gate's children; AppGate's Launch (src/app-state/AppGate.tsx:42-60) renders LaunchState (Not running, paused, workspace lost, unsupported, error, loading) and the consent node (src/consent/ConsentSheet.tsx) without it, though every one of them is shown to a signed-in phone (accessView signed_in). So a phone paired over http://192.168.x.y sees no 'Unencrypted home network · {host}' on the AI-provider consent sheet, the screen where it agrees to send data, nor on Not running for that very server. The US-006h and US-007c notes record the omission as the builder's choice; it was not a lead decision.",
+      "acceptanceCriteria": [
+        "Cause: InsecureNetworkBanner sits in the children branch only (app/(app)/_layout.tsx:29); Launch's other two branches (AppGate.tsx:47-48 LaunchState, :58 the consent node) have none",
+        "Change: ONE place renders the line for every state Launch shows (LaunchState, the consent step and the screens), for example Launch wraps all three in the top bar and the nested SafeAreaProvider SignedInScreens uses today, and SignedInScreens drops its own copy so the line shows exactly once; the origin is the signed-in server's apiUrl; nothing over https or on the hosted server; still inside the top safe area and never over a screen's header; tokens only, words beside the icon",
+        "Test: a test proves the line for each Launch outcome over an http own server (not_running, paused, workspace_lost, unsupported, error, loading, consent, children), none over https, and exactly one on the screens: a react-dom/server render over mocks as src/auth/__tests__/auth-root.test.ts does, or a pure helper plus a source-reading wiring test as connect-screens.test.ts does; it fails on the current code for consent and not_running. The existing edges.test.ts cases for insecureNetworkLine still pass unchanged",
+        "Checks: npm run typecheck, npm run lint (0 errors), npx vitest run, npm run check:bundle and bash scripts/ralph/acceptance-prd001-connect.sh --no-ci pass"
+      ],
+      "files": [
+        "app/(app)/_layout.tsx",
+        "src/app-state/AppGate.tsx",
+        "src/app-state/__tests__/",
+        "src/connect/components/InsecureNetworkBanner.tsx",
+        "src/connect/__tests__/"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P001N-RVW-3",
+      "prdStory": "review",
+      "title": "A device refusal is told once: a later hosted session clears it, so its sign-out goes to Welcome",
+      "description": "MEDIUM (US-006d gate table: 'no own server and signed out → welcome'; US-006c, US-006h). The refusal the device provider reports stays in the current-server snapshot (ended) until connected() or forgotten() (src/connect/current-server.ts:129-131) or the process restarts, and gate.ts hostedAccess (src/app-state/gate.ts:128-137) answers connect with that refusal whenever the hosted session is not signed in. A phone revoked by its own server → Connect with 'This phone was removed from {server}…' → Back (useGoBack to Welcome, ConnectScreen.tsx:67) → Sign in to Automatos → hosted Studio → Sign out, or a hosted 401 (useSignOutOnExpiry): AppGate (AppGate.tsx:84-96) redirects to /connect for the old server and connectionEndedNote (src/connect/edges.ts:120-124) shows the old removal again, instead of Welcome, after every hosted sign-out until the app process restarts.",
+      "acceptanceCriteria": [
+        "Cause: nothing clears ended once the person has moved on to the hosted server; hostedAccess honours it whenever the hosted session is signed out (gate.ts:132-135)",
+        "Change: CurrentServerStore gains one more move that drops the refusal and keeps the server (for example dismissEnded(): ready(own, null), bumping the generation like the others), called once a hosted session is signed in while a refusal is held (AppGate, access signed_in on source hosted); a refused phone that has not signed in anywhere since still lands on Connect with the reason and the server prefilled (US-006h unchanged)",
+        "Test: src/connect/__tests__/current-server.test.ts: refused → dismissEnded → ready with own null and ended null, and a read started before it does not bring the refusal back; a gate chain (src/app-state/__tests__/gate.test.ts or src/connect/__tests__/edges.test.ts): refused → hosted signed in → dismissed → signed out → welcome (fails on the current code, which gives connect), and refused → still signed out → connect with the reason",
+        "Checks: npm run typecheck, npm run lint (0 errors), npx vitest run, npm run check:bundle and bash scripts/ralph/acceptance-prd001-connect.sh --no-ci pass"
+      ],
+      "files": [
+        "src/connect/current-server.ts",
+        "src/app-state/AppGate.tsx",
+        "src/app-state/gate.ts",
+        "src/app-state/__tests__/",
+        "src/connect/__tests__/"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
     }
   ],
   "ownerTest": [
