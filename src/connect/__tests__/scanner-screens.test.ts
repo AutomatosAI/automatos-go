@@ -1,6 +1,6 @@
 // The scanner and the pairing link's shape, read from the source (vitest runs no React Native
-// renderer): expo-camera's CameraView reads QR codes only; the camera is asked for only by the
-// scanner, never at launch; Open Settings is Linking.openSettings; neither the scanner nor a link
+// renderer): expo-camera's CameraView reads QR codes only; the camera is asked for only behind a
+// tap (the scanner, chat's camera attachment), never at launch; Open Settings is Linking.openSettings; neither the scanner nor a link
 // pairs or calls the server (KC8); KC13 is in the scanner's module comment and Connect says 'Scan it
 // with Automatos Go'; the words come from strings.ts, the colours from the tokens.
 
@@ -48,12 +48,19 @@ describe('the QR scanner (US-006g)', () => {
     expect(qrScanner).toContain('onBarcodeScanned={view.reading ? onScanned : undefined}');
   });
 
-  it('asks for the camera when it opens: only the scanner asks, nothing at launch', () => {
+  it('asks for the camera when it opens: only behind a tap, nothing at launch', () => {
     expect(qrScanner).toContain('useCameraPermissions()');
-    const askers = [...sources('src'), ...sources('app')].filter(({ text }) =>
-      /useCameraPermissions|requestCameraPermissionsAsync/.test(text),
-    );
-    expect(askers.map(({ file }) => file)).toEqual([path.join(SCANNER_DIR, 'QrScanner.tsx')]);
+    // Every camera asker sits behind a person's tap: the scanner, and chat's camera attachment
+    // (A2's askForCamera, called from the attach menu). Any other file asking would be a launch path.
+    const onTap = [
+      path.join(SCANNER_DIR, 'QrScanner.tsx'),
+      path.join('src/chat/attachments', 'pickers.ts'),
+    ];
+    const askers = [...sources('src'), ...sources('app')]
+      .filter(({ text }) => /useCameraPermissions|requestCameraPermissionsAsync/.test(text))
+      .map(({ file }) => file);
+    expect(askers).toContain(path.join(SCANNER_DIR, 'QrScanner.tsx'));
+    expect(askers.filter((file) => !onTap.includes(file))).toEqual([]);
   });
 
   it('opens Settings with Linking.openSettings, and always offers Type the code', () => {
