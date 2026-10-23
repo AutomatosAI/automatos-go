@@ -2,12 +2,13 @@
 // roleCan is the bootstrap's (GET /api/workspaces/current), never one derived from the auth mode or
 // the edition, so it must follow the server: it is read at launch (use-launch.ts), again on coming
 // back to the foreground once the last read is older than RESUME_REFRESH_AFTER_MS, and again after
-// a refusal (any 403, from a query or a mutation: a demoted editor answering, a paused workspace) at
-// most once per FORBIDDEN_REFRESH_MIN_MS. The workspace query's own refusal is not a trigger: it IS
-// the read, and the gate shows it (bootstrap-refusal.ts), so a refusal can never loop. Pure;
-// session-refresh.ts applies it to the QueryClient and use-session-refresh.ts wires AppState.
+// a refusal (any 403, from a query, a mutation or any other call of the session's client: a demoted
+// editor answering, a paused workspace) at most once per FORBIDDEN_REFRESH_MIN_MS. The workspace
+// query's own refusal is not a trigger: it IS the read, and the gate shows it
+// (bootstrap-refusal.ts), so a refusal can never loop. Pure; session-refresh.ts applies it to the
+// QueryClient and use-session-refresh.ts wires AppState.
 
-import { isApiError } from '../api/errors';
+import { isApiError, type ApiError } from '../api/errors';
 import { isForeground } from '../api/live-connection';
 import { FORBIDDEN_REFRESH_MIN_MS, RESUME_REFRESH_AFTER_MS } from './config';
 
@@ -28,7 +29,7 @@ export function refreshDecision(
 }
 
 /** A refusal that may mean the role changed: any ApiError of kind forbidden (a 403). */
-export function isForbidden(error: unknown): boolean {
+export function isForbidden(error: unknown): error is ApiError {
   return isApiError(error) && error.kind === 'forbidden';
 }
 

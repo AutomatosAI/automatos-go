@@ -1,7 +1,8 @@
 // Keeps the role the server's (KC12; D16, D17): mounted once by app/(app)/_layout.tsx, beside the
 // gate rather than under it, so a workspace the gate shows as paused or lost is read again on
 // resume too. On mount it is the launch; then AppState's return from the background, and every 403
-// the query and mutation caches hear, go through the refresher (session-refresh.ts, decided by
+// (each told once by the session's refusal channel, refusals.ts: the launch client's reports and
+// what the query and mutation caches hear) go through the refresher (session-refresh.ts, decided by
 // role-refresh.ts), which reads the workspace query again. The launch and every resume also rotate
 // a paired phone's token once it is due (US-006i, src/connect/rotation.ts rotatesOn): never on a
 // refusal, never per request. Only wiring.
@@ -12,8 +13,9 @@ import { AppState } from 'react-native';
 
 import { tokenRotation } from '../connect/app-rotation';
 import { rotatesOn } from '../connect/rotation';
+import { sessionRefusals } from './refusals';
 import { isResume, type RefreshEvent } from './role-refresh';
-import { createSessionRefresher, watchRefusals } from './session-refresh';
+import { createSessionRefresher, hearRefusals } from './session-refresh';
 
 export function useSessionRefresh(): void {
   const queryClient = useQueryClient();
@@ -30,10 +32,10 @@ export function useSessionRefresh(): void {
       if (isResume(previous, next)) onEvent('resume');
       previous = next;
     });
-    const stopWatching = watchRefusals(queryClient, () => onEvent('forbidden'));
+    const stopHearing = hearRefusals(queryClient, sessionRefusals, () => onEvent('forbidden'));
     return () => {
       appState.remove();
-      stopWatching();
+      stopHearing();
     };
   }, [queryClient]);
 }
