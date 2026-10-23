@@ -12,6 +12,7 @@ import { queryKeys } from '../../api/query-keys';
 import { logger } from '../../lib/logger';
 import { isUsableId, routes } from '../../navigation/routes';
 import { joinLabel } from '../../ui/paint';
+import { typeWord } from '../deliverables/types';
 import { CC_ROUTES } from '../routes';
 import { BOARD_COPY } from '../strings';
 
@@ -70,25 +71,19 @@ export function linkedDeliverablesQuery(
 export type LinkedDeliverableView = {
   readonly id: string;
   readonly title: string;
-  /** 'Report', 'Spreadsheet': the type as a word; null when the server sent none. */
+  /** 'Report', 'Spreadsheet': the type as the gallery words it (types.ts); null when none. */
   readonly kind: string | null;
   /** routes.cc.deliverable(id). */
   readonly href: string;
   readonly accessibilityLabel: string;
 };
 
-/** 'spreadsheet' → 'Spreadsheet', 'slide_deck' → 'Slide deck'. */
-function kindWord(type: string | null): string | null {
-  const words = type?.replace(/[_-]+/g, ' ').trim();
-  return words ? words[0].toUpperCase() + words.slice(1) : null;
-}
-
 export function linkedDeliverableViews(
   rows: readonly LinkedDeliverable[],
 ): LinkedDeliverableView[] {
   return rows.map((row) => {
     const title = row.title.trim() || BOARD_COPY.untitled;
-    const kind = kindWord(row.artifact_type);
+    const kind = typeWord(row.artifact_type);
     return {
       id: row.id,
       title,

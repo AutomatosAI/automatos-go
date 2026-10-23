@@ -334,3 +334,57 @@ export const SOCIAL_COPY = Object.freeze({
   studioMissing: 'Open this post in Studio on the web.',
   studioFailed: 'Studio could not be opened on this phone.',
 });
+
+/** The Deliverables gallery (D-DELIVERABLES, D25): what agents made, opened and never decided. */
+export const DELIVERABLES_COPY = Object.freeze({
+  loading: 'Loading the Deliverables…',
+  listLabel: 'Deliverables',
+  filtersLabel: 'Filter the Deliverables by type',
+  /** The filter that shows every type. */
+  all: 'All',
+  /** A Deliverable the server sent without a title. */
+  untitled: 'Untitled',
+  /** A type the server sent blank: the card still shows, under this word. */
+  file: 'File',
+  /** The web's artwork labels (deliverable-icon.tsx), one for the card and many for the filter. */
+  types: Object.freeze({
+    report: Object.freeze({ one: 'Report', other: 'Reports' }),
+    image: Object.freeze({ one: 'Image', other: 'Images' }),
+    document: Object.freeze({ one: 'Document', other: 'Documents' }),
+    code: Object.freeze({ one: 'Code', other: 'Code' }),
+    slide: Object.freeze({ one: 'Slides', other: 'Slides' }),
+    spreadsheet: Object.freeze({ one: 'Spreadsheet', other: 'Spreadsheets' }),
+    blog_post: Object.freeze({ one: 'Blog post', other: 'Blog posts' }),
+    video: Object.freeze({ one: 'Video', other: 'Videos' }),
+    audio: Object.freeze({ one: 'Audio', other: 'Audio' }),
+    archive: Object.freeze({ one: 'Archive', other: 'Archives' }),
+  }),
+  /** Who made it when no agent did: where it came from (the web's made-by.ts). */
+  madeBy: Object.freeze({
+    social_post: 'Socials',
+    upload: 'Uploaded',
+    mission: 'Mission',
+    playbook: 'Playbook',
+    heartbeat: 'Routine',
+    task: 'Task',
+    chat: 'Chat',
+    agent_output: 'Generated',
+    document: 'Templates',
+    trigger: 'Trigger',
+  } as Readonly<Record<string, string>>),
+  unknownAgent: 'Unknown agent',
+  /** Between who made it and when: 'Scout · 08:06'. */
+  separator: '·',
+  /** A failed run's report (deliverable_service.py shown_status): a word beside the dot. */
+  failedRun: 'Run failed',
+  /** What a card opens, said after its own label. */
+  openHint: 'Opens the Deliverable',
+  loadMore: 'Load more',
+  loadMoreHint: 'Shows older Deliverables',
+  empty: Object.freeze({
+    title: 'No Deliverables yet',
+    message: 'Files your agents write land here.',
+  }),
+  emptyType: (types: string) => `No ${types.toLowerCase()} yet`,
+  emptyTypeMessage: 'Files of this type land here as your agents write them.',
+});
