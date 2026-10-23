@@ -1,5 +1,5 @@
-// User-facing copy for the session shell (one strings module per folder). Nothing about plans,
-// credits or prices (D8).
+// User-facing copy for the session shell (one strings module per folder). Nothing about billing
+// (D8).
 
 export const SESSION_COPY = Object.freeze({
   /** The keychain refused to say which server this phone uses (auth-branch.ts 'unreadable'). */
