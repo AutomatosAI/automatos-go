@@ -205,19 +205,19 @@
       "title": "Deliverables gallery: type filters, load more, the card",
       "description": "As a user, I want to look at what was made, like Studio's gallery (D-DELIVERABLES).",
       "acceptanceCriteria": [
-        "src/cc/deliverables/schemas.ts + api.ts: GET /api/deliverables?limit&offset&artifact_type ({success, deliverables: [{id (uuid), artifact_type, source_type, agent_name, title, summary, preview_url, content_url?, created_at, status}]}), offset paging; GET /api/deliverables/{deliverable_id}?include_content=true (content inline up to 1 MB, content_truncated)",
-        "app/(app)/cc/deliverables.tsx with src/cc/deliverables/DeliverableCard.tsx: type filter pills (from the artifact types present), cards with icon, type label, title, excerpt, mono meta (agent, time) — NO 'DLV-' id, NO Awaiting/Done pills, NO Approve/Request changes; 'Load more'; tap → routes.cc.deliverable(id)",
-        "src/cc/deliverables/gallery.ts (pure) + src/cc/__tests__/deliverables.test.ts: filters, page merge with dedupe, the card view-model",
-        "npm run check:routes passes",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes",
-        "npm run check:bundle passes"
+        "src/cc/deliverables/schemas.ts + api.ts: GET /api/deliverables?limit&offset&artifact_type ({success, deliverables: [{id (uuid), artifact_type, source_type, agent_name, title, summary, preview_url, content_url?, created_at, status}]}), offset paging; GET /api/deliverables/{deliverable_id}?include_content=true (content inline up to 1 MB, content_truncated) → DONE — src/cc/deliverables/schemas.ts (DeliverableListSchema: row {id uuid, artifact_type, source_type, agent_name, title, summary, preview_url, content_url?, created_at, status}, total; a 200 with success: false throws ApiError server) + api.ts (fetchDeliverablesPage/galleryQuery offset paging, fetchDeliverable/deliverableQuery ?include_content=true with content, content_truncated, content_error); deliverables-api.test.ts 10 tests (bbe3342)",
+        "app/(app)/cc/deliverables.tsx with src/cc/deliverables/DeliverableCard.tsx: type filter pills (from the artifact types present), cards with icon, type label, title, excerpt, mono meta (agent, time) — NO 'DLV-' id, NO Awaiting/Done pills, NO Approve/Request changes; 'Load more'; tap → routes.cc.deliverable(id) → DONE — app/(app)/cc/deliverables.tsx → src/cc/deliverables/DeliverablesTab.tsx with TypePills.tsx (All + types the gallery has shown) and DeliverableCard.tsx (type icon, mono type word, serif title, excerpt, mono meta who · when; Run failed dot+word on a failed run report); Load more button; card → routes.cc.deliverable(id); no made-up id, no status pills, no verdict buttons (gate D25 check passes on HEAD) (bbe3342)",
+        "src/cc/deliverables/gallery.ts (pure) + src/cc/__tests__/deliverables.test.ts: filters, page merge with dedupe, the card view-model → DONE — gallery.ts (galleryParams, nextOffset, mergePages dedupe by id, withTypes, typePills, deliverableCard, emptyCopy, galleryView) + types.ts; deliverables.test.ts 16 tests (bbe3342)",
+        "npm run check:routes passes → DONE — 22 routes: 20 on the server at the pin, 2 pendingUpstream (foundation), 0 missing",
+        "npm run typecheck passes → DONE — tsc --noEmit exit 0",
+        "npm run lint passes (0 errors) → DONE — eslint . exit 0, 0 problems",
+        "npx vitest run passes → DONE — 102 files, 1581 tests passed",
+        "npm run check:bundle passes → DONE — expo export --platform ios exit 0 (entry .hbc 6.51 MB)"
       ],
       "files": ["app/(app)/cc/deliverables.tsx", "src/cc/deliverables/", "src/cc/__tests__/"],
       "priority": 9,
-      "passes": false,
-      "notes": "The only mutation the server has is a soft DELETE, and the app deletes nothing (D63)."
+      "passes": true,
+      "notes": "The only mutation the server has is a soft DELETE, and the app deletes nothing (D63). | US-013a DONE (bbe3342): the gallery sends source_type_exclude=heartbeat as Studio feed does (FEED_DEFAULT_FILTERS); pills come from the types loaded pages have shown (no counts: only some pages are loaded); the tab figure stays null (no review count exists, D25); ticket/linked.ts now words types through deliverables/types.ts. For US-013b: routes.cc.deliverable builds /cc/deliverables/{id} (screen file app/(app)/cc/deliverables/[id].tsx per KX3), while the gate checks for the directory app/(app)/cc/deliverable — reconcile there. No FOUNDATION GAP."
     },
     {
       "id": "US-013b",
