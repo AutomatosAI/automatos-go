@@ -3,9 +3,10 @@
 // is the copy version plus the sorted provider ids ('unlisted' for a server that lists none), so a
 // provider added or removed, a server that starts listing names, or a new copy version asks again.
 // A viewer sends nothing and is never asked (a viewer promoted to editor is, at the next
-// bootstrap); a workspace that lists no provider needs no sheet. Pure.
+// bootstrap); a workspace that lists no provider needs no sheet. workspaceConsent applies it to the
+// bootstrap's workspace, for the gate's consent step and the sheet (US-007c). Pure.
 
-import type { WorkspaceRole } from '../api/workspace';
+import type { Workspace, WorkspaceRole } from '../api/workspace';
 import { roleCan } from '../auth/role';
 import {
   CONSENT_COPY_VERSION,
@@ -13,7 +14,7 @@ import {
   SENDING_ACTIONS,
   UNLISTED_FINGERPRINT,
 } from './config';
-import { providerNames, type ConsentProviders } from './providers';
+import { providerNames, providersFrom, type ConsentProviders } from './providers';
 import type { ConsentRecord } from './store';
 
 /** Providers there is something to agree to. */
@@ -51,6 +52,23 @@ export function consentNeeded({ role, providers, record }: ConsentInput): boolea
   if (!canSend(role)) return false;
   if (providers.kind === 'none') return false;
   return record?.fingerprint !== fingerprintOf(providers);
+}
+
+/** A bootstrap's consent: its providers, and whether this person must agree to them first. */
+export type WorkspaceConsent =
+  | { readonly needed: true; readonly providers: AgreeableProviders }
+  | { readonly needed: false; readonly providers: ConsentProviders };
+
+/** consentNeeded for the workspace the bootstrap returned: its role and its ai_providers. */
+export function workspaceConsent(
+  workspace: Pick<Workspace, 'role' | 'ai_providers'>,
+  record: ConsentRecord | null,
+): WorkspaceConsent {
+  const providers = providersFrom(workspace);
+  if (providers.kind !== 'none' && consentNeeded({ role: workspace.role, providers, record })) {
+    return { needed: true, providers };
+  }
+  return { needed: false, providers };
 }
 
 /** The record 'Agree and continue' writes: what the sheet showed, and when. */

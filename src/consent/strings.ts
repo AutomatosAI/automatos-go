@@ -18,3 +18,12 @@ export const CONSENT_COPY = Object.freeze({
   unlisted: `Auto answers using AI models from the AI providers this workspace uses, for chat and, where it is available, Auto Live voice. ${WHAT_GOES}`,
   unlistedNote: "This server doesn't list them yet.",
 });
+
+/** The consent sheet (ConsentSheet.tsx): the AI label beside the heading is the foundation's. */
+export const CONSENT_SHEET_COPY = Object.freeze({
+  heading: 'Before you talk to Auto',
+  /** Above the list of the server's providers, each by the name it sends. */
+  providersLabel: 'AI providers',
+  agree: 'Agree and continue',
+  agreeHint: 'Saves your agreement on this phone and opens Auto',
+});

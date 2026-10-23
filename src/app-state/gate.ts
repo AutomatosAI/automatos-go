@@ -11,7 +11,10 @@
 // app. An own server that does not answer is 'not_running'; a bootstrap the server refuses is
 // 'paused' (D8's words) or 'workspace_lost' (src/session/bootstrap-refusal.ts, US-007a), even when
 // a later re-read (src/session/role-refresh.ts) is the one refused; any other failed step is an
-// error with Retry. app-state/AppGate wires it; no React here.
+// error with Retry. Last (shellStep, US-007c, KC11): the AI-provider consent sheet while this
+// person can send and has not agreed to the bootstrap's ai_providers (src/consent/policy.ts), so no
+// (app) screen, and nothing typed to Auto or an agent, comes before the yes; then the screens.
+// app-state/AppGate wires it; no React here.
 
 import type { Discovery } from '../api/discovery';
 import type { Server, ServerSource } from '../api/server';
@@ -27,6 +30,8 @@ import {
   type OwnServerRefusal,
 } from '../connect/server-support';
 import { OWN_SERVER_COPY } from '../connect/strings';
+import { workspaceConsent } from '../consent/policy';
+import type { ConsentRecord } from '../consent/store';
 import { bootstrapRefusal, REFUSAL_MESSAGES } from '../session/bootstrap-refusal';
 import { SHELL_COPY } from './strings';
 
@@ -219,4 +224,26 @@ export function launchView({ server, discovery, workspace }: LaunchInput): Launc
   return (
     unsupportedView(server, discovery.data) ?? workspaceView(server, discovery.data, workspace)
   );
+}
+
+export type ReadyLaunch = Extract<LaunchView, { readonly kind: 'ready' }>;
+
+/** The signed-in shell's steps, in order: the launch, the consent sheet, the (app) screens. */
+export type ShellStep =
+  /** Discovery and the bootstrap: their own state until the workspace is ready. */
+  | { readonly kind: 'launch'; readonly view: Exclude<LaunchView, { readonly kind: 'ready' }> }
+  /** The AI-provider consent sheet, in place of every (app) screen (KC11). */
+  | { readonly kind: 'consent'; readonly ready: ReadyLaunch }
+  | { readonly kind: 'children'; readonly ready: ReadyLaunch };
+
+/**
+ * The launch, then the consent step: `record` is this server's record for the launch's workspace
+ * (src/consent/memory.ts). The bootstrap's role and ai_providers decide (workspaceConsent): a
+ * viewer goes straight to the screens; a list not yet agreed to, or one that changed on a later
+ * bootstrap, asks first.
+ */
+export function shellStep(launch: LaunchView, record: ConsentRecord | null): ShellStep {
+  if (launch.kind !== 'ready') return { kind: 'launch', view: launch };
+  const { needed } = workspaceConsent(launch.workspace, record);
+  return { kind: needed ? 'consent' : 'children', ready: launch };
 }

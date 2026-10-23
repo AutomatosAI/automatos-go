@@ -6,19 +6,19 @@ import { useMemo } from 'react';
 
 import { appPersister, appQueryClient } from '../app-state/query-root';
 import { useAuthSession } from '../auth/AuthRoot';
-import { consentStore } from '../consent/app-store';
+import { consentMemory } from '../consent/app-store';
 import { workspaceIds } from '../session/workspace-ids';
 import { currentServers } from './current-server';
 import { deviceStore } from './device-store';
 import { createServerSwitch, type ConsentPort, type ServerSwitch } from './switch';
 
 /**
- * The consent records of a server left behind go with it (US-007b). The gate's consent step
- * (US-007c) holds nothing in memory yet; it replaces resetMemory with its own.
+ * The consent step's memory is dropped, and the consent records of a server left behind go with it,
+ * from the store and then from memory (US-007b, US-007c: src/consent/memory.ts).
  */
 const CONSENT: ConsentPort = Object.freeze({
-  resetMemory: () => undefined,
-  forgetServer: (origin: string) => consentStore.forgetServer(origin),
+  resetMemory: () => consentMemory.resetMemory(),
+  forgetServer: (origin: string) => consentMemory.forgetServer(origin),
 });
 
 export function useServerSwitch(): ServerSwitch {
