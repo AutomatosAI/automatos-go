@@ -336,6 +336,52 @@
       "priority": 14,
       "passes": true,
       "notes": "Fixed 4ddc06f. BMP needs a known DIB header size at offset 14 as well as 'BM' (the AC's 2-byte signature alone would send a text file starting 'BM' to the manipulator and refuse it). attachment-list.ts still marks a chip 'image' by type and name only (needsReencode): an extension-less JPEG shows a file chip but is re-encoded on upload."
+    },
+    {
+      "id": "P001C-RVW-4",
+      "prdStory": "review",
+      "title": "A tool call cut off by Stop reads 'Stopped', never as done",
+      "description": "src/chat/controller/thread.ts:254-266 stopped() runs the vendored completeRunningToolCalls over the live turn, which turns every 'running' call into state 'completed' (src/core/web/lib/chat/tool-calls.ts completeRunningToolCalls). The vendored toolStatusOf (src/core/web/components/play/chat/labels.ts:105-110) then reads a completed call that is neither waiting nor skipped as 'done', so src/chat/lines.ts:122-134 toolLineRows draws it with MARK_DONE, the olive done tone, the done words and the VoiceOver word 'Done'. The web never does this on Stop: frontend/lib/chat/hooks.ts:96-109 stop() only aborts and cancels, and completeRunningToolCalls runs only on the finish frame (hooks.ts:449-458); a call still running when the reply is no longer streaming reads 'Stopped: …' (labels.ts toolText 'stopped', muted). The comment's reason ('nothing may keep spinning') is already met without it: liveAutoRow passes streaming = status === 'streaming' (view-model.ts:243), so after Stop a running call shows no spinner. Scenario: ask Auto to search the web, tap Stop while 'Searching the web' spins: the line becomes '✓ Searched the web' (VoiceOver 'Done, Searched the web'), saying the search finished when Stop cut it off. Reproduced at reducer level (review probe): send → tool-start platform_web_search → stopped → threadRows tool line {mark '✓', tone 'done', text 'Searched the web', accessibilityLabel 'Done, Searched the web'}; the same call after a failed read reads {mark '–', tone 'muted', text 'Stopped: searching the web'}. The tests pin the wrong rule: thread.test.ts:318-332 expects state 'completed' after Stop, and view-model-rows.test.ts:71-84 ('a call left running by Stop reads Stopped') never folds the stopped action, so it passes on a state Stop never produces.",
+      "acceptanceCriteria": [
+        "Cause: stopped() in src/chat/controller/thread.ts:254-266 completes running tool calls, so the vendored toolStatusOf reads a call Stop cut off as done (✓, olive, 'Done') instead of stopped (–, muted, 'Stopped: …'), unlike the web's stop (hooks.ts:96-109), which leaves it running.",
+        "Change: stopped() leaves the live turn's tool calls as they are (status 'stopped', live kept, failure null); a running call then reads 'Stopped: …' through toolLineRows(…, streaming false), as on the web. The completeRunningToolCalls import goes if nothing else uses it; the thread.ts header comment and the stopped() doc comment say the new rule. Nothing else in the reducer changes (stopFailed, named and refetched as today).",
+        "Test: src/chat/__tests__/thread.test.ts — 'Stop closes running tool calls' becomes 'Stop leaves a running tool call running, so it reads stopped': after send → tool-start → stopped, the call keeps state 'running' and the thread is 'stopped'. src/chat/__tests__/view-model-rows.test.ts — the 'a call left running by Stop reads Stopped' test folds the stopped action through threadReducer and reads threadRows of that state: mark '–', tone 'muted', text 'Stopped: searching the web', accessibilityLabel 'Stopped: searching the web' (never '✓' or 'Done'). Restoring completeRunningToolCalls in stopped() turns both red (seen).",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": [
+        "src/chat/controller/thread.ts",
+        "src/chat/__tests__/thread.test.ts",
+        "src/chat/__tests__/view-model-rows.test.ts"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P001C-RVW-5",
+      "prdStory": "review",
+      "title": "A reply whose read dropped while the turn runs on shows Auto working, never 'interrupted, Try again'",
+      "description": "The turn is a detached producer (D-STOP: dropping the connection alone never cancels a turn; automatos-ai services/chat_turns.py:9), and on a phone the read drops whenever iOS suspends the app mid-turn (the user switches app or locks the screen during a long turn). src/api/stream.ts:63-67 turns a read that breaks after the status into ApiError('stream'); src/chat/controller/turn-runner.ts:125-127 dispatches it as failed; src/chat/controller/thread.ts:249-252 makes any such error status 'failed'; src/chat/view-model.ts:255-263 then draws 'The reply was interrupted. Try again.' (src/api/strings.ts:13) with Try again, and canSend is true. On the return to the foreground use-thread.ts:113-126 only refetches the saved list: nothing asks GET /api/chat/{id} whether the turn is still in flight, so until the reply is saved (chat_changed fires only for a client that left, api/chat.py:398-405) the thread says the turn failed and offers to send it again. Try again (ChatScreen askAgain → useThread.send) posts the same message into the same chat; the server's session queue serializes it behind the running turn (api/chat.py:386-395), so Auto answers twice and any write the turn made (a ticket filed, a Mission created) can be made twice. D-STALE-CHAT / OT-C2 ('leave and reopen during a turn → Auto is working… then the reply') fail on the phone's most common way of leaving. Reproduced at reducer level (review probe): loaded → send → chat-id → failed(ApiError('stream')) → refetched with the user's message saved and no reply: status 'failed', canSend true, turnNotice {kind 'failed', text 'The reply was interrupted. Try again.', retry true}, no 'working' row.",
+      "acceptanceCriteria": [
+        "Cause: a read that breaks after the turn started (ApiError 'stream', or 'network') is folded as a failed turn (thread.ts:249-252) and never checked against GET /api/chat/{id}'s turnInFlight, so a turn still running on the server is shown as interrupted with Try again (view-model.ts:261-262), and Try again queues a duplicate turn.",
+        "Change: in src/chat/controller/thread.ts (pure) a helper, e.g. awaitsDetachedCheck(state) → true when status is 'failed', the failure's kind is 'stream' or 'network' (never 'turn': an e: line is the server's own failure) and state.chatId is not null; and an action, e.g. { type: 'detached', turnInFlight }, that only from that state turns it to status 'working' with failure null and the live turn (its draft and partial reply) kept when turnInFlight is true, and changes nothing when false. use-thread.ts only wires it: while awaitsDetachedCheck(state) holds it calls checkChat (src/chat/controller/live-chat.ts) for the thread's chat once, and again on each return to the foreground, and dispatches detached with the answer; a null answer (404, 403) or a thrown check leaves the failure as it is. Then the existing paths carry on: 'Auto is working…' and Stop (canStop includes 'working'), the chat_changed or foreground refetch retires the live turn when the reply lands (mayRetire), the five-minute guard. A draft with no chat id yet, a 'turn' failure and every other status are untouched. Nothing is persisted (D-CACHE).",
+        "Test: a new src/chat/__tests__/thread-detached.test.ts (thread.test.ts is at its 400-line target) — over threadReducer and deep-frozen states: send → chat-id → failed(ApiError('stream')) → awaitsDetachedCheck true; detached {turnInFlight: true} → status 'working', failure null, live.draft kept, canSend false, canStop true, turnNotice null, threadRows has the 'working' row when no text streamed yet; then refetched with Auto's reply → idle, live null, the reply once; detached {turnInFlight: false} → unchanged (still failed, Try again offered); a 'network' failure behaves as 'stream'; a turn failure (e: line, kind 'turn'), a draft failed before its chat-id frame and a 'stopped' thread never await the check and ignore detached. Making detached a no-op turns the tests red (seen).",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": [
+        "src/chat/controller/thread.ts",
+        "src/chat/controller/use-thread.ts",
+        "src/chat/__tests__/thread-detached.test.ts"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": ""
     }
   ],
   "ownerTest": [
