@@ -457,6 +457,25 @@
       "priority": 19,
       "passes": true,
       "notes": "Fixed 2b7d492. Prettier also rewrapped one pre-existing over-long line in thread-detached.test.ts (the 'unnamed' run). No FOUNDATION GAP."
+    },
+    {
+      "id": "P001C-SEAM-1",
+      "prdStory": "seam",
+      "title": "The composer stays above the keyboard when a bar sits above the signed-in screens (the unencrypted-network note)",
+      "description": "Found by the lead's seam review of connect + chat + Command Centre merged on the foundation (23 Oct; two verifiers confirmed it from the code). The connect wave draws its 'Unencrypted home network' bar above the whole signed-in stack for any http own server: AppGate renders the bar, then a nested SafeAreaProvider holding the (app) Stack (connect branch: src/app-state/AppGate.tsx:55-57; app/(app)/_layout.tsx:26-29; the bar is insets.top + space2 + one line + space2 tall, src/connect/components/InsecureNetworkBanner.tsx:37, about 80-90 pt on a Dynamic Island iPhone). src/chat/screens/ChatFrame.tsx:32 is a KeyboardAvoidingView with no keyboardVerticalOffset. React Native 0.81's KeyboardAvoidingView measures its frame relative to its parent (Libraries/Components/Keyboard/KeyboardAvoidingView.js:129) and pads by frame.y + frame.height - keyboardY (:110), so with the bar it lifts the composer by the bar's height too little: on a home server over http the pill input and Send sit behind the keyboard, and Return is a newline (US-009a), so the person cannot send without dismissing the keyboard. On the hosted server or https there is no bar and the composer is right. This wave does not have the bar on its branch; the fix must work with and without it.",
+      "acceptanceCriteria": [
+        "Cause: ChatFrame's KeyboardAvoidingView assumes its screen starts at the window's top (no keyboardVerticalOffset), which a bar drawn above the signed-in stack breaks (ChatFrame.tsx:32).",
+        "Change: ChatFrame's KeyboardAvoidingView gets keyboardVerticalOffset = the distance of the signed-in stack from the window's top, read from useSafeAreaFrame().y of react-native-safe-area-context (5.6.2: a SafeAreaProvider reports its frame converted to the root view controller's view, ios/RNCSafeAreaProvider.m:74, so under the gate's nested provider y is the bar's height, and 0 with no bar). Every other KeyboardAvoidingView in a signed-in screen that takes text gets the same offset; src/ui/Sheet.tsx is inside a native Modal and is left as it is. The comment says why the offset is there.",
+        "Test: src/chat/__tests__ (the kit's source-check style): ChatFrame passes keyboardVerticalOffset from useSafeAreaFrame; no signed-in screen under src/chat or app/(app) has a KeyboardAvoidingView without that offset (src/ui/Sheet.tsx excepted).",
+        "Checks: npm run typecheck, npm run lint (0 errors), npx vitest run, npm run check:bundle and bash scripts/ralph/acceptance-prd001-chat.sh --no-ci pass (the kit-JSON checks pass once this story is marked)."
+      ],
+      "files": [
+        "src/chat/screens/ChatFrame.tsx",
+        "src/chat/__tests__/"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": ""
     }
   ],
   "ownerTest": [
@@ -467,6 +486,7 @@
     {"id": "OT-C5", "what": "Attachments: a camera photo, a HEIC from the library (arrives as JPEG), a PDF from Files; a refused type shows the server's words.", "why": "Native pickers and a live upload."},
     {"id": "OT-C6", "what": "From a ticket (after the A3 wave): 'Ask Auto about #n' opens the discussion; 'Update ticket and re-queue' re-queues it.", "why": "Crosses the two parallel waves."},
     {"id": "OT-C7", "what": "Report this on an Auto message once PRD-266 US-016 is deployed and the discovery document lists report_content.", "why": "Server dependency."},
-    {"id": "OT-C8", "what": "Decide KC5: plain text for Auto's answers (as the handoff draws it) or a markdown renderer (a new JS dependency, shippable over the air).", "why": "Open question for Gerard."}
+    {"id": "OT-C8", "what": "Decide KC5: plain text for Auto's answers (as the handoff draws it) or a markdown renderer (a new JS dependency, shippable over the air).", "why": "Open question for Gerard."},
+    {"id": "OT-C9", "what": "iPhone paired to a home server over http (the 'Unencrypted home network' bar showing): on Home and on an older chat, tap the composer — the pill input and Send sit just above the keyboard. The same on the hosted server (no bar).", "why": "Keyboard layout needs a device; seam review 23 Oct."}
   ]
 }
