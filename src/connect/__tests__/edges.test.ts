@@ -108,15 +108,15 @@ describe('the server section on Account', () => {
 });
 
 describe('the forget question', () => {
-  it('says this phone stops using the server and Studio still lists it', () => {
+  it('says the server removes this phone, the phone stops using it, and Studio may still list it (US-006i)', () => {
     expect(FORGET_SERVER_COPY.question(HOME)).toBe(
-      'This phone stops using Home NAS (192.168.1.20:8000). Studio still lists it until it is removed there.',
+      "This phone is removed from Home NAS (192.168.1.20:8000) and stops using it. If the server can't be reached, this phone still forgets it, and Studio may still list this phone until it is removed there.",
     );
-    expect(FORGET_SERVER_COPY.title).toBe('Forget this server?');
-    expect(FORGET_SERVER_COPY.action).toBe('Forget this server');
+    expect(FORGET_SERVER_COPY.title).toBe('Remove this phone and forget this server?');
+    expect(FORGET_SERVER_COPY.action).toBe('Remove this phone and forget this server');
   });
 
-  it('deletes nothing: no account or workspace is named, no delete or remove action (D63)', () => {
+  it('deletes nothing: no account or workspace is named, no delete action; Remove is this phone only (D63)', () => {
     const words = Object.values(FORGET_SERVER_COPY)
       .map((value) => (typeof value === 'function' ? value(HOME) : value))
       .join(' ');

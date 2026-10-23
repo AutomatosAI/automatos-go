@@ -28,3 +28,18 @@ export const pairResponseSchema = z.object({
 });
 
 export type PairResponse = z.output<typeof pairResponseSchema>;
+
+/**
+ * POST /api/v1/mobile/devices/{device_id}/rotate (automatos-ai api/mobile_devices.py
+ * `rotate_device_token`), Cache-Control no-store: the new token, once, and how long the old one
+ * lives on. DELETE /devices/{device_id} answers the device's to_dict(), which Remove this phone
+ * does not read (no schema: the client discards the body).
+ */
+export const rotateResponseSchema = z.object({
+  device_id: z.string().uuid(),
+  token: deviceTokenSchema,
+  rotate_after: isoDateTime,
+  previous_token_valid_until: isoDateTime,
+});
+
+export type RotateResponse = z.output<typeof rotateResponseSchema>;

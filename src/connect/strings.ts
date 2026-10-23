@@ -1,7 +1,7 @@
 // User-facing copy for connecting to your own server (one strings module per feature). No message
 // names a status code or an internal (D-ONE-CLIENT); none points at making an account (D-SIGNIN).
 
-import { ACCOUNT_COPY, SHELL_COPY } from '../app-state/strings';
+import { ACCOUNT_COPY } from '../app-state/strings';
 import { AUTH_COPY } from '../auth/strings';
 import type { AddressRefusal } from './address';
 import type { PairRefusal } from './api';
@@ -217,17 +217,26 @@ export const SERVER_SECTION_COPY = Object.freeze({
   edition: ACCOUNT_COPY.edition,
 });
 
+const REMOVE_AND_FORGET = 'Remove this phone and forget this server';
+
 /**
- * Forget this server, asked first (components/ForgetServer.tsx): it forgets on this phone only, so
- * the question says Studio still lists the phone (Remove this phone is US-006i).
+ * Remove this phone and forget this server, asked first (components/ForgetServer.tsx): the server
+ * revokes this phone (remove-device.ts), then the phone forgets it. A server that can't be told is
+ * still forgotten here, so the question says Studio may still list the phone.
  */
 export const FORGET_SERVER_COPY = Object.freeze({
-  action: SHELL_COPY.forgetServer,
-  title: 'Forget this server?',
+  action: REMOVE_AND_FORGET,
+  title: `${REMOVE_AND_FORGET}?`,
   question: (server: string) =>
-    `This phone stops using ${server}. Studio still lists it until it is removed there.`,
-  confirm: SHELL_COPY.forgetServer,
+    `This phone is removed from ${server} and stops using it. If the server can't be reached, this phone still forgets it, and Studio may still list this phone until it is removed there.`,
+  confirm: REMOVE_AND_FORGET,
   cancel: 'Cancel',
+});
+
+/** After Remove this phone, when the server couldn't be told (remove-device.ts): a toast. */
+export const REMOVE_DEVICE_COPY = Object.freeze({
+  notRemoved: (server: string) =>
+    `This phone forgot ${server}, but couldn't remove itself there. Studio may still list it: remove it in Studio → Settings → Phones & devices.`,
 });
 
 /** An own server that does not answer (components/NotRunning.tsx, PRD-001 §4.7 Edges). */

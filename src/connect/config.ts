@@ -109,3 +109,15 @@ export const SERVER_NAME_MAX_LENGTH = 120;
  * docker compose, run on the server in the folder it was installed in, detached.
  */
 export const SELF_HOSTED_START_COMMAND = 'docker compose up -d';
+
+/**
+ * POST /devices/{id}/rotate's refusal for a token already rotated out (automatos-ai
+ * services/mobile/devices.py): asking again with it can never succeed (US-006i).
+ */
+export const TOKEN_SUPERSEDED = 'token_superseded';
+
+/**
+ * Remove this phone (remove-device.ts) waits this long for the server before forgetting it anyway:
+ * a server that is not running must not hold Forget this server for the client's full timeout.
+ */
+export const REMOVE_DEVICE_TIMEOUT_MS = 10_000;

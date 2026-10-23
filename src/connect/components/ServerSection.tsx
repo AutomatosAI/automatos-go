@@ -1,7 +1,7 @@
 // Settings → Account's server section (US-006h, PRD-001 §4.5 server switch): the server's name, its
 // address (with the unencrypted home network line while it is http) and the edition in words. Its
-// way out: on a paired own server Forget this server, asked first (ForgetServer); on the hosted
-// server the shell's Sign out. Either way the gate then opens Welcome. Nothing here deletes an
+// way out: on a paired own server 'Remove this phone and forget this server', asked first
+// (ForgetServer, US-006i); on the hosted server the shell's Sign out. Either way the gate then opens Welcome. Nothing here deletes an
 // account or a workspace (D63). The words are edges.ts serverSectionView's.
 
 import { View } from 'react-native';

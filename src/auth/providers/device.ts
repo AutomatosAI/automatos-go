@@ -1,14 +1,17 @@
 // The paired-phone sign-in provider (D-AUTH-PROVIDER, US-006): a self-hosted install's device token
 // behind the same small interface as Clerk, an added file and one registry entry (KC15: the
 // interface gains no method). getToken reads the paired record (src/connect/device-store.ts: memory
-// first, then the keychain); signOut forgets it on this phone (the server-side Remove this phone is
-// US-006i); onExpired hears that the server stopped accepting the token.
+// first, then the keychain); signOut forgets it on this phone (Remove this phone, the server side,
+// runs before it: src/connect/remove-device.ts); onExpired hears that the server stopped accepting
+// the token.
 //
 // A provider serves ONE pairing, the first record it reads: its server, its device row and the
 // moment it paired (the server keeps the row when a phone pairs again, so the row alone is not
-// enough; a rotation, US-006i, keeps all three). Once the phone pairs again, here or elsewhere, it
-// gives no token, so a call still running for the last pairing never carries the next one's token,
-// and the shell builds a new provider for the new pairing.
+// enough). A token rotation (src/connect/rotation.ts) keeps all three and changes only the token
+// and rotateAfter, so the provider goes on serving the pairing and hands out the new token once the
+// store holds it (the store shows a record only after its keychain write). Once the phone pairs
+// again, here or elsewhere, it gives no token, so a call still running for the last pairing never
+// carries the next one's token, and the shell builds a new provider for the new pairing.
 //
 // The client's 401s reach the provider through its refusal source, each with its ApiError: bound
 // with bindProvider (binding.ts) a 401 would reach only the listeners, without its code and before
