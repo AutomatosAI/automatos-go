@@ -597,6 +597,66 @@
       "priority": 15,
       "passes": true,
       "notes": " | P001N-RVW-3 1d4ed24 (+ this mark): foundation files changed (KC2): src/app-state/gate.ts (the gate's steps: refusalLeftBehind) and src/app-state/AppGate.tsx (the gate's steps: drops a refusal a hosted sign-in left behind); no foundation test changed (tests in src/connect/__tests__). Also src/connect/current-server.ts dismissEnded + tell(). No FOUNDATION GAP. Server facts: none relied on."
+    },
+    {
+      "id": "P001N-SEAM-1",
+      "prdStory": "seam",
+      "title": "Every 403 from the session's client re-reads the role, whichever kit made the call",
+      "description": "Found by the lead's seam review of connect + chat + Command Centre merged on the foundation (23 Oct; raised by three review lenses, each confirmed by two verifiers). US-007a's contract is that the role is read again 'after a refusal (any 403, from a query or a mutation)', so a demoted editor's screens re-gate through roleCan. It hears refusals only through the TanStack caches: src/session/session-refresh.ts:67-77 (watchRefusals subscribes to getQueryCache() and getMutationCache()), wired in src/session/use-session-refresh.ts:33. Chat's writes are plain promises outside both caches: the turn (src/chat/controller/turn-runner.ts:118-125), card Approve/Grant/Deny/File (src/chat/cards/use-card-request.ts:48-53), 'Update ticket and re-queue' (src/chat/discussion/use-discussion.ts:84-97) and uploads (src/chat/attachments/use-attachments.ts:58-66). The Command Centre routes every write through useMutation, so its refusals are heard and chat's are not. A demoted editor keeps an enabled composer and live card buttons, and a paused workspace is not shown, until something else re-reads the workspace.",
+      "acceptanceCriteria": [
+        "Cause: watchRefusals hears only TanStack query/mutation refusals (session-refresh.ts:67-77); calls made outside those caches never reach the refresher.",
+        "Change: the session's one client (src/app-state/launch-client.ts, createLaunchClient) reports refusals itself: when request() or stream() rejects with an ApiError of kind 'forbidden' on any route other than the workspace read (routes.workspaceCurrent), it signals the session refresher before rethrowing, and useSessionRefresh treats that signal exactly like a refusal from the caches (the 'forbidden' event): re-read GET /api/workspaces/current, update the role, show a paused or lost workspace. A burst of 403s re-reads once (the refresher's existing coalescing). The caller still receives the same ApiError. watchRefusals may stay for anything that does not go through the client, but a refusal is never re-read twice.",
+        "Test: src/app-state/__tests__ and src/session/__tests__: a 403 from a request and from a stream (a chat-shaped turn) re-reads the workspace once; a burst of 403s re-reads once; the workspace read's own 403 does not loop; a non-403 error does not re-read; the caller still gets the ApiError; a refusal through a mutation is not re-read twice.",
+        "Checks: npm run typecheck, npm run lint (0 errors), npx vitest run, npm run check:bundle and bash scripts/ralph/acceptance-prd001-connect.sh --no-ci pass (the kit-JSON checks pass once this story is marked)."
+      ],
+      "files": [
+        "src/app-state/launch-client.ts",
+        "src/session/",
+        "src/app-state/__tests__/",
+        "src/session/__tests__/"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P001N-SEAM-2",
+      "prdStory": "seam",
+      "title": "A workspace change mid-session resets every signed-in screen, not only the cache",
+      "description": "Found by the lead's seam review (23 Oct; two verifiers confirmed it). forgetWorkspaceData removes only TanStack queries, and its contract is that 'screens still mounted refetch under the new id when they next render' (src/app-state/session-cache.ts:38-48). AppGate keeps the same screens mounted across the change: `{step.kind === 'consent' ? consent : children}` has no workspace key (src/app-state/AppGate.tsx:61-69). Chat keeps the workspace's thread outside the cache: the home chat id lives in useState and is 'kept once chosen' (src/chat/home/use-home.ts:34-40), and messages and cards live in useReducer (src/chat/controller/use-thread.ts:199). A mid-session change does happen: automatos-ai falls back to the person's other workspace when the X-Workspace-ID one is no longer theirs (core/auth/hybrid.py:838-850), and src/api/workspace.ts:96-110 then calls onWorkspaceChange. The old chat id answers 404 under the new workspace, so Home shows the new workspace's header and needs strip over the old workspace's conversation and its Mission plan and tool-approval cards, and Approve on those reaches the new workspace and is refused.",
+      "acceptanceCriteria": [
+        "Cause: the signed-in subtree is not keyed by workspace, so screen-local state survives a workspace change (AppGate.tsx:61-69).",
+        "Change: src/app-state/AppGate.tsx (Launch) keys the ready subtree by the workspace id (e.g. <Fragment key={step.ready.workspace.id}>), so every signed-in screen's local state resets together with forgetWorkspaceData when the workspace changes; the consent step keeps working as it does (shown for the new workspace when it is owed). The comment says why the key is there.",
+        "Test: src/app-state/__tests__: the ready subtree is keyed by the workspace id (the source check style the gate's other tests use, or a pure helper that names the key), and a change of workspace id changes the key; consent still precedes the screens when owed.",
+        "Checks: npm run typecheck, npm run lint (0 errors), npx vitest run, npm run check:bundle and bash scripts/ralph/acceptance-prd001-connect.sh --no-ci pass."
+      ],
+      "files": [
+        "src/app-state/AppGate.tsx",
+        "src/app-state/__tests__/"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P001N-SEAM-3",
+      "prdStory": "seam",
+      "title": "A web link that opens the app (iOS universal link, Android App Link) lands on the screen the web link means",
+      "description": "Found by the lead's seam review (23 Oct; a split verdict, then two tie-break verifiers confirmed it). app.json gives Android a verified VIEW intent filter for https ui.automatos.app with pathPrefix /go, /command-center and /chat, and iOS associatedDomains applinks:ui.automatos.app (docs/native-modules.md:365-377). expo-router delivers such a URL's path and query unchanged unless app/+native-intent.tsx exists (expo-router 6.0.24 calls redirectSystemPath only then: build/getLinkingConfig.js:42-47, 71-79), and there is none; appRouteForWebLink (src/navigation/web-links.ts:118) is used only for links inside the app. So https://ui.automatos.app/chat?chatId=abc resolves to app/(app)/chat/index.tsx → [id].tsx with no id and opens an empty draft (src/chat/screens/chat-route.ts:10-13), where web-links.ts:97-98 would map it to /chat/abc; and https://ui.automatos.app/command-center?tab=board&task_id=419 matches no route and opens 'Lost'.",
+      "acceptanceCriteria": [
+        "Cause: no app/+native-intent.tsx, so an incoming web URL never goes through appRouteForWebLink.",
+        "Change: app/+native-intent.tsx exports redirectSystemPath({ path, initial }) that maps an incoming web link (https://ui.automatos.app/..., or the bare path expo-router passes) through appRouteForWebLink and returns its app route; /go/pair and every /go/* path, and automatos:// app-scheme paths, pass through unchanged (the pairing link keeps its own route); a web path appRouteForWebLink cannot map keeps today's behaviour; it never throws (on any error it returns the path it was given). It contains no logic of its own beyond that: the mapping stays in src/navigation/web-links.ts (add a pure helper there if needed, tested there).",
+        "Test: src/navigation/__tests__: /chat?chatId=abc → /chat/abc; /command-center?tab=board&task_id=419 → the Command Centre ticket route web-links maps it to; /go/pair?... and automatos://connect unchanged; an unknown or malformed path unchanged, never a throw; the native-intent file only delegates (source check).",
+        "Checks: npm run typecheck, npm run lint (0 errors), npx vitest run, npm run check:bundle and bash scripts/ralph/acceptance-prd001-connect.sh --no-ci pass."
+      ],
+      "files": [
+        "app/+native-intent.tsx",
+        "src/navigation/web-links.ts",
+        "src/navigation/__tests__/"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": ""
     }
   ],
   "ownerTest": [
@@ -654,7 +714,9 @@
       "id": "OT-N11",
       "what": "Decide the open questions in `openQuestions`.",
       "why": "Gerard's calls."
-    }
+    },
+    {"id": "OT-N12", "what": "Demote yourself from editor to viewer in Studio while the app is open on Home; send a message: it is refused once, and the app turns read-only (composer and card buttons off) without a restart. Restore the role afterwards.", "why": "Live role change across kits; seam review 23 Oct."},
+    {"id": "OT-N13", "what": "Tap a shared https://ui.automatos.app/chat?chatId=<id> link and a /command-center?tab=board&task_id=<n> link (Notes or Messages) on the iPhone: each opens that chat or that ticket in the app, not an empty draft or 'Lost'.", "why": "Universal links need the installed app and the served apple-app-site-association; seam review 23 Oct."}
   ],
   "openQuestions": [
     "D21 push consent at pairing: where is the operator asked 'Send notifications through Expo's push service?' — Studio's Pair a phone, the server console, or the phone (which would need a /pair field or a server setting PRD-266 does not have)? This wave asks nothing and records push.expo (KC10).",
