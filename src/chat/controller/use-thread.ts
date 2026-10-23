@@ -24,6 +24,7 @@ import {
   canStop,
   createThread,
   loadedAction,
+  openingList,
   threadReducer,
   type ThreadAction,
   type ThreadState,
@@ -73,6 +74,9 @@ function useSaved(client: ApiClient, chatId: string | null) {
   return useQuery({
     queryKey: queryKeys.chat.messages(chatId ?? ''),
     queryFn: chatId ? ({ signal }) => fetchMessages(client, chatId, signal) : skipToken,
+    // the key switches to the id once the check answers, and a switch fetches only a stale query:
+    // the open waits on this visit's list (openingList), so the cached one must never count as fresh
+    staleTime: 0,
     refetchOnMount: 'always',
   });
 }
@@ -88,10 +92,11 @@ function useThreadQueries(
   const { checked } = check;
   const messagesId = loading ? (checked?.id ?? null) : state.chatId;
   const saved = useSaved(client, messagesId);
+  const opening = openingList(saved);
   useEffect(() => {
-    const action = loading ? loadedAction(checked, saved.data) : null;
+    const action = loading ? loadedAction(checked, opening) : null;
     if (action) dispatch(action);
-  }, [loading, checked, saved.data, dispatch]);
+  }, [loading, checked, opening, dispatch]);
   useEffect(() => {
     if (saved.data) dispatch({ type: 'refetched', messages: saved.data });
   }, [saved.data, dispatch]);

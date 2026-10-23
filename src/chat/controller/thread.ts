@@ -175,6 +175,22 @@ export function loadedAction(
   return { type: 'loaded', chatId: checked.id, messages, turnInFlight: checked.turnInFlight };
 }
 
+/** The saved-list query as TanStack reports it: only what the opening gate reads. */
+export type SavedListQuery = {
+  readonly isFetchedAfterMount: boolean;
+  readonly isSuccess: boolean;
+  readonly data: readonly StoredMessage[] | undefined;
+};
+
+/**
+ * The saved list a chat may open on: only one fetched since this visit began, as the check is. A
+ * cached list may predate the turn the check reports in flight (it ends on Auto's earlier reply),
+ * and judged against it that turn would never show as working (D-STALE-CHAT).
+ */
+export function openingList(query: SavedListQuery): readonly StoredMessage[] | undefined {
+  return query.isFetchedAfterMount && query.isSuccess ? query.data : undefined;
+}
+
 function liveTurn(draft: ThreadDraft | null, chatId: string | null, since: number): LiveTurn {
   return { draft, turn: { ...initialTurn, chatId }, since };
 }

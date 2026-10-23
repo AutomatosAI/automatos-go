@@ -1,6 +1,7 @@
 // Fixtures for the chat controller's tests: saved messages, stream lines, a client over a fake
-// transport that answers by route, a body whose chunks the test hands over one at a time, and a
-// store that folds dispatched actions through threadReducer. Nothing touches the network.
+// transport that answers by route, a body whose chunks the test hands over one at a time, a
+// store that folds dispatched actions through threadReducer, and the saved list's answers as
+// use-thread.ts opens a chat on them. Nothing touches the network.
 
 import {
   SERVER,
@@ -10,8 +11,14 @@ import {
 } from '../../api/__tests__/fake-transport';
 import { createApiClient } from '../../api/client';
 import type { StreamingResponse, TransportRequest } from '../../api/transport-types';
-import { threadReducer, type ThreadAction, type ThreadState } from '../controller/thread';
-import type { StoredMessage } from '../schemas';
+import {
+  loadedAction,
+  openingList,
+  threadReducer,
+  type ThreadAction,
+  type ThreadState,
+} from '../controller/thread';
+import type { ChatThread, StoredMessage } from '../schemas';
 
 export const CHAT_ID = '0c5a9e1e-0000-4000-8000-00000000c001';
 export const OTHER_CHAT_ID = '0c5a9e1e-0000-4000-8000-00000000c002';
@@ -116,6 +123,28 @@ export function store(initial: ThreadState) {
     actions,
     types: () => actions.map((action) => action.type),
   };
+}
+
+/** GET /api/chat/{CHAT_ID}'s answer this visit: a turn is running on the server. */
+export const IN_FLIGHT: ChatThread = {
+  id: CHAT_ID,
+  title: null,
+  createdAt: AT,
+  updatedAt: AT,
+  kind: 'user',
+  turnInFlight: true,
+};
+
+/** The saved-list query as useQuery reports it: fetched this visit, or still only the cached one. */
+export function savedList(isFetchedAfterMount: boolean, data: readonly StoredMessage[]) {
+  return { isFetchedAfterMount, isSuccess: true, data };
+}
+
+/** use-thread.ts with one answer of the saved list: `loaded` while loading, then `refetched`. */
+export function answerSaved(state: ThreadState, list: ReturnType<typeof savedList>): ThreadState {
+  const opening = state.status === 'loading' ? loadedAction(IN_FLIGHT, openingList(list)) : null;
+  const refetched: ThreadAction = { type: 'refetched', messages: list.data };
+  return [...(opening ? [opening] : []), refetched].reduce(threadReducer, state);
 }
 
 /** Lets pending reads, writes and timers run (a few turns of the event loop). */

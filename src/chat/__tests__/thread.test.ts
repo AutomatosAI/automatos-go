@@ -12,6 +12,7 @@ import {
   canStop,
   createThread,
   loadedAction,
+  openingList,
   shownMessages,
   threadReducer,
   type ThreadAction,
@@ -25,12 +26,14 @@ import {
   AT,
   CHAT_ID,
   OTHER_CHAT_ID,
+  answerSaved,
   callsTo,
   clientWith,
   deepFreeze,
   line,
   routedTransport,
   saved,
+  savedList,
   settle,
   store,
 } from './thread-fixtures';
@@ -162,6 +165,19 @@ describe('the chat controller (US-008b)', () => {
     await settle();
     expect(thread.state()).toMatchObject({ status: 'idle', live: null });
     expect(thread.state().messages.map((message) => message.id)).toEqual(['m-1', 'm-2']);
+  });
+
+  it('reopened mid-turn, a chat opens on this visit’s list, never the cached one (D-STALE-CHAT)', () => {
+    const cached = savedList(false, [EARLIER]);
+    const fresh = savedList(true, [EARLIER, ASKED]);
+    expect([openingList(cached), openingList(fresh)]).toEqual([undefined, fresh.data]);
+    const waiting = answerSaved(createThread(CHAT_ID), cached);
+    const working = answerSaved(waiting, fresh);
+    expect([waiting.status, working.status]).toEqual(['loading', 'working']);
+    expect(working.live).toMatchObject({ draft: null, since: 2 });
+    const replied = answerSaved(working, savedList(true, [EARLIER, ASKED, REPLIED]));
+    expect(replied).toMatchObject({ status: 'idle', live: null });
+    expect(shownMessages(replied)).toEqual([EARLIER, ASKED, REPLIED]);
   });
 
   it('an e: line → failed with the taxonomy kind (turn + its code); a refusal → the client’s kind', async () => {
