@@ -1,0 +1,49 @@
+{
+  "provenance": "contract",
+  "kind": "chat-turn",
+  "title": "An e: line mid-turn (provider_failed) after text and a running tool call; no finish follows",
+  "source": {
+    "catalogue": "orchestrator/consumers/chatbot/turn_errors.py:74-96"
+  },
+  "chunks": [
+    "d:{\"type\":\"chat-id\",\"chatId\":\"0c0ffee0-0",
+    "000-4000-80",
+    "00-00000000c4a7\",\"ai_generated\":true}\n0:\"Drafting the letter now",
+    "\"\nd:{\"type\": \"tool-start\", \"data\": {\"too",
+    "lCallId\": \"",
+    "call_3\", \"toolName\": \"platform_create_document\", \"input\": {\"titl",
+    "e\": \"Q4 letter\"}}}\ne:{\"message\": \"Auto c",
+    "ould not fi",
+    "nish this reply: the AI provider had a problem on its side. Noth",
+    "ing needs changing on your side; ask aga",
+    "in in a min",
+    "ute.\", \"code\": \"provider_failed\"}\n"
+  ],
+  "expected": {
+    "frames": [
+      "chat-id",
+      "text",
+      "tool-start",
+      "error"
+    ],
+    "rest": "",
+    "turn": {
+      "chatId": "0c0ffee0-0000-4000-8000-00000000c4a7",
+      "text": "Drafting the letter now",
+      "toolCalls": [
+        {
+          "toolCallId": "call_3",
+          "toolName": "platform_create_document",
+          "input": {
+            "title": "Q4 letter"
+          }
+        }
+      ],
+      "finish": null,
+      "error": {
+        "message": "Auto could not finish this reply: the AI provider had a problem on its side. Nothing needs changing on your side; ask again in a minute.",
+        "code": "provider_failed"
+      }
+    }
+  }
+}

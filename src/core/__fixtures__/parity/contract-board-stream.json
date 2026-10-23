@@ -1,0 +1,45 @@
+{
+  "provenance": "contract",
+  "kind": "sse",
+  "title": "GET /api/v1/tasks/stream: the sync frame, a task change, a chat_changed, \": hb\" heartbeats, cut mid-frame and between the blank line",
+  "source": {
+    "catalogue": "orchestrator/services/board_events.py:167-236"
+  },
+  "chunks": [
+    "event: board_changed\ndata: {\"workspace_id\": \"0a0a0a0a-0000-4000-8000-0000000000a5\"}\n",
+    "\n: h",
+    "b\n\nevent: board_changed\ndata: {\"workspace_id\": \"0a0a0a0a-0000-4000-8000-0000000000a5\", ",
+    "\"task_id\": 422, \"status\": \"done\", \"event\": \"task_changed\"}\n\n: hb\n\n: hb\n\nevent: ch",
+    "at_changed\ndata: {\"workspace_id\": \"0a0a0a0a-0000-4000-8000-0000000000a5\", \"chat_id\": \"0c0ffee0-0000-4000-8000-00000000c4a7\", \"use",
+    "r_id\": 7, \"event\": \"chat_changed\"}\n\n"
+  ],
+  "expected": {
+    "events": [
+      {
+        "event": "board_changed",
+        "data": {
+          "workspace_id": "0a0a0a0a-0000-4000-8000-0000000000a5"
+        }
+      },
+      {
+        "event": "board_changed",
+        "data": {
+          "workspace_id": "0a0a0a0a-0000-4000-8000-0000000000a5",
+          "task_id": 422,
+          "status": "done",
+          "event": "task_changed"
+        }
+      },
+      {
+        "event": "chat_changed",
+        "data": {
+          "workspace_id": "0a0a0a0a-0000-4000-8000-0000000000a5",
+          "chat_id": "0c0ffee0-0000-4000-8000-00000000c4a7",
+          "user_id": 7,
+          "event": "chat_changed"
+        }
+      }
+    ],
+    "rest": ""
+  }
+}

@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: typecheck · lint · test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # package-lock.json is committed; lifecycle scripts stay off in CI.
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests (coverage gate on src/core, src/api, src/auth)
+        run: npm run test:coverage
+
+      # src/core/web must match core.lock.json byte for byte (no hand edits, no drift).
+      - name: Vendored core matches the lock
+        run: npm run check:core
+
+      # Every {method, path} in a src/**/routes.ts table is served by automatos-ai at the pinned
+      # SHA (src/core/route-manifest.json); a pendingUpstream route passes and is listed (K4).
+      - name: Route tables match the server
+        run: npm run check:routes
+
+  bundle:
+    name: expo-doctor · iOS bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Expo doctor
+        run: npx --yes expo-doctor
+
+      # Compiles the JS bundle only (expo export) — no native build, no EAS.
+      - name: iOS bundle
+        run: npm run check:bundle

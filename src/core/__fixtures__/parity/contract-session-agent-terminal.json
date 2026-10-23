@@ -1,0 +1,31 @@
+{
+  "provenance": "contract",
+  "kind": "chat-turn",
+  "title": "A session agent picked in chat: the lane yields one e: line (session_agent_terminal), no chat-id, no finish",
+  "source": {
+    "catalogue": "orchestrator/api/chat.py:358-366"
+  },
+  "chunks": [
+    "e:{\"message\": \"Sc",
+    "out runs as a Claude Code session in the Canvas terminal. Pick Scout in the agent menu or ",
+    "open the session ",
+    "from the board to talk to Scout there.\", \"code\": \"session_agent_terminal\"}\n"
+  ],
+  "expected": {
+    "frames": [
+      "error"
+    ],
+    "rest": "",
+    "turn": {
+      "chatId": null,
+      "aiGenerated": false,
+      "text": "",
+      "toolCalls": [],
+      "finish": null,
+      "error": {
+        "message": "Scout runs as a Claude Code session in the Canvas terminal. Pick Scout in the agent menu or open the session from the board to talk to Scout there.",
+        "code": "session_agent_terminal"
+      }
+    }
+  }
+}

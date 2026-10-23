@@ -1,0 +1,136 @@
+{
+  "provenance": "contract",
+  "kind": "chat-turn",
+  "title": "A normal turn in the digest order: chat-id, the malformed agent-info, memory, reasoning, narration, one tool call, the answer, receipts twice, usage, finish",
+  "source": {
+    "catalogue": "reports/mobile-review-2026-10-20/digests/chat-api.md:9"
+  },
+  "chunks": [
+    "d:{\"type\":\"chat-id\",\"ch",
+    "atId\":\"0c0ffee0-0000-4000-8000-00000000c4a7\",\"ai_generated\":t",
+    "rue}\nd:",
+    "{\"type\": {\"type\": \"agent-info\", \"agent\": {\"id\": 1, \"name\": \"Auto\", \"type\": \"system\", \"skills\": []}}}\nd:{\"type\": \"memory-injected\", \"data\": {",
+    "\"m",
+    "emories\": [{\"content\": \"Prefers short answers\"}], \"totalMatched\": 1}}\nd:{\"type\": \"reasoning\", \"da",
+    "ta\": {\"delta\": \"The own",
+    "er wants the cards in Review.\"}}\n0:\"Let me check the board.\"\n",
+    "d:{\"typ",
+    "e\": \"narration\", \"data\": {\"text\": \"Let me check the board.\"}}\nd:{\"type\": \"tool-start\", \"data\": {\"toolCallId\": \"call_1\", \"toolName\": \"platfor",
+    "m_",
+    "list_tasks\", \"input\": {\"status\": \"review\"}}}\nd:{\"type\": \"progress\", \"data\": {\"text\": \"Reading the",
+    " board\"}}\nd:{\"type\": \"t",
+    "ool-end\", \"data\": {\"toolCallId\": \"call_1\", \"toolName\": \"platf",
+    "orm_lis",
+    "t_tasks\", \"success\": true, \"durationMs\": 412, \"summary\": \"2 cards in Review\"}}\nd:{\"type\":\"tool-data\",\"data\":{\"task_card\": {\"id\": 422, \"numbe",
+    "r\"",
+    ": \"#0422\", \"title\": \"Draft the Q4 letter\", \"status\": \"review\", \"assigned_agent\": \"Scout\", \"runtim",
+    "e\": null, \"last_tool\": ",
+    "null, \"files_touched\": 0, \"exit_reason\": null, \"denials\": 0, ",
+    "\"starte",
+    "d_at\": \"2026-10-20 09:12:00+00:00\", \"completed_at\": null}}}\nd:{\"type\": \"tool-result\", \"data\": {\"toolCallId\": \"call_1\", \"toolName\": \"platform",
+    "_l",
+    "ist_tasks\", \"result\": \"[{\\\"id\\\": 422, \\\"status\\\": \\\"review\\\"}, {\\\"id\\\": 431, \\\"status\\\": \\\"review",
+    "\\\"}]\"}}\n0:\"Two cards ar",
+    "e in Review: \"\n0:\"#0422 Draft the Q4 letter \\u2014 waiting on",
+    " Maya, ",
+    "\"\n0:\"and #0431 Fix the invoice export.\"\nd:{\"type\":\"tool-data\",\"data\":{\"receipts\": {\"receipts\": [{\"action\": \"platform_list_tasks\", \"kind\": \"r",
+    "ea",
+    "d\", \"status\": \"done\", \"subject\": \"the board\", \"effect\": \"looked up\", \"link\": null, \"reason\": null",
+    "}], \"model\": \"claude-so",
+    "nnet-5-5\"}}}\nd:{\"type\": \"receipts\", \"data\": {\"receipts\": [{\"a",
+    "ction\":",
+    " \"platform_list_tasks\", \"kind\": \"read\", \"status\": \"done\", \"subject\": \"the board\", \"effect\": \"looked up\", \"link\": null, \"reason\": null}], \"mo",
+    "de",
+    "l\": \"claude-sonnet-5-5\"}}\nd:{\"type\":\"usage\",\"data\":{\"promptTokens\": 1200, \"completionTokens\": 64,",
+    " \"totalTokens\": 1264}}\n",
+    "d:{\"type\":\"finish\",\"finishReason\":\"stop\",\"ai_generated\":true}",
+    "\n"
+  ],
+  "expected": {
+    "frames": [
+      "chat-id",
+      "unknown",
+      "ignored",
+      "reasoning",
+      "text",
+      "narration",
+      "tool-start",
+      "progress",
+      "tool-end",
+      "tool-data",
+      "tool-result",
+      "text",
+      "text",
+      "text",
+      "tool-data",
+      "receipts",
+      "usage",
+      "finish"
+    ],
+    "rest": "",
+    "turn": {
+      "chatId": "0c0ffee0-0000-4000-8000-00000000c4a7",
+      "aiGenerated": true,
+      "agent": null,
+      "text": "Two cards are in Review: #0422 Draft the Q4 letter — waiting on Maya, and #0431 Fix the invoice export.",
+      "reasoning": "The owner wants the cards in Review.",
+      "progress": [
+        "Let me check the board.",
+        "Reading the board"
+      ],
+      "toolCalls": [
+        {
+          "toolCallId": "call_1",
+          "toolName": "platform_list_tasks",
+          "state": "completed",
+          "input": {
+            "status": "review"
+          },
+          "durationMs": 412,
+          "summary": "2 cards in Review",
+          "skipped": false
+        }
+      ],
+      "waitingToolCallId": null,
+      "receipts": [
+        {
+          "action": "platform_list_tasks",
+          "kind": "read",
+          "status": "done",
+          "subject": "the board",
+          "effect": "looked up",
+          "link": null,
+          "reason": null
+        }
+      ],
+      "taskCards": [
+        {
+          "id": 422,
+          "number": "#0422",
+          "title": "Draft the Q4 letter",
+          "status": "review",
+          "assigned_agent": "Scout",
+          "runtime": null,
+          "last_tool": null,
+          "files_touched": 0,
+          "exit_reason": null,
+          "denials": 0,
+          "started_at": "2026-10-20 09:12:00+00:00",
+          "completed_at": null
+        }
+      ],
+      "approvals": [],
+      "deliverables": [],
+      "usage": {
+        "promptTokens": 1200,
+        "completionTokens": 64,
+        "totalTokens": 1264
+      },
+      "finish": {
+        "finishReason": "stop",
+        "aiGenerated": true
+      },
+      "error": null
+    }
+  }
+}

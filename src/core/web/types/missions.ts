@@ -1,0 +1,379 @@
+// Vendored from AutomatosAI/automatos-ai frontend/types/missions.ts @ 630fc1c85af06c5c76e70c74e9653ee1804fdf41 — do not edit — scripts/sync-core.ts
+/**
+ * Mission Control Types — PRD-82A Sequential Mission Coordinator
+ *
+ * Aligned 1:1 with backend Pydantic models in orchestrator/api/missions.py
+ * and enums in orchestrator/core/models/orchestration_enums.py.
+ */
+
+// ── Enums (match orchestration_enums.py exactly) ──────────────
+
+export type RunState =
+  | 'pending'
+  | 'planning'
+  | 'awaiting_approval'
+  | 'running'
+  | 'paused'
+  | 'verifying'
+  | 'awaiting_human'
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
+
+export type TaskState =
+  | 'pending'
+  | 'queued'
+  | 'assigned'
+  | 'running'
+  | 'completed'     // NOT terminal — awaiting verification
+  | 'verifying'
+  | 'verified'      // BLOCKED not terminal — human can reject
+  | 'failed'
+  | 'skipped'
+  | 'stalled'
+  | 'retrying'
+
+export type StateType = 'initial' | 'active' | 'blocked' | 'terminal'
+
+// ── API Response Types (match Pydantic models) ────────────────
+
+export interface MissionResponse {
+  id: string
+  workspace_id: string
+  goal: string
+  state: RunState
+  state_type: StateType
+  plan: Record<string, unknown> | null
+  config: Record<string, unknown> | null
+  /** F282: check_each_step normalised from config, whatever spelling it was written under. */
+  check_each_step: boolean
+  output_summary: Record<string, unknown> | null
+  token_budget_estimate: number | null
+  tokens_used: number
+  max_retries: number
+  max_concurrent: number
+  complexity_tier: string | null
+  parallel_groups: string[]
+  has_synthesis_tasks: boolean
+  created_by: string
+  /** Why the run stopped or paused (F153: a budget pause names the spend). */
+  stop_reason?: string | null
+  stop_detail?: string | null
+  started_at: string | null
+  completed_at: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface MissionDetailResponse extends MissionResponse {
+  tasks: TaskResponse[]
+  recent_events: EventResponse[]
+  /** Counts derived server-side from the task rows (see _task_progress). */
+  task_progress?: TaskProgress
+}
+
+export interface TaskResponse {
+  id: string
+  title: string
+  description: string | null
+  task_type: string | null
+  sequence_number: number
+  agent_role: string | null
+  state: TaskState
+  state_type: StateType
+  assigned_agent_id: number | null
+  attempt_number: number
+  tokens_used: number
+  estimated_tokens: number
+  complexity: string | null
+  parallel_group: string | null
+  failure_reason_code: string | null
+  failure_detail: string | null
+  output_excerpt: string | null
+  output: string | null
+  started_at: string | null
+  completed_at: string | null
+  created_at: string | null
+}
+
+export interface EventResponse {
+  id: string
+  event_type: string
+  actor_type: string
+  actor_id: string | null
+  old_state: string | null
+  new_state: string | null
+  task_id: string | null
+  /** Why the run stopped, on the transition that stopped it. */
+  stop_detail?: string | null
+  created_at: string | null
+}
+
+export interface MissionListResponse {
+  missions: MissionResponse[]
+  total: number
+  limit: number
+  offset: number
+}
+
+// ── Request Types ─────────────────────────────────────────────
+
+export interface MissionCreateRequest {
+  goal: string
+  config?: Record<string, unknown>
+  template_id?: string
+}
+
+export interface MissionApproveRequest {
+  max_concurrent_override?: number
+  token_budget_override?: number
+  /** F291: the owner's note on the plan; every step's prompt carries it. */
+  note?: string
+}
+
+export interface MissionRejectRequest {
+  reason: string
+}
+
+// PRD-163 S4/Q57: approval-time plan editing — edits PATCH the plan (task rows)
+// before approval so an edited agent_role persists into execution.
+export interface MissionTaskEdit {
+  task_id?: string
+  temp_id?: string
+  sequence_number?: number
+  agent_role?: string
+  title?: string
+  description?: string
+}
+
+export interface MissionPlanEditRequest {
+  task_edits: MissionTaskEdit[]
+}
+
+// F282: PATCH /api/missions/{id}/settings — the one check_each_step switch,
+// on the New mission form and again on the mission page.
+export interface MissionSettingsRequest {
+  check_each_step: boolean
+}
+
+export interface MissionSettingsResponse {
+  id: string
+  check_each_step: boolean
+}
+
+export interface SaveAsRoutineRequest {
+  name: string
+  description?: string
+  tags?: string[]
+}
+
+export interface SaveAsRoutineResponse {
+  template_id: string
+  name: string
+  task_count: number
+}
+
+// ── Frontend Display Helpers ──────────────────────────────────
+
+export const DONE_TASK_STATES: readonly TaskState[] = ['verified', 'failed', 'skipped'] as const
+export const ACTIVE_TASK_STATES: readonly TaskState[] = ['assigned', 'running', 'completed', 'verifying', 'retrying'] as const
+
+export const TERMINAL_RUN_STATES: readonly RunState[] = ['completed', 'failed', 'cancelled'] as const
+
+export interface MissionStats {
+  taskCount: number
+  tasksDone: number
+  tasksActive: number
+  tasksFailed: number
+  tokensUsed: number
+  elapsedMs: number
+}
+
+export interface TaskProgress {
+  total: number
+  done: number
+  active: number
+  verified: number
+  failed: number
+  skipped: number
+  all_terminal: boolean
+}
+
+export function computeMissionStats(mission: MissionDetailResponse): MissionStats {
+  const tasks = mission.tasks
+  // The server counts these off the task rows themselves. Prefer them: the
+  // client derivation read 0/9 for a mission that was 2 verified, 1 failed and
+  // 6 skipped. Fall back to deriving when an older response has no counts.
+  const progress = mission.task_progress
+
+  return {
+    taskCount: progress?.total ?? tasks.length,
+    tasksDone: progress?.done ?? tasks.filter(t => (DONE_TASK_STATES as readonly string[]).includes(t.state)).length,
+    tasksActive: progress?.active ?? tasks.filter(t => (ACTIVE_TASK_STATES as readonly string[]).includes(t.state)).length,
+    tasksFailed: progress?.failed ?? tasks.filter(t => t.state === 'failed').length,
+    tokensUsed: mission.tokens_used || tasks.reduce((sum, t) => sum + t.tokens_used, 0),
+    // F062: a finished mission's clock stops when it finished. Counting to
+    // `now` showed 26 h 20 m for a mission that ran 1 h 24 m (13:14 → 14:38 on
+    // 09-19) — a completed thing presented as still running, the same class as
+    // night 1's status lies.
+    elapsedMs: mission.started_at
+      ? (mission.completed_at ? new Date(mission.completed_at).getTime() : Date.now())
+        - new Date(mission.started_at).getTime()
+      : 0,
+  }
+}
+
+// ── RunState display config ───────────────────────────────────
+
+export const RUN_STATE_CONFIG: Record<RunState, {
+  label: string
+  color: string
+  bgClass: string
+  pulse?: boolean
+}> = {
+  pending: {
+    label: 'Pending',
+    color: 'text-muted-foreground',
+    bgClass: 'bg-muted',
+  },
+  planning: {
+    label: 'Planning',
+    color: 'text-[hsl(var(--info))]',
+    bgClass: 'bg-[hsl(var(--info))]/10 border-[hsl(var(--info))]/20',
+  },
+  awaiting_approval: {
+    label: 'Needs Approval',
+    color: 'text-[hsl(var(--warning))]',
+    bgClass: 'bg-[hsl(var(--warning))]/10 border-[hsl(var(--warning))]/20',
+  },
+  running: {
+    label: 'Running',
+    color: 'text-primary',
+    bgClass: 'bg-primary/10 border-primary/20',
+    pulse: true,
+  },
+  paused: {
+    label: 'Paused',
+    color: 'text-muted-foreground',
+    bgClass: 'bg-muted',
+  },
+  verifying: {
+    label: 'Verifying',
+    color: 'text-[hsl(var(--info))]',
+    bgClass: 'bg-[hsl(var(--info))]/10 border-[hsl(var(--info))]/20',
+    pulse: true,
+  },
+  awaiting_human: {
+    label: 'Needs Review',
+    color: 'text-[hsl(var(--warning))]',
+    bgClass: 'bg-[hsl(var(--warning))]/10 border-[hsl(var(--warning))]/20',
+    pulse: true,
+  },
+  completed: {
+    label: 'Completed',
+    color: 'text-[hsl(var(--success))]',
+    bgClass: 'bg-[hsl(var(--success))]/10 border-[hsl(var(--success))]/20',
+  },
+  failed: {
+    label: 'Failed',
+    color: 'text-destructive',
+    bgClass: 'bg-destructive/10 border-destructive/20',
+  },
+  cancelled: {
+    label: 'Cancelled',
+    color: 'text-muted-foreground',
+    bgClass: 'bg-muted',
+  },
+}
+
+// ── TaskState display config (for DAG nodes) ──────────────────
+
+export const TASK_STATE_CONFIG: Record<TaskState, {
+  label: string
+  color: string
+  borderClass: string
+  bgClass: string
+  icon: string        // Lucide icon name
+  animate?: string    // Tailwind animation class
+}> = {
+  pending: {
+    label: 'Pending',
+    color: 'text-muted-foreground',
+    borderClass: 'border-muted-foreground/20',
+    bgClass: 'bg-muted/5',
+    icon: 'Circle',
+  },
+  queued: {
+    label: 'Queued',
+    color: 'text-muted-foreground',
+    borderClass: 'border-muted-foreground/30',
+    bgClass: 'bg-muted/5',
+    icon: 'Clock',
+  },
+  assigned: {
+    label: 'Assigned',
+    color: 'text-[hsl(var(--info))]',
+    borderClass: 'border-[hsl(var(--info))]/40',
+    bgClass: 'bg-[hsl(var(--info))]/5',
+    icon: 'UserCheck',
+  },
+  running: {
+    label: 'Running',
+    color: 'text-primary',
+    borderClass: 'border-primary/60',
+    bgClass: 'bg-primary/5',
+    icon: 'Loader2',
+    animate: 'animate-spin',
+  },
+  completed: {
+    label: 'Completed',
+    color: 'text-[hsl(var(--info))]',
+    borderClass: 'border-[hsl(var(--info))]/40',
+    bgClass: 'bg-[hsl(var(--info))]/5',
+    icon: 'CheckCircle2',
+  },
+  verifying: {
+    label: 'Verifying',
+    color: 'text-[hsl(var(--info))]',
+    borderClass: 'border-[hsl(var(--info))]/40',
+    bgClass: 'bg-[hsl(var(--info))]/5',
+    icon: 'Search',
+    animate: 'animate-pulse',
+  },
+  verified: {
+    label: 'Verified',
+    color: 'text-[hsl(var(--success))]',
+    borderClass: 'border-[hsl(var(--success))]/60',
+    bgClass: 'bg-[hsl(var(--success))]/10',
+    icon: 'ShieldCheck',
+  },
+  failed: {
+    label: 'Failed',
+    color: 'text-destructive',
+    borderClass: 'border-destructive/40',
+    bgClass: 'bg-destructive/5',
+    icon: 'XCircle',
+  },
+  skipped: {
+    label: 'Skipped',
+    color: 'text-muted-foreground/50',
+    borderClass: 'border-muted/20',
+    bgClass: 'bg-muted/5',
+    icon: 'SkipForward',
+  },
+  stalled: {
+    label: 'Stalled',
+    color: 'text-[hsl(var(--warning))]',
+    borderClass: 'border-[hsl(var(--warning))]/40',
+    bgClass: 'bg-[hsl(var(--warning))]/5',
+    icon: 'AlertTriangle',
+  },
+  retrying: {
+    label: 'Retrying',
+    color: 'text-[hsl(var(--warning))]',
+    borderClass: 'border-[hsl(var(--warning))]/40',
+    bgClass: 'bg-[hsl(var(--warning))]/5',
+    icon: 'RefreshCw',
+    animate: 'animate-spin',
+  },
+}

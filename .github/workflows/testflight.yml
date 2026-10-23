@@ -1,0 +1,136 @@
+# TestFlight delivery — runs after CI succeeds on main (or by hand).
+#
+# Decides between an over-the-air JS update and a full native build by
+# comparing the tree's fingerprint with the last finished testflight build:
+#   identical  → eas update  (channel "testflight", preview env)  — minutes, no quota
+#   different  → eas build --auto-submit (profile "testflight")  — ~25 min, uses iOS quota
+# Every decision goes through scripts/testflight-decide.js (tested in CI).
+#
+# In-progress guard (D48): builds are started with --no-wait, so a second merge
+# can arrive while the first build is still on EAS. Before deciding, the job
+# waits (polling every 60 s, up to 100 min) while any testflight iOS build is
+# new, queued or building, and fails naming the build if it is still busy —
+# two quick merges never start two native builds.
+#
+# Needs ONE secret: EXPO_TOKEN (expo.dev → Account settings → Access tokens),
+# stored in the GitHub environment "testflight" (restrict that environment to
+# the main branch, D50). Apple signing, the App Store Connect key and the
+# EXPO_PUBLIC_* values all live on EAS, so nothing Apple-related is in GitHub.
+# The EAS project link (extra.eas.projectId) comes from `eas init`, a human step.
+#
+# Trust boundary: workflow_run fires for ANY run of "CI", including pull
+# requests from forks, so the job only proceeds for a push to main of this
+# very repository, installs dependencies with lifecycle scripts disabled, and
+# only then receives the token.
+name: TestFlight
+
+on:
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'auto = fingerprint decides · update = OTA only · build = native build + submit'
+        type: choice
+        default: auto
+        options: [auto, update, build]
+
+concurrency:
+  group: testflight
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ship:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    environment: testflight
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Dependencies first, with lifecycle scripts off, so no package script
+      # ever runs with the EAS token in the environment.
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Check the EAS project link
+        run: |
+          if [ -z "$(jq -r '.expo.extra.eas.projectId // empty' app.json)" ]; then
+            echo "::error::app.json has no extra.eas.projectId — run eas init (a human step, see README) and commit owner, extra.eas.projectId and updates.url."
+            exit 1
+          fi
+
+      # Third-party code that receives EXPO_TOKEN: the action is pinned to a commit
+      # and eas-cli to an exact version, both bumped deliberately (never a floating tag).
+      - uses: expo/expo-github-action@c7b66a9c327a43a8fa7c0158e7f30d6040d2481e # v8 (8.2.1)
+        with:
+          eas-version: 24.11.0
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Check EAS auth
+        run: |
+          if [ -z "${EXPO_TOKEN:-}" ]; then
+            echo "::error::EXPO_TOKEN is empty — add it as a secret of the 'testflight' GitHub environment (expo.dev → Account settings → Access tokens)."
+            exit 1
+          fi
+          eas whoami --non-interactive
+
+      - name: Decide update vs build (waits while a testflight build is in progress)
+        id: decide
+        env:
+          REQUESTED: ${{ github.event.inputs.mode || 'auto' }}
+          POLL_SECONDS: 60
+          MAX_WAIT_SECONDS: 6000
+        run: |
+          set -euo pipefail
+          waited=0
+          while :; do
+            busy=$(eas build:list --platform ios --build-profile testflight --limit 20 --json --non-interactive \
+              | jq -r '[.[] | select((.status | ascii_downcase) as $s | ["new", "in_queue", "in_progress"] | index($s))] | .[0].id // empty')
+            if [ -n "$busy" ]; then
+              mode=$(node scripts/testflight-decide.js --in-progress true --requested "$REQUESTED")
+            else
+              last=$(eas build:list --platform ios --status finished --build-profile testflight --limit 1 --json --non-interactive | jq -r '.[0].id // empty')
+              same=""
+              if [ "$REQUESTED" = "auto" ] && [ -n "$last" ]; then
+                eas fingerprint:compare --build-id "$last" --non-interactive --json > fingerprint.json
+                same=$(jq -r '.fingerprint1.hash == .fingerprint2.hash' fingerprint.json)
+              fi
+              echo "last finished build: ${last:-none} · fingerprints identical: ${same:-not compared}"
+              mode=$(node scripts/testflight-decide.js --in-progress false --last-finished-id "$last" \
+                --fingerprints-identical "$same" --requested "$REQUESTED")
+            fi
+            [ "$mode" != "wait" ] && break
+            if [ "$waited" -ge "$MAX_WAIT_SECONDS" ]; then
+              echo "::error::testflight build $busy is still new, queued or building after $((waited / 60)) min — not starting another (D48). Re-run this workflow once it finishes."
+              exit 1
+            fi
+            echo "testflight build $busy is in progress — waiting ${POLL_SECONDS}s"
+            sleep "$POLL_SECONDS"
+            waited=$((waited + POLL_SECONDS))
+          done
+          echo "mode=$mode" | tee -a "$GITHUB_OUTPUT"
+
+      - name: Publish OTA update (JS only)
+        if: steps.decide.outputs.mode == 'update'
+        run: eas update --channel testflight --environment preview --auto --non-interactive
+
+      - name: Build and submit to TestFlight
+        if: steps.decide.outputs.mode == 'build'
+        run: eas build --platform ios --profile testflight --auto-submit --non-interactive --no-wait

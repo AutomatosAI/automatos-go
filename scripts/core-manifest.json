@@ -1,0 +1,130 @@
+{
+  "source": "AutomatosAI/automatos-ai",
+  "sha": "630fc1c85af06c5c76e70c74e9653ee1804fdf41",
+  "root": "frontend",
+  "notes": [
+    "Vendored by scripts/sync-core.ts into src/core/web/ (K1); core.lock.json records every file written. Never edit a vendored file: fix this manifest or src/core/shims/ and re-run the sync.",
+    "lib/discussion.ts is an addition to the PRD-001 \u00a74.3 chat list: D31 'Ask Auto about' a ticket builds its opening message with it.",
+    "Tests: every __tests__/*.test.ts beside a vendored file that imports a vendored module is copied to the mirrored __tests__/ when it needs only vitest, vendored modules and test fixtures, runs in node and is pure; every other one is listed in core.lock.json skippedTests with the reason. skipTests (root-relative path \u2192 reason) skips by hand a test the rule would copy but that cannot run here.",
+    "copy: checkout-relative files outside the root, copied verbatim (no header line) to a path under src/core/ and lock-listed like any vendored file; the server's route manifest is one (US-004c, K4)."
+  ],
+  "sets": {
+    "chat": [
+      "lib/chat/receipts.ts",
+      "lib/chat/errors.ts",
+      "lib/chat/narration.ts",
+      "lib/chat/tool-calls.ts",
+      "lib/chat/approvals.ts",
+      "lib/chat/suggestion.ts",
+      "lib/chat/retry.ts",
+      "lib/chat/deliverables.ts",
+      "lib/chat/message-text.ts",
+      "lib/chat/chat-session.ts",
+      "lib/ai-label/copy.ts",
+      "components/play/chat/labels.ts",
+      "components/play/chat/reply.ts",
+      "components/play/chat/caption.ts",
+      "lib/discussion.ts"
+    ],
+    "cc": [
+      "lib/ticket-number.ts",
+      "lib/grant-owner.ts",
+      "lib/ticket-links.ts",
+      "components/activity/board/ticket-stage.ts",
+      "components/activity/board/ticket-kind.ts",
+      "components/command-center/calendar-kinds.ts",
+      "components/command-center/calendar-actions.ts",
+      "hooks/use-board-event-stream.ts"
+    ],
+    "styles": [
+      "lib/look-kit/contrast.ts",
+      "lib/look-kit/css.ts",
+      "lib/look-kit/hsl.ts",
+      "lib/look-kit/scope.ts",
+      "lib/look-kit/studio-tokens.ts",
+      "lib/look-kit/types.ts",
+      "lib/look-kit/validate.ts",
+      "lib/looks/catalogue.ts",
+      "lib/looks/presets.ts",
+      "lib/looks/engine.ts",
+      "lib/looks/tone.ts",
+      "lib/mascot/types.ts",
+      "lib/mascot/reducer.ts",
+      "lib/mascot/tools.ts",
+      "lib/mascot/events.ts",
+      "lib/mascot/ring.ts",
+      "lib/mascot/player.ts",
+      "lib/theme-host/look-schema.ts",
+      "lib/theme-host/css-value.ts"
+    ]
+  },
+  "extract": {
+    "hooks/use-board-event-stream.ts": {
+      "names": ["parseSSEFrames"],
+      "reason": "the board stream's SSE frame parser is pure; the React hook around it reads with fetch and invalidates TanStack Query (the app has its own src/api/live.ts)"
+    }
+  },
+  "drop": {
+    "lib/chat/chat-session.ts": {
+      "names": ["loadChatSession", "saveChatSession"],
+      "reason": "they read and write window.localStorage; the app persists the session itself (encrypted MMKV, D-CACHE)"
+    },
+    "lib/look-kit/css.ts": {
+      "names": ["applyCssVars"],
+      "reason": "it sets CSS custom properties on a DOM element; the app turns a look into React Native styles instead"
+    }
+  },
+  "typeOnly": {
+    "components/widgets/types.ts": {
+      "names": ["MissionApprovalTask", "MissionApprovalWidgetData", "ToolApprovalWidgetData"],
+      "reason": "lib/chat/approvals.ts needs the card data types; the file also types React widget components"
+    },
+    "lib/api-client.ts": {
+      "names": ["ApprovalGrant", "GrantOwner"],
+      "reason": "lib/ticket-links.ts types a question link with ApprovalGrant and lib/grant-owner.ts names a grant's owner with GrantOwner; the client itself uses fetch and localStorage"
+    },
+    "hooks/use-activity-api.ts": {
+      "names": ["ActivityFeedItem", "ScheduleItem", "ScheduleItemType"],
+      "reason": "lib/ticket-links.ts types a feed link and the calendar helpers type schedule items with these; the hook is TanStack Query"
+    },
+    "lib/theme-sdk/index.ts": {
+      "names": [
+        "HostChatMessage",
+        "HostDeliverable",
+        "HostReceipt",
+        "HostToolCall",
+        "MissionSuggestionMessage"
+      ],
+      "reason": "Play's chat helpers and lib/mascot/types.ts type-import these from the SDK barrel, which re-exports React hooks and Next.js components"
+    },
+    "lib/theme-sdk/chat.ts": {
+      "names": ["HostChatMessage", "HostDeliverable", "HostReceipt", "HostToolCall"],
+      "reason": "the barrel's chat types; the module's runtime is React hooks over the web's stores"
+    },
+    "lib/theme-sdk/cards.ts": {
+      "names": ["MissionSuggestionMessage"],
+      "reason": "the barrel re-exports this type through cards.ts, whose runtime is React card components"
+    },
+    "lib/theme-sdk/host-cards/chat-cards.tsx": {
+      "names": ["MissionSuggestionMessage", "WithdrawOffer"],
+      "reason": "the SDK's chat types are declared beside React card components"
+    },
+    "hooks/use-scheduled-tasks-api.ts": {
+      "names": ["ScheduledTaskStatus"],
+      "reason": "components/command-center/calendar-actions.ts types a routine's pause state with it; the hooks are TanStack Query and sonner toasts"
+    }
+  },
+  "shims": {
+    "@ai-sdk/react": {
+      "path": "src/core/shims/ai-sdk-react.ts",
+      "reason": "types/chat.ts type-imports UIMessage; the app has no AI SDK, so a structural type stands in"
+    }
+  },
+  "skipTests": {},
+  "copy": {
+    "orchestrator/reports/route-manifest.json": {
+      "to": "src/core/route-manifest.json",
+      "reason": "the server's {method, path} pairs at the pin (orchestrator/scripts/dump_routes.py); scripts/check-routes.ts checks every src/**/routes.ts table against it (K4)"
+    }
+  }
+}
