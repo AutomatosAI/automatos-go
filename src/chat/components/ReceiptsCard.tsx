@@ -1,13 +1,15 @@
-// 'What Auto did' (the handoff's receipts card, mirroring components/play/chat/receipts.tsx): the
-// mono title, one line per call with its mark (✓ olive, … waiting, ✕, –) and Play's tag, and the
-// closing note. A line whose call touched a page opens it through the mapped link. Each line is one
-// element to screen readers, read as its status word and its words (§4.6), never as the mark.
+// 'What Auto did' (mirroring components/play/chat/receipts.tsx, a section with no frame): the mono
+// title, one line per call with its mark (✓ olive, … waiting, ✕, –) and Play's tag, and the
+// closing note. Drawn as a quiet block under the answer, never a box (Gerard, 23 Oct: no boxes
+// around Auto's text; the handoff's card is overruled, as TurnNotice's was). A line whose call
+// touched a page opens it through the mapped link. Each line is one element to screen readers,
+// read as its status word and its words (§4.6), never as the mark.
 
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { WebLinkTarget } from '../../navigation/web-links';
 import { useTokens } from '../../styles/theme';
-import { Card, Text } from '../../ui';
+import { Text } from '../../ui';
 import { CHAT_COPY } from '../strings';
 import { MARK_COLOURS, type ReceiptRow, type ReceiptsView } from '../view-model';
 
@@ -64,7 +66,7 @@ export type ReceiptsCardProps = {
 export function ReceiptsCard({ receipts, onLink }: ReceiptsCardProps) {
   const { spacing } = useTokens();
   return (
-    <Card padding="space5" style={{ gap: spacing.space2 }}>
+    <View style={{ gap: spacing.space2 }}>
       <Text variant="mono" tone="muted" accessibilityRole="header">
         {CHAT_COPY.receiptsTitle}
       </Text>
@@ -76,7 +78,7 @@ export function ReceiptsCard({ receipts, onLink }: ReceiptsCardProps) {
           {receipts.note}
         </Text>
       ) : null}
-    </Card>
+    </View>
   );
 }
 

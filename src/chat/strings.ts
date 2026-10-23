@@ -42,6 +42,25 @@ export const CHAT_COPY = Object.freeze({
   retry: 'Try again',
 });
 
+/**
+ * Auto's formatted answers (OT-C8): the marker before a list item (a bullet by how deep it sits, a
+ * task item's box and the words a screen reader hears for it), and the question before a link in
+ * Auto's answer opens another site (its host, then its full address under it).
+ */
+export const MARKDOWN_COPY = Object.freeze({
+  bullets: Object.freeze(['•', '◦', '▪']) as readonly string[],
+  listNumber: (count: number) => `${count}.`,
+  taskMarks: Object.freeze({ done: '☑', open: '☐' }),
+  taskWords: (checked: boolean) => (checked ? 'Done' : 'Not done'),
+  openSite: Object.freeze({
+    title: (host: string) => `Open ${host}?`,
+    open: 'Open',
+    cancel: 'Cancel',
+    /** VoiceOver's hint on such a link: where it goes, since the address is not on screen. */
+    hint: (host: string) => `Asks before opening ${host}`,
+  }),
+});
+
 /** Play's receiptBadge tags: a done write says Done, a refused call Not done, a skipped one Skipped. */
 export const RECEIPT_BADGES = Object.freeze({
   done: 'Done',

@@ -115,7 +115,7 @@ describe('Auto’s text', () => {
       { kind: 'narration', text: 'Let me check the board. ', retracted: false },
       { kind: 'text', text: 'Two tickets are blocked.' },
     );
-    expect(autoRows(threadRows(state))[0].paragraphs).toEqual(['Two tickets are blocked.']);
+    expect(autoRows(threadRows(state))[0].answer).toBe('Two tickets are blocked.');
   });
 
   it('never shows a saved reply’s narration part', () => {
@@ -127,7 +127,7 @@ describe('Auto’s text', () => {
       ],
     };
     const rows = threadRows(opened([saved('m1', 'user', 'Go'), reply]));
-    expect(autoRows(rows)[0].paragraphs).toEqual(['Done.']);
+    expect(autoRows(rows)[0].answer).toBe('Done.');
     expect(allText(rows)).not.toContain('Looking now');
   });
 });
