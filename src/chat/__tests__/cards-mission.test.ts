@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { jsonReply, reply, type FakeTransport } from '../../api/__tests__/fake-transport';
@@ -13,6 +16,7 @@ import {
   cardAccess,
   isUserSentence,
   missionCreateBody,
+  planRefusalText,
   refusalText,
   rejectBody,
   rejectReasonError,
@@ -156,7 +160,7 @@ describe('a refused card action (403, 409, 422): words, never a status code', ()
         `Invalid run transition: executing → approved (entity ${MISSION_ID})`,
         API_ERROR_COPY.conflict,
       ],
-      [400, "Mission is in 'executing' state, expected 'awaiting_approval'", API_ERROR_COPY.server],
+      [400, "Mission is in 'running' state, expected 'awaiting_approval'", API_ERROR_COPY.server],
       [422, '[{"loc": ["body", "reason"], "msg": "field required"}]', API_ERROR_COPY.server],
     ];
     for (const [status, detail, words] of cases) {
@@ -201,5 +205,87 @@ describe('a refused card action (403, 409, 422): words, never a status code', ()
     const plain = routedTransport({ [`POST ${path}`]: () => reply(403, 'Forbidden') });
     const denied = await approveMission(clientWith(plain), MISSION_ID).catch((e) => e);
     expect(refusalText(denied)).toBe(API_ERROR_COPY.forbidden);
+  });
+});
+
+describe('a plan someone already decided says so (planRefusalText)', () => {
+  /** api/missions.py approve_plan and reject_plan, for a Mission no longer awaiting approval. */
+  const wrongState = (state: string) =>
+    `Mission is in '${state}' state, expected 'awaiting_approval'`;
+
+  it('names an approved, a rejected and any other decided plan by the state the server names', () => {
+    expect(planRefusalText(refusal(400, wrongState('running')))).toBe(CARD_COPY.alreadyApproved);
+    expect(planRefusalText(refusal(400, wrongState('cancelled')))).toBe(CARD_COPY.alreadyRejected);
+    expect(planRefusalText(refusal(400, wrongState('pending')))).toBe(CARD_COPY.alreadyDecided);
+    expect(CARD_COPY.alreadyApproved).toBe('This plan was already approved.');
+    expect(CARD_COPY.alreadyRejected).toBe('This plan was already rejected or cancelled.');
+    expect(CARD_COPY.alreadyDecided).toBe('This plan was already decided.');
+  });
+
+  it('reads every state an approve leads to as approved', () => {
+    for (const state of [
+      'running',
+      'paused',
+      'replanning',
+      'verifying',
+      'awaiting_human',
+      'completed',
+      'failed',
+    ]) {
+      expect(planRefusalText(refusal(400, wrongState(state)))).toBe(CARD_COPY.alreadyApproved);
+    }
+    expect(planRefusalText(refusal(400, wrongState('planning')))).toBe(CARD_COPY.alreadyDecided);
+  });
+
+  it('gives the same words on a 409, with an end stop and spaces around it', () => {
+    expect(planRefusalText(refusal(409, wrongState('running')))).toBe(CARD_COPY.alreadyApproved);
+    expect(planRefusalText(refusal(409, `  ${wrongState('cancelled')}. `))).toBe(
+      CARD_COPY.alreadyRejected,
+    );
+  });
+
+  it('keeps the taxonomy words for every other refusal', () => {
+    const cases: [number, string, string][] = [
+      [403, 'Permission denied: missions:update', API_ERROR_COPY.forbidden],
+      [
+        409,
+        `Optimistic lock conflict on run ${MISSION_ID} — another transaction modified this row`,
+        API_ERROR_COPY.conflict,
+      ],
+      [
+        409,
+        `Invalid run transition: running → cancelled (entity ${MISSION_ID})`,
+        API_ERROR_COPY.conflict,
+      ],
+      [422, '[{"loc": ["body", "reason"], "msg": "field required"}]', API_ERROR_COPY.server],
+      [422, wrongState('running'), API_ERROR_COPY.server],
+      [
+        400,
+        "Mission is in 'RunState.RUNNING' state, expected 'awaiting_approval'",
+        API_ERROR_COPY.server,
+      ],
+    ];
+    for (const [status, detail, words] of cases) {
+      expect(planRefusalText(refusal(status, detail))).toBe(words);
+    }
+    expect(planRefusalText(new ApiError('network'))).toBe(API_ERROR_COPY.network);
+    expect(planRefusalText(new TypeError('boom'))).toBe(API_ERROR_COPY.server);
+  });
+
+  it('reads the wrong-state 400 off the wire through the client', async () => {
+    const route = `POST /api/missions/${MISSION_ID}/approve`;
+    const body = { detail: wrongState('running') };
+    const transport = routedTransport({ [route]: () => jsonReply(400, body) });
+    const caught = await approveMission(clientWith(transport), MISSION_ID).catch((e) => e);
+    expect(planRefusalText(caught)).toBe(CARD_COPY.alreadyApproved);
+    expect(refusalText(caught)).toBe(API_ERROR_COPY.server);
+  });
+
+  it('is what the plan card hands its request, as the grant card hands grantRefusalText', () => {
+    const card = readFileSync(
+      path.resolve(__dirname, '..', 'cards', 'PlanApprovalCard.tsx'),
+      'utf8',
+    );
+    expect(card).toMatch(/useCardRequest\(card\.key, onSettled, planRefusalText\)/);
   });
 });

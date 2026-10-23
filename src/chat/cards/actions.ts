@@ -6,7 +6,9 @@
 // and never a button the server would refuse. A refusal shows the server's own sentence only when
 // it is one a person wrote for people; otherwise, and always for a status, the taxonomy's words. A
 // grant's refusal (api/approval_grants.py answers 422 for a card that can no longer run) also says
-// what a decided card was decided as, and keeps a sentence that names its expiry time.
+// what a decided card was decided as, and keeps a sentence that names its expiry time. A plan's
+// refusal (api/missions.py answers 400 for a Mission no longer awaiting approval) says the plan was
+// already approved, rejected or decided, by the state the server names.
 
 import { ApiError, isApiError, userMessage, type ApiErrorKind } from '../../api/errors';
 import type { WorkspaceRole } from '../../api/workspace';
@@ -152,4 +154,36 @@ export function grantRefusalText(error: unknown): string {
   const decided = NOT_PENDING.exec(words);
   if (decided) return alreadyDecided(decided[1]);
   return isUserSentence(words.replace(CLOCK, '')) ? words : refusalText(error);
+}
+
+/** Approve and Reject refuse a Mission no longer waiting with a 400 (a 409 from a later server). */
+const PLAN_REFUSALS: ReadonlySet<number> = new Set([400, 409]);
+/** api/missions.py approve_plan and reject_plan: the server's words for a plan already decided. */
+const WRONG_STATE = /^Mission is in '([a-z_]+)' state, expected 'awaiting_approval'\.?$/;
+/** The run states an approve leads to (approve_plan moves the run to running); a reject cancels it. */
+const APPROVED_STATES: ReadonlySet<string> = new Set([
+  'running',
+  'paused',
+  'replanning',
+  'verifying',
+  'awaiting_human',
+  'completed',
+  'failed',
+]);
+
+function planDecided(state: string): string {
+  if (APPROVED_STATES.has(state)) return CARD_COPY.alreadyApproved;
+  return state === 'cancelled' ? CARD_COPY.alreadyRejected : CARD_COPY.alreadyDecided;
+}
+
+/**
+ * What a refused Approve or Reject says: a plan already decided in the kit's words for the state
+ * its Mission is in, else refusalText's (403, 422 and the 409 lock and transition conflicts).
+ */
+export function planRefusalText(error: unknown): string {
+  const refused =
+    isApiError(error) && error.status !== undefined && PLAN_REFUSALS.has(error.status);
+  if (!refused) return refusalText(error);
+  const decided = WRONG_STATE.exec((error.serverMessage ?? '').trim());
+  return decided ? planDecided(decided[1]) : refusalText(error);
 }

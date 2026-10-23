@@ -129,6 +129,10 @@ export const CARD_COPY = Object.freeze({
   cancel: 'Cancel',
   approved: 'Plan approved. The Mission is running.',
   rejected: 'Plan rejected.',
+  /** A plan someone already decided (the server's wrong-state 400), by the state its Mission is in. */
+  alreadyApproved: 'This plan was already approved.',
+  alreadyRejected: 'This plan was already rejected or cancelled.',
+  alreadyDecided: 'This plan was already decided.',
   reasonRequired: 'Say why you are rejecting this plan.',
   reasonTooLong: (max: number) => `Keep the reason to ${max.toLocaleString('en')} characters.`,
   /** components/widgets/oversight-note.tsx: the note's name, and each tier's words. */

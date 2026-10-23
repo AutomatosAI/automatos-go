@@ -1,7 +1,8 @@
 // A Mission plan waiting for approval (the mission_approval card; the web's MissionApprovalWidget,
 // drawn as the handoff's Mission card): the goal, the task count, the oversight note (PRD-181 S5),
 // and the numbered tasks with the agent each runs on. Approve & run sends the empty body; Reject
-// first asks why, and sends nothing until there is a reason. Decided, it says how. A role that
+// first asks why, and sends nothing until there is a reason. Decided, it says how; a plan someone
+// already decided elsewhere says so when the server refuses (planRefusalText). A role that
 // cannot decide reads it with the D17 words. No cost or ceiling is shown (D8); plan edits and the
 // Face ID step (A4) are not here.
 
@@ -11,7 +12,7 @@ import { StyleSheet, View } from 'react-native';
 import { useTokens } from '../../styles/theme';
 import { Button, Text, TextField } from '../../ui';
 import { CARD_COPY } from '../strings';
-import { REJECT_REASON_MAX_CHARS, rejectBody, type CardAccess } from './actions';
+import { REJECT_REASON_MAX_CHARS, planRefusalText, rejectBody, type CardAccess } from './actions';
 import { approveMission, rejectMission } from './api';
 import { ReadOnlyNote, RefusalText } from './CardNotes';
 import type { SettleCard } from './model';
@@ -148,7 +149,7 @@ export type PlanApprovalCardProps = {
 
 export function PlanApprovalCard({ card, onSettled }: PlanApprovalCardProps) {
   const access = useCardAccess('approve');
-  const request = useCardRequest(card.key, onSettled);
+  const request = useCardRequest(card.key, onSettled, planRefusalText);
   const approve = () =>
     request.run(async (client) => {
       await approveMission(client, card.missionId);

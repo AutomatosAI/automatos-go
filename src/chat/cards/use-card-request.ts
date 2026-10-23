@@ -1,8 +1,8 @@
 // One card action at a time (D-CARDS): busy while the call is out, the refusal's words when the
-// server says no (refusalText, or a grant card's grantRefusalText: never a status code), and the
-// outcome handed to the thread when it agrees, so the card keeps it however often it is drawn
-// again. Who may act comes from the session's role (cardAccess). It only wires: the payloads, the
-// gate and the words are actions.ts and grants.ts.
+// server says no (refusalText, a grant card's grantRefusalText or the plan card's planRefusalText:
+// never a status code), and the outcome handed to the thread when it agrees, so the card keeps it
+// however often it is drawn again. Who may act comes from the session's role (cardAccess). It only
+// wires: the payloads, the gate and the words are actions.ts and grants.ts.
 
 import { useCallback, useRef, useState } from 'react';
 
