@@ -4,10 +4,12 @@
 // mutates its arguments. A live turn holds back the saved messages from where it started: the
 // server saves the user's message before it streams and the reply when it ends, so showing both
 // would draw the turn twice. A refetch that brings the reply retires the live turn (merge by id,
-// never a duplicate); a turn the server failed (an e: line) stays until the next send, so its
-// failure keeps the kit's own words (D-NO-BILLING). The turn runs detached on the server: Stop is a
-// cancel as well as an abort (turn-runner.ts) and leaves the turn's tool calls as they are, so one
-// it cut off reads 'Stopped: …', never done; a chat reopened mid-turn shows Auto working until
+// never a duplicate); a reply saved before the read ends (the server's memory step runs with the
+// stream still open) is held back while it streams and retires the turn when the read settles
+// (finished, failed, stopped); a turn the server failed (an e: line) stays until the next send, so
+// its failure keeps the kit's own words (D-NO-BILLING). The turn runs detached on the server: Stop
+// is a cancel as well as an abort (turn-runner.ts) and leaves the turn's tool calls as they are, so
+// one it cut off reads 'Stopped: …', never done; a chat reopened mid-turn shows Auto working until
 // chat_changed or a resume brings the reply (web: frontend/lib/chat/hooks.ts, PRD-237 S7); and a
 // read that broke (iOS suspends the app mid-turn) is a failure only until GET /api/chat/{id} says
 // the turn runs on: then Auto is working, never 'interrupted, Try again' (a second turn).
@@ -258,16 +260,37 @@ function frame(state: ThreadState, action: ActionOf<'frame'>): ThreadState {
   return { ...state, live, cards };
 }
 
+/** A turn the server failed keeps its failure on screen; any other settled turn may retire. */
+function mayRetire(state: ThreadState): boolean {
+  if (state.status === 'failed') return state.failure?.kind !== 'turn';
+  return state.status === 'idle' || state.status === 'working' || state.status === 'stopped';
+}
+
+/**
+ * The live turn retires once Auto's reply is saved from where it started and the turn has settled.
+ * Never mid-read ('streaming'): a second send would go through while the read runs.
+ */
+function retireIfReplied(state: ThreadState): ThreadState {
+  const live = state.live;
+  const replied =
+    live !== null &&
+    state.messages.slice(live.since).some((message) => message.role === 'assistant');
+  return replied && mayRetire(state)
+    ? { ...state, status: 'idle', live: null, failure: null }
+    : state;
+}
+
 function finished(state: ThreadState): ThreadState {
   if (state.status !== 'streaming') return state;
   const error = state.live?.turn.error;
-  if (!error) return { ...state, status: 'idle' };
-  return { ...state, status: 'failed', failure: { kind: 'turn', code: turnErrorCode(error.code) } };
+  if (!error) return retireIfReplied({ ...state, status: 'idle' });
+  const failure = { kind: 'turn', code: turnErrorCode(error.code) } as const;
+  return retireIfReplied({ ...state, status: 'failed', failure });
 }
 
 function failed(state: ThreadState, action: ActionOf<'failed'>): ThreadState {
   if (state.status !== 'streaming') return state;
-  return { ...state, status: 'failed', failure: failureOf(action.error) };
+  return retireIfReplied({ ...state, status: 'failed', failure: failureOf(action.error) });
 }
 
 /**
@@ -277,7 +300,7 @@ function failed(state: ThreadState, action: ActionOf<'failed'>): ThreadState {
  */
 function stopped(state: ThreadState): ThreadState {
   if (!canStop(state)) return state;
-  return { ...state, status: 'stopped', failure: null };
+  return retireIfReplied({ ...state, status: 'stopped', failure: null });
 }
 
 /** The cancel did not reach the server, so the turn is still running there: Auto is working. */
@@ -293,21 +316,10 @@ function named(state: ThreadState, action: ActionOf<'named'>): ThreadState {
   return { ...state, chatId: action.chatId, live };
 }
 
-/** A turn the server failed keeps its failure on screen; any other settled turn may retire. */
-function mayRetire(state: ThreadState): boolean {
-  if (state.status === 'failed') return state.failure?.kind !== 'turn';
-  return state.status === 'idle' || state.status === 'working' || state.status === 'stopped';
-}
-
 function refetched(state: ThreadState, action: ActionOf<'refetched'>): ThreadState {
   if (state.status === 'loading') return state;
   const messages = mergeById(state.messages, action.messages);
-  const live = state.live;
-  const replied =
-    live !== null && messages.slice(live.since).some((message) => message.role === 'assistant');
-  if (replied && mayRetire(state))
-    return { ...state, status: 'idle', messages, live: null, failure: null };
-  return messages === state.messages ? state : { ...state, messages };
+  return retireIfReplied(messages === state.messages ? state : { ...state, messages });
 }
 
 function gaveUp(state: ThreadState): ThreadState {
@@ -320,7 +332,7 @@ function gaveUp(state: ThreadState): ThreadState {
  */
 function detached(state: ThreadState, action: ActionOf<'detached'>): ThreadState {
   if (!action.turnInFlight || !awaitsDetachedCheck(state)) return state;
-  return { ...state, status: 'working', failure: null };
+  return retireIfReplied({ ...state, status: 'working', failure: null });
 }
 
 function card(state: ThreadState, action: ActionOf<'card'>): ThreadState {
