@@ -8,13 +8,14 @@
 // Then, signed in (launchView): the server's discovery document (K3: the built-in server's 404 is
 // already hostedDefaults; an own server's is 'unsupported') → a sign-in this app has (an own server
 // must still take paired phones) → GET /api/workspaces/current, read again on every launch → the
-// app. An own server that does not answer is 'not_running'; any other failed step is an error with
-// Retry (a paused workspace in its own words, D8). app-state/AppGate wires it; no React here.
+// app. An own server that does not answer is 'not_running'; a bootstrap the server refuses is
+// 'paused' (D8's words) or 'workspace_lost' (src/session/bootstrap-refusal.ts, US-007a), even when
+// a later re-read (src/session/role-refresh.ts) is the one refused; any other failed step is an
+// error with Retry. app-state/AppGate wires it; no React here.
 
 import type { Discovery } from '../api/discovery';
 import type { Server, ServerSource } from '../api/server';
-import { WORKSPACE_COPY } from '../api/strings';
-import { isWorkspacePaused, type Workspace } from '../api/workspace';
+import type { Workspace } from '../api/workspace';
 import { selectProvider } from '../auth/select';
 import { AUTH_COPY } from '../auth/strings';
 import type { OwnServer } from '../connect/current-server';
@@ -26,6 +27,7 @@ import {
   type OwnServerRefusal,
 } from '../connect/server-support';
 import { OWN_SERVER_COPY } from '../connect/strings';
+import { bootstrapRefusal, REFUSAL_MESSAGES } from '../session/bootstrap-refusal';
 import { SHELL_COPY } from './strings';
 
 export type Step<T> =
@@ -60,6 +62,20 @@ export function stepOf<T>(query: QuerySnapshot<T>, since = 0): Step<T> {
     return { status: 'error', error: query.error };
   }
   return PENDING;
+}
+
+/**
+ * The bootstrap as a gate step: stepOf, except that a refusal (paused, or no longer a member:
+ * bootstrap-refusal.ts) newer than the data takes the app away, because a re-read on resume or
+ * after a 403 exists to find exactly that; while it is tried again it is loading, never the old
+ * app. A re-read that fails any other way (offline, a 5xx) still keeps the app open.
+ */
+export function workspaceStepOf(query: QuerySnapshot<Workspace>, since: number): Step<Workspace> {
+  const refusedLast =
+    bootstrapRefusal(query.error) !== null &&
+    query.errorUpdatedAt >= Math.max(since, query.dataUpdatedAt);
+  if (!refusedLast) return stepOf(query, since);
+  return query.fetchStatus === 'fetching' ? PENDING : { status: 'error', error: query.error };
 }
 
 export type AccessInput = {
@@ -136,6 +152,8 @@ export type LaunchView =
   /** The server can't be used by this app as it is: what it says, and what to do. */
   | { readonly kind: 'unsupported'; readonly message: string; readonly detail: string }
   | { readonly kind: 'paused'; readonly message: string }
+  /** No longer a member of the workspace (any other 403, or a 404): only the way out, no Retry. */
+  | { readonly kind: 'workspace_lost'; readonly message: string }
   /** An own server that does not answer (PRD-001 §4.7 Edges: Not running). */
   | { readonly kind: 'not_running'; readonly server: Server; readonly step: LaunchStep }
   | { readonly kind: 'ready'; readonly discovery: Discovery; readonly workspace: Workspace };
@@ -189,9 +207,8 @@ function workspaceView(
   if (workspace.status === 'success') {
     return { kind: 'ready', discovery, workspace: workspace.data };
   }
-  if (isWorkspacePaused(workspace.error)) {
-    return { kind: 'paused', message: WORKSPACE_COPY.paused };
-  }
+  const refusal = bootstrapRefusal(workspace.error);
+  if (refusal !== null) return { kind: refusal, message: REFUSAL_MESSAGES[refusal] };
   return failedView(server, 'workspace', workspace.error);
 }
 

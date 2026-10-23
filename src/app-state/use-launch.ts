@@ -3,8 +3,10 @@
 // GET /api/workspaces/current. Both are persisted families, so a restored discovery document opens
 // the gate at once while it refetches; the workspace is read again on every launch (staleTime 0,
 // and only data fetched since this launch counts), because the server silently replaces a
-// workspace header the user can no longer use. The client is rebuilt whenever the server or the
-// session changes, each server with its own workspace-id holder (US-006d).
+// workspace header the user can no longer use; a later re-read the server refuses (paused, or no
+// longer a member) takes the app away (gate.ts workspaceStepOf, US-007a). The client is rebuilt
+// whenever the server or the session changes, each server with its own workspace-id holder
+// (US-006d).
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
@@ -16,7 +18,14 @@ import type { Server } from '../api/server';
 import { expoTransport } from '../api/transport';
 import type { ClientAuth } from '../auth/providers/binding';
 import { workspaceIds } from '../session/workspace-ids';
-import { launchView, serverSupported, stepOf, type LaunchStep, type LaunchView } from './gate';
+import {
+  launchView,
+  serverSupported,
+  stepOf,
+  workspaceStepOf,
+  type LaunchStep,
+  type LaunchView,
+} from './gate';
 import { createLaunchClient } from './launch-client';
 import { launchBootstrap } from './session-cache';
 
@@ -61,7 +70,7 @@ export function useLaunch(server: Server, clientAuth: ClientAuth): Launch {
   const view = launchView({
     server,
     discovery: discoveryStep,
-    workspace: stepOf(workspace, launchedAt),
+    workspace: workspaceStepOf(workspace, launchedAt),
   });
   return { view, client, retry };
 }

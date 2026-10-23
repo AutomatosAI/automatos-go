@@ -6,4 +6,7 @@ export const SESSION_COPY = Object.freeze({
   unreadableTitle: "Couldn't open this phone's saved server",
   unreadableMessage: 'Unlock your phone, then try again.',
   retry: 'Try again',
+  /** The bootstrap refused: no longer a member of the workspace (bootstrap-refusal.ts). */
+  lostTitle: 'Workspace not available',
+  lostMessage: "You're no longer a member of this workspace. Ask its owner to add you again.",
 });

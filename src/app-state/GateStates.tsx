@@ -1,5 +1,6 @@
 // The gate's whole-screen states (AppGate.tsx; the decisions are gate.ts): loading, an error with
-// Retry, a server this app can't use, a paused workspace and an own server that does not answer
+// Retry, a server this app can't use, a paused workspace, a workspace this person is no longer in
+// (US-007a: no Retry, the server has said no) and an own server that does not answer
 // (src/connect/components/NotRunning.tsx, US-006h). Every one a signed-in person can be stuck on
 // offers the way out: Sign out on the hosted server (use-sign-out.ts), Forget this server on an own
 // one, asked first (src/connect/components/ForgetServer.tsx).
@@ -8,12 +9,14 @@ import type { LucideIcon } from 'lucide-react-native';
 import { type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import CirclePause from 'lucide-react-native/icons/circle-pause';
+import UserX from 'lucide-react-native/icons/user-x';
 
 import { ForgetServer } from '../connect/components/ForgetServer';
 import { NotRunning } from '../connect/components/NotRunning';
 import { ownServer } from '../connect/current-server';
 import { FORGET_SERVER_COPY } from '../connect/strings';
 import { useCurrentServer } from '../connect/use-current-server';
+import { SESSION_COPY } from '../session/strings';
 import { useTokens } from '../styles/theme';
 import { Button, EmptyState, ErrorState, LoadingState, Screen, UI_COPY } from '../ui';
 import type { LaunchStep, LaunchView } from './gate';
@@ -111,6 +114,12 @@ export function LaunchState({ view, serverName, onRetry }: LaunchStateProps) {
       );
     case 'paused':
       return <PausedState view={view} serverName={serverName} onRetry={onRetry} />;
+    case 'workspace_lost':
+      return (
+        <GateMessage title={SESSION_COPY.lostTitle} message={view.message} icon={UserX}>
+          <LeaveButton serverName={serverName} />
+        </GateMessage>
+      );
     case 'not_running':
       return <NotRunning server={serverName} onRetry={() => onRetry(view.step)} />;
     default:

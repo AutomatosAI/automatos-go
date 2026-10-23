@@ -6,6 +6,8 @@
 // While the server is http, the unencrypted home network line sits above every screen (US-006h,
 // D-HTTPS): the bar takes the top safe area, and the screens get their own safe-area provider
 // below it, so a screen's top inset starts under the bar and the bar never covers its header.
+// The role stays the server's (US-007a, KC12): useSessionRefresh reads the workspace again on
+// resume and after a refusal, beside the gate, so a paused or lost workspace is re-read too.
 import { Stack } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -13,6 +15,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppGate } from '../../src/app-state/AppGate';
 import { useAppSession } from '../../src/app-state/session';
 import { InsecureNetworkBanner } from '../../src/connect/components/InsecureNetworkBanner';
+import { useSessionRefresh } from '../../src/session/use-session-refresh';
 
 function SignedInScreens() {
   const { server } = useAppSession();
@@ -27,6 +30,7 @@ function SignedInScreens() {
 }
 
 export default function SignedInLayout() {
+  useSessionRefresh();
   return (
     <AppGate>
       <SignedInScreens />

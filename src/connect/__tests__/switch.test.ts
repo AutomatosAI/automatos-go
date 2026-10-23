@@ -38,7 +38,7 @@ async function setup({ kind = 'clerk', paired = null as PairedRecord | null } = 
   const queryClient = createQueryClient();
   queryClient.setQueryData(queryKeys.workspace(), { id: HOSTED_WORKSPACE });
   queryClient.setQueryData(queryKeys.board(), [{ id: 1 }]);
-  await persistQueryClientSave({ queryClient, ...persistOptions(persister, 'owner') });
+  await persistQueryClientSave({ queryClient, ...persistOptions(persister, 'device-1') });
 
   const workspaceIds = createWorkspaceIdRegistry();
   const held = HOSTED ? workspaceIds.forServer(HOSTED) : null;
