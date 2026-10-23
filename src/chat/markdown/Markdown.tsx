@@ -1,13 +1,14 @@
 // Auto's answer as formatted text (OT-C8, decided 23 Oct): lex.ts lexes the markdown (marked, GFM)
 // into blocks once per text, and as a reply streams only the text after its settled blocks, and
-// this draws them on the look's tokens: paragraphs in the thread's Body 1 (14/1.55), headings on
-// the Title scale, lists with their markers (a task item's box ticked or not; nested lists
-// indent), code blocks and tables (their own files), quotes behind a rule in the border token, and
-// a rule as the Divider. No bubble and no box around the words, as the handoff draws Auto's
-// answer. Every block's words stay selectable and carry Report this where it is offered. A settled
-// block is the same object frame after frame and each block view is memoised, so while a reply
-// streams only its last block is drawn again; Markdown itself is memoised, so a saved message is
-// not drawn again while another one streams.
+// this draws them on the look's tokens: paragraphs in the thread's words (16/24, the web's 16 px,
+// D72), headings above them (look.ts headingFace), lists with their markers (a task item's box
+// ticked or not; nested lists indent), code blocks and tables (their own files), quotes behind a
+// rule in the border token, and a rule as the Divider, 12 pt between blocks (6 inside a list
+// item, look.ts blockGap). It is drawn inside Auto's box (AutoMessage). Every block's words stay
+// selectable and carry Report this where it is offered. A settled block is the same object frame
+// after frame and each block view is memoised, so while a reply streams only its last block is
+// drawn again; Markdown itself is memoised, so a saved message is not drawn again while another
+// one streams.
 
 import { memo, useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -21,7 +22,7 @@ import type { Block, ListBlock, QuoteBlock } from './blocks';
 import { CodeBlockView } from './CodeBlockView';
 import { InlineText } from './InlineText';
 import { lexMarkdown, type MarkdownLex } from './lex';
-import { headingTextLevel, listMarker } from './look';
+import { blockGap, headingFace, listMarker } from './look';
 import { TableView } from './TableView';
 
 const QUOTE_RULE = 2;
@@ -46,6 +47,7 @@ function ListView({ list, listDepth, ...shared }: Shared & { readonly list: List
           // a list's items never reorder; a streaming list only adds them
           <View key={index} style={[styles.item, { gap: spacing.space3 }]}>
             <Text
+              variant="thread"
               tone="muted"
               selectable={false}
               style={styles.marker}
@@ -84,18 +86,21 @@ const BlockView = memo(function BlockView({
   const { onLink, report } = shared;
   switch (block.kind) {
     case 'paragraph':
-      return <InlineText spans={block.spans} onLink={onLink} report={report} />;
-    case 'heading':
+      return <InlineText spans={block.spans} variant="thread" onLink={onLink} report={report} />;
+    case 'heading': {
+      const face = headingFace(block.level);
       return (
         <InlineText
           spans={block.spans}
-          variant="title"
-          level={headingTextLevel(block.level)}
+          variant={face.variant}
+          level={face.level}
+          weight={face.weight}
           header
           onLink={onLink}
           report={report}
         />
       );
+    }
     case 'list':
       return <ListView list={block} {...shared} />;
     case 'code':
@@ -112,7 +117,7 @@ const BlockView = memo(function BlockView({
 function BlockList({ blocks, ...shared }: Shared & { readonly blocks: readonly Block[] }) {
   const { spacing } = useTokens();
   return (
-    <View style={{ gap: spacing.space3 }}>
+    <View style={{ gap: spacing[blockGap(shared.listDepth)] }}>
       {blocks.map((block, index) => (
         // blocks never reorder; while a reply streams the last one may change kind (a paragraph
         // that becomes a table), so the kind is part of the key

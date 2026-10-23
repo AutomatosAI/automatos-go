@@ -14,7 +14,7 @@ export function HomeScreen() {
   const { chatId, error, retry } = useHomeChat();
   if (chatId !== undefined) return <ChatScreen chatId={chatId} above={<NeedsStrip />} />;
   return (
-    <ChatFrame header={<HomeHeader working={false} />} above={<NeedsStrip />}>
+    <ChatFrame header={<HomeHeader />} above={<NeedsStrip />}>
       {error ? <ErrorState error={error} onRetry={retry} /> : <LoadingState />}
     </ChatFrame>
   );

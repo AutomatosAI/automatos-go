@@ -1,7 +1,7 @@
 // The thread as rows (US-008c), pure: what MessageList draws for a ThreadState. A saved message is
 // one row (the user's bubble, or Auto's message with its receipts); a live turn is the user's draft
 // and Auto's reply so far (text with narration already taken out by turnReducer, tool lines, the
-// receipts, the limit and attachment notices); then 'Auto is working…' while a turn runs and one
+// receipts, the limit and attachment notices); then 'Auto is thinking' while a turn runs and one
 // notice for a turn that failed, stopped or could not be stopped. A turn the server still runs
 // (being read, or 'working': a read that broke mid-turn, a Stop the server never heard) keeps its
 // running calls running; only a stopped or failed turn reads them 'Stopped: …'. Receipts and tool
@@ -276,7 +276,7 @@ function liveRows(state: ThreadState, cards: PlacedCards, options: ViewOptions):
   return rows.filter(isRow);
 }
 
-/** 'Auto is working…' while a turn runs and its answer has not started (a held-back line aside). */
+/** 'Auto is thinking' while a turn runs and its answer has not started (a held-back line aside). */
 export function isWorking(state: ThreadState): boolean {
   return turnRuns(state) && !streamingText(state.live?.turn.text ?? '').trim();
 }

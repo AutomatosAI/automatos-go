@@ -268,6 +268,28 @@ describe('the type scale', () => {
     expect(sizesOf('mono', 'figure')).toEqual([19, 17, 15]);
   });
 
+  it('sets the chat thread’s words at Geist 16/24, apart from the body levels (D72)', () => {
+    expect(STUDIO_TYPE.thread).toEqual({
+      fontFamily: 'Geist-Regular',
+      fontSize: 16,
+      lineHeight: 24,
+      letterSpacing: 0,
+    });
+  });
+
+  it('sets the headings in Auto’s answers a step above them, Newsreader 500 19 and 17 (D72)', () => {
+    expect(STUDIO_TYPE.threadTitle1).toEqual({
+      fontFamily: 'Newsreader16pt16pt-Medium',
+      fontSize: 19,
+      lineHeight: 21.85,
+      letterSpacing: -0.28,
+    });
+    expect(STUDIO_TYPE.threadTitle2).toMatchObject({
+      fontFamily: 'Newsreader16pt16pt-Medium',
+      fontSize: 17,
+    });
+  });
+
   it('raises the 9-10.5 px mono labels to 11, uppercase and tracked', () => {
     for (const role of ['eyebrow', 'label'] as const) {
       expect(STUDIO_TYPE[role]).toMatchObject({

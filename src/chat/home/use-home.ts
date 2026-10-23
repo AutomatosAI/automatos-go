@@ -1,14 +1,13 @@
-// Home's two reads, wired only (the rules are home.ts's). The home thread (KC4): the newest chat
-// in GET /api/chat/history, read fresh on every visit and kept once chosen; useThread then checks
-// it before reuse (a stale id starts a draft). The header's agents: GET /api/chat/agents. Both
-// families stay in memory (D-CACHE, query-keys.ts).
+// Home's read, wired only (the rules are home.ts's). The home thread (KC4): the newest chat in
+// GET /api/chat/history, read fresh on every visit and kept once chosen; useThread then checks it
+// before reuse (a stale id starts a draft). The family stays in memory (D-CACHE, query-keys.ts).
 
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 
 import { queryKeys } from '../../api/query-keys';
 import { useApiClient } from '../../app-state/session';
-import { fetchAgents, fetchHistory } from '../api';
+import { fetchHistory } from '../api';
 import { keptChatId, newestChatId } from './home';
 
 /** Home needs only the newest chat; the older chats list reads its own pages (US-008g). */
@@ -41,14 +40,4 @@ export function useHomeChat(): HomeChat {
   // a retry in flight shows loading, not the failure it may fix
   const failed = chatId === undefined && !history.isFetching;
   return { chatId, error: failed ? history.error : null, retry };
-}
-
-/** How many agents the workspace has for the header; null until the server answers. */
-export function useAgentCount(): number | null {
-  const client = useApiClient();
-  const agents = useQuery({
-    queryKey: queryKeys.chat.agents(),
-    queryFn: ({ signal }) => fetchAgents(client, signal),
-  });
-  return agents.data?.length ?? null;
 }

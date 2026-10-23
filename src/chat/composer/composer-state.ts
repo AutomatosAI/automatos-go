@@ -1,18 +1,16 @@
-// The composer's state, pure (US-009a; D-COMPOSER, D-AI-LABEL, D-ROLES): what its one round button
-// does (send, stop, or nothing yet), whether the pill takes typing, its placeholder, and the notice
-// above it. Return never sends: it inserts a newline, and the button is the only way to send.
+// The composer's state, pure (US-009a; D-COMPOSER, D-ROLES): what its one round button does (send,
+// stop, or nothing yet), whether the pill takes typing, its placeholder, and the notice above it.
+// Return never sends: it inserts a newline, and the button is the only way to send.
 //
-// The order is the web's. A viewer reads the thread and never writes to it (D17). While the AI label
-// can't be seen every control is off, Stop included (the web's ai-label-fence.tsx), and before its
-// first measurement the composer is held without a notice, so the paused words never flash as a
-// screen opens. A role not yet read offers nothing (roleCan). Then a reply in flight turns the
-// button into Stop while the pill still takes the next message; an upload or a thread still opening
-// holds the send; and a blank message with nothing attached has nothing to send.
+// The order is the web's. A viewer reads the thread and never writes to it (D17); a role not yet
+// read offers nothing (roleCan). Then a reply in flight turns the button into Stop while the pill
+// still takes the next message; an upload or a thread still opening holds the send; and a blank
+// message with nothing attached has nothing to send. The AI label never holds the composer: it is
+// the thread's first row (D73), not a fence on the send.
 
 import type { WorkspaceRole } from '../../api/workspace';
 import { roleCan } from '../../auth/role';
 import { ROLE_COPY } from '../../auth/strings';
-import { AI_LABEL_PAUSED_TEXT } from '../../styles/ai-label-state';
 import { COMPOSER_COPY } from '../strings';
 
 export type ComposerButtonMode = 'send' | 'stop' | 'disabled';
@@ -22,9 +20,6 @@ export type ComposerInput = {
   /** A reply is streaming, or a reopened chat's turn is still in flight (the thread's canStop). */
   readonly streaming: boolean;
   readonly role: WorkspaceRole | null | undefined;
-  readonly aiLabelVisible: boolean;
-  /** false until the label's first measurement is in (useLabelFence); true when omitted. */
-  readonly aiLabelChecked?: boolean;
   /** A file is still uploading: the message waits for it (US-009b). */
   readonly uploading: boolean;
   /** Files uploaded and ready to go with the message (US-009b); none when omitted. */
@@ -33,8 +28,8 @@ export type ComposerInput = {
   readonly loading?: boolean;
 };
 
-/** 'paused' is drawn by the foundation's AiLabelPaused, in the label's fixed colours. */
-export type ComposerNotice = { readonly kind: 'paused' | 'viewer'; readonly text: string };
+/** Why the composer is off, in words: only a viewer's (D17). */
+export type ComposerNotice = { readonly kind: 'viewer'; readonly text: string };
 
 export type ComposerState = {
   readonly buttonMode: ComposerButtonMode;
@@ -43,15 +38,12 @@ export type ComposerState = {
   readonly notice: ComposerNotice | null;
 };
 
-/** How long after the label's first layout a missing measurement counts as hidden (the web's 400). */
-export const LABEL_SETTLE_MS = 400;
-
 const OFF = Object.freeze({ buttonMode: 'disabled', inputEditable: false }) as Pick<
   ComposerState,
   'buttonMode' | 'inputEditable'
 >;
 
-/** The composer switched off, and why: the viewer's words, the paused label's, or none. */
+/** The composer switched off, and why: the viewer's words, or none while the role is unread. */
 function switchedOff(input: ComposerInput): ComposerState | null {
   if (input.role && !roleCan(input.role, 'chat')) {
     return {
@@ -59,11 +51,6 @@ function switchedOff(input: ComposerInput): ComposerState | null {
       placeholder: COMPOSER_COPY.readOnlyPlaceholder,
       notice: { kind: 'viewer', text: ROLE_COPY.viewerReadOnly },
     };
-  }
-  if (!input.aiLabelVisible) {
-    const checked = input.aiLabelChecked ?? true;
-    const notice = checked ? ({ kind: 'paused', text: AI_LABEL_PAUSED_TEXT } as const) : null;
-    return { ...OFF, placeholder: COMPOSER_COPY.placeholder, notice };
   }
   if (!roleCan(input.role, 'chat')) {
     return { ...OFF, placeholder: COMPOSER_COPY.placeholder, notice: null };

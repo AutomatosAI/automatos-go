@@ -33,9 +33,9 @@ Scaffold lifted from the academy app's TestFlight tree.
 Lint guards: `fetch` / `XMLHttpRequest` only in `src/api/**`; `expo/fetch` only in
 `src/api/transport.ts`; never `react-native-webview`; files warn over 400 lines and fail over
 800; functions 50 lines (`.tsx` 150; test callbacks exempt, as on the web), depth 4,
-complexity 10; no colour literals in `src/**` or `app/**` outside `src/styles/tokens/**` and
-`src/styles/ai-label.tsx`; `src/core/*.ts` and `src/core/parity/**` import no React, React
-Native or Expo; `console` only in `src/lib/logger.ts`.
+complexity 10; no colour literals in `src/**` or `app/**` outside `src/styles/tokens/**`;
+`src/core/*.ts` and `src/core/parity/**` import no React, React Native or Expo; `console` only
+in `src/lib/logger.ts`.
 
 CI (`.github/workflows/ci.yml`): jobs `typecheck · lint · test` and
 `expo-doctor · iOS bundle` (names are read by branch protection — do not
@@ -129,13 +129,13 @@ functions < 50 lines, components < 150; pure logic outside React with tests in
 
 ## Terms
 
-| Term               | Meaning                                                                                                |
-| ------------------ | ------------------------------------------------------------------------------------------------------ |
-| **Auto**           | The workspace's AI, a proper noun (never "the assistant"). Labelled "Auto is an AI" by every composer. |
-| **Playbook**       | A reusable, saved routine (never "Recipe").                                                            |
-| **Mission**        | Orchestrated multi-agent work, broken into tasks on the board (never "Workflow" or "Job").             |
-| **Deliverable**    | Something an agent made — a document, image, file (never "Output" or "Artifact" in copy).              |
-| **Command Centre** | Board, Calendar, Questions and Deliverables (the web's "Command Center").                              |
+| Term               | Meaning                                                                                                         |
+| ------------------ | --------------------------------------------------------------------------------------------------------------- |
+| **Auto**           | The workspace's AI, a proper noun (never "the assistant"). Labelled "Auto is an AI" at the top of every thread. |
+| **Playbook**       | A reusable, saved routine (never "Recipe").                                                                     |
+| **Mission**        | Orchestrated multi-agent work, broken into tasks on the board (never "Workflow" or "Job").                      |
+| **Deliverable**    | Something an agent made — a document, image, file (never "Output" or "Artifact" in copy).                       |
+| **Command Centre** | Board, Calendar, Questions and Deliverables (the web's "Command Center").                                       |
 
 ## Never
 

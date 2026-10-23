@@ -21,7 +21,7 @@ import { UI_COPY } from './strings';
 
 // ── Text ────────────────────────────────────────────────────────────────────────────────────
 
-export type TextVariant = 'title' | 'body' | 'mono' | 'eyebrow';
+export type TextVariant = 'title' | 'body' | 'mono' | 'eyebrow' | 'thread';
 export type TextLevel = 1 | 2 | 3 | 4 | 5 | 6;
 export type TextTone =
   'default' | 'muted' | 'subtle' | 'accent' | 'success' | 'info' | 'warning' | 'inverse';
@@ -33,9 +33,20 @@ const FIGURES = ['figure1', 'figure2', 'figure3'] as const;
 const at = <T>(list: readonly T[], level: number): T =>
   list[Math.min(Math.max(Math.trunc(level), 1), list.length) - 1];
 
-/** title and body levels 1–6 are the scale's sizes; mono is the label, or figure 1–3 with a level. */
+function threadRole(level: TextLevel | undefined): TypeRole {
+  if (level === 1) return 'threadTitle1';
+  if (level === 2) return 'threadTitle2';
+  return 'thread';
+}
+
+/**
+ * title and body levels 1–6 are the scale's sizes; mono is the label, or figure 1–3 with a level;
+ * thread is the chat thread's 16/24 (D72), its levels 1 and 2 the headings in Auto's answers (19
+ * and 17 pt serif) and any other level the words.
+ */
 export function textRole(variant: TextVariant, level?: TextLevel): TypeRole {
   if (variant === 'eyebrow') return 'eyebrow';
+  if (variant === 'thread') return threadRole(level);
   if (variant === 'mono') return level === undefined ? 'label' : at(FIGURES, level);
   return at(variant === 'title' ? TITLES : BODIES, level ?? 1);
 }
@@ -285,7 +296,10 @@ export function countPhrase(count: number, forms: PluralForms): string {
   return `${count} ${pluralForm(count, forms)}`;
 }
 
-/** The header's Command Centre button (handoff §1 Header): 36 pt high, a 15 pt icon, 12 pt label. */
+/**
+ * The Command Centre button (handoff §1 Header; since D73 HUD's, A5): 36 pt high, a 15 pt icon,
+ * 12 pt label.
+ */
 export const COMMAND_CENTRE_BUTTON = Object.freeze({
   height: ICON_BUTTON_SIZES.md.box,
   iconSize: 15,

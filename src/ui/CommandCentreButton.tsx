@@ -1,7 +1,8 @@
-// The header's Command Centre button (handoff §1 Header, K5): card ground, 1 pt border, 6 pt radius,
-// 36 pt high; layout-dashboard, 'Command Centre' and the orange CountBadge with the server's one
-// needs-you number (D26, useNeedsYou). It opens the Board. This is the ONE place a header shows the
-// number: home (A2) and the other headers mount this button, never a badge of their own.
+// The Command Centre button (handoff §1 Header, K5): card ground, 1 pt border, 6 pt radius, 36 pt
+// high; layout-dashboard, 'Command Centre' and the orange CountBadge with the server's one needs-you
+// number (D26, useNeedsYou). It opens the Board. Since D73 no Studio header mounts it: home and the
+// chat route carry the number on the menu button and the menu's Command Centre row. Kept for HUD
+// (A5).
 
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet } from 'react-native';

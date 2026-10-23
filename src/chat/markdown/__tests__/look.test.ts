@@ -1,7 +1,8 @@
 // How Auto's markdown is dressed (OT-C8), from the look's tokens only: each mark's face (bold,
 // italic always a bundled italic face, since iOS never slants an upright one; the mono face for
-// code at the text's size, no ground), a link's paint, the heading scale, list markers (a task
-// item's box), the code block's widest line, and table columns sized from their longest line.
+// code at the text's size, no ground), a link's paint, the heading faces a step above the
+// thread's 16 pt words (D72), the gap between blocks (closer inside a list item), list markers (a
+// task item's box), the code block's widest line, and table columns sized from their longest line.
 
 import { describe, expect, it } from 'vitest';
 
@@ -11,12 +12,15 @@ import { STUDIO_TYPE, MIN_TEXT_SIZE, TYPE_SPECS, type TypeRole } from '../../../
 import { MARKDOWN_COPY } from '../../strings';
 import type { Cell } from '../blocks';
 import type { InlineMark, Span } from '../inline';
+import { textFace, textRole } from '../../../ui/variants';
 import {
   CODE_BLOCK_MAX_WIDTH,
   CODE_BLOCK_ROLE,
   TABLE_COLUMNS,
+  STRONG_WEIGHT,
+  blockGap,
   columnWidths,
-  headingTextLevel,
+  headingFace,
   listMarker,
   monoFace,
   spanStyle,
@@ -126,11 +130,53 @@ describe('monoFace', () => {
   });
 });
 
+describe('blockGap', () => {
+  it('sets the answer’s blocks 12 pt apart, and 6 inside a list item, so a sub-list sits with it', () => {
+    expect(blockGap(0)).toBe('space5');
+    expect([1, 2, 3].map(blockGap)).toEqual(['space2', 'space2', 'space2']);
+    const { spacing } = tokensFor('studio', 'dark');
+    expect([spacing[blockGap(0)], spacing[blockGap(1)]]).toEqual([12, 6]);
+  });
+});
+
 describe('headings', () => {
-  it('sit on the thread’s Title scale, h1 largest, h4 to h6 at Title 6', () => {
-    expect([1, 2, 3, 4, 5, 6].map((level) => headingTextLevel(level as 1))).toEqual([
-      3, 4, 5, 6, 6, 6,
+  const levels = [1, 2, 3, 4, 5, 6] as const;
+
+  it('draw h1 and h2 on the thread’s titles, h3 to h6 as the thread’s words at 600 (D72)', () => {
+    expect(levels.map(headingFace)).toEqual([
+      { variant: 'thread', level: 1 },
+      { variant: 'thread', level: 2 },
+      { variant: 'thread', weight: STRONG_WEIGHT },
+      { variant: 'thread', weight: STRONG_WEIGHT },
+      { variant: 'thread', weight: STRONG_WEIGHT },
+      { variant: 'thread', weight: STRONG_WEIGHT },
     ]);
+    expect(STRONG_WEIGHT).toBe(600);
+  });
+
+  it('run h1 > h2 > the thread’s 16 pt words, and h3 is the words in semibold', () => {
+    const size = (level: (typeof levels)[number]) => {
+      const face = headingFace(level);
+      return STUDIO_TYPE[textRole(face.variant, face.level)].fontSize;
+    };
+    expect(size(1)).toBeGreaterThan(size(2));
+    expect(size(2)).toBeGreaterThan(STUDIO_TYPE.thread.fontSize);
+    expect(size(3)).toBe(STUDIO_TYPE.thread.fontSize);
+    // a step above the words, as the web's chat (18 and 16 px serif over 16 px): never a page title
+    expect([size(1), size(2)]).toEqual([19, 17]);
+    const face = (level: 1 | 2) => STUDIO_TYPE[textRole('thread', level)].fontFamily;
+    expect([face(1), face(2)]).toEqual(['Newsreader16pt16pt-Medium', 'Newsreader16pt16pt-Medium']);
+    expect(STUDIO_TYPE.thread.fontSize).toBe(16);
+    expect(textFace(type, 'thread', { weight: 600 }).fontFamily).toBe('Geist-SemiBold');
+  });
+
+  it('keeps a minor heading’s 600 on a run that is not bold (an italic or a link in an h3)', () => {
+    const italic = spanStyle(type, colours, 'thread', ['em'], false, 600);
+    expect(faceNamed(italic?.fontFamily)).toMatchObject({ style: 'italic', weight: 500 });
+    const link = spanStyle(type, colours, 'thread', [], true, 600);
+    expect(link?.fontFamily).toBe('Geist-SemiBold');
+    // without the block's weight a plain link is the role's own face
+    expect(spanStyle(type, colours, 'thread', [], true)?.fontFamily).toBe('Geist-Regular');
   });
 });
 

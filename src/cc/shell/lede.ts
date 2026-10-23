@@ -1,9 +1,9 @@
 // The head's lede and the tabs' figures, pure (handoff §2 Head, D26): '1 agent working, 5 in queue,
 // 6 need your eyes.' The needs clause is the server's needs-you total as served (useNeedsYou, the one
-// number the Command Centre button shows), never recomputed here. The working and queued figures
-// are the board's, counted as the server's activity stats count them (services/activity_service.py
-// at the pinned SHA): distinct agents holding an in-progress ticket, and the tickets in Inbox or
-// Assigned, mission steps included. A source that has not answered leaves its clause out rather
+// number the header's menu button and its Command Centre row show, D73), never recomputed here.
+// The working and queued figures are the board's, counted as the server's activity stats count
+// them (services/activity_service.py at the pinned SHA): distinct agents holding an in-progress
+// ticket, and the tickets in Inbox or Assigned, mission steps included. A source that has not answered leaves its clause out rather
 // than show a 0 it does not know. Tabs: Board = needs-you's total, the server's one number (D26,
 // the web's PRD-252 R5: 'the one Needs-you number sits on Board'), the same figure as the lede's
 // needs clause; Questions = needs-you counts.question (the server's); Calendar and Deliverables

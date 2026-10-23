@@ -9,6 +9,7 @@ import type { ReactNode } from 'react';
 import { Alert, Text as NativeText, type StyleProp, type TextStyle } from 'react-native';
 
 import type { WebLinkTarget } from '../../navigation/web-links';
+import type { FontWeight } from '../../styles/fonts';
 import { useTokens } from '../../styles/theme';
 import type { Colours } from '../../styles/tokens';
 import type { TypeRole, TypeScale } from '../../styles/type';
@@ -24,6 +25,8 @@ type RunContext = {
   readonly type: TypeScale;
   readonly colours: Colours;
   readonly role: TypeRole;
+  /** The block's own weight (a minor heading's 600), kept by a run that is not bold. */
+  readonly weight: FontWeight | undefined;
   readonly onLink: (target: WebLinkTarget) => void;
 };
 
@@ -45,7 +48,8 @@ function follow(link: MarkdownLink, onLink: (target: WebLinkTarget) => void): vo
 function run(span: Span, index: number, context: RunContext): ReactNode {
   if (span.kind === 'break') return '\n';
   const link = span.href === null ? null : markdownLink(span.href);
-  const style = spanStyle(context.type, context.colours, context.role, span.marks, link !== null);
+  const { type, colours, role, weight } = context;
+  const style = spanStyle(type, colours, role, span.marks, link !== null, weight);
   if (style === null) return span.text;
   if (link === null) {
     return (
@@ -72,6 +76,8 @@ export type InlineTextProps = {
   readonly variant?: TextVariant;
   readonly level?: TextLevel;
   readonly tone?: TextTone;
+  /** The block's weight (a minor heading at 600); the role's own by default. */
+  readonly weight?: FontWeight;
   /** A heading: screen readers hear it as one. */
   readonly header?: boolean;
   readonly style?: StyleProp<TextStyle>;
@@ -84,18 +90,20 @@ export function InlineText({
   variant = 'body',
   level,
   tone,
+  weight,
   header = false,
   style,
   onLink,
   report,
 }: InlineTextProps) {
   const { type, colours } = useTokens();
-  const context: RunContext = { type, colours, role: textRole(variant, level), onLink };
+  const context: RunContext = { type, colours, role: textRole(variant, level), weight, onLink };
   return (
     <Text
       variant={variant}
       level={level}
       tone={tone}
+      weight={weight}
       style={style}
       selectable
       accessibilityRole={header ? 'header' : undefined}

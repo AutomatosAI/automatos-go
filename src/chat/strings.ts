@@ -7,6 +7,7 @@
 import type { TurnErrorCode } from '../core/turn-reducer';
 import { WAITING_FOR_YOU, type ToolStatus } from '../core/web/components/play/chat/labels';
 import type { Receipt } from '../core/web/types';
+import { UI_COPY } from '../ui/strings';
 
 /** Words a failed turn shows, and whether asking again can help. */
 export type FailureCopy = { readonly text: string; readonly canRetry: boolean };
@@ -15,16 +16,16 @@ export type FailureCopy = { readonly text: string; readonly canRetry: boolean };
 const LIMIT_TEXT = 'Auto has reached a limit for now. Ask your workspace owner.';
 
 export const CHAT_COPY = Object.freeze({
-  /** The label beside Auto's mark (the handoff's mono 'AUTO'). */
-  autoLabel: 'Auto',
-  autoMark: 'A',
-  /** VoiceOver's name for one of Auto's messages, and for one of the user's. */
+  /** VoiceOver's name for Auto's avatar at the head of one of its messages. */
   autoSaid: 'Auto said',
+  /** VoiceOver's name for one of the user's messages. */
   youSaid: 'You said',
   /** A file the user sent with a message ('Attached: plan.pdf'). */
   attached: 'Attached',
-  /** The working indicator (the handoff's italic 'Auto is working…'). */
-  working: 'Auto is working…',
+  /** The thinking pill's word, as the web's chat shows it while Auto works (D72). */
+  thinking: 'Thinking',
+  /** VoiceOver's words for the thinking pill. */
+  thinkingLabel: 'Auto is thinking',
   /** components/play/chat/receipts.tsx RECEIPTS_TITLE and its tags. */
   receiptsTitle: 'What Auto did',
   /** components/play/chat/tool-lines.tsx TOOL_LINES_LABEL. */
@@ -219,8 +220,7 @@ export const TICKET_COPY = Object.freeze({
 
 /**
  * The composer (D-COMPOSER): the handoff's 'Message Auto' pill and its one round button. A viewer's
- * reason and the paused label's are not here: they are ROLE_COPY.viewerReadOnly (D17) and the
- * vendored AI_LABEL_PAUSED_TEXT.
+ * reason is ROLE_COPY.viewerReadOnly (D17).
  */
 export const COMPOSER_COPY = Object.freeze({
   /** The pill's VoiceOver name and its placeholder (the handoff's aria-label). */
@@ -234,19 +234,18 @@ export const COMPOSER_COPY = Object.freeze({
 });
 
 /**
- * The home's header (the handoff's §1 Header): the wordmark beside the brand mark, the mono line
- * under it ('NORTHWIND · 5 AGENTS', 'NORTHWIND · AUTO IS WORKING' while a turn runs) and the
- * avatar chip that opens Settings.
+ * The header on home and the chat route (D73): the wordmark beside the brand mark, Back, and the one
+ * menu button, whose label carries the needs-you number ('Menu, 13 need you').
  */
 export const HOME_COPY = Object.freeze({
   wordmark: 'automatos',
   brand: 'Automatos',
-  agents: Object.freeze({ one: 'agent', other: 'agents' }),
-  working: 'Auto is working',
-  settings: 'Settings',
   back: 'Back',
-  /** The list button (D28): older chats sit behind it. */
-  olderChats: 'Older chats',
+  menu: 'Menu',
+  /** The menu button's hint, naming the menu's rows (menu.ts menuHint). */
+  menuHint: (rows: string) => `Opens ${rows}`,
+  /** Before the last row's name in the hint: 'New chat, Chats and Settings'. */
+  listAnd: ' and ',
 });
 
 /**
@@ -271,6 +270,15 @@ export const HISTORY_COPY = Object.freeze({
   minutes: (count: number) => `${count} min`,
   hours: (count: number) => `${count} h`,
   yesterday: 'Yesterday',
+});
+
+/** The header's menu (D73, menu.ts MENU_ITEMS): its rows, and the name of a workspace with none. */
+export const MENU_COPY = Object.freeze({
+  newChat: HISTORY_COPY.newChat,
+  chats: 'Chats',
+  commandCentre: UI_COPY.commandCentre,
+  settings: 'Settings',
+  unnamedWorkspace: 'Your workspace',
 });
 
 /**

@@ -33,7 +33,7 @@ const failure = (id: string): StoredMessage => ({
   source: { label: 'Error', origin: 'turn_error', code: 'turn_failed' },
 });
 
-/** A saved exchange, a saved failure, and a turn being written now ('Auto is working…' first). */
+/** A saved exchange, a saved failure, and a turn being written now (the thinking row first). */
 function thread(): ChatRow[] {
   const state = apply(
     opened([

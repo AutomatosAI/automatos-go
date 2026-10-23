@@ -1,4 +1,4 @@
-// Older chats (routes.chats, D28), behind the list button in the home header: every chat of
+// Older chats (routes.chats, D28), behind the header menu's Chats (D73): every chat of
 // either kind, newest activity first, 50 at a time with 'Load more'. A row opens routes.chat(id);
 // 'New chat' opens a draft (routes.chat('new')), which its first message creates. It only wires:
 // the paging is history.ts's, each row's words rows.ts's.

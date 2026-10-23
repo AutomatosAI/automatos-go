@@ -2,7 +2,7 @@
 // the server's needs-you answer, and hand them to the pure modules beside them (dateline.ts,
 // lede.ts, tabs.ts). The board and the calendar are their tabs' own queries (one cache entry each);
 // needs-you is the foundation's useNeedsYou, so the lede's number and the Board tab's figure are the
-// Command Centre button's.
+// header menu's (its button and its Command Centre row, D73).
 // No stream is opened here (D-LIVE).
 
 import { useQuery } from '@tanstack/react-query';

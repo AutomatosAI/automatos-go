@@ -10,6 +10,7 @@
 import { tripletToHex } from '../../core/web/lib/look-kit/hsl';
 import { STUDIO_TYPE } from '../type';
 import { STUDIO_DARK_SOURCE, STUDIO_LIGHT_SOURCE } from './studio-source';
+import { threadPaint } from './thread';
 import type {
   ColourScheme,
   Colours,
@@ -17,6 +18,7 @@ import type {
   ShadowLayer,
   Shadows,
   Spacing,
+  ThreadPaint,
   TokenName,
   Tokens,
 } from './types';
@@ -111,6 +113,13 @@ export const STUDIO_SHADOWS: Shadows = Object.freeze({
   dialog: Object.freeze([layer(18, 45, 0.14)]),
 });
 
+/** The thread's boxes and Auto's avatar (D72); declared above STUDIO_TOKENS, which reads it. */
+export const STUDIO_THREAD: Readonly<Record<ColourScheme, ThreadPaint>> = Object.freeze({
+  light: threadPaint(STUDIO_COLOURS.light, STUDIO_COLOURS.light.onStrong),
+  // the web's white mark in both tones (Dark's on-strong is ink)
+  dark: threadPaint(STUDIO_COLOURS.dark, STUDIO_COLOURS.light.onStrong),
+});
+
 const STUDIO_TOKENS: Readonly<Record<ColourScheme, Tokens>> = Object.freeze({
   light: studio('light'),
   dark: studio('dark'),
@@ -125,6 +134,7 @@ function studio(scheme: ColourScheme): Tokens {
     spacing: STUDIO_SPACING,
     shadows: STUDIO_SHADOWS,
     type: STUDIO_TYPE,
+    thread: STUDIO_THREAD[scheme],
   });
 }
 

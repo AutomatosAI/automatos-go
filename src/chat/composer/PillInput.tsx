@@ -1,5 +1,6 @@
 // The composer's pill (the handoff's 2j input): 42 tall with a 21 pt radius, --background ground and
-// 1 pt border, the field's olive focus ring; it grows with the message up to six lines, then scrolls.
+// 1 pt border, the field's olive focus ring; the words in the thread's 16/24 (D72), as they will
+// read once sent; it grows with the message up to six lines, then scrolls.
 // Multiline, and Return inserts a newline: it never submits (D-COMPOSER). Painted with the
 // foundation's fieldPaint, so it focuses and dims as every text field does.
 // FOUNDATION GAP: src/ui/TextField has no pill shape (6 pt radius, multiline from 80, no style).
@@ -24,7 +25,7 @@ export function PillInput({ value, onChangeText, placeholder, label, editable }:
   const tokens = useTokens();
   const [focused, setFocused] = useState(false);
   const tone = fieldPaint(tokens.colours, { focused, disabled: !editable });
-  const face = textFace(tokens.type, 'body1');
+  const face = textFace(tokens.type, 'thread');
   const metrics = pillMetrics(face.lineHeight);
   return (
     <TextInput

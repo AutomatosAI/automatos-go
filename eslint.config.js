@@ -16,7 +16,7 @@ const MAX_COMPLEXITY = 10;
 
 const TEST_FILES = ['**/__tests__/**', '**/*.test.ts', '**/*.test.tsx'];
 const APP_CODE = ['src/**', 'app/**'];
-const TOKEN_FILES = ['src/styles/tokens/**', 'src/styles/ai-label.tsx'];
+const TOKEN_FILES = ['src/styles/tokens/**'];
 // Hand-written core (K1): src/core/web is vendored, ignored here and checked by sync-core.
 const HAND_WRITTEN_CORE = ['src/core/*.ts', 'src/core/parity/**'];
 

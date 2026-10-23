@@ -1,18 +1,20 @@
-// The composer (US-009a, the handoff's 2j without its chips; D-COMPOSER, D-AI-LABEL, D-ROLES): the
-// foundation's AiLabel, the attached files' chips (US-009b), then a row of the [+] (camera, photo
-// library, files), the 'Message Auto' pill and the 42 pt round ink button, arrow-up to send and a
-// square to stop. Return inserts a newline; only the button sends. No suggestion chips, no Plan
-// toggle (D30), no voice button (A6). composerState decides everything; this only wires: the
-// label's visibility (useLabelFence) gates it, an upload holds the send, and a send hands the
-// trimmed words and the ready files up, then clears the pill and the chips.
+// The composer (US-009a, the handoff's 2j without its chips; D-COMPOSER, D-ROLES): a viewer's
+// notice, the attached files' chips (US-009b), then a row of the [+] (camera, photo library, files),
+// the 'Message Auto' pill and the 42 pt round ink button, arrow-up to send and a square to stop.
+// Return inserts a newline; only the button sends. No suggestion chips, no Plan toggle (D30), no
+// voice button (A6), and no AI label: that is the thread's first row (D73), and nothing about it
+// holds the send. composerState decides everything; this only wires: an upload holds the send, and
+// a send taps lightly (expo-haptics, in the binary since the scaffold), hands the trimmed words and
+// the ready files up, then clears the pill and the chips.
 
+import * as Haptics from 'expo-haptics';
 import ArrowUp from 'lucide-react-native/icons/arrow-up';
 import Square from 'lucide-react-native/icons/square';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import type { WorkspaceRole } from '../../api/workspace';
-import { AiLabel, AiLabelPaused } from '../../styles/ai-label';
+import { logger } from '../../lib/logger';
 import { useTokens } from '../../styles/theme';
 import { IconButton, Text } from '../../ui';
 import { AttachMenu } from '../attachments/AttachMenu';
@@ -22,7 +24,6 @@ import type { ChatFile } from '../request';
 import { COMPOSER_COPY } from '../strings';
 import { composerButton, composerState, outgoingText, type ComposerNotice } from './composer-state';
 import { PillInput } from './PillInput';
-import { useLabelFence } from './use-label-fence';
 
 const NOTICE_LEVEL = 4;
 
@@ -41,9 +42,15 @@ export type ComposerProps = {
 
 const NO_FILES: readonly ChatFile[] = Object.freeze([]);
 
+/** A light tap as the message goes; a phone without haptics just sends. */
+function tapOnSend(): void {
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch((error: unknown) =>
+    logger.warn('send haptic failed', error),
+  );
+}
+
 function Notice({ notice }: { readonly notice: ComposerNotice | null }) {
   if (!notice) return null;
-  if (notice.kind === 'paused') return <AiLabelPaused />;
   return (
     <Text level={NOTICE_LEVEL} tone="muted" accessibilityRole="text">
       {notice.text}
@@ -61,13 +68,10 @@ export function Composer({
 }: ComposerProps) {
   const { colours, spacing } = useTokens();
   const [text, setText] = useState('');
-  const fence = useLabelFence();
   const state = composerState({
     text,
     streaming,
     role,
-    aiLabelVisible: fence.visible,
-    aiLabelChecked: fence.checked,
     uploading: files?.uploading ?? false,
     attachments: files?.ready.length ?? 0,
     loading,
@@ -77,6 +81,7 @@ export function Composer({
     if (state.buttonMode === 'stop') {
       onStop();
     } else if (state.buttonMode === 'send') {
+      tapOnSend();
       onSend(outgoingText(text), files?.ready ?? NO_FILES);
       setText('');
       files?.sent();
@@ -95,7 +100,6 @@ export function Composer({
         },
       ]}
     >
-      <AiLabel track={fence.track} />
       <Notice notice={state.notice} />
       {files ? <AttachmentChips chips={files.chips} onRemove={files.remove} /> : null}
       <View style={[styles.row, { gap: spacing.space3 }]}>

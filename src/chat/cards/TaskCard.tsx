@@ -1,7 +1,9 @@
 // A ticket the reply filed or checked (PRD-238 S6, the web's components/chatbot/task-card.tsx, drawn
 // as the handoff's '#0431: filed to Inbox' with its link button): the mono headline, the serif
 // title, who has it and what it last did, and 'Open on the board →' to the ticket sheet through the
-// foundation's cc.ticket. A ticket whose id is not a board row id shows no link.
+// foundation's cc.ticket. A ticket whose id is not a board row id shows no link. It sits under
+// Auto's box in the thread, so it takes the panel's 10 pt radius as that box and the approval
+// cards do (D72).
 
 import { StyleSheet, View } from 'react-native';
 
@@ -24,7 +26,7 @@ export function TaskCard({ ticket, onLink }: TaskCardProps) {
   const { spacing } = useTokens();
   const { link } = ticket;
   return (
-    <Card padding="space5" style={{ gap: spacing.space2 }}>
+    <Card padding="space5" radius="panel" style={{ gap: spacing.space2 }}>
       <View
         accessible
         accessibilityLabel={ticket.accessibilityLabel}

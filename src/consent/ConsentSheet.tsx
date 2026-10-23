@@ -1,9 +1,9 @@
 // The AI-provider consent sheet (US-007c; D23, KC11): the gate's consent step, shown in place of
 // every (app) screen until this person agrees (app/(app)/_layout.tsx hands it to the gate). The
-// foundation's AI label in its fixed colours, 'Before you talk to Auto', the sentence of what goes
-// to the providers, every provider the server lists by name (or the unlisted note), 'Agree and
-// continue' and ONE way out: Sign out (hosted) or Forget this server, asked first (own). No 'Not
-// now'. Thin wiring: sheet.ts decides the words, use-consent.ts the step.
+// foundation's AI label (one muted caption line), 'Before you talk to Auto', the sentence of what
+// goes to the providers, every provider the server lists by name (or the unlisted note), 'Agree
+// and continue' and ONE way out: Sign out (hosted) or Forget this server, asked first (own). No
+// 'Not now'. Thin wiring: sheet.ts decides the words, use-consent.ts the step.
 
 import { StyleSheet, View } from 'react-native';
 
