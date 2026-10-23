@@ -3,6 +3,7 @@
 // check and says whether a turn is in flight; GET /api/chat/{id}/messages (chat.messages) is the
 // saved list, refetched after every turn, on chat_changed for this chat (the foundation's one live
 // stream, useLiveEvent) and when the app comes back to the foreground (the stream replays nothing).
+// A read that broke mid-turn asks GET /api/chat/{id} again whether the turn runs on (D-STOP).
 // Both families stay in memory (D-CACHE, query-keys.ts); nothing here writes to the phone.
 
 import { skipToken, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -14,12 +15,14 @@ import { isForeground } from '../../api/live-connection';
 import { useLiveEvent } from '../../api/live';
 import { queryKeys } from '../../api/query-keys';
 import { useApiClient } from '../../app-state/session';
+import { logger } from '../../lib/logger';
 import { fetchMessages } from '../api';
 import type { CardOutcome } from '../cards/model';
 import { buildChatRequest, type ChatRequestInput } from '../request';
 import { checkChat, isChatChangedFor } from './live-chat';
 import {
   AWAITING_REPLY_GUARD_MS,
+  awaitsDetachedCheck,
   canSend,
   canStop,
   createThread,
@@ -109,20 +112,54 @@ function useThreadQueries(
   return { loadError: loading ? (check.error ?? saved.error ?? null) : null, retry };
 }
 
+/** Calls `onReturn` each time the app comes back to the foreground; returns the unsubscribe. */
+function onForegroundReturn(onReturn: () => void): () => void {
+  let wasForeground = isForeground(AppState.currentState);
+  const subscription = AppState.addEventListener('change', (next) => {
+    const foreground = isForeground(next);
+    if (foreground && !wasForeground) onReturn();
+    wasForeground = foreground;
+  });
+  return () => subscription.remove();
+}
+
 /** chat_changed for this chat, or a return to the foreground, refetches the saved list. */
 function useThreadRefresh(chatId: string | null, refresh: () => void): void {
   useLiveEvent('chat_changed', (data) => {
     if (isChatChangedFor(chatId, data)) refresh();
   });
+  useEffect(() => onForegroundReturn(refresh), [refresh]);
+}
+
+/**
+ * A read that broke mid-turn (awaitsDetachedCheck; iOS suspends the app) asks GET /api/chat/{id}
+ * whether the turn runs on, once and again on each return to the foreground. No answer (404, 403)
+ * or a failed check leaves the failure as it is.
+ */
+function useDetachedCheck(
+  client: ApiClient,
+  chatId: string | null,
+  dispatch: Dispatch<ThreadAction>,
+): void {
   useEffect(() => {
-    let wasForeground = isForeground(AppState.currentState);
-    const subscription = AppState.addEventListener('change', (next) => {
-      const foreground = isForeground(next);
-      if (foreground && !wasForeground) refresh();
-      wasForeground = foreground;
-    });
-    return () => subscription.remove();
-  }, [refresh]);
+    if (!chatId) return;
+    const controller = new AbortController();
+    const ask = () => {
+      checkChat(client, chatId, controller.signal).then(
+        (thread) => {
+          if (thread && !controller.signal.aborted)
+            dispatch({ type: 'detached', turnInFlight: thread.turnInFlight });
+        },
+        (error: unknown) => logger.debug('[chat] could not ask whether the turn runs on', error),
+      );
+    };
+    ask();
+    const unsubscribe = onForegroundReturn(ask);
+    return () => {
+      controller.abort();
+      unsubscribe();
+    };
+  }, [client, chatId, dispatch]);
 }
 
 /** The web's guard: a detached reply that has not come after five minutes is no longer awaited. */
@@ -168,6 +205,7 @@ export function useThread(cachedId: string | null): ThreadView {
     if (chatId) void queryClient.invalidateQueries({ queryKey: queryKeys.chat.messages(chatId) });
   }, [latest, queryClient]);
   useThreadRefresh(state.chatId, refresh);
+  useDetachedCheck(client, awaitsDetachedCheck(state) ? state.chatId : null, dispatch);
   useAwaitGuard(state.status, dispatch);
   const open = useCallback(
     (chatId: string | null) => {

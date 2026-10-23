@@ -7,8 +7,10 @@
 // never a duplicate); a turn the server failed (an e: line) stays until the next send, so its
 // failure keeps the kit's own words (D-NO-BILLING). The turn runs detached on the server: Stop is a
 // cancel as well as an abort (turn-runner.ts) and leaves the turn's tool calls as they are, so one
-// it cut off reads 'Stopped: …', never done; and a chat reopened mid-turn shows Auto working
-// until chat_changed or a resume brings the reply (web: frontend/lib/chat/hooks.ts, PRD-237 S7).
+// it cut off reads 'Stopped: …', never done; a chat reopened mid-turn shows Auto working until
+// chat_changed or a resume brings the reply (web: frontend/lib/chat/hooks.ts, PRD-237 S7); and a
+// read that broke (iOS suspends the app mid-turn) is a failure only until GET /api/chat/{id} says
+// the turn runs on: then Auto is working, never 'interrupted, Try again' (a second turn).
 // Auto's cards (cards/model.ts) are filed on the thread as frames raise them, with the user's
 // outcome, so they outlive the live turn: the saved reply carries none.
 
@@ -92,6 +94,8 @@ export type ThreadAction =
   | { readonly type: 'named'; readonly chatId: string }
   | { readonly type: 'refetched'; readonly messages: readonly StoredMessage[] }
   | { readonly type: 'gaveUp' }
+  /** GET /api/chat/{id}'s answer after a read broke mid-turn (awaitsDetachedCheck). */
+  | { readonly type: 'detached'; readonly turnInFlight: boolean }
   /** The user acted on a card and the server agreed (or dismissed a suggestion). */
   | { readonly type: 'card'; readonly key: string; readonly outcome: CardOutcome };
 
@@ -104,6 +108,8 @@ type Handlers = { readonly [K in ThreadAction['type']]: Handler<K> };
 
 const SENDABLE: ReadonlySet<ThreadStatus> = new Set(['idle', 'stopped', 'failed']);
 const STOPPABLE: ReadonlySet<ThreadStatus> = new Set(['streaming', 'working']);
+/** A read that broke: the turn may run on without it. Never 'turn': an e: line is the server's. */
+const DETACHABLE: ReadonlySet<ThreadFailure['kind']> = new Set(['stream', 'network']);
 
 /** A cached id starts loading (it is checked first); no id is a draft, ready to send. */
 export function createThread(chatId: string | null): ThreadState {
@@ -123,6 +129,19 @@ export function canSend(state: ThreadState): boolean {
 
 export function canStop(state: ThreadState): boolean {
   return STOPPABLE.has(state.status);
+}
+
+/**
+ * The read of a named chat's turn broke (the network, the stream) and the turn is a detached
+ * producer (D-STOP): until GET /api/chat/{id} answers, it may still be running on the server.
+ */
+export function awaitsDetachedCheck(state: ThreadState): boolean {
+  return (
+    state.status === 'failed' &&
+    state.chatId !== null &&
+    state.failure !== null &&
+    DETACHABLE.has(state.failure.kind)
+  );
 }
 
 /** The saved messages to draw: those a live turn holds back are left out until it retires. */
@@ -295,6 +314,15 @@ function gaveUp(state: ThreadState): ThreadState {
   return state.status === 'working' ? { ...state, status: 'idle', live: null } : state;
 }
 
+/**
+ * The turn whose read broke runs on: Auto is working, the live turn (the draft, the reply so far)
+ * kept until the saved reply retires it. Not in flight: the failure stays, with Try again.
+ */
+function detached(state: ThreadState, action: ActionOf<'detached'>): ThreadState {
+  if (!action.turnInFlight || !awaitsDetachedCheck(state)) return state;
+  return { ...state, status: 'working', failure: null };
+}
+
 function card(state: ThreadState, action: ActionOf<'card'>): ThreadState {
   const cards = settleCard(state.cards, action.key, action.outcome);
   return cards === state.cards ? state : { ...state, cards };
@@ -312,6 +340,7 @@ const HANDLERS: Handlers = {
   named,
   refetched,
   gaveUp,
+  detached,
   card,
 };
 
