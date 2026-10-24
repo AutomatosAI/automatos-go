@@ -22,3 +22,10 @@ export const ROW_ID_PATTERN = /^[1-9][0-9]*$/;
 
 /** A device's digest time, 'HH:MM' on the 24-hour clock (W1 DIGEST_TIME_PATTERN). */
 export const DIGEST_TIME_PATTERN = /^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/;
+
+/** The first element of the signed message (KP6 = W2 K9's canonical array). */
+export const PUSH_SIG_MESSAGE_TAG = 'v2';
+
+/** The freshness window (KP6 = W2 K9): iat at most 7 days old and at most 5 minutes ahead. */
+export const PUSH_SIG_MAX_AGE_SECONDS = 604800;
+export const PUSH_SIG_MAX_FUTURE_SECONDS = 300;
