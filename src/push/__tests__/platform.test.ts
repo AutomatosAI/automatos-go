@@ -34,6 +34,19 @@ const ROOT = path.resolve(__dirname, '../../..');
 const PUSH_DIR = path.join(ROOT, 'src', 'push');
 const PLATFORM_DIR = path.join(PUSH_DIR, 'platform');
 
+/** An import of platform/expo that is not `import type` (a bare import and require included). */
+/** The adapter's module name as an importer writes it: './expo' or '…/platform/expo'. */
+const EXPO_ADAPTER = /^(?:\.\/|.*\/platform\/)expo$/;
+const ADAPTER_PATH = String.raw`(?:\./|[^'"]*/platform/)expo`;
+/** An import of the adapter that is not `import type` (a bare import and require included). */
+const RUNTIME_IMPORT_OF_EXPO_ADAPTER = new RegExp(
+  [
+    String.raw`import\s+(?!type\b)[^;]*?from\s*['"]${ADAPTER_PATH}['"]`,
+    String.raw`import\s*['"]${ADAPTER_PATH}['"]`,
+    String.raw`require\(\s*['"]${ADAPTER_PATH}['"]`,
+  ].join('|'),
+);
+
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
@@ -327,9 +340,20 @@ describe('read from the source', () => {
     expect(importers).toEqual([path.join('src', 'push', 'platform', 'expo.ts')]);
   });
 
-  it('no test imports platform/expo', () => {
+  it('no test and no other platform module loads platform/expo (a type-only import is erased)', () => {
     const tests = appSources.filter(({ file }) => file.includes(`${path.sep}__tests__${path.sep}`));
-    expect(tests.filter(({ text }) => importsOf(text, /platform\/expo$/).length > 0)).toEqual([]);
+    const pure = sources(PLATFORM_DIR).filter(({ file }) => !file.endsWith(`${path.sep}expo.ts`));
+    const loads = [...tests, ...pure].filter(({ text }) =>
+      RUNTIME_IMPORT_OF_EXPO_ADAPTER.test(text),
+    );
+    expect(loads.map(({ file }) => relative(file))).toEqual([]);
+    const typeOnly = [...tests, ...pure].filter(
+      ({ text }) => importsOf(text, EXPO_ADAPTER).length > 0,
+    );
+    expect(typeOnly.map(({ file }) => relative(file)).sort()).toEqual([
+      path.join('src', 'push', '__tests__', 'platform-fixtures.ts'),
+      path.join('src', 'push', 'platform', 'setup.ts'),
+    ]);
   });
 
   it('the other platform modules import no react, react-native or expo-*', () => {

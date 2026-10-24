@@ -7,7 +7,7 @@
 import { logger } from '../../lib/logger';
 import { PUSH_CATEGORIES } from './categories';
 import { PUSH_CHANNELS } from './channels';
-import type { NotificationsPort } from './port';
+import type { NotificationsPort } from './expo';
 
 export type SetupOutcome = Readonly<{
   ok: boolean;

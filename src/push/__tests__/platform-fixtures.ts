@@ -2,7 +2,7 @@
 // order (a method a test did not stub records its name and throws), the installed module's Android
 // numbers, and the exact actions and calls US-014b registers (KP7, KP20).
 
-import type { NotificationsPort } from '../platform/port';
+import type { NotificationsPort } from '../platform/expo';
 
 /** expo-notifications 0.32.17's numbers (NotificationChannelManager.types.d.ts). */
 export const IMPORTANCE = { HIGH: 6, DEFAULT: 5 } as const;
