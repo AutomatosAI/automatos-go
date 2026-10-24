@@ -128,3 +128,8 @@ export const STATUS_WORDS = Object.freeze({
   offline: 'Offline',
   running: 'Running',
 });
+
+/** Auto on screen (US-017b): VoiceOver hears his name and what he is doing (the vendored caption). */
+export const MASCOT_COPY = Object.freeze({
+  label: (caption: string) => `Auto, ${caption}`,
+});
