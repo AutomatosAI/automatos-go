@@ -71,3 +71,13 @@ export const LANGUAGE_NAMES: Readonly<Record<string, string>> = Object.freeze({
   vi: 'Vietnamese',
   zh: 'Chinese',
 });
+
+/**
+ * What the voice says in place of what speech cannot carry (toSpeakable, US-019d): a code block, a
+ * table, a URL. The words are on screen in the chat; the voice only points there.
+ */
+export const SPOKEN_COPY = Object.freeze({
+  code: "There's code in the chat.",
+  table: "There's a table in the chat.",
+  link: 'a link',
+});
