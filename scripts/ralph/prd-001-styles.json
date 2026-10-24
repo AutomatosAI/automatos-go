@@ -961,13 +961,13 @@
       "title": "Play's shelf: the paper thumbnails' titles never draw Instrument Serif under 19 pt",
       "description": "Review finding (MEDIUM, US-016d / D-A11Y: 'Play's display face under 19 pt'). src/styles/homes/ShelfCards.tsx:33 builds the paper title as { ...style.type.display('cardSm'), fontSize: sheet.title, lineHeight: sheet.title }: display('cardSm') is Instrument Serif Italic at 19 for the Editorial type looks (Ember, Daylight), and the override then sets 16 on the newest card's paper (src/styles/homes/play-shelf.ts:44 heroPaper.title) and 11 on every grid tile's paper (play-shelf.ts:48 tilePaper.title). That bypasses play-type.ts:91-96 displayFace, the rule that drops Instrument Serif below 19 to Geist 600. It is the only fontSize override in the wave's added lines.",
       "acceptanceCriteria": [
-        "Cause: a fontSize override after display('cardSm') skips the type's under-19 fallback (ShelfCards.tsx:33)",
-        "Change: the paper title's face comes from the style's type at the paper's size through the same rule displayFace applies (Instrument Serif only at 19 pt and above, else Geist 600), computed in pure code (play-shelf.ts or the Play type) rather than by overriding fontSize in the component; sizes stay 16 and 11 (the 11 pt floor holds)",
-        "Test (src/styles/homes/__tests__/shelf.test.ts or src/styles/typeface/__tests__/scale.test.ts): for every Play type look, the hero paper title (16) and tile paper title (11) faces are never Instrument Serif; at >= 19 the look's display face is kept; no size under 11",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes",
-        "bash scripts/ralph/acceptance-prd001-styles.sh --no-ci passes"
+        "Cause: a fontSize override after display('cardSm') skips the type's under-19 fallback (ShelfCards.tsx:33) → DONE — ad748b9: confirmed — Paper spread display('cardSm') (Instrument Serif Italic 19 at the serif look) then set fontSize 16 / 11, skipping displayFace's under-19 fallback",
+        "Change: the paper title's face comes from the style's type at the paper's size through the same rule displayFace applies (Instrument Serif only at 19 pt and above, else Geist 600), computed in pure code (play-shelf.ts or the Play type) rather than by overriding fontSize in the component; sizes stay 16 and 11 (the 11 pt floor holds) → DONE — ad748b9: play-type.ts exports playDisplayAt(font, slot, size) (slot leading, displayFace's rule: Instrument Serif only at >= 19, else Geist 600) and display() goes through it; play-shelf.ts paperTitle(font, paper) built once per type look at heroPaper.title 16 and tilePaper.title 11 (plus paperSheet); ShelfCards.tsx Paper reads paperTitle(style.playLook.font, size), no fontSize override; sizes stay 16 and 11",
+        "Test (src/styles/homes/__tests__/shelf.test.ts or src/styles/typeface/__tests__/scale.test.ts): for every Play type look, the hero paper title (16) and tile paper title (11) faces are never Instrument Serif; at >= 19 the look's display face is kept; no size under 11 → DONE — ad748b9: shelf.test.ts 'the papers' titles' (5 tests): 16 / 11 at leading 1 for every type look; never InstrumentSerif-Italic for any type look or preset; serif (Ember, Daylight) falls to Geist-SemiBold, clean / bric / round keep their face; at 19, 24, 44 the look's display face is kept and playDisplayAt at the slot's size equals display('cardSm'); a size under 11 is held at 11",
+        "npm run typecheck passes → DONE — npm run typecheck: tsc --noEmit clean",
+        "npm run lint passes (0 errors) → DONE — npm run lint: 0 errors (2 pre-existing line-count warnings, src/cc/strings.ts and src/styles/strings.ts, untouched)",
+        "npx vitest run passes → DONE — npx vitest run: 268 files, 4519 tests passed",
+        "bash scripts/ralph/acceptance-prd001-styles.sh --no-ci passes → DONE — acceptance --no-ci: every check passes except 'every story of phase <= 2 passes' and 'every AC carries a DONE mark', red only for the open review stories RVW-6..7 (to pass once the last one is done)"
       ],
       "files": [
         "src/styles/homes/ShelfCards.tsx",
@@ -977,8 +977,8 @@
         "src/styles/typeface/__tests__/scale.test.ts"
       ],
       "priority": 27,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "DONE ad748b9: the shelf's paper titles take Play's type at the sheet's size through displayFace's under-19 rule (pure playDisplayAt in play-type.ts, paperTitle in play-shelf.ts): Instrument Serif falls to Geist 600 at 16 and 11; no seam edit, no foundation gap"
     },
     {
       "id": "P001S-RVW-6",
