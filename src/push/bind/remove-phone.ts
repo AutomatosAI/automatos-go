@@ -58,16 +58,21 @@ export async function recordedDeviceId(
   }
 }
 
+/** A DELETE that failed: a row already gone (404) counts as removed; any other failure is logged by kind. */
+export function goneAlready(error: unknown): boolean {
+  if (isApiError(error) && error.kind === 'not_found') return true;
+  logger.warn('[push] could not remove this phone from the server', {
+    kind: isApiError(error) ? error.kind : 'unknown',
+  });
+  return false;
+}
+
 async function revoked(deps: RemovalDeps, deviceId: string): Promise<boolean> {
   try {
     await deps.revoke(deviceId);
     return true;
   } catch (error) {
-    if (isApiError(error) && error.kind === 'not_found') return true;
-    logger.warn('[push] could not remove this phone from the server', {
-      kind: isApiError(error) ? error.kind : 'unknown',
-    });
-    return false;
+    return goneAlready(error);
   }
 }
 

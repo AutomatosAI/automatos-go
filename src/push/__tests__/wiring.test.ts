@@ -18,7 +18,7 @@ import {
   type PushSession,
 } from '../session';
 import { pushWiringFor, reportingRegistrar, type PushNatives } from '../wiring';
-import { WS } from './data-fixtures';
+import { DEVICE_ID, WS } from './data-fixtures';
 import { memoryStorage, nodeSha256 } from './handler-fixtures';
 import {
   GRANTED,
@@ -28,6 +28,7 @@ import {
   UNDETERMINED,
   facts,
   setup,
+  storedRecord,
 } from './registration-fixtures';
 
 // The registration fixtures build the real key store over a fake SecureStore.
@@ -219,5 +220,17 @@ describe('pushWiringFor', () => {
     expect(outcomes).toEqual([outcome]);
     expect(env.api.routes()).toEqual([]);
     expect(env.device.state.tokenReads).toBe(0);
+  });
+
+  it('binds the leave and the leftover check to this server, workspace and client (US-014i)', async () => {
+    const { wiring, env } = wired();
+    await env.keys.store.save(storedRecord());
+    expect(await wiring.clearLeftover()).toBe(false);
+    await wiring.leave();
+    expect(env.api.routes()).toEqual([`DELETE /api/v1/mobile/devices/${DEVICE_ID}`]);
+    expect(await env.keys.store.load()).toBeNull();
+    // the registrar is closed: a resume after the leave sends nothing
+    await wiring.registrar.run();
+    expect(env.api.calls).toHaveLength(1);
   });
 });

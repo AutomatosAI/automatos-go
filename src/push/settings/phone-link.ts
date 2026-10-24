@@ -4,9 +4,12 @@
 // small store: PushRoot attaches what the screen may call while it is mounted and detaches it on
 // unmount (sign-out, Forget this server); a later attach wins, and a stale detach changes nothing.
 // With nothing attached the screen says it is checking and offers no button, and Account offers no
-// Remove this phone (US-014h, KP16: the link carries the session's removal). Pure: no React.
+// Remove this phone (US-014h, KP16: the link carries the session's removal). The link also carries
+// the session's leave, which Sign out and the connect kit's server switch run before the provider
+// is cleared (US-014i, bind/before-leaving.ts). Pure: no React.
 
 import { logger } from '../../lib/logger';
+import type { PushLeave } from '../bind/leave';
 import type { PhoneRemoval } from '../bind/remove-phone';
 import type { PermissionState } from '../registration/state';
 import type { RegisterOptions, RegistrationOutcome } from '../registration/register';
@@ -19,6 +22,8 @@ export type PhoneLink = Readonly<{
   askPermission: () => Promise<PermissionState>;
   /** Remove this phone, bound to the session's registrar, client and push record (KP16). */
   removal: PhoneRemoval;
+  /** Push cleared before the session is left: sign-out, Forget this server, a new pairing. */
+  leave: PushLeave;
 }>;
 
 export type PhoneLinkStore = Readonly<{

@@ -118,9 +118,14 @@ export function updateDevice(
  * Revokes this phone's own row. W1 answers the revoked row, which nothing reads: the body is
  * discarded, so a 2xx is the whole answer and a row this version cannot parse never fails it.
  */
-export function revokeDevice(client: ApiClient, deviceId: string): Promise<void> {
+export function revokeDevice(
+  client: ApiClient,
+  deviceId: string,
+  signal?: AbortSignal,
+): Promise<void> {
   return client.request(PUSH_ROUTES.devices.revoke, {
     params: { device_id: checked(deviceId, isUuid, 'A device id') },
+    signal,
   });
 }
 

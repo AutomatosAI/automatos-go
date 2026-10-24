@@ -4,8 +4,9 @@
 // launch, resume, a new token, the in-context ask, Settings → Notifications — reports its outcome
 // to PushRoot through reportingRegistrar, so the ask sees the status the screen just changed. Remove
 // this phone (KP16) runs over that same registrar, the session's client and its teardown, with the
-// removal hold the registrar reads. Pure over the natives (natives.ts and PushRoot bind the app's;
-// tests pass fakes).
+// removal hold the registrar reads; so do the session's leave (sign-out, Forget this server, a new
+// pairing: bind/leave.ts, US-014i), its expiry handler and the leftover check at the session's
+// start. Pure over the natives (natives.ts and PushRoot bind the app's; tests pass fakes).
 
 import type { QueryClient } from '@tanstack/react-query';
 
@@ -14,6 +15,7 @@ import type { WorkspaceRole } from '../api/workspace';
 import { logger } from '../lib/logger';
 import type { KeyValueStorage } from '../storage/encrypted-storage';
 import { revokeDevice } from './api';
+import { clearLeftover, onSessionExpired, pushLeaveFor, type PushLeave } from './bind/leave';
 import { phoneRemovalFor, type PhoneRemoval } from './bind/remove-phone';
 import { MS_PER_SECOND } from './config';
 import { handledStoreOver, type HandledStore } from './inbound/handled-store';
@@ -71,6 +73,12 @@ export type PushWiring = Readonly<{
   teardown: TeardownDeps;
   /** Remove this phone, for a hosted phone's Account (through the phone link). */
   removal: PhoneRemoval;
+  /** Push cleared before the session is left (through the phone link). */
+  leave: PushLeave;
+  /** The provider's onExpired: an own server leaves push, a hosted session clears what is shown. */
+  expired: () => Promise<void>;
+  /** At the session's start, a push record of another server is cleared. */
+  clearLeftover: () => Promise<boolean>;
 }>;
 
 /** The registrar, with each run's outcome reported; a report that throws changes nothing. */
@@ -134,16 +142,40 @@ function responsesFor(
 
 type RemovalParts = Readonly<{ hold: RemovalHold; registrar: Registrar; teardown: TeardownDeps }>;
 
+function scopeOf(input: WiringInput) {
+  return Object.freeze({
+    serverOrigin: input.session.serverOrigin,
+    workspaceId: input.workspaceId,
+  });
+}
+
 /** Remove this phone in this session's server and workspace (KP16). */
 function removalFor(input: WiringInput, natives: PushNatives, parts: RemovalParts): PhoneRemoval {
   return phoneRemovalFor({
     ...parts,
-    scope: Object.freeze({
-      serverOrigin: input.session.serverOrigin,
-      workspaceId: input.workspaceId,
-    }),
+    scope: scopeOf(input),
     store: natives.store,
     revoke: (deviceId) => revokeDevice(input.client, deviceId),
+  });
+}
+
+type LeavingParts = Readonly<{ registrar: Registrar; teardown: TeardownDeps }>;
+
+/** The session's leave, its expiry handler and the leftover check (bind/leave.ts, US-014i). */
+function leavingFor(input: WiringInput, natives: PushNatives, parts: LeavingParts) {
+  const { source, serverOrigin } = input.session;
+  const leave = pushLeaveFor({
+    ...parts,
+    source,
+    scope: scopeOf(input),
+    store: natives.store,
+    revoke: (deviceId, signal) => revokeDevice(input.client, deviceId, signal),
+  });
+  return Object.freeze({
+    leave,
+    expired: () => onSessionExpired({ source, leave, port: natives.port }),
+    clearLeftover: () =>
+      clearLeftover({ serverOrigin, store: natives.store, teardown: parts.teardown }),
   });
 }
 
@@ -176,5 +208,6 @@ export function pushWiringFor(input: WiringInput, natives: PushNatives): PushWir
     prompt,
     teardown,
     removal: removalFor(input, natives, { hold, registrar, teardown }),
+    ...leavingFor(input, natives, { registrar, teardown }),
   });
 }

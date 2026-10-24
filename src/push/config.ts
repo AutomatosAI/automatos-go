@@ -102,6 +102,12 @@ export const PUSH_DESTINATION = 'push';
 /** W1's device status a PATCH (the digest time) is taken for: pending and revoked rows refuse it. */
 export const ACTIVE_DEVICE_STATUS = 'active';
 
+/**
+ * Leaving the hosted server (KP16, W2 US-009): the DELETE of this phone's row waits at most this long
+ * for the server, then the phone is cleared and signed out anyway (best effort).
+ */
+export const SIGN_OUT_DELETE_TIMEOUT_MS = 4000;
+
 /** The MMKV item of the handled response keys (dedupe.ts's stored form: keys only, never a payload). */
 export const HANDLED_KEYS_ITEM = 'push.handled-responses.v1';
 

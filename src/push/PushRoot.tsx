@@ -1,14 +1,18 @@
 // Push for the signed-in session, in ONE mount (PRD-001 §4.8, KP3): the shell mounts <PushRoot
 // session={…}/> once, under the gate's ready session (US-014h). On mount it sets the notification
-// platform up (channels, then categories) and then runs the session's one registrar, which runs
+// platform up (channels, then categories), clears a push record of another server (one forgotten
+// while push was not mounted, US-014i) and then runs the session's one registrar, which runs
 // again on each resume (the person may have changed the permission in the phone's Settings), on a
 // new token and after the in-context ask; it sets the foreground handler (receive.ts: verified
 // within FOREGROUND_VERIFY_TIMEOUT_MS, or nothing is shown), handles notification responses
-// (useNotificationResponses), keeps the badge on the needs-you number, and attaches the registrar
-// and Remove this phone for Settings (the phone link). Unmount takes every listener, the handler
-// and the link away and closes the registrar. It renders only the in-context ask, never while the
-// person's Remove this phone holds (promptStatusOf). Push is wired again only when the session's
-// server or push gates change (sessionKeyOf), never for a rebuilt object.
+// (useNotificationResponses), keeps the badge on the needs-you number, and attaches the registrar,
+// Remove this phone and the session's leave (sign-out, Forget this server, a new pairing: US-014i)
+// to the phone link. It listens to the provider's onExpired: an own server that ended the pairing
+// leaves push, a hosted session that expired clears the badge and the delivered notifications.
+// Unmount takes every listener, the handler and the link away and closes the registrar. It renders
+// only the in-context ask, never while the person's Remove this phone holds (promptStatusOf). Push
+// is wired again only when the session's server or push gates change (sessionKeyOf), never for a
+// rebuilt object.
 
 import { useQueryClient } from '@tanstack/react-query';
 import { usePathname } from 'expo-router';
@@ -98,23 +102,38 @@ function listenSafely(listen: () => ListenerHandle, what: string): ListenerHandl
   }
 }
 
-/** Setup, then the launch run; again on resume and on a new token. Settings reads the registrar. */
-function useRegistration({ registrar, askPermission, removal }: PushWiring): void {
+/** Setup and a leftover cleared, then the launch run; again on resume and on a new token. */
+function useRegistration(wiring: PushWiring): void {
+  const { registrar, askPermission, removal, leave, clearLeftover } = wiring;
   useEffect(() => {
     const { port } = NATIVES;
-    void setupNotificationPlatform(port, Platform.OS).then(() => registrar.run());
+    void setupNotificationPlatform(port, Platform.OS)
+      .then(clearLeftover)
+      .then(() => registrar.run());
     const resume = AppState.addEventListener('change', (state) => {
       if (state === 'active') void registrar.run();
     });
     const token = listenSafely(() => watchPushToken(port, registrar), 'a new push token');
-    const detach = phoneLinks.attach({ registrar, askPermission, removal });
+    const detach = phoneLinks.attach({ registrar, askPermission, removal, leave });
     return () => {
       detach();
       token.remove();
       resume.remove();
       void registrar.close();
     };
-  }, [registrar, askPermission, removal]);
+  }, [registrar, askPermission, removal, leave, clearLeftover]);
+}
+
+/** The session the server or Clerk no longer accepts (the foundation's onExpired). */
+function useExpiry(provider: PushSession['provider'], { expired }: PushWiring): void {
+  useEffect(() => {
+    try {
+      return provider.onExpired(() => void expired());
+    } catch {
+      logger.warn('[push] could not listen for an ended session');
+      return undefined;
+    }
+  }, [provider, expired]);
 }
 
 /** While the app is open, a push shows only once it verifies (receive.ts). */
@@ -154,6 +173,7 @@ export function PushRoot({ session }: PushRootProps) {
   );
   const wiring = useWiring(session, onOutcome);
   useRegistration(wiring);
+  useExpiry(session.provider, wiring);
   useForegroundHandler(wiring);
   useNotificationResponses(wiring.responses);
   useAppBadge(NATIVES.port);
