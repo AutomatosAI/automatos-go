@@ -78,6 +78,95 @@ export const LOOK_SYNC_COPY = Object.freeze({
 });
 
 /**
+ * Play's look page 'Make it yours' (US-017e, 'Automatos Play Looks.dc.html' and the web's
+ * looks-screen.tsx, look-options.tsx, look-manager.tsx at the pin): the heading, each knob's name
+ * as the design writes it, what VoiceOver hears for an option ('Molten accent, selected') and the
+ * glow ('24 percent'), the preview's sample words, the looks row, the sheet a long press on a
+ * saved look opens, and why a change was refused.
+ */
+export const PLAY_LOOK_COPY = Object.freeze({
+  heading: 'Make it yours.',
+  lead: 'Pick a look, then tweak it. Auto changes with it.',
+  back: 'Back',
+  /** The status line of a look changed since it was picked: 'Ember · edited'. */
+  edited: (name: string) => `${name} · edited`,
+  knobs: Object.freeze({
+    accent: 'Accent',
+    ground: 'Background',
+    font: 'Type',
+    shell: "Auto's shell",
+    light: "Auto's light · eyes + ring",
+    glow: 'Glow',
+  }),
+  /** The accent's heading names the one picked: 'Accent · Molten'. */
+  accentTitle: (name: string) => `Accent · ${name}`,
+  /** What each option is, after its name, for VoiceOver: 'Molten accent'. */
+  kinds: Object.freeze({
+    accent: 'accent',
+    ground: 'background',
+    font: 'type',
+    shell: 'shell',
+    light: 'light',
+  }),
+  /** VoiceOver's name for an option: 'Molten accent, selected'. */
+  option: (name: string, kind: string, selected: boolean) =>
+    selected ? `${name} ${kind}, selected` : `${name} ${kind}`,
+  glowOff: 'Off',
+  glowShown: (glow: number) => `${glow}%`,
+  /** The glow in words for VoiceOver; at the cap, why it stops there. */
+  glowWords: (glow: number) => `${glow} percent`,
+  glowAtCap: (glow: number) => `${glow} percent, the most this look keeps readable`,
+  looks: 'Looks',
+  /** VoiceOver's name for a look in the row: 'Ember, Warm, editorial, selected'. */
+  look: (name: string, sub: string, selected: boolean) =>
+    selected ? `${name}, ${sub}, selected` : `${name}, ${sub}`,
+  lookHint: 'Touch and hold to rename, duplicate or delete',
+  /** The row's type sample, set in each look's own face. */
+  sample: 'Aa',
+  saveAsNew: 'Save as new look',
+  reset: 'Reset',
+  resetHint: 'Back to the look you picked',
+  /** A look made with Save as new look: 'My look 2', under it 'Your look' (never a time). */
+  savedName: (n: number) => `My look ${n}`,
+  savedSub: 'Your look',
+  /** A duplicate: 'Ember copy', then 'Ember copy 2'. */
+  copyWord: 'copy',
+  notKept: "This phone couldn't keep that change. It lasts until Automatos Go closes.",
+  preview: Object.freeze({
+    label: (name: string) => `Preview of ${name}: Auto, a message, what he did and a report`,
+    you: 'Can you make me a shortlist under £700?',
+    searched: 'Searched the web · 5 results',
+    report: 'Made a report',
+    reply: 'Three laptops make the cut. My pick is the ',
+    pick: 'ASUS Vivobook S 14',
+    replyEnd: '.',
+    title: 'Laptop shortlist',
+  }),
+  sheet: Object.freeze({
+    rename: 'Rename',
+    duplicate: 'Duplicate',
+    delete: 'Delete',
+    newName: 'New name',
+    saveName: 'Save name',
+    cancel: 'Cancel',
+    confirmDelete: (name: string) => `Delete ${name}? This can't be undone.`,
+    deleteLook: 'Delete look',
+    keep: 'Keep it',
+  }),
+  /** The toast after a delete: '… Play is back to Ember.' when the look deleted was the one on. */
+  deleted: (name: string, backTo: string | null) =>
+    backTo === null ? `Deleted ${name}.` : `Deleted ${name}. Play is back to ${backTo}.`,
+  duplicated: (name: string) => `Duplicated as ${name}.`,
+  renamed: (name: string) => `Renamed to ${name}.`,
+  refusals: Object.freeze({
+    preset: "A preset can't be changed. Save it as a new look instead.",
+    'not-saved': "That look isn't one of your saved looks any more.",
+    full: 'There’s no room for another look. Delete one to save another.',
+    name: 'A name is 1 to 40 characters on one line.',
+  }),
+});
+
+/**
  * The live previews on the picker's cards (US-016h): sample words in each style's own layout,
  * hidden from VoiceOver (the card says its name and state). Play's tool line and HUD's chip take
  * their words from the vendored labels and captions, so they read as the real screens do.
