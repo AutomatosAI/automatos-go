@@ -29,3 +29,22 @@ export const PUSH_SIG_MESSAGE_TAG = 'v2';
 /** The freshness window (KP6 = W2 K9): iat at most 7 days old and at most 5 minutes ahead. */
 export const PUSH_SIG_MAX_AGE_SECONDS = 604800;
 export const PUSH_SIG_MAX_FUTURE_SECONDS = 300;
+
+/** The actions a notification offers (KP7 = W2 K9's categories): no Approve, no option buttons. */
+export const REPLY_ACTION_ID = 'reply';
+export const OPEN_ACTION_ID = 'open';
+
+/**
+ * A tap on the notification itself: expo-notifications 0.32.17's DEFAULT_ACTION_IDENTIFIER
+ * (build/NotificationsEmitter.d.ts), named here so the pure modules never import the native one.
+ */
+export const DEFAULT_ACTION_ID = 'expo.modules.notifications.actions.DEFAULT';
+
+/** The link_type of a question push: its grant_id is what a reply answers (W2 US-011a). */
+export const QUESTION_LINK_TYPE = 'question';
+
+/** A reply from the notification is trimmed and cut to this many characters (code points). */
+export const ANSWER_MAX_CHARS = 4000;
+
+/** The handled responses remembered across launches: keys only, the oldest dropped first. */
+export const HANDLED_KEYS_MAX = 50;
