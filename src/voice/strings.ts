@@ -23,6 +23,21 @@ export const RECOGNITION_COPY: Readonly<Record<RecognitionCopyKey, (language: st
 export const DOWNLOAD_ACTION = 'Download';
 
 /**
+ * Microphone and speech recognition permissions (US-019c), asked only from a press. micOff and
+ * speechOff name the permission that is off (speech recognition: iOS quick-ask only) with
+ * openSettings; restricted (Screen Time) has no button. ready follows a first-time grant: the
+ * prompt took the hold that raised it (the reducer's 'ready' message).
+ */
+export const PERMISSION_COPY = Object.freeze({
+  micOff: "Automatos Go can't hear you: the microphone is off for it. Turn it on in Settings.",
+  speechOff:
+    "Automatos Go can't hear you: speech recognition is off for it. Turn it on in Settings.",
+  restricted: 'The microphone or speech recognition is restricted on this phone (Screen Time).',
+  openSettings: 'Open Settings',
+  ready: 'Ready. Hold to talk.',
+});
+
+/**
  * Languages by name, keyed by the locale's language subtag ('en' for 'en-GB'), for the copy above.
  * A language not listed is named by its locale tag.
  */
