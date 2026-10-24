@@ -853,6 +853,186 @@
       "priority": 22,
       "passes": true,
       "notes": "Needs A2 and A3 merged (KS3). Edits to A2/A3 files are dress fixes only: no behaviour change, no new feature; each one named 'SEAM EDIT: <path> — <why>' (gate-enforced). | US-016l DONE 24 Oct (0503ee9): src/styles/dress/cc-dress.ts (pure: shellTitle, shellDress, shellTabPaint, liveGlyphStatus, markToken, shellGround, roundCorner, dressedStripCell) and use-cc-dress.ts; cc-dress.test.ts + cc-fixtures.ts; HudTopBar's nested '//' repeats the brand face (A5's own file). SEAM EDIT: src/cc/shell/Head.tsx — the title through useShellTitle (Play's screen slot, HUD's brand line with '//' in the accent; VoiceOver still hears 'Command Centre'). SEAM EDIT: src/cc/shell/TabStrip.tsx — the tab word's face, the rule's token, the paddings from useShellDress (HUD's Geist Mono tabs 16 in, Play's and HUD's accent bar) and the strip's ground clear under Play and HUD (shellGround). SEAM EDIT: src/cc/shell/LiveWord.tsx — HUD draws the stream state as StatusPip's glyph + WORD; the dot and its pulse unchanged for Studio and Play. SEAM EDIT: src/cc/shell/TopBar.tsx — the back control's ghost paint is dressedButtonPaint and its label the dress's control label (Studio's identical). SEAM EDIT: src/cc/calendar/DayStrip.tsx — the cell's paint and border width from dressedStripCell (Studio's exactly stripCellPaint's at 1 pt). SEAM EDIT: app/(app)/cc/_layout.tsx — the stack's contentStyle ground is shellGround: --background in Studio, clear under Play and HUD so the Screen's glow and grid show under the tab's screen. SEAM EDIT: src/chat/composer/PillInput.tsx — the pill's corners are roundCorner(21, radii.full): 21 in Studio and Play, square in HUD's TYPE sheet. No FOUNDATION GAP. Choices: the top bar keeps its --secondary chrome in every style (the status-bar band); tags, the band's cadence and Deliverable meta keep A3's 'as written' case under HUD (case is not a radius, face or colour decision); HUD's live word holds still (the WORD is the signal); A2's thread cards (MissionFrame) and the history row's pressed paint are outside this story's screens and sheets. Device checks for the owner: the Command Centre in each style and look (Play's title size, the accent underline, HUD's brand line, Geist Mono tabs and inset bar, '● STREAMING LIVE' / '○ CONNECTING' / '— OFFLINE'), Play's glow and HUD's grid under the Board, Calendar and Questions, a Deliverable pushed over the gallery under Play and HUD (the clear stack must not show the gallery through it), the day strip's chosen day, HUD's square TYPE pill, Dynamic Type at the largest sizes."
+    },
+    {
+      "id": "P001S-RVW-1",
+      "prdStory": "review",
+      "phase": 2,
+      "title": "Look sync: a read that overlaps a save never puts the phone back on the server's older look",
+      "description": "Review finding (MEDIUM, US-017d / D-PHONE-CHOICE: 'overwrites a phone change with an older server read'). src/styles/sync/look-sync-run.ts:127-134 readAndApply drops a read only when rt.sends changed while it ran (a save QUEUED during the read). A save already in flight when the read starts (queued before it, so counted in sendsBefore), or one the outbox only dispatches during the read (src/styles/sync/look-outbox.ts:29-30, tail.then(run)), is not seen. Interleaving: a knob change → queueSend (sends 1, PUT A in flight) → the look page opens or the app returns to the foreground → refresh → GET starts (sendsBefore 1) and the server serves it before PUT A commits → PUT A answers → 'kept' clears lookChanged (look-sync.ts:202-205) → the GET answers with the pre-PUT copy, rt.sends is still 1 so it is applied → serverTruth (look-sync.ts:159-164) takes the server's older active look; settle (look-sync.ts:176) then finds nothing changed, so nothing is re-sent. The phone shows the old look while the server holds the new one until the next foreground read, and an edit made meanwhile is made on top of the old look. The file's own header (look-sync-run.ts:11-12) promises 'an answer ... read while a save was sent, is dropped'. The web reads once per scope (play-look-store.ts @ 630fc1c85 'Once per scope and theme'), so it never had this overlap; the phone's foreground reads add it.",
+      "acceptanceCriteria": [
+        "Cause: readAndApply's guard (look-sync-run.ts:132) counts saves queued during the read but not a save in flight or answered during it",
+        "Change: a read is applied only when no save of that theme was queued, in flight or answered at any point between the read's start and its answer (e.g. the runtime counts answered saves beside rt.sends and drops the answer unless both are unchanged AND nothing was outstanding when the read started); a dropped read changes nothing on the phone and the next mount / foreground / look-page open reads again (no timer, no retry loop, no polling); the header comment says exactly what is dropped",
+        "Test (src/styles/sync/__tests__/look-sync-run.test.ts, a fake client whose GET and PUT promises the test resolves by hand): (1) PUT in flight → GET starts → PUT answers → GET answers with the pre-PUT copy → the store's active look is still the phone's newer one and no second PUT is sent; (2) the same with the GET answering BEFORE the PUT keeps today's behaviour (the phone's look kept, sent again only if the server lacks it); (3) a read with no save outstanding is applied as today; every existing test in the file still passes",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "bash scripts/ralph/acceptance-prd001-styles.sh --no-ci passes"
+      ],
+      "files": [
+        "src/styles/sync/look-sync-run.ts",
+        "src/styles/sync/look-outbox.ts",
+        "src/styles/sync/__tests__/look-sync-run.test.ts"
+      ],
+      "priority": 23,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P001S-RVW-2",
+      "prdStory": "review",
+      "phase": 2,
+      "title": "Auto: a tinted clip Skia cannot load falls back to stills instead of freezing him",
+      "description": "Review finding (MEDIUM, US-017b / KS11 / D-MASCOT). src/styles/mascot/MascotSkia.tsx:54-86 TintedClip has no failure path: Skia's useVideoLoading (node_modules/@shopify/react-native-skia/src/external/reanimated/useVideoLoading.ts) swallows a failed Skia.Video(...) and leaves the video null, so duration stays 0 (useVideo.ts:79). The backstop timer then never starts (MascotSkia.tsx:72 'if (duration <= 0) return') and nearClipEnd is always false (clip-boundary.ts:21), so no boundary is ever reported. Mascot's clipFailed (Mascot.tsx:60) is only set by the expo-video path (MascotClip.tsx:55-57, 78-82), so stage.stills stays false (stage.ts:112) and every non-urgent state change waits for a clip boundary that never comes: on a Gold, Silver or Cobalt shell (and on sleeping, which stage.ts:82-86 also routes through Skia) Auto stays on one still while the chat thinks, works or finishes, and a one-shot never ends. The Skia video path is exactly the one KS11 calls unproven on a device (OT-S2), and MASCOT_TINTED_CLIPS only helps after someone notices and ships an update.",
+      "acceptanceCriteria": [
+        "Cause: TintedClip reports neither a load failure nor a stall, so the driver never learns the clip is not playing (MascotSkia.tsx:54-86)",
+        "Change: a tinted clip that has no duration (or no first frame) within a load deadline (a named constant beside CLIP_BACKSTOP_MS in clip-boundary.ts, decided by a pure helper there) calls the same onError path the expo-video clip uses, so Mascot sets clipFailed and the stage shows the tinted still (stage.ts reduceMotion || clipFailed) and the driver runs on stillBoundaryMs; the deadline timer is cleared on unmount, on a new file and once the clip loads; nothing else about tinted clips changes",
+        "Test: src/styles/mascot/__tests__/clip-boundary.test.ts covers the pure stall decision (no duration before the deadline → waiting; at the deadline → failed; a duration → loaded) and src/styles/mascot/__tests__/stage.test.ts shows a tinted shell with clipFailed true gives 'tinted-still' and stills true",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes",
+        "bash scripts/ralph/acceptance-prd001-styles.sh --no-ci passes"
+      ],
+      "files": [
+        "src/styles/mascot/MascotSkia.tsx",
+        "src/styles/mascot/Mascot.tsx",
+        "src/styles/mascot/clip-boundary.ts",
+        "src/styles/mascot/__tests__/clip-boundary.test.ts",
+        "src/styles/mascot/__tests__/stage.test.ts"
+      ],
+      "priority": 24,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P001S-RVW-3",
+      "prdStory": "review",
+      "phase": 2,
+      "title": "Auto: the old clip's late timeUpdate or playToEnd never ends the new clip's run",
+      "description": "Review finding (MEDIUM, US-017b; the web's fix P260-FX-15 lost in the port). src/styles/mascot/MascotClip.tsx:67-77 reportAt guards by run only. At a boundary caught by timeUpdate (inside BOUNDARY_MS 80 ms of the end, player.ts:19), the driver moves to run n+1 with another file; React re-renders, so reportAt now carries run n+1, but the player's item only changes when replaceAsync resolves (MascotClip.tsx:52-54). The old clip's playToEnd (due within those 80 ms) or a late timeUpdate then arrives with currentTime at the old clip's end and player.duration still the old clip's, atClipBoundary passes, and run n+1 is reported finished before its clip has played: a queued one-shot (celebrate, hello, oops) is marked done at once and Auto drops to the next state ('All done' never plays); a loop restarts an extra time. The web's handlers take the clip they belong to and drop events for a clip no longer on screen (frontend/hooks/use-mascot-player.ts @ 630fc1c85 handleBoundary, lines 72-78).",
+      "acceptanceCriteria": [
+        "Cause: a boundary event is read against the run React holds now, not the clip the player was playing when the event fired (MascotClip.tsx:67-77)",
+        "Change: MascotClip knows which clip the player has loaded (the first clip, then each clip once replaceAsync resolves) and a timeUpdate / playToEnd counts as a boundary only when the loaded clip is the run's clip; the decision is a pure function (in clip-boundary.ts or a new pure module beside it, no React / expo imports) taking the loaded clip, the run's clip, the run, the run already reported, the time and the duration; replay() of the same file keeps working",
+        "Test (src/styles/mascot/__tests__/): the old clip's end arriving after the run moved on to another file reports nothing; the new clip's own end reports its run once; a replay of the same file reports each run once; a reported run is never reported twice",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes",
+        "bash scripts/ralph/acceptance-prd001-styles.sh --no-ci passes"
+      ],
+      "files": [
+        "src/styles/mascot/MascotClip.tsx",
+        "src/styles/mascot/clip-boundary.ts",
+        "src/styles/mascot/__tests__/clip-boundary.test.ts"
+      ],
+      "priority": 25,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P001S-RVW-4",
+      "prdStory": "review",
+      "phase": 2,
+      "title": "Picker: the chosen card's ring and 'Selected' in its style's accent, not the error colour",
+      "description": "Review finding (MEDIUM, US-016h AC 'the selected card carries a 2 pt ring in that style's accent', marked DONE). src/styles/picker/cards.ts:119-126 cardFrame paints the selected ring in the token 'accent', and src/styles/picker/StyleCard.tsx:37-38 draws the check and 'Selected' in colours.accent / tone 'accent' (frame at StyleCard.tsx:125). Studio's 'accent' key is the look's consequence (error) colour under every look, by the vendored engine's design (src/core/web/lib/look-kit/studio-tokens.ts:24-26, D-REVIEW F9), never the look's accent. Computed: Ember paints the ring #FF6B6B (the error colour) where its accent is #FF6A1F; Aurora, Obsidian and every HUD preset (accent #3FE0FF on ARC) also get #FF6B6B. So under Play and HUD the chosen card reads as an error. Studio is right as built (its accent and consequence colour are one).",
+      "acceptanceCriteria": [
+        "Cause: cardFrame and SelectedWord read Studio's 'accent' key, which under Play and HUD is the error colour (studio-tokens.ts:24-26)",
+        "Change: the ring is the card's style's accent (Studio: colours.accent as today; Play: its look's accent, playVars accent; HUD: hudVars accent) and the check and 'Selected' are that style's readable accent text (Play: accentText; HUD: its accent, already AA on its ground; Studio unchanged), chosen by a pure helper in src/styles/picker/cards.ts (or the dress) from the resolved style; nothing else on the card changes",
+        "Test (src/styles/picker/__tests__/cards.test.ts): for every Play preset and every HUD preset the selected ring colour equals the look's accent and is not the error colour; Studio Light and Dark keep colours.accent; the 'Selected' word's colour is >= 4.5 on the card colour for every preset (the vendored contrastRatio)",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "bash scripts/ralph/acceptance-prd001-styles.sh --no-ci passes"
+      ],
+      "files": [
+        "src/styles/picker/cards.ts",
+        "src/styles/picker/StyleCard.tsx",
+        "src/styles/picker/__tests__/cards.test.ts"
+      ],
+      "priority": 26,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P001S-RVW-5",
+      "prdStory": "review",
+      "phase": 2,
+      "title": "Play's shelf: the paper thumbnails' titles never draw Instrument Serif under 19 pt",
+      "description": "Review finding (MEDIUM, US-016d / D-A11Y: 'Play's display face under 19 pt'). src/styles/homes/ShelfCards.tsx:33 builds the paper title as { ...style.type.display('cardSm'), fontSize: sheet.title, lineHeight: sheet.title }: display('cardSm') is Instrument Serif Italic at 19 for the Editorial type looks (Ember, Daylight), and the override then sets 16 on the newest card's paper (src/styles/homes/play-shelf.ts:44 heroPaper.title) and 11 on every grid tile's paper (play-shelf.ts:48 tilePaper.title). That bypasses play-type.ts:91-96 displayFace, the rule that drops Instrument Serif below 19 to Geist 600. It is the only fontSize override in the wave's added lines.",
+      "acceptanceCriteria": [
+        "Cause: a fontSize override after display('cardSm') skips the type's under-19 fallback (ShelfCards.tsx:33)",
+        "Change: the paper title's face comes from the style's type at the paper's size through the same rule displayFace applies (Instrument Serif only at 19 pt and above, else Geist 600), computed in pure code (play-shelf.ts or the Play type) rather than by overriding fontSize in the component; sizes stay 16 and 11 (the 11 pt floor holds)",
+        "Test (src/styles/homes/__tests__/shelf.test.ts or src/styles/typeface/__tests__/scale.test.ts): for every Play type look, the hero paper title (16) and tile paper title (11) faces are never Instrument Serif; at >= 19 the look's display face is kept; no size under 11",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "bash scripts/ralph/acceptance-prd001-styles.sh --no-ci passes"
+      ],
+      "files": [
+        "src/styles/homes/ShelfCards.tsx",
+        "src/styles/homes/play-shelf.ts",
+        "src/styles/typeface/play-type.ts",
+        "src/styles/homes/__tests__/shelf.test.ts",
+        "src/styles/typeface/__tests__/scale.test.ts"
+      ],
+      "priority": 27,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P001S-RVW-6",
+      "prdStory": "review",
+      "phase": 2,
+      "title": "The keyboard takes Play's and HUD's tone, not Studio's Light / Dark / System",
+      "description": "Review finding (MEDIUM, US-016b 'the user's Light / Dark / System does not apply under Play'; 'Light/Dark/System leaking into Play'). src/styles/theme.tsx:85-87 sets Appearance.setColorScheme(appearanceOverride(choice)) from Studio's choice whatever style is painted, and none of the app's three text inputs sets keyboardAppearance (src/ui/TextField.tsx:104, src/chat/composer/PillInput.tsx:33, src/styles/play/companion/PlayComposer.tsx:130). So a phone in Light mode on the default System choice opens a light keyboard under Play's dark Ember composer and HUD's always-dark TYPE sheet, and Studio set to Dark gives a dark keyboard over Play's Daylight. The colours, the status bar (Screen.tsx statusBarStyle(tone)) and the sheet do follow the painted tone; only the system keyboard leaks.",
+      "acceptanceCriteria": [
+        "Cause: nothing passes the painted style's tone to the keyboard; the window appearance follows Studio's choice only (theme.tsx:85-87)",
+        "Change: one pure helper (src/styles/, e.g. keyboardAppearanceFor(resolved style)) gives 'dark' | 'light' from the painted style's tone under Play and HUD, and 'default' under Studio and an installed theme (Studio's behaviour unchanged); TextField, PillInput and PlayComposer set keyboardAppearance from it through useStyle(); Appearance.setColorScheme stays Studio's choice, so the Studio card's System preview still reads the device's scheme. SEAM EDIT: src/chat/composer/PillInput.tsx recorded in this story's DONE notes",
+        "Test: the helper for Studio (Light, Dark, System), every Play preset (Daylight light, the rest dark) and HUD (dark); src/ui/__tests__/dressed.test.ts or a styles test pins it",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes",
+        "bash scripts/ralph/acceptance-prd001-styles.sh --no-ci passes"
+      ],
+      "files": [
+        "src/styles/ground/ground.ts",
+        "src/ui/TextField.tsx",
+        "src/chat/composer/PillInput.tsx",
+        "src/styles/play/companion/PlayComposer.tsx",
+        "src/styles/ground/__tests__/ground.test.ts"
+      ],
+      "priority": 28,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P001S-RVW-7",
+      "prdStory": "review",
+      "phase": 2,
+      "title": "Not running: a re-check answered after the screen went never runs the gate's Retry",
+      "description": "Review finding (LOW, US-017f / US-016j: 'the 5 s re-check left running after the screen goes'). src/styles/edges/recheck.ts:49-63 stop() clears the next timer but cannot reach a check already running, and src/styles/edges/gate-recheck.ts:16-24 calls onRetry when that probe settles; use-recheck.ts:14 stops the chain on unmount only. A throwaway node run confirmed onRetry is called once after stop(). After Sign out or Forget this server (the screen goes while the discovery probe is out), the late answer runs the unmounted gate's Retry (use-launch.ts refetch), a refetch from a gate that no longer exists; after Check again it refetches twice.",
+      "acceptanceCriteria": [
+        "Cause: the re-check chain's stop() does not stop a check in flight from acting on its answer (recheck.ts:49-63, gate-recheck.ts:16-24)",
+        "Change: a check that settles after stop() does nothing (the chain hands each run a 'still running' test or an AbortSignal that quietRecheck honours before calling onRetry); the chain otherwise behaves as today (5 s after the last check settled, a failing check logged and the chain going on)",
+        "Test (src/styles/edges/__tests__/recheck.test.ts and gate-recheck.test.ts, the injected clock): a probe that answers after stop() calls onRetry zero times; a probe that answers before stop() calls it once; no timer is left after stop()",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "bash scripts/ralph/acceptance-prd001-styles.sh --no-ci passes"
+      ],
+      "files": [
+        "src/styles/edges/recheck.ts",
+        "src/styles/edges/gate-recheck.ts",
+        "src/styles/edges/use-recheck.ts",
+        "src/styles/edges/GateEdge.tsx",
+        "src/styles/edges/__tests__/recheck.test.ts",
+        "src/styles/edges/__tests__/gate-recheck.test.ts"
+      ],
+      "priority": 29,
+      "passes": false,
+      "notes": ""
     }
   ]
 }
