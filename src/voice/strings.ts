@@ -73,6 +73,15 @@ export const LANGUAGE_NAMES: Readonly<Record<string, string>> = Object.freeze({
 });
 
 /**
+ * The AI notice (KV7, PRD-264 EUAI-04): shown as its own AUTO line and spoken once, before the first
+ * spoken reply of a voice session, and never repeated (no reminder, D73). The server's own words,
+ * copied from automatos-ai orchestrator/modules/policy/ai_disclosure.py VOICE_GREETING @ 7ae677b52
+ * (the line as written in 10e594213); notice/ai-notice.ts puts the answering agent's name in place
+ * of Auto.
+ */
+export const AI_VOICE_GREETING = 'Hi, this is Auto, your AI assistant.';
+
+/**
  * What the voice says in place of what speech cannot carry (toSpeakable, US-019d): a code block, a
  * table, a URL. The words are on screen in the chat; the voice only points there.
  */
