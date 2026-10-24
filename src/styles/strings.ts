@@ -68,6 +68,16 @@ export const THEME_COPY = Object.freeze({
 });
 
 /**
+ * Play's and HUD's looks in step with the web (US-017d): what Play's look page says while Play is
+ * not installed in the workspace (a 404 from the looks route). HUD's looks stay on the phone then
+ * with no words. A failed read or save shows the API taxonomy's own words.
+ */
+export const LOOK_SYNC_COPY = Object.freeze({
+  localOnly: 'Kept on this phone only',
+  playNotInstalled: 'Install Play in Studio to keep your looks in step with the web.',
+});
+
+/**
  * The live previews on the picker's cards (US-016h): sample words in each style's own layout,
  * hidden from VoiceOver (the card says its name and state). Play's tool line and HUD's chip take
  * their words from the vendored labels and captions, so they read as the real screens do.

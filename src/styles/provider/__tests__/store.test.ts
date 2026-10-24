@@ -1,6 +1,7 @@
 // The style store (D54, D59): hydrated synchronously from the phone's storage (the style choice
-// under styles.choice, HUD's looks under styles.hud.looks, the theme 'Same as Studio' followed and
-// its painting under styles.theme.*) so the first frame paints the chosen style; every setter
+// under styles.choice, HUD's looks under styles.hud.looks, Play's under styles.play.looks with the
+// look sync's marks beside them, the theme 'Same as Studio' followed and its painting under
+// styles.theme.*) so the first frame paints the chosen style; every setter
 // saves through its source and holds what the next launch reads back; a failing store is logged,
 // never thrown; a flip into Play counts Auto's hello. A new phone follows Studio (D-PHONE-CHOICE).
 
@@ -12,6 +13,9 @@ import { memoryStorage, type KeyValueStorage } from '../../../storage/encrypted-
 import { INITIAL_HUD_LOOKS, type HudLooks } from '../../hud/hud-looks';
 import { HUD_DEFAULT_LOOK, HUD_PRESET_LOOKS, type HudLook } from '../../hud/look-schema';
 import { HUD_LOOKS_KEY, serialiseHudLooks } from '../../hud/look-store';
+import { PLAY_LOOKS_KEY, serialisePlayLooks } from '../../play/look-store';
+import { INITIAL_PLAY_LOOKS, type PlayLooks } from '../../play/play-looks';
+import { LOOK_MARKS_KEYS, serialiseLookMarks } from '../../sync/look-marks';
 import { serialiseChoice } from '../../registry/choice';
 import { STYLE_CHOICE_KEY } from '../../registry/choice-store';
 import { FOLLOW_STUDIO, builtinChoice, paintedChoice, themeChoice } from '../../registry/style-id';
@@ -110,11 +114,24 @@ describe('hydration: the first frame paints the chosen style (D54)', () => {
     expect(firstFrame(state).hudLook).toEqual(MINE);
   });
 
-  it('paints Play on the first frame of a phone left on Play', () => {
+  it('paints Play on the first frame of a phone left on Play, in its kept look', () => {
     const store = storeOver(
-      phoneOn({ [STYLE_CHOICE_KEY]: serialiseChoice(builtinChoice('play')) }),
+      phoneOn({
+        [STYLE_CHOICE_KEY]: serialiseChoice(builtinChoice('play')),
+        [PLAY_LOOKS_KEY]: serialisePlayLooks({ saved: [], active: OBSIDIAN }),
+      }),
     );
     expect(firstFrame(store.getState()).layout).toBe('play');
+    expect(firstFrame(store.getState()).playLook).toEqual(OBSIDIAN);
+  });
+
+  it("starts each theme's look sync from its kept marks (US-017d)", () => {
+    const marks = { serverSeen: true, lookChanged: true, savedChanged: false };
+    const state = storeOver(
+      phoneOn({ [LOOK_MARKS_KEYS.hud]: serialiseLookMarks(marks) }),
+    ).getState();
+    expect(state.lookSync.hud).toEqual({ ...marks, synced: 'pending', failure: null });
+    expect(state.lookSync.play).toMatchObject({ serverSeen: false, synced: 'server' });
   });
 
   it("starts a new phone on 'Same as Studio' (painting Studio), ARC, Ember and no theme painting", () => {
@@ -126,6 +143,7 @@ describe('hydration: the first frame paints the chosen style (D54)', () => {
     expect(state.themeFonts).toBeNull();
     expect(state.hudLooks).toEqual(INITIAL_HUD_LOOKS);
     expect(state.playLook).toBe(DEFAULT_LOOK);
+    expect(state.playLooks).toEqual(INITIAL_PLAY_LOOKS);
     expect(state.themePaint).toBeNull();
     expect(state.playEntries).toBe(0);
   });
@@ -159,7 +177,7 @@ describe('hydration: the first frame paints the chosen style (D54)', () => {
     const paint = painting();
     const sources = {
       ...appStyleSources(() => memoryStorage()),
-      playLook: memorySource(OBSIDIAN),
+      playLooks: memorySource<PlayLooks>({ saved: [], active: OBSIDIAN }),
       themePaint: memorySource<ThemePaint | null>(paint),
     };
     const state = hydrateStyleState(sources);
@@ -211,12 +229,33 @@ describe('the setters', () => {
     expect(storeOver(storage).getState().hudLooks.active).toEqual(MINE);
   });
 
-  it("holds Play's look for this launch until its store exists", () => {
+  it("stores Play's looks on the phone: the next launch reads them back (US-017d)", () => {
     const storage = memoryStorage();
     const store = storeOver(storage);
+    const mine = { ...OBSIDIAN, id: 'look-1', name: 'My look 1', sub: 'Your look' };
+    expect(store.getState().setPlayLooks({ saved: [mine], active: mine })).toBe(true);
     expect(store.getState().setPlayLook(OBSIDIAN)).toBe(true);
-    expect(store.getState().playLook).toBe(OBSIDIAN);
-    expect(storeOver(storage).getState().playLook).toBe(DEFAULT_LOOK);
+    expect(store.getState().playLook).toEqual(OBSIDIAN);
+    expect(store.getState().playLooks.saved).toEqual([mine]);
+    expect(storage.getItem(PLAY_LOOKS_KEY)).not.toBeNull();
+    const next = storeOver(storage).getState();
+    expect(next.playLook).toEqual(OBSIDIAN);
+    expect(next.playLooks.saved).toEqual([mine]);
+  });
+
+  it("keeps a theme's look sync marks on the phone, its standing for this launch only", () => {
+    const storage = memoryStorage();
+    const store = storeOver(storage);
+    const status = {
+      serverSeen: true,
+      lookChanged: true,
+      savedChanged: false,
+      synced: 'pending' as const,
+      failure: 'network' as const,
+    };
+    expect(store.getState().setLookSync('play', status)).toBe(true);
+    expect(store.getState().lookSync.play).toEqual(status);
+    expect(storeOver(storage).getState().lookSync.play).toEqual({ ...status, failure: null });
   });
 
   it('keeps the theme painting on the phone for the next launch (US-016i)', () => {

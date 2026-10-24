@@ -11,25 +11,13 @@
 // for a read when it opens (useThemeRefresh), which joins a read already running.
 
 import { useCallback, useEffect } from 'react';
-import { AppState } from 'react-native';
 
-import { isForeground } from '../../api/live-connection';
 import { useAppSession } from '../../app-state/session';
 import { useToast } from '../../ui';
 import { useStyleRoot } from '../provider/context';
 import { THEME_COPY } from '../strings';
+import { onForegroundReturn } from '../sync/foreground';
 import { refreshThemes, sessionKey, watchPaintFiles } from './sync';
-
-/** Calls `onReturn` each time the app comes back to the foreground; returns the unsubscribe. */
-function onForegroundReturn(onReturn: () => void): () => void {
-  let wasForeground = isForeground(AppState.currentState);
-  const subscription = AppState.addEventListener('change', (next) => {
-    const foreground = isForeground(next);
-    if (foreground && !wasForeground) onReturn();
-    wasForeground = foreground;
-  });
-  return () => subscription.remove();
-}
 
 /** One read of the workspace's themes, applied (joins a read already running). */
 export function useThemeRefresh(): () => Promise<void> {

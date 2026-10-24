@@ -4,19 +4,26 @@
 // frontend/lib/looks/editor.ts (the base look, edited, a fresh id) and
 // lib/theme-host/builtin/play-look-state.ts (renaming or deleting the active look), with the HUD
 // drawing's own words and save ('Automatos Command HUD.dc.html': 'ARC · EDITED', 'MINE N', reset to
-// the look it was picked from). HUD's looks stay on the phone (D59): no server here.
+// the look it was picked from). No server here: HUD_LOOK_RULES hands the look sync (US-017d,
+// play/look-sync.ts) HUD's check and fresh-id rule, and it keeps the looks in step with the web
+// under 'automatos/hud' where HUD is installed in the workspace (else they stay on the phone, D59).
 
 import { LOOK_TEXT_MAX } from '../../core/web/lib/look-kit/validate';
 import { plainTextProblem } from '../../core/web/lib/theme-host/css-value';
+import type { LookRules } from '../play/look-sync';
 import { HUD_LOOK_COPY } from '../strings';
 import {
   HUD_DEFAULT_LOOK,
   HUD_KNOBS,
   HUD_PRESET_LOOKS,
   hudKnobSpec,
+  isHudLook,
   type HudKnob,
   type HudLook,
 } from './look-schema';
+
+/** The id HUD's looks are kept under on the server (the web theme automatos/hud). */
+export const HUD_THEME_ID = 'automatos/hud';
 
 /** The most looks a phone keeps: the server's cap for Play's looks. */
 export const MAX_HUD_SAVED_LOOKS = 100;
@@ -121,6 +128,11 @@ function freshNumber(saved: readonly HudLook[]): number {
   return n;
 }
 
+/** 'mine-N' with the lowest free N (as Save as new look numbers it). */
+export function freshHudLookId(saved: readonly HudLook[]): string {
+  return `${HUD_SAVED_ID_PREFIX}${freshNumber(saved)}`;
+}
+
 /**
  * 'Save as new look': the active values as 'mine-N' / 'MINE N' (a vendored LOOK_ID_PATTERN id),
  * saved and made the active look, so it reads unedited. A phone holding MAX_HUD_SAVED_LOOKS saves
@@ -167,3 +179,17 @@ export function resetLook(looks: HudLooks): HudLooks {
   const base = baseLook(looks.active, looks.saved) ?? HUD_DEFAULT_LOOK;
   return base === looks.active ? looks : Object.freeze({ ...looks, active: base });
 }
+
+/** A look as HUD takes it (the vendored validateLook over HUD_LOOK_SPEC), or null. */
+function checkHudLook(value: unknown): HudLook | null {
+  return isHudLook(value) ? Object.freeze({ ...value }) : null;
+}
+
+/** HUD's rules for the look sync (play/look-sync.ts): the same engine as Play's. */
+export const HUD_LOOK_RULES: LookRules<HudLook> = Object.freeze({
+  themeId: HUD_THEME_ID,
+  check: checkHudLook,
+  isPreset: isPresetId,
+  freshId: freshHudLookId,
+  defaultLook: HUD_DEFAULT_LOOK,
+});
