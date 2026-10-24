@@ -7,7 +7,7 @@
 // to run a background task (KP19): only what the server sent is ever shown.
 
 /** A listener's handle; remove() detaches it. */
-export type Subscription = Readonly<{ remove: () => void }>;
+export type ListenerHandle = Readonly<{ remove: () => void }>;
 
 /** One button a notification category offers (expo-notifications' NotificationAction). */
 export type CategoryAction = Readonly<{
@@ -73,9 +73,11 @@ export type NotificationsPort = Readonly<{
   /** The Expo push token's value (ExponentPushToken[…]); never logged. */
   getExpoPushTokenAsync: (options: Readonly<{ projectId: string }>) => Promise<string>;
   /** Told when the OS hands the app a new device token; the Expo token is then read again. */
-  addPushTokenListener: (listener: () => void) => Subscription;
-  addNotificationReceivedListener: (listener: (notification: unknown) => void) => Subscription;
-  addNotificationResponseReceivedListener: (listener: (response: unknown) => void) => Subscription;
+  addPushTokenListener: (listener: () => void) => ListenerHandle;
+  addNotificationReceivedListener: (listener: (notification: unknown) => void) => ListenerHandle;
+  addNotificationResponseReceivedListener: (
+    listener: (response: unknown) => void,
+  ) => ListenerHandle;
   /** The response that launched or last foregrounded the app, if any (a cold start's tap). */
   getLastNotificationResponse: () => unknown;
   clearLastNotificationResponse: () => void;
