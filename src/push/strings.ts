@@ -29,3 +29,12 @@ export const PUSH_CHANNEL_COPY = Object.freeze({
   review: 'Ready for review',
   auto: 'Auto',
 });
+
+/**
+ * The phone's name when its model cannot be read (W2 US-009's name; Studio's Phones & devices shows
+ * it). The model name itself comes from the phone.
+ */
+export const PUSH_PHONE_NAME_COPY = Object.freeze({
+  ios: 'iPhone',
+  android: 'Android phone',
+});

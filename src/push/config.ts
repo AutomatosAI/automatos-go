@@ -65,3 +65,26 @@ export const STALE_CHECK_TIMEOUT_MS = 4000;
  * not verify within it is shown as unverified (nothing at all).
  */
 export const FOREGROUND_VERIFY_TIMEOUT_MS = 2000;
+
+/** The push record's keychain item (KP18), named in the app's key registry (src/lib/secure-keys.ts). */
+export const PUSH_RECORD_ITEM = 'automatos.push-record.v1';
+
+/** W1's column limits (core/models/mobile_devices.py, api/mobile_devices.py). */
+export const PUSH_KEY_MAX_LENGTH = 128;
+export const LOCALE_MAX_LENGTH = 35;
+export const TIMEZONE_MAX_LENGTH = 64;
+export const PHONE_NAME_MAX_LENGTH = 120;
+export const EXPO_PUSH_TOKEN_MAX_LENGTH = 255;
+
+/** W1's expo_push_token rule (api/mobile_devices.py EXPO_PUSH_TOKEN_PATTERN). */
+export const EXPO_PUSH_TOKEN_PATTERN = /^ExponentPushToken\[[^[\]\s]+\]$/;
+
+/** A registration whose facts have not changed is sent again after this long (KP10). */
+export const REREGISTER_AFTER_MS = 24 * 60 * 60 * 1000;
+
+/** A hosted phone with no key for its row revokes and re-registers at most this often (KP10). */
+export const RECOVERY_MIN_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
+/** The MMKV item that remembers the last key recovery per server and workspace: dates, nothing else. */
+export const KEY_RECOVERY_ITEM = 'push.key-recovery.v1';
+export const RECOVERY_SCOPES_MAX = 16;

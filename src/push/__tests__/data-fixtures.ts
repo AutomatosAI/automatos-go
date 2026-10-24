@@ -3,12 +3,11 @@
 // client over the foundation's fake transport, so nothing touches the network.
 
 import { createApiClient } from '../../api/client';
-import type { TransportRequest } from '../../api/transport-types';
+import type { StreamingResponse, TransportRequest } from '../../api/transport-types';
 import {
   SERVER,
   fakeTransport,
   jsonReply,
-  reply,
   type FakeTransport,
 } from '../../api/__tests__/fake-transport';
 
@@ -81,7 +80,8 @@ export const PREFERENCES = {
 };
 
 export function harness(
-  answer: (request: TransportRequest) => ReturnType<typeof reply> = () => jsonReply(200, {}),
+  answer: (request: TransportRequest) => StreamingResponse | Promise<StreamingResponse> = () =>
+    jsonReply(200, {}),
 ) {
   const transport: FakeTransport = fakeTransport(answer);
   const client = createApiClient({

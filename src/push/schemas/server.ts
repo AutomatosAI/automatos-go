@@ -12,14 +12,14 @@ import { z } from 'zod';
 import { isApiError } from '../../api/errors';
 import { WORKSPACE_ROLES } from '../../api/workspace';
 import { logger } from '../../lib/logger';
-import { CONFLICT_STATUS, DIGEST_TIME_PATTERN } from '../config';
+import { CONFLICT_STATUS, DIGEST_TIME_PATTERN, PUSH_KEY_MAX_LENGTH } from '../config';
 
 const Text = z.string().nullable().catch(null);
 
 /** POST /api/v1/mobile/devices, Cache-Control no-store: push_key in clear only when minted. */
 export const registrationSchema = z.object({
   device_id: z.string().uuid(),
-  push_key: z.string().min(1).nullable(),
+  push_key: z.string().min(1).max(PUSH_KEY_MAX_LENGTH).nullable(),
 });
 
 export type Registration = Readonly<z.output<typeof registrationSchema>>;
