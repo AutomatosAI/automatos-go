@@ -1,6 +1,6 @@
 // The styles' copy (one strings module per feature, §4.11): the picker's names, taglines and the
-// words its cards and rows say to VoiceOver. Nothing about plans, credits or prices (D8), and no
-// pointer to creating an account (D-NO-SIGNUP).
+// words its cards and rows say to VoiceOver. Nothing commercial (D8), and nothing that points at
+// making an account (D63).
 
 import type { ThemeChoice } from './theme-choice';
 import type { BuiltInStyleId } from './registry/style-id';
@@ -39,4 +39,26 @@ export const PICKER_COPY = Object.freeze({
     system: 'System',
   }),
   schemeGroup: 'Studio appearance',
+});
+
+/**
+ * HUD's looks (US-018a; the Looks drawer is US-018c): each knob's label as the look schema carries
+ * it, the status line's mark and the name 'Save as new look' gives, in HUD's capitals as the HUD
+ * drawing writes them ('ARC · EDITED', 'MINE 2').
+ */
+export const HUD_LOOK_COPY = Object.freeze({
+  knobs: Object.freeze({
+    ground: 'Background',
+    accent: 'Accent',
+    font: 'Type',
+    grid: 'Grid',
+    glow: 'Glow',
+    scan: 'Scanlines',
+    auto: 'Auto',
+    motion: 'Motion',
+  }),
+  /** The status line of a look changed since it was picked: 'ARC · EDITED'. */
+  edited: (name: string) => `${name} · EDITED`,
+  /** A look saved with 'Save as new look': 'MINE 1', 'MINE 2'. */
+  savedName: (n: number) => `MINE ${n}`,
 });
