@@ -34,8 +34,8 @@
     },
     {
       "id": "D-PHONE-CHOICE",
-      "text": "The style choice is the phone's own (encrypted MMKV), never the server's. Play's looks sync with the web through GET/PUT /api/themes/looks/automatos/play, so a look changed on the phone repaints Play in the browser; HUD looks stay on the phone.",
-      "source": "D59, D55"
+      "text": "The phone's style choice defaults to 'Same as Studio' (Gerard, 24 Oct: 'install a theme in Studio and the phone changes with it' — Same as Studio is the default): the phone follows the workspace's active theme (GET /api/themes/active) until the user picks a style on the phone; picking one stores it on the phone (encrypted MMKV) and overrides; choosing 'Same as Studio' again follows the server once more. Play's looks sync with the web through GET/PUT /api/themes/looks/automatos/play, so a look changed on the phone repaints Play in the browser; HUD looks stay on the phone.",
+      "source": "D59, D55; Gerard 24 Oct"
     },
     {
       "id": "D-LOOK-PAGES",
@@ -395,6 +395,67 @@
       "notes": "The provider is extended inside src/styles/theme.tsx: app/_layout.tsx is not touched in phase 1 (the connect kit edits it in parallel); if wiring there turns out unavoidable, write FOUNDATION GAP and leave it for US-016j. RE-VERIFY after foundation: ThemeProvider's position in app/_layout.tsx (FND-4: above QueryClientProvider and AuthRoot, so this provider holds local state only; server sync is StyleSync, US-017d/US-016i)."
     },
     {
+      "id": "US-016h",
+      "prdStory": "US-016",
+      "phase": 1,
+      "title": "The style picker (the Style and look screen) and Studio's Light / Dark / System",
+      "description": "As a user, I want to flip between Studio, Play and HUD and see each one live before I pick it (FR-7). The Settings row that leads here is US-016j's (phase 2).",
+      "acceptanceCriteria": [
+        "app/(app)/settings/style.tsx renders US-016a's pickerState as three large cards, each a live preview painted in its own style through StyleScope: Studio (the cream or Studio Dark header with 'automatos' and a needs card), Play (Auto at 84 idling, 'Ready.' and a tool chip, the look's glow), HUD (a 120 pt RingCore with 'AUTOMATOS //' and a chip); previews animate only while the screen is focused and never under Reduce Motion, and are hidden from accessibility",
+        "A tap flips the style at once (US-016e setStyle: haptic, crossfade); the selected card carries a 2 pt ring in that style's accent AND the word 'Selected' (never colour alone); the Studio card has the Light / Dark / System SegmentedControl (the foundation's scheme setter); the Play card 'Make it yours →' (STYLE_SCREENS.lookPlay), the HUD card 'Looks →' (STYLE_SCREENS.lookHud); installed themes appear under Studio when US-016i provides them",
+        "src/styles/nav.ts: STYLE_SCREENS {settingsStyle '/settings/style', lookPlay '/settings/look/play', lookHud '/settings/look/hud'} with typed helpers for expo-router; src/navigation/routes.ts is not edited (KS4); app/(app)/settings/style.tsx mounts StyleSync (US-017d) so the looks are read when the screen opens",
+        "Each card: accessibilityRole 'button', label 'Studio style' and the selected state; every text >= 11",
+        "src/styles/picker/__tests__/: the card copy and STYLE_SCREENS",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": [
+        "app/(app)/settings/style.tsx",
+        "src/styles/picker/",
+        "src/styles/nav.ts"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "RE-VERIFY after foundation: how app routes are typed in src/navigation/routes.ts (mirror its idiom in src/styles/nav.ts). The picker and the look pages carry no sign-up pointer either (D-NO-SIGNUP)."
+    },
+    {
+      "id": "US-016i",
+      "prdStory": "US-016",
+      "phase": 1,
+      "title": "Installed marketplace themes with a mobile block, under Studio: tokens, fonts and mascot as data",
+      "description": "As a user whose workspace installed a theme that supports phones, I want my phone to follow Studio's theme by default — install or pick a theme in Studio and the phone repaints with its colours and fonts — and still see installed themes under Studio in the picker (D58, PRD-261 M-04, D-PHONE-CHOICE) — data only, never code (D-NO-CODE).",
+      "acceptanceCriteria": [
+        "src/styles/routes.ts: GET /api/themes/installed; GET /api/themes/active; GET /api/themes/mobile/{install_id} with pendingUpstream 'PRD-261 M-04 (#1258, merged after the pin 630fc1c85)'; GET /api/themes/files/{digest}/{path:path} as the one prefix a file URL may have",
+        "src/styles/themes/schemas.ts (the real shapes on core main 99fb70ff5, read by PLAY from services/themes/updates.py:72-89, defaults.py:138-149, revocations.py; unknown fields ignored): Installed {installs: [{installId, themeId, name, version, optIn: {required, wording, packageId} | null, revoked: null | {level 'warn' | 'disable' | other, reason}, …}]} — revoked is NOT a boolean and a level the app doesn't know counts as 'disable' (fail closed, as core's effective_level); the row has NO mobile field. Active {choice: 'studio' | 'classic' | <installId uuid>, source: 'choice' | 'default' | 'fallback', theme: null | {installId, themeId, version, …}, revoked?: {installId, level, reason}}. MobileTheme {schema 1, installId, themeId, version, mobile: null | {source 'tokens' | 'fromLooks', tone 'light' | 'dark' | null, tokens {light: Record | null, dark: Record | null}, fonts {sans?, serif?, mono?}, mascot {mode 'clips' | 'stills' | 'none', states [{name, clip | null, still | null}]}}} (services/themes/mobile.py:3-13)",
+        "src/styles/themes/installed.ts (pure): only when canMobileTheme(discovery) (core advertises mobile_theme from automatos-ai #1295); for each install whose revoked is null or level 'warn', GET /api/themes/mobile/{installId} at most MOBILE_THEME_FETCH_CONCURRENCY 4 at a time; offered when mobile is non-null (null also covers an optIn still required, a theme without a phone look, a revoked one); a 404 skips that install; a paired phone is a theme member since automatos-ai #1264, so its answers are real; rows sorted by name as '<name> · <version>' under Studio in the picker",
+        "src/styles/themes/follow.ts (pure) + the picker: a 'Same as Studio' row first under Studio, the DEFAULT on a phone with no stored choice. followStudio(active, mobileAnswer) → the style to paint: active.theme non-null and its mobile answer non-null → that theme over the Studio layout; choice 'studio' or 'classic', theme null, a revoked (active.revoked) or a null mobile answer → Studio (a revoked theme also shows the toast below). The phone reads GET /api/themes/active on mount, on foreground and when the picker opens; nothing pushes a change. A style picked on the phone is stored (MMKV) and overrides until 'Same as Studio' is picked again. Tests: each branch, the default, the override and the return",
+        "src/styles/themes/paint.ts (pure): themeTokens(answer, studioScheme, systemScheme, studioDefaults) — 'tokens' source: the user's scheme (System → the device) picks light or dark, a null scheme falls back to the other; 'fromLooks': the tone's scheme; each value 'H S% L%' (the vendored tripletToHex) or '#rrggbb', anything else dropped and logged; only the 24 MOBILE_TOKEN_NAMES are read; a painting without --background or --foreground is not offered; Studio keys the theme leaves out keep that scheme's Studio values; the 10 MOBILE_CONTRAST_PAIRS measured with the vendored contrastRatio and a failing pair logged",
+        "src/styles/themes/files.ts: a theme file is downloaded only when its URL is a relative path starting with '/api/themes/files/' with no '..', no '//', no scheme and no host; with the client's bearer to the configured API origin only; never a .js, .mjs, .css or .html file; into the cache directory keyed by its digest path (content-addressed); fonts at most 400 KB (the server's cap), mascot files at most 2 MB each — larger refused",
+        "src/styles/themes/fonts.ts: sans, serif and mono loaded with expo-font loadAsync from the cached files under the families 'theme-<installId>-<role>'; the Studio layout's body, title and mono faces use them while the theme is the style; a failed load keeps Studio's",
+        "The mascot: this story caches the theme's mascot files (files.ts) and exposes them from the theme state; US-017b's Mascot shows them when the painted theme's mascot mode is clips or stills ('none' → no mascot). This story is moved ahead of US-017b (Gerard, 24 Oct): it does not wait for the Mascot component — build no mascot UI here",
+        "src/styles/themes/ThemeSync.tsx: mounted ONCE inside the style provider in src/styles/** (no shell edit in phase 1; US-017d's StyleSync adopts it when built, US-016j moves it if the shell needs to). RE-VERIFY where the session's API client and discovery are reachable from there; if the provider sits above the session, mount ThemeSync in the highest src/styles component inside it and write FOUNDATION GAP. Refreshes /active and the mobile answer on mount and foreground; the last answers cached in MMKV for the first paint; a chosen or followed theme that disappears or is revoked → back to Studio with the toast \"That theme isn't available any more, so Automatos Go is back on Studio.\"",
+        "A security-reviewer run (foreground, waited for) on src/styles/themes/ and src/styles/routes.ts finds no HIGH or CRITICAL, or each one is fixed in this story",
+        "src/styles/themes/__tests__/: the URL allowlist (absolute, protocol-relative, '..', a code suffix, a foreign host refused), painting (triplets, hex, garbage, missing --background, tone rules), the 404 skip, the capability gate, the revoked fallback",
+        "npm run check:routes passes",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes",
+        "bash scripts/ralph/acceptance-prd001-styles.sh --no-ci passes"
+      ],
+      "files": [
+        "src/styles/routes.ts",
+        "src/styles/themes/",
+        "src/styles/picker/",
+        "src/styles/sync/"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "RE-VERIFY after foundation: canMobileTheme in src/api/capabilities.ts (US-004b), how the client exposes its auth headers for a file download (the A3 kit's open-file.ts needs the same — if there is no helper, build the smallest adapter in src/styles/themes/ and write FOUNDATION GAP), and expo-file-system's download API at ~19. This is the last phase-1 story. Name any auth-header adapter src/styles/themes/auth-headers.ts — a path containing 'credentials' or 'secret' is refused by the secrets hook. REORDERED 24 Oct (Gerard): runs right after US-016e (provider) and US-016h (picker), before US-016f…US-017f; the mascot UI part moved to US-017b. Core shapes confirmed by session PLAY on 99fb70ff5; mobile_theme capability in automatos-ai #1295."
+    },
+    {
       "id": "US-016f",
       "prdStory": "US-016",
       "phase": 1,
@@ -415,7 +476,7 @@
         "src/styles/dress/",
         "src/ui/"
       ],
-      "priority": 7,
+      "priority": 9,
       "passes": false,
       "notes": "RE-VERIFY after foundation: the primitive list and props in src/ui/index.ts and the status keys in src/ui/variants.ts (FND-2). The A2 and A3 screens are built from these primitives at the same time; this story is how they get dressed, so a prop they use must keep working."
     },
@@ -444,7 +505,7 @@
         "src/ui/index.ts",
         "src/ui/__tests__/"
       ],
-      "priority": 8,
+      "priority": 10,
       "passes": false,
       "notes": "RE-VERIFY after foundation: @shopify/react-native-skia is installed (US-002a) and its RadialGradient / Canvas API at that version (read node_modules/@shopify/react-native-skia). Colour strings come from the token modules (lint)."
     },
@@ -472,7 +533,7 @@
         "assets/mascot/",
         "src/styles/mascot/"
       ],
-      "priority": 9,
+      "priority": 11,
       "passes": false,
       "notes": "Measured 20 Oct with ffprobe: idle.mp4 is hevc 'hvc1' 512x512, 24 fps, 121 frames, 5.04 s, made with hevc_videotoolbox for Safari (the web plays it as the alpha clip); stills 512x512 RGBA. 12 clips ≈ 2.0 MB, 12 stills ≈ 1.2 MB. RE-VERIFY after foundation: the frame type name in src/core/ai-sdk-stream.ts (US-003c) and the vendored mascot paths (US-003b; media.ts arrives with caption.ts's closure)."
     },
@@ -488,6 +549,7 @@
         "src/styles/mascot/MascotClip.tsx: expo-video useVideoPlayer + VideoView — nativeControls false, contentFit 'contain', muted, no fullscreen or picture in picture, a transparent background; no loop flag: the clip restarts or swaps at its boundary through the driver (playToEnd, plus timeUpdate at <= 250 ms against the vendored BOUNDARY_MS 80); one player, its source replaced on a swap",
         "src/styles/mascot/MascotSkia.tsx: tinted clips (Skia useVideo on the same .mp4 while MASCOT_TINTED_CLIPS) and every still (Skia useImage) drawn through <ColorMatrix matrix={cssFilterToColorMatrix(shell filter)}>, the sleeping dim composed on top; if the installed Skia has no useVideo, MASCOT_TINTED_CLIPS becomes false and the DONE mark says FOUNDATION GAP",
         "src/styles/mascot/Mascot.tsx: <Mascot size state> reads the resolved style (ring palette, shell, platform, Reduce Motion, theme files); accessibilityRole 'image' with the label 'Auto, <the vendored captionFor(state)>'; renders nothing where the style shows no mascot (Studio without a theme mascot; HUD with auto 'off'); src/styles/mascot/use-mascot.ts holds the driver state for a caller that feeds it events (the homes in phase 2)",
+        "Studio painted by an installed theme (US-016i, which ran before this story): when the theme's mascot mode is clips or stills, the Mascot uses US-016i's cached files (the clip on iOS when present, else the still); 'none' → no mascot (D-MASCOT)",
         "src/styles/mascot/__tests__/geometry.test.ts",
         "npm run typecheck passes",
         "npm run lint passes (0 errors)",
@@ -497,7 +559,7 @@
       "files": [
         "src/styles/mascot/"
       ],
-      "priority": 10,
+      "priority": 12,
       "passes": false,
       "notes": "RE-VERIFY after foundation: expo-video ~3.0 (useVideoPlayer, VideoView props, the 'playToEnd' and 'timeUpdate' events through expo's useEvent, timeUpdateEventInterval) and Skia's useVideo / useImage / ColorMatrix at the installed version — read node_modules, never guess. The alpha on device is OT-S2."
     },
@@ -527,7 +589,7 @@
         "src/styles/play/companion/",
         "src/styles/strings.ts"
       ],
-      "priority": 11,
+      "priority": 13,
       "passes": false,
       "notes": "No data fetching and no import from src/chat here (phase 1): props only. Text colours in Ember map to the look's variables: cream → groundText, #B7ADA4 → groundText2, #8A8077 → text3 (groundText2 faded as the vendored studio-tokens fadedText), molten → accent, #FF8A3D/#FFB070 → accentText, hearth → groundSurface."
     },
@@ -555,35 +617,9 @@
       "files": [
         "src/styles/hud/core/"
       ],
-      "priority": 12,
+      "priority": 14,
       "passes": false,
       "notes": "The HUD README's text twins hold: the chip, the status words and the transcript say everything the rings and waveform show. The desktop panels (AGENTS, MISSION, SPEND, LATENCY, THIS MACHINE, DELIVERABLES) are not on the phone core."
-    },
-    {
-      "id": "US-016h",
-      "prdStory": "US-016",
-      "phase": 1,
-      "title": "The style picker (the Style and look screen) and Studio's Light / Dark / System",
-      "description": "As a user, I want to flip between Studio, Play and HUD and see each one live before I pick it (FR-7). The Settings row that leads here is US-016j's (phase 2).",
-      "acceptanceCriteria": [
-        "app/(app)/settings/style.tsx renders US-016a's pickerState as three large cards, each a live preview painted in its own style through StyleScope: Studio (the cream or Studio Dark header with 'automatos' and a needs card), Play (Auto at 84 idling, 'Ready.' and a tool chip, the look's glow), HUD (a 120 pt RingCore with 'AUTOMATOS //' and a chip); previews animate only while the screen is focused and never under Reduce Motion, and are hidden from accessibility",
-        "A tap flips the style at once (US-016e setStyle: haptic, crossfade); the selected card carries a 2 pt ring in that style's accent AND the word 'Selected' (never colour alone); the Studio card has the Light / Dark / System SegmentedControl (the foundation's scheme setter); the Play card 'Make it yours →' (STYLE_SCREENS.lookPlay), the HUD card 'Looks →' (STYLE_SCREENS.lookHud); installed themes appear under Studio when US-016i provides them",
-        "src/styles/nav.ts: STYLE_SCREENS {settingsStyle '/settings/style', lookPlay '/settings/look/play', lookHud '/settings/look/hud'} with typed helpers for expo-router; src/navigation/routes.ts is not edited (KS4); app/(app)/settings/style.tsx mounts StyleSync (US-017d) so the looks are read when the screen opens",
-        "Each card: accessibilityRole 'button', label 'Studio style' and the selected state; every text >= 11",
-        "src/styles/picker/__tests__/: the card copy and STYLE_SCREENS",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes",
-        "npm run check:bundle passes"
-      ],
-      "files": [
-        "app/(app)/settings/style.tsx",
-        "src/styles/picker/",
-        "src/styles/nav.ts"
-      ],
-      "priority": 13,
-      "passes": false,
-      "notes": "RE-VERIFY after foundation: how app routes are typed in src/navigation/routes.ts (mirror its idiom in src/styles/nav.ts). The picker and the look pages carry no sign-up pointer either (D-NO-SIGNUP)."
     },
     {
       "id": "US-017d",
@@ -614,7 +650,7 @@
         "src/styles/sync/",
         "src/styles/play/__tests__/"
       ],
-      "priority": 14,
+      "priority": 15,
       "passes": false,
       "notes": "Server: orchestrator/api/themes_looks.py (gate members:read; per workspace and per user; a theme not installed → 404) and services/themes/looks.py. RE-VERIFY after foundation: how scripts/check-routes.ts normalises '{theme_id:path}' and how src/api/client.ts substitutes a path parameter — if it encodes the whole value, build a feature-local substitution that encodes each segment and write FOUNDATION GAP. The phone sees the look last saved on the server, not one still being edited in a browser tab (docs/theme-host/mobile.md)."
     },
@@ -641,7 +677,7 @@
         "src/styles/play/look-page/",
         "src/styles/play/__tests__/"
       ],
-      "priority": 15,
+      "priority": 16,
       "passes": false,
       "notes": "The web's import/export of looks (lib/looks/transfer.ts) is not on the phone in v1."
     },
@@ -668,7 +704,7 @@
         "src/styles/hud/drawer-model.ts",
         "src/styles/hud/__tests__/"
       ],
-      "priority": 16,
+      "priority": 17,
       "passes": false,
       "notes": "Saved looks are named 'MINE N' as the HUD prototype names them (its save()); Play's are 'My look N'."
     },
@@ -698,43 +734,9 @@
         "src/styles/strings.ts",
         "app/+not-found.tsx"
       ],
-      "priority": 17,
-      "passes": false,
-      "notes": "RE-VERIFY after foundation: the server source type in src/api/server.ts ('hosted' today; the connect kit adds 'paired' in parallel — read it, never edit it)."
-    },
-    {
-      "id": "US-016i",
-      "prdStory": "US-016",
-      "phase": 1,
-      "title": "Installed marketplace themes with a mobile block, under Studio: tokens, fonts and mascot as data",
-      "description": "As a user whose workspace installed a theme that supports phones, I want it under Studio in the picker, painting the Studio layout with its colours, fonts and mascot (D58, PRD-261 M-04) — data only, never code (D-NO-CODE).",
-      "acceptanceCriteria": [
-        "src/styles/routes.ts: GET /api/themes/installed; GET /api/themes/mobile/{install_id} with pendingUpstream 'PRD-261 M-04 (#1258, merged after the pin 630fc1c85)'; GET /api/themes/files/{digest}/{path:path} as the one prefix a file URL may have",
-        "src/styles/themes/schemas.ts: zod for {installs: [{installId, themeId, name, version, revoked, optIn, …}]} and MobileTheme {schema 1, installId, themeId, version, mobile: null | {source 'tokens' | 'fromLooks', tone 'light' | 'dark' | null, tokens {light: Record | null, dark: Record | null}, fonts {sans?, serif?, mono?}, mascot {mode 'clips' | 'stills' | 'none', states [{name, clip | null, still | null}]}}} (frontend/lib/api-client.ts MobileTheme, docs/theme-host/mobile.md); unknown fields ignored",
-        "src/styles/themes/installed.ts (pure): only when canMobileTheme(discovery); the mobile answer for each install, at most MOBILE_THEME_FETCH_CONCURRENCY 4 at a time; kept when mobile is non-null and the install is not revoked; a 404 skips that install (a revoked or foreign install). A paired phone is a theme member since automatos-ai #1264 (services/themes/membership.py gives a device its bound workspace; PLAY, 24 Oct), so a device's answers are real, not 404s; rows sorted by name as '<name> · <version>' under Studio in the picker",
-        "src/styles/themes/paint.ts (pure): themeTokens(answer, studioScheme, systemScheme, studioDefaults) — 'tokens' source: the user's scheme (System → the device) picks light or dark, a null scheme falls back to the other; 'fromLooks': the tone's scheme; each value 'H S% L%' (the vendored tripletToHex) or '#rrggbb', anything else dropped and logged; only the 24 MOBILE_TOKEN_NAMES are read; a painting without --background or --foreground is not offered; Studio keys the theme leaves out keep that scheme's Studio values; the 10 MOBILE_CONTRAST_PAIRS measured with the vendored contrastRatio and a failing pair logged",
-        "src/styles/themes/files.ts: a theme file is downloaded only when its URL is a relative path starting with '/api/themes/files/' with no '..', no '//', no scheme and no host; with the client's bearer to the configured API origin only; never a .js, .mjs, .css or .html file; into the cache directory keyed by its digest path (content-addressed); fonts at most 400 KB (the server's cap), mascot files at most 2 MB each — larger refused",
-        "src/styles/themes/fonts.ts: sans, serif and mono loaded with expo-font loadAsync from the cached files under the families 'theme-<installId>-<role>'; the Studio layout's body, title and mono faces use them while the theme is the style; a failed load keeps Studio's",
-        "The mascot: mode clips or stills → US-017b's Mascot uses the theme's cached files (the clip on iOS when present, else the still); 'none' → no mascot",
-        "src/styles/themes/ThemeSync.tsx inside StyleSync (US-017d): refreshes on mount and foreground; the last answer cached in MMKV for the first paint; a chosen theme that disappears or is revoked → back to Studio with the toast \"That theme isn't available any more, so Automatos Go is back on Studio.\"",
-        "A security-reviewer run (foreground, waited for) on src/styles/themes/ and src/styles/routes.ts finds no HIGH or CRITICAL, or each one is fixed in this story",
-        "src/styles/themes/__tests__/: the URL allowlist (absolute, protocol-relative, '..', a code suffix, a foreign host refused), painting (triplets, hex, garbage, missing --background, tone rules), the 404 skip, the capability gate, the revoked fallback",
-        "npm run check:routes passes",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes",
-        "npm run check:bundle passes",
-        "bash scripts/ralph/acceptance-prd001-styles.sh --no-ci passes"
-      ],
-      "files": [
-        "src/styles/routes.ts",
-        "src/styles/themes/",
-        "src/styles/picker/",
-        "src/styles/sync/"
-      ],
       "priority": 18,
       "passes": false,
-      "notes": "RE-VERIFY after foundation: canMobileTheme in src/api/capabilities.ts (US-004b), how the client exposes its auth headers for a file download (the A3 kit's open-file.ts needs the same — if there is no helper, build the smallest adapter in src/styles/themes/ and write FOUNDATION GAP), and expo-file-system's download API at ~19. This is the last phase-1 story. Name any auth-header adapter src/styles/themes/auth-headers.ts — a path containing 'credentials' or 'secret' is refused by the secrets hook."
+      "notes": "RE-VERIFY after foundation: the server source type in src/api/server.ts ('hosted' today; the connect kit adds 'paired' in parallel — read it, never edit it)."
     },
     {
       "id": "US-016j",
