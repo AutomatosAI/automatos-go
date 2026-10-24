@@ -38,3 +38,13 @@ export const PUSH_PHONE_NAME_COPY = Object.freeze({
   ios: 'iPhone',
   android: 'Android phone',
 });
+
+/**
+ * The preference lines the settings logic hands the Notifications screen (PRD-001 §4.7): who may
+ * hide question text, and which phone's time the daily digest follows (W2 K12).
+ */
+export const PUSH_PREFS_COPY = Object.freeze({
+  redactLocked: 'Your workspace owner or admin can change this.',
+  digestPhone:
+    "In this phone's time zone. With more than one phone, the digest follows the one you used last.",
+});

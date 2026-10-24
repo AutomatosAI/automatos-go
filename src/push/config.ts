@@ -88,3 +88,6 @@ export const RECOVERY_MIN_INTERVAL_MS = 24 * 60 * 60 * 1000;
 /** The MMKV item that remembers the last key recovery per server and workspace: dates, nothing else. */
 export const KEY_RECOVERY_ITEM = 'push.key-recovery.v1';
 export const RECOVERY_SCOPES_MAX = 16;
+
+/** A preference row's push switch for its event (W2 K7: a destination never delivered as a row). */
+export const PUSH_DESTINATION = 'push';
