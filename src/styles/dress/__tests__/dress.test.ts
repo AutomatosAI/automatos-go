@@ -22,6 +22,7 @@ import {
 import { GRABBER } from '../../../ui/overlay';
 import type { ResolvedStyle } from '../../provider/resolve';
 import { AI_LABEL_TONE } from '../../ai-label-state';
+import { PLAY_CHIP_LINE_ALPHA, PLAY_OUTLINE_ALPHA } from '../../tokens/dress-colours';
 import { HUD_BRACKET } from '../../tokens/hud';
 import { STYLE_RADII } from '../../tokens/radii';
 import { MIN_TEXT_SIZE, TYPE_SPECS } from '../../type';
@@ -33,7 +34,7 @@ import {
   dressOf,
   type Dress,
 } from '../dress';
-import { HUD_SELECTED_BORDER, PLAY_CHIP_LINE_ALPHA, PLAY_OUTLINE_ALPHA } from '../paints';
+import { HUD_SELECTED_BORDER } from '../paints';
 import {
   ALL_STYLES,
   HUD,

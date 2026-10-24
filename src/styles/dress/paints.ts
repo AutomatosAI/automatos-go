@@ -7,9 +7,9 @@
 // with the ground's line. HUD's are its README's: primary the accent with its ink, secondary and
 // outline the 1 pt accent line, chosen things the accent fill with a 1.5 pt accent border, panels
 // the panel fill with the panel border and the brackets, and a selected panel a soft accent glow
-// ('Automatos Command Pages.dc.html': 1.5px accent, 0 0 24px -6px at .5).
+// ('Automatos Command Pages.dc.html': 1.5px accent, 0 0 24px -6px at .5). Every colour comes
+// from the tokens: the look's variables, and the lines and glow tokens/dress-colours.ts derives.
 
-import { rgba } from '../../core/web/lib/look-kit/css';
 import {
   BUTTON_PAINTS,
   buttonPaint,
@@ -19,6 +19,7 @@ import {
   type ButtonVariant,
   type ControlPaint,
 } from '../../ui/variants';
+import { HUD_SELECTED_GLOW, hudSelectedGlowColour, playDressLines } from '../tokens/dress-colours';
 import type { HudVars } from '../tokens/hud';
 import type { PlayVars } from '../tokens/play';
 import type { Colours } from '../tokens/types';
@@ -85,16 +86,10 @@ export type DressPaints = {
   readonly panel: PanelPaints;
 };
 
-/** Ember's outline button: a 1 pt line of the ground's text at 24 %. */
-export const PLAY_OUTLINE_ALPHA = 0.24;
-/** Ember 04's filter chips when not chosen: a 1 pt line of the ground's text at 20 %. */
-export const PLAY_CHIP_LINE_ALPHA = 0.2;
 /** A solid button's pressed opacity (at-btn--default:hover, as the foundation's primary). */
 export const SOLID_PRESSED_OPACITY = BUTTON_PAINTS.primary.pressedOpacity;
 /** HUD's selected or live line: 1.5 pt (its README 'Panel'). */
 export const HUD_SELECTED_BORDER = 1.5;
-/** HUD's soft accent glow round a selected panel. */
-export const HUD_SELECTED_GLOW = Object.freeze({ blurRadius: 24, spreadDistance: -6, alpha: 0.5 });
 export const HAIRLINE = 1;
 
 const paintOf = (control: Pick<ControlPaint, 'backgroundColor' | 'borderColor' | 'color'>) => ({
@@ -159,7 +154,7 @@ export function studioPaints(colours: Colours): DressPaints {
 }
 
 function playButtons(vars: PlayVars): Record<ButtonVariant, PaintSet> {
-  const line = rgba(vars.groundText, PLAY_OUTLINE_ALPHA);
+  const line = playDressLines(vars).outline;
   return {
     primary: solid(vars.accent, vars.accentInk),
     secondary: solid(vars.groundText, vars.groundBg),
@@ -178,7 +173,7 @@ function playButtons(vars: PlayVars): Record<ButtonVariant, PaintSet> {
 
 /** Play's: the look's --pl-* variables; pressed cards take the Studio-keyed hover the look sets. */
 export function playPaints(vars: PlayVars, colours: Colours): DressPaints {
-  const chipLine = rgba(vars.groundText, PLAY_CHIP_LINE_ALPHA);
+  const chipLine = playDressLines(vars).chip;
   const card = { background: vars.groundSurface, border: vars.groundLine };
   return {
     button: playButtons(vars),
@@ -227,10 +222,9 @@ function hudButtons(vars: HudVars): Record<ButtonVariant, PaintSet> {
 
 /** HUD's soft glow round a selected or live panel, in the look's accent. */
 export function hudGlowLayers(accent: string): readonly GlowLayer[] {
-  const { blurRadius, spreadDistance, alpha } = HUD_SELECTED_GLOW;
-  return Object.freeze([
-    { offsetX: 0, offsetY: 0, blurRadius, spreadDistance, color: rgba(accent, alpha) },
-  ]);
+  const { blurRadius, spreadDistance } = HUD_SELECTED_GLOW;
+  const color = hudSelectedGlowColour(accent);
+  return Object.freeze([{ offsetX: 0, offsetY: 0, blurRadius, spreadDistance, color }]);
 }
 
 /** HUD's: its README's derived variables (tokens/hud.ts hudVars); the segment track its token. */

@@ -1,0 +1,30 @@
+// The colours the dress (src/styles/dress) derives from Play's and HUD's variables beyond the ones
+// they carry, built with the vendored rgba as tokens/hud.ts builds its own, so every colour the
+// shared primitives paint comes from this directory (D-TOKENS). Play: Ember's outline button, a
+// 1 pt line of the ground's text at 24 %, and 04's filter chips at 20 %. HUD: the soft accent glow
+// round a selected or live panel ('Automatos Command Pages.dc.html': 0 0 24px -6px at .5).
+
+import { rgba } from '../../core/web/lib/look-kit/css';
+import type { PlayVars } from './play';
+
+/** Ember's outline button: a 1 pt line of the ground's text at 24 %. */
+export const PLAY_OUTLINE_ALPHA = 0.24;
+/** Ember 04's filter chips when not chosen: a 1 pt line of the ground's text at 20 %. */
+export const PLAY_CHIP_LINE_ALPHA = 0.2;
+/** HUD's soft accent glow round a selected panel. */
+export const HUD_SELECTED_GLOW = Object.freeze({ blurRadius: 24, spreadDistance: -6, alpha: 0.5 });
+
+export type PlayDressLines = { readonly outline: string; readonly chip: string };
+
+/** Play's two lines of the ground's text: the outline button's and an unchosen chip's. */
+export function playDressLines(vars: Pick<PlayVars, 'groundText'>): PlayDressLines {
+  return Object.freeze({
+    outline: rgba(vars.groundText, PLAY_OUTLINE_ALPHA),
+    chip: rgba(vars.groundText, PLAY_CHIP_LINE_ALPHA),
+  });
+}
+
+/** The colour of HUD's glow round a selected panel, in the look's accent. */
+export function hudSelectedGlowColour(accent: string): string {
+  return rgba(accent, HUD_SELECTED_GLOW.alpha);
+}
