@@ -1,13 +1,17 @@
-// Shared fixtures of the action handler's tests (handler.test.ts, handler-logging.test.ts): v2
-// payloads signed here with node:crypto under this phone's push key, the response expo-notifications
+// Shared fixtures of the action handler's tests (handler.test.ts, handler-logging.test.ts) and the
+// foreground handler's (receive.test.ts, receive-logging.test.ts): v2 payloads signed here with
+// node:crypto under this phone's push key, the response and the notification expo-notifications
 // hands over for each, the push record, a server that answers each route from a script over the
-// foundation's fake transport, and fakes for the port, the router, the Toast and MMKV.
+// foundation's fake transport, fakes for the port, the router, the Toast and MMKV, and a logger spy.
 
 import { createHash, createHmac } from 'node:crypto';
+
+import { vi } from 'vitest';
 
 import type { StreamingResponse } from '../../api/transport-types';
 import { jsonReply } from '../../api/__tests__/fake-transport';
 import type { WorkspaceRole } from '../../api/workspace';
+import { logger } from '../../lib/logger';
 import type { KeyValueStorage } from '../../storage/encrypted-storage';
 import { handledStoreOver } from '../inbound/handled-store';
 import type { HandlerDeps } from '../inbound/handler';
@@ -91,6 +95,30 @@ export function response(data: unknown, actionIdentifier: string, options: Respo
     },
     actionIdentifier,
     ...(options.userText === undefined ? {} : { userText: options.userText }),
+  };
+}
+
+export const QUESTION_CATEGORY = 'automatos.question.3';
+export const OPEN_CATEGORY = 'automatos.open';
+
+/** A notification as expo-notifications 0.32.17 hands it to the foreground handler (iOS). */
+export function received(
+  data: unknown,
+  category: string = QUESTION_CATEGORY,
+  text: Pick<ResponseOptions, 'title' | 'body'> = {},
+) {
+  return {
+    date: 1792540800.5,
+    request: {
+      identifier: IOS_ID,
+      content: {
+        title: text.title ?? 'Auto needs an answer',
+        body: text.body ?? 'Ship the Lisbon deck?',
+        data,
+        categoryIdentifier: category,
+      },
+      trigger: { type: 'push' },
+    },
   };
 }
 
@@ -251,4 +279,21 @@ export function responsesPort(last: unknown) {
 /** Lets every pending promise settle (the listener's handling is not awaited by the port). */
 export async function settle(): Promise<void> {
   for (let turn = 0; turn < 20; turn += 1) await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+/** Every logged argument as text: an Error by its message and cause, anything else as JSON. */
+function asText(arg: unknown): string {
+  if (arg instanceof Error) return `${arg.name} ${arg.message} ${String(arg.cause ?? '')}`;
+  return typeof arg === 'string' ? arg : (JSON.stringify(arg) ?? String(arg));
+}
+
+/** Records every logged argument as text, at every level (restore with vi.restoreAllMocks). */
+export function spyOnLogger(): string[] {
+  const lines: string[] = [];
+  for (const level of ['debug', 'info', 'warn', 'error'] as const) {
+    vi.spyOn(logger, level).mockImplementation((...args: unknown[]) => {
+      lines.push(...args.map(asText));
+    });
+  }
+  return lines;
 }

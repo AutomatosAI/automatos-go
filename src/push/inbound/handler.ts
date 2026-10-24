@@ -64,6 +64,14 @@ export type HandlerDeps = Readonly<{
   refresh?: () => void;
 }>;
 
+/** What a signature check reads: this server's push record, the hash and the clock. */
+export type VerifyDeps = Readonly<{
+  session: Pick<ResponseSession, 'serverOrigin'>;
+  store: Pick<PushKeyStore, 'load'>;
+  sha256: Sha256;
+  nowSeconds: () => number;
+}>;
+
 type Intent<K extends PushIntent['kind']> = Extract<PushIntent, { kind: K }>;
 
 type ReadableEvent = Extract<InboundEvent, { kind: 'readable' }>;
@@ -104,7 +112,7 @@ function firstTime(handled: HandlerDeps['handled'], key: string): boolean {
 }
 
 /** The record's key when the record is this server's, else null (nothing verifies). */
-async function pushKeyFor(deps: HandlerDeps): Promise<string | null> {
+async function pushKeyFor(deps: VerifyDeps): Promise<string | null> {
   let record: PushRecord | null;
   try {
     record = await deps.store.load();
@@ -115,7 +123,8 @@ async function pushKeyFor(deps: HandlerDeps): Promise<string | null> {
   return record && record.serverOrigin === deps.session.serverOrigin ? record.pushKey : null;
 }
 
-async function isVerified(payload: PushPayload | null, deps: HandlerDeps): Promise<boolean> {
+/** The payload's sig checks out with this server's push key, and it is fresh (also receive.ts's). */
+export async function isVerified(payload: PushPayload | null, deps: VerifyDeps): Promise<boolean> {
   if (!payload) return false;
   const pushKey = await pushKeyFor(deps);
   return verifyPushSignature(payload, pushKey, deps.sha256, deps.nowSeconds());

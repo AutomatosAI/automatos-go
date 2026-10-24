@@ -130,3 +130,13 @@ export const PUSH_ACTION_COPY = Object.freeze({
   otherWorkspace: 'That notification is from another workspace.',
   answerHere: 'Answer it here.',
 });
+
+/**
+ * The in-context ask (KP11): one title, the three push types in PUSH_TYPE_COPY's words, and two
+ * buttons. 'Turn on' shows the phone's own permission prompt; nothing here promises more.
+ */
+export const PUSH_PROMPT_COPY = Object.freeze({
+  title: 'Get a notification when Auto needs you',
+  turnOn: 'Turn on',
+  notNow: 'Not now',
+});

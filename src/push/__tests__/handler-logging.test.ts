@@ -6,7 +6,6 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { logger } from '../../lib/logger';
 import { handleResponse } from '../inbound/handler';
 import { startResponses } from '../inbound/responses';
 import {
@@ -22,6 +21,7 @@ import {
   responsesPort,
   settle,
   signed,
+  spyOnLogger,
   world,
   type WorldOptions,
 } from './handler-fixtures';
@@ -99,22 +99,6 @@ const PATHS: readonly Path[] = [
     options: { loadFails: true },
   },
 ];
-
-/** Every logged argument as text: an Error by its message and cause, anything else as JSON. */
-function asText(arg: unknown): string {
-  if (arg instanceof Error) return `${arg.name} ${arg.message} ${String(arg.cause ?? '')}`;
-  return typeof arg === 'string' ? arg : (JSON.stringify(arg) ?? String(arg));
-}
-
-function spyOnLogger(): string[] {
-  const lines: string[] = [];
-  for (const level of ['debug', 'info', 'warn', 'error'] as const) {
-    vi.spyOn(logger, level).mockImplementation((...args: unknown[]) => {
-      lines.push(...args.map(asText));
-    });
-  }
-  return lines;
-}
 
 const SECRETS = [
   TITLE,

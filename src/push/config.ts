@@ -103,3 +103,17 @@ export const GRANTED_STATUS = 'granted';
 
 /** The answer route's refusal of a question that is not open any more (approval_grants.py). */
 export const UNPROCESSABLE_STATUS = 422;
+
+/** The discovery capability a server lists when it sends push to phones (D-CAPABILITIES). */
+export const PUSH_CAPABILITY = 'push';
+
+/** The in-context ask (KP11): from the second session on, and at most twice, a week apart. */
+export const PROMPT_MIN_SESSIONS = 2;
+export const PROMPT_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+export const PROMPT_MAX_DECLINES = 2;
+
+/** The MMKV item of the in-context ask's counters: numbers and dates only, never a key or a token. */
+export const PROMPT_COUNTS_ITEM = 'push.prompt.v1';
+
+/** The phone's clock is read in milliseconds; the signature's window is in seconds. */
+export const MS_PER_SECOND = 1000;
