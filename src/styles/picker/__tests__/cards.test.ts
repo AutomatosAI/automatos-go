@@ -1,12 +1,22 @@
 import { describe, expect, it } from 'vitest';
 
+import { contrastRatio } from '../../../core/web/lib/look-kit/contrast';
+import { ACCENTS, ERROR_COLOUR } from '../../../core/web/lib/looks/catalogue';
 import { PRESETS } from '../../../core/web/lib/looks/presets';
+import {
+  HUD_STYLES,
+  PLAY_STYLES,
+  STUDIO_DARK,
+  STUDIO_LIGHT,
+  STUDIO_STYLES,
+} from '../../dress/__tests__/fixtures';
 import { HUD_PRESET_LOOKS } from '../../hud/look-schema';
 import type { StyleMotion } from '../../provider/resolve';
 import { pickerState, type PickerInput } from '../../registry/picker';
 import { FOLLOW_STUDIO, builtinChoice, themeChoice } from '../../registry/style-id';
 import { MIN_TEXT_SIZE } from '../../type';
 import { hudVars } from '../../tokens/hud';
+import { HUD_FIXED, HUD_LOOK_CATALOGUE } from '../../tokens/hud-catalogue';
 import { playVars } from '../../tokens/play';
 import {
   CARD_RING,
@@ -16,6 +26,7 @@ import {
   pickerCards,
   playToolLine,
   previewAnimates,
+  selectedPaint,
 } from '../cards';
 import {
   autoStandIn,
@@ -129,14 +140,69 @@ describe('the picker cards', () => {
 });
 
 describe("the card's frame", () => {
-  it('rings the chosen card 2 pt in its accent', () => {
-    expect(cardFrame(true)).toEqual({ borderWidth: 2, margin: 0, colour: 'accent' });
+  it("rings the chosen card 2 pt in its style's accent", () => {
+    for (const style of [...STUDIO_STYLES, ...PLAY_STYLES, ...HUD_STYLES]) {
+      const ring = selectedPaint(style).ring;
+      expect(cardFrame(true, style)).toEqual({ borderWidth: 2, margin: 0, colour: ring });
+    }
   });
 
   it('keeps the others the same size with a 1 pt border and a 1 pt margin', () => {
-    const idle = cardFrame(false);
-    expect(idle).toEqual({ borderWidth: 1, margin: 1, colour: 'border' });
-    expect(idle.borderWidth + idle.margin).toBe(CARD_RING.selected);
+    for (const style of [STUDIO_LIGHT, PLAY_STYLES[0], HUD_STYLES[0]]) {
+      const idle = cardFrame(false, style);
+      expect(idle).toEqual({ borderWidth: 1, margin: 1, colour: style.tokens.colours.border });
+      expect(idle.borderWidth + idle.margin).toBe(CARD_RING.selected);
+    }
+  });
+});
+
+describe("the chosen card's ring and 'Selected' (never the error colour)", () => {
+  /** WCAG AA for the 'Selected' word (mono 11 pt and up: normal text). */
+  const AA = 4.5;
+
+  it("ring Play in its look's accent and word it in the accent's text, under every preset", () => {
+    expect(PLAY_STYLES.length).toBeGreaterThanOrEqual(PRESETS.length);
+    for (const style of PLAY_STYLES) {
+      const { playLook, play, tokens } = style;
+      if (!playLook || !play) throw new Error('a Play style carries its look and variables');
+      const paint = selectedPaint(style);
+      expect(paint.ring).toBe(ACCENTS[playLook.accent].hex);
+      expect(paint.ring).toBe(play.accent);
+      expect(paint.ring).not.toBe(ERROR_COLOUR);
+      expect(paint.ring).not.toBe(tokens.colours.accent);
+      expect(paint.word).toBe(play.accentText);
+    }
+  });
+
+  it("ring HUD in its look's accent and word it in that accent, under every preset", () => {
+    for (const style of HUD_STYLES) {
+      const { hudLook, hud, tokens } = style;
+      if (!hudLook || !hud) throw new Error('a HUD style carries its look and variables');
+      const paint = selectedPaint(style);
+      expect(paint.ring).toBe(HUD_LOOK_CATALOGUE.accents[hudLook.accent].hex);
+      expect(paint.ring).toBe(hud.accent);
+      expect(paint.ring).not.toBe(HUD_FIXED.error);
+      expect(paint.ring).not.toBe(tokens.colours.accent);
+      expect(paint.word).toBe(hud.accent);
+    }
+  });
+
+  it("keep Studio Light and Dark (and an installed theme) on Studio's accent", () => {
+    for (const style of STUDIO_STYLES) {
+      const { accent } = style.tokens.colours;
+      expect(selectedPaint(style)).toEqual({ ring: accent, word: accent });
+    }
+    expect(selectedPaint(STUDIO_DARK).ring).not.toBe(selectedPaint(STUDIO_LIGHT).ring);
+  });
+
+  it("read 'Selected' at AA on the card under every style and preset", () => {
+    for (const style of [...STUDIO_STYLES, ...PLAY_STYLES, ...HUD_STYLES]) {
+      const ratio = contrastRatio(selectedPaint(style).word, style.tokens.colours.card);
+      expect(
+        ratio,
+        `${style.layout} ${style.playLook?.id ?? style.hudLook?.id ?? style.tone}`,
+      ).toBeGreaterThanOrEqual(AA);
+    }
   });
 });
 
