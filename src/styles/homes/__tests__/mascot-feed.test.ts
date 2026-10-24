@@ -92,6 +92,16 @@ describe('Auto over A2’s thread: the frames and how the thread moved', () => {
     expect(autoShows(answered)).toBe('idle');
   });
 
+  it('a Deliverable landing in the chat: Auto celebrates (US-017g)', () => {
+    const made = live(
+      homeOn(opened()),
+      SEND,
+      frame(madeDocument('shortlist-1', 'Laptop shortlist')),
+    );
+    expect(autoShows(made)).toBe('celebrate');
+    expect(made.run.driver.mascot.celebratedThisTurn).toBe(true);
+  });
+
   it('a chat reopened mid-turn works until the saved reply lands', () => {
     const question = saved('m1', 'user', 'Find me a laptop');
     const reopened = live(homeOn(createThread(CHAT_ID)), {
@@ -151,6 +161,17 @@ describe('the feed’s rules', () => {
       toolRunning: true,
       limitReached: false,
     });
+  });
+
+  it('says deliverable-added once per new Deliverable, for the turn that named it', () => {
+    const shortlist = madeDocument('shortlist-1', 'Laptop shortlist');
+    const made = threadReducer(sent, frame(shortlist));
+    expect(threadMascotEvents(sent, made)).toEqual([{ type: 'deliverable-added' }]);
+    const again = threadReducer(made, frame(shortlist));
+    expect(threadMascotEvents(made, again)).toEqual([]);
+    const second = threadReducer(made, frame(madeDocument('budget-2', 'Lisbon budget')));
+    expect(threadMascotEvents(made, second)).toEqual([{ type: 'deliverable-added' }]);
+    expect(threadMascotEvents(opened(), sent)).toEqual([{ type: 'send' }]);
   });
 
   it('leaves the words to the frames while this phone reads them', () => {

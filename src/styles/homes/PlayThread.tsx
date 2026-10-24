@@ -2,11 +2,12 @@
 // pieces, oldest first, opening with the AI label (PlayThreadCaption, D73). The user's words in
 // Play's outlined bubble; Auto's reply unboxed: its tool chips, its words (A2's markdown on the
 // style's tokens) with the caret while this phone reads them, the report card for each Deliverable
-// the turn made, "What Auto did", then A2's own notices, ticket cards and cards (Mission suggestion,
-// plan and tool approval, withdraw offer), dressed by the primitives. 'Auto is thinking' is not a
-// row here: Auto's row under the thread says it (its text twin). Report this long-presses Auto's
-// message and is each block's accessible action, as on A2's thread (AutoMessage.tsx is the
-// reference). The list scrolls to the end only when a row is added (A2's shouldScrollToEnd).
+// the turn made (dropping in as it lands, US-017g), "What Auto did", then A2's own notices, ticket
+// cards and cards (Mission suggestion, plan and tool approval, withdraw offer), dressed by the
+// primitives. 'Auto is thinking' is not a row here: Auto's row under the thread says it (its text
+// twin). Report this long-presses Auto's message and is each block's accessible action, as on A2's
+// thread (AutoMessage.tsx is the reference). The list scrolls to the end only when a row is added
+// (A2's shouldScrollToEnd).
 
 import { useRouter } from 'expo-router';
 import { useCallback, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
@@ -69,7 +70,13 @@ function useReportActions(onReport: (() => void) | undefined): ReportAccessibili
   );
 }
 
-function Reports({ refs }: { readonly refs: readonly DeliverableRef[] }) {
+type ReportsProps = {
+  readonly refs: readonly DeliverableRef[];
+  /** The reply being written holds them: they just landed, so they drop in. */
+  readonly drop?: boolean;
+};
+
+function Reports({ refs, drop = false }: ReportsProps) {
   const router = useRouter();
   return refs.map((ref) => (
     <ReportCard
@@ -77,6 +84,7 @@ function Reports({ refs }: { readonly refs: readonly DeliverableRef[] }) {
       title={ref.title}
       eyebrow={reportEyebrowOf(ref)}
       onOpen={() => router.push(routes.cc.deliverable(ref.id))}
+      drop={drop}
     />
   ));
 }
@@ -108,7 +116,7 @@ function PlayAuto({ row, caret, refs, onLink, onRetry, onCard, report }: PlayAut
           {words}
         </AutoMessage>
       ) : null}
-      <Reports refs={refs} />
+      <Reports refs={refs} drop={risesIn(row.key)} />
       <ReceiptsLine rows={playReceiptRows(row.receipts)} onRow={openReceipt} />
       {row.notices.map((notice) => (
         <TurnNotice key={notice.key} notice={notice} onRetry={onRetry} />

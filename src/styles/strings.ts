@@ -372,6 +372,24 @@ export const PLAY_TABS_COPY = Object.freeze({
 });
 
 /**
+ * Play's Shelf and a Deliverable's page (Ember 04-05, US-017g): the title, the server's count, the
+ * newest piece's badge, the eyebrow ('Report · Today', in the label style's capitals) and the way
+ * back. Everything else (the pills, the empty, loading and failure words, Load more, the file's
+ * actions) is A3's copy.
+ */
+export const PLAY_SHELF_COPY = Object.freeze({
+  title: 'Your shelf',
+  /** '15 Deliverables', set in Geist Mono capitals. */
+  count: Object.freeze({ one: 'Deliverable', other: 'Deliverables' }),
+  newest: 'Newest',
+  today: 'Today',
+  joiner: ' · ',
+  back: '← Shelf',
+  backLabel: 'Back to the shelf',
+  listLabel: 'Your shelf of Deliverables',
+});
+
+/**
  * HUD's phone core (US-018b, 'Automatos Command HUD.dc.html'): the top bar, the status row's word
  * for Auto's state, the mic (A6 opens it: 'MIC LIVE' shows whenever it is open), the command row
  * (KS10), the three buttons and what the transcript says to VoiceOver. HOLD TO TALK does nothing
@@ -449,7 +467,11 @@ export const EDGE_COPY = Object.freeze({
     studio: 'Talk to Auto',
     lede: "I'm Auto. Tell me what you need and I'll get it done.",
     /** Play's starter chips (KS13): a tap fills the message box and never sends. */
-    starters: Object.freeze(['Plan my week', 'What needs me today?', 'Summarise what my agents did']),
+    starters: Object.freeze([
+      'Plan my week',
+      'What needs me today?',
+      'Summarise what my agents did',
+    ]),
     starterHint: 'Puts this in the message box',
     /** HUD's transcript before the first message. */
     hud: 'Say or type what you need.',

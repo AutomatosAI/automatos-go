@@ -4,7 +4,8 @@
 // 11 text2), the preview (Geist 14 text2, one line) and the report badge (the label style in the
 // accent text), over 1 pt dividers of the ground's text at 0.07; the bottom bar under it all. No
 // search field (PRD-001 open question 3 is Gerard's). Props only: phase 2 (US-017g) feeds it A2's
-// history, its paging and the destinations.
+// history, its paging and the destinations, and what stands in the rows' place while there are none
+// (`empty`: the wait, a failure, the first chat's nudge).
 
 import { useRouter } from 'expo-router';
 import { useMemo, type ReactElement } from 'react';
@@ -35,6 +36,8 @@ export type PlayConversationsProps = {
   readonly onEndReached?: () => void;
   /** Under the list: A2's loading-more or end row. */
   readonly footer?: ReactElement | null;
+  /** In the rows' place while there are none: loading, a failure, the empty state. */
+  readonly empty?: ReactElement | null;
   /** The signed-in person's initial on the avatar chip; an icon without it. */
   readonly initial?: string | null;
 };
@@ -128,7 +131,8 @@ function ConversationRow({ row, last, paint, onOpen }: RowProps) {
 }
 
 export function PlayConversations(props: PlayConversationsProps) {
-  const { conversations, now, timeZone, onNewChat, onOpen, onEndReached, footer, initial } = props;
+  const { conversations, now, timeZone, onNewChat, onOpen, onEndReached, footer, empty, initial } =
+    props;
   const paint = useCompanionPaint();
   const sections = useMemo(
     () => conversationSections(conversations, { now, timeZone }),
@@ -179,8 +183,9 @@ export function PlayConversations(props: PlayConversationsProps) {
         )}
         onEndReached={onEndReached}
         ListFooterComponent={footer ?? null}
+        ListEmptyComponent={empty ?? null}
         stickySectionHeadersEnabled={false}
-        contentContainerStyle={{ paddingHorizontal: spacing.space3 }}
+        contentContainerStyle={[styles.content, { paddingHorizontal: spacing.space3 }]}
         style={styles.list}
       />
       <PlayBottomBar active="chats" />
@@ -194,4 +199,6 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   title: { flex: 1 },
   list: { flex: 1 },
+  /** The empty slot fills the list, so a state centres in it. */
+  content: { flexGrow: 1 },
 });

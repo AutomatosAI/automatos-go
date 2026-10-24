@@ -13,6 +13,9 @@
 //                 read (a reopened turn the server still runs): one source per turn
 //   approvals     a plan, tool or withdraw card waiting on the user: approval-waiting, and
 //                 approval-settled once none waits
+//   deliverables  a Deliverable the live turn names for the first time: deliverable-added, once
+//                 per move (the web's lib/chat-controller/turn.ts announces each new one once), so
+//                 Auto celebrates as its card lands (US-017g)
 //
 // captionFactsOf says what Play's row adds under Auto's word (the vendored chatCaption): the
 // running call's input, the newest Deliverable's kind, a card waiting on the user.
@@ -34,6 +37,7 @@ const STOP: MascotEvent = Object.freeze({ type: 'stop' });
 const APPROVAL_WAITING: MascotEvent = Object.freeze({ type: 'approval-waiting' });
 const APPROVAL_SETTLED: MascotEvent = Object.freeze({ type: 'approval-settled' });
 const APPROVAL_KINDS: ReadonlySet<string> = new Set(['plan', 'tool', 'withdraw']);
+const DELIVERABLE_ADDED: MascotEvent = Object.freeze({ type: 'deliverable-added' });
 
 /** The web chat's status for the thread's (lib/chat/chat-status.ts). */
 export function chatStatusOf(state: Pick<ThreadState, 'status'>): ChatStatus {
@@ -91,6 +95,19 @@ function approvalEvents(previous: FeedFacts, next: FeedFacts): MascotEvent[] {
   return [after ? APPROVAL_WAITING : APPROVAL_SETTLED];
 }
 
+/** The ids of the live turn's Deliverables; none with no turn on screen. */
+function madeIds(state: Pick<FeedFacts, 'live'>): ReadonlySet<string> {
+  return new Set(state.live?.turn.deliverables.map((ref) => ref.id) ?? []);
+}
+
+/** A Deliverable the live turn had not named before: a turn that started anew names all of its. */
+function deliverableEvents(previous: FeedFacts, next: FeedFacts): MascotEvent[] {
+  const sameTurn = previous.live !== null && previous.live.since === next.live?.since;
+  const known = sameTurn ? madeIds(previous) : new Set<string>();
+  const fresh = [...madeIds(next)].some((id) => !known.has(id));
+  return fresh ? [DELIVERABLE_ADDED] : [];
+}
+
 /** Auto's events for one move of the thread's state, in order; none when nothing he reads moved. */
 export function threadMascotEvents(previous: FeedFacts, next: FeedFacts): MascotEvent[] {
   if (previous === next) return [];
@@ -98,6 +115,7 @@ export function threadMascotEvents(previous: FeedFacts, next: FeedFacts): Mascot
     ...statusEvents(previous, next),
     ...replyEvents(previous, next),
     ...approvalEvents(previous, next),
+    ...deliverableEvents(previous, next),
   ];
 }
 

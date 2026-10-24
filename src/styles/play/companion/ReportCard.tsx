@@ -3,10 +3,12 @@
 // 1 pt accent line at 0.4, 12 pad and 14 gap; a 64 x 80 paper in the sheet's colours (radius 5, the
 // title at 11, a rule and a little chart, all decoration hidden from VoiceOver); the eyebrow
 // 'REPORT · JUST NOW' in the label style and the accent text; the title in the card slot; and
-// 'Open', the screen's one primary (44 high, radius 10: the dress's Play button).
+// 'Open', the screen's one primary (44 high, radius 10: the dress's Play button). A card that just
+// landed drops in 16 pt and overshoots to 1.04 over 420 ms (US-017g; none under Reduce Motion).
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
+import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 
 import { Button, Text } from '../../../ui';
 import { PLAY_CHAT_COPY } from '../../strings';
@@ -18,13 +20,27 @@ export type ReportCardProps = {
   /** The line over the title; 'Report · just now' when omitted. */
   readonly eyebrow?: string;
   readonly onOpen: () => void;
+  /** It just landed in the chat: it drops in (history never replays). */
+  readonly drop?: boolean;
 };
 
-const { report } = COMPANION;
+const { report, drop: land } = COMPANION;
 /** CSS's 135°: from the top-left corner to the bottom-right. */
 const GRADIENT_START = Object.freeze({ x: 0, y: 0 });
 const GRADIENT_END = Object.freeze({ x: 1, y: 1 });
 const LAST_BAR = report.bars.length - 1;
+const LAND_EASING = Easing.out(Easing.cubic);
+
+/** Ember's land: every frame names opacity, then translateY before scale, as reanimated asks. */
+const LAND = new Keyframe({
+  0: { opacity: 0, transform: [{ translateY: -land.distance }, { scale: land.from }] },
+  [land.peakAt]: {
+    opacity: 1,
+    transform: [{ translateY: 0 }, { scale: land.overshoot }],
+    easing: LAND_EASING,
+  },
+  100: { opacity: 1, transform: [{ translateY: 0 }, { scale: 1 }], easing: LAND_EASING },
+}).duration(land.durationMs);
 
 function Paper({ title, paint }: { readonly title: string; readonly paint: CompanionPaint }) {
   const { vars, lines, style } = paint;
@@ -69,13 +85,19 @@ function Paper({ title, paint }: { readonly title: string; readonly paint: Compa
   );
 }
 
-export function ReportCard({ title, eyebrow = reportEyebrow(), onOpen }: ReportCardProps) {
+export function ReportCard({
+  title,
+  eyebrow = reportEyebrow(),
+  onOpen,
+  drop = false,
+}: ReportCardProps) {
   const paint = useCompanionPaint();
   if (!paint) return null;
   const { vars, lines, style } = paint;
   const said = PLAY_CHAT_COPY.report;
   return (
-    <View
+    <Animated.View
+      entering={drop && paint.loops ? LAND : undefined}
       style={[
         styles.card,
         {
@@ -102,7 +124,7 @@ export function ReportCard({ title, eyebrow = reportEyebrow(), onOpen }: ReportC
           <Button label={said.open} accessibilityLabel={said.openLabel(title)} onPress={onOpen} />
         </View>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 

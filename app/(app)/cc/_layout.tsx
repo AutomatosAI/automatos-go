@@ -5,7 +5,9 @@
 // social post are sheets over it (SHEET_ROUTE_OPTIONS). One opened from outside the tabs (chat, the
 // needs strip) is this stack's first screen, with no tab under it: no tab shows selected, and every
 // tab, Board too, goes to its screen. The words and figures are src/cc/shell's (pure, tested); the
-// live word reads the foundation's one stream.
+// live word reads the foundation's one stream. In Play the Shelf and a Deliverable draw their own
+// header, way back and bottom bar (Ember 04-05, KS10), so the top bar, head and tabs step aside
+// there (src/styles/homes/use-play-layout.ts).
 import { Stack } from 'expo-router';
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -16,6 +18,7 @@ import { TabStrip } from '../../../src/cc/shell/TabStrip';
 import { TopBar } from '../../../src/cc/shell/TopBar';
 import { useShellFigures, useShellTab } from '../../../src/cc/shell/use-shell';
 import { SHEET_ROUTE_OPTIONS } from '../../../src/cc/use-sheet-route';
+import { useShellStepsAside } from '../../../src/styles/homes/use-play-layout';
 import { useTokens } from '../../../src/styles/theme';
 import { Screen } from '../../../src/ui';
 
@@ -26,6 +29,7 @@ export default function CommandCentreLayout() {
   const { colours } = useTokens();
   const tab = useShellTab();
   const { lede, counts } = useShellFigures();
+  const aside = useShellStepsAside();
   const screenOptions = useMemo(
     () => ({
       headerShown: false,
@@ -37,9 +41,13 @@ export default function CommandCentreLayout() {
   );
   return (
     <Screen edges={EDGES}>
-      <TopBar />
-      <Head lede={lede} />
-      <TabStrip active={tab} counts={counts} />
+      {aside ? null : (
+        <>
+          <TopBar />
+          <Head lede={lede} />
+          <TabStrip active={tab} counts={counts} />
+        </>
+      )}
       <View style={styles.body}>
         <Stack screenOptions={screenOptions}>
           <Stack.Screen name="ticket/[taskId]" options={SHEET_ROUTE_OPTIONS} />
