@@ -58,7 +58,10 @@ export function sameAnswer(sent: string, recorded: string | null): boolean {
   return recorded !== null && strippedBothWays(sent) === strippedBothWays(recorded);
 }
 
-/** '#0419' for W2's '#0419' (services/ticket_numbers.py) or a bare '0419'; null without one. */
+/**
+ * One hash, then the number: #0419 for W2's #0419 (services/ticket_numbers.py) or a bare 0419;
+ * null without one.
+ */
 export function ticketLabel(ticketNumber: string | undefined): string | null {
   const number = ticketNumber?.trim().replace(LEADING_HASHES, '');
   return number ? `#${number}` : null;
