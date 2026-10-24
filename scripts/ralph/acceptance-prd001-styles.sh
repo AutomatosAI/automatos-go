@@ -54,7 +54,7 @@ MASCOT_STATES="hello idle listening thinking working searching reading celebrate
 # KS1: the only paths this wave may add or change, per phase.
 P1_ALLOWED='^(src/styles/|src/ui/|assets/mascot/|assets/styles-fonts/|app/\(app\)/settings/style\.tsx$|app/\(app\)/settings/look/|app/\+not-found\.tsx$|scripts/ralph/(prd-001-styles\.json|PROMPT_build_prd001-styles\.md|PROMPT_review_prd001-styles\.md|acceptance-prd001-styles\.sh)$)'
 # Phase 2 adds the shell files the A1 connect kit edits in parallel (US-016j) and A2's / A3's files.
-P2_EXTRA='^(src/app-state/AppGate\.tsx$|src/app-state/__tests__/app-gate-edge-slot\.test\.tsx?$|app/\(app\)/_layout\.tsx$|app/_layout\.tsx$|app/\(app\)/settings/index\.tsx$|src/chat/|src/cc/|app/\(app\)/index\.tsx$|app/\(app\)/chat/|app/\(app\)/chats\.tsx$|app/\(app\)/cc/)'
+P2_EXTRA='^(src/connect/__tests__/edges\.test\.ts$|src/consent/__tests__/consent-gate\.test\.ts$|src/app-state/AppGate\.tsx$|src/app-state/__tests__/app-gate-edge-slot\.test\.tsx?$|app/\(app\)/_layout\.tsx$|app/_layout\.tsx$|app/\(app\)/settings/index\.tsx$|src/chat/|src/cc/|app/\(app\)/index\.tsx$|app/\(app\)/chat/|app/\(app\)/chats\.tsx$|app/\(app\)/cc/)'
 # KS2: edits of these need a 'SEAM EDIT: <path>' line in the kit's DONE notes.
 SEAMS='^(src/app-state/AppGate\.tsx|app/\(app\)/settings/index\.tsx|app/\(app\)/_layout\.tsx|app/_layout\.tsx|app/\+not-found\.tsx|app/\(app\)/index\.tsx|app/\(app\)/chats\.tsx)$|^(src/chat/|src/cc/|app/\(app\)/chat/|app/\(app\)/cc/)'
 
