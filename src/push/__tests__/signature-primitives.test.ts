@@ -4,7 +4,6 @@
 // expo-crypto in sha256-native.ts only, no test importing it, no logger and no TextEncoder.
 
 import { createHash, createHmac } from 'node:crypto';
-import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -13,6 +12,7 @@ import { signedMessage } from '../signature/canonical';
 import { hmacSha256, toHex, type Sha256 } from '../signature/hmac';
 import { utf8Bytes } from '../signature/utf8';
 import { FULL, IAT, MINIMAL, WS } from './data-fixtures';
+import { importsOf, sources } from './source-files';
 
 const PUSH_DIR = path.resolve(__dirname, '..');
 const SIGNATURE_DIR = path.join(PUSH_DIR, 'signature');
@@ -29,15 +29,6 @@ function seededBytes(seed: string, length: number): Uint8Array {
     block = createHash('sha256').update(block).digest();
   }
   return new Uint8Array(Buffer.concat(chunks).subarray(0, length));
-}
-
-/** Every .ts file under dir, recursively. */
-function sources(dir: string): { file: string; text: string }[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) return sources(full);
-    return entry.name.endsWith('.ts') ? [{ file: full, text: readFileSync(full, 'utf8') }] : [];
-  });
 }
 
 describe('utf8Bytes', () => {
@@ -166,10 +157,6 @@ describe('the canonical message (KP6 = W2 K9)', () => {
 
 describe('read from the source', () => {
   const pushSources = sources(PUSH_DIR);
-  const importsOf = (text: string, module: RegExp) =>
-    [...text.matchAll(/(?:from|import|require\()\s*['"]([^'"]+)['"]/g)]
-      .map((match) => match[1] ?? '')
-      .filter((name) => module.test(name));
 
   it('only signature/sha256-native.ts imports expo-crypto', () => {
     const importers = pushSources

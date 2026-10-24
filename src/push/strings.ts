@@ -9,3 +9,23 @@ export const PUSH_LINK_COPY = Object.freeze({
   postGone: 'That post no longer needs you.',
   chatGone: 'That conversation is not available.',
 });
+
+/**
+ * What iOS draws on a notification (KP7): the buttons of each category, and the line it shows in
+ * place of the text when previews are off. Every button opens the app; none approves anything.
+ */
+export const PUSH_CATEGORY_COPY = Object.freeze({
+  reply: 'Reply…',
+  replySend: 'Send',
+  replyPlaceholder: 'Your answer',
+  open: 'Open',
+  questionPreview: 'A question needs your answer',
+  openPreview: 'Automatos Go',
+});
+
+/** The Android channels' names, as the system's notification settings list them (KP20). */
+export const PUSH_CHANNEL_COPY = Object.freeze({
+  questions: 'Questions',
+  review: 'Ready for review',
+  auto: 'Auto',
+});

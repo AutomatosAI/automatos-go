@@ -59,3 +59,9 @@ export const SOCIAL_NEEDS_APPROVAL_STATUS = 'needs_approval';
 
 /** How long a link's stale check may take before its screen opens unchecked (KP9). */
 export const STALE_CHECK_TIMEOUT_MS = 4000;
+
+/**
+ * The foreground handler's verify budget (KP15): a push received while the app is open that does
+ * not verify within it is shown as unverified (nothing at all).
+ */
+export const FOREGROUND_VERIFY_TIMEOUT_MS = 2000;
