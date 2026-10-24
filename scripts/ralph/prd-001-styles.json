@@ -912,14 +912,14 @@
       "title": "Auto: the old clip's late timeUpdate or playToEnd never ends the new clip's run",
       "description": "Review finding (MEDIUM, US-017b; the web's fix P260-FX-15 lost in the port). src/styles/mascot/MascotClip.tsx:67-77 reportAt guards by run only. At a boundary caught by timeUpdate (inside BOUNDARY_MS 80 ms of the end, player.ts:19), the driver moves to run n+1 with another file; React re-renders, so reportAt now carries run n+1, but the player's item only changes when replaceAsync resolves (MascotClip.tsx:52-54). The old clip's playToEnd (due within those 80 ms) or a late timeUpdate then arrives with currentTime at the old clip's end and player.duration still the old clip's, atClipBoundary passes, and run n+1 is reported finished before its clip has played: a queued one-shot (celebrate, hello, oops) is marked done at once and Auto drops to the next state ('All done' never plays); a loop restarts an extra time. The web's handlers take the clip they belong to and drop events for a clip no longer on screen (frontend/hooks/use-mascot-player.ts @ 630fc1c85 handleBoundary, lines 72-78).",
       "acceptanceCriteria": [
-        "Cause: a boundary event is read against the run React holds now, not the clip the player was playing when the event fired (MascotClip.tsx:67-77)",
-        "Change: MascotClip knows which clip the player has loaded (the first clip, then each clip once replaceAsync resolves) and a timeUpdate / playToEnd counts as a boundary only when the loaded clip is the run's clip; the decision is a pure function (in clip-boundary.ts or a new pure module beside it, no React / expo imports) taking the loaded clip, the run's clip, the run, the run already reported, the time and the duration; replay() of the same file keeps working",
-        "Test (src/styles/mascot/__tests__/): the old clip's end arriving after the run moved on to another file reports nothing; the new clip's own end reports its run once; a replay of the same file reports each run once; a reported run is never reported twice",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes",
-        "npm run check:bundle passes",
-        "bash scripts/ralph/acceptance-prd001-styles.sh --no-ci passes"
+        "Cause: a boundary event is read against the run React holds now, not the clip the player was playing when the event fired (MascotClip.tsx:67-77) → DONE — ad39ba8: confirmed — reportAt (MascotClip.tsx:67-77) checked only reported.current === run and atClipBoundary(seconds, player.duration); useEventListener sets its listener ref during render, so the run React holds moves to n+1 before the effect's replaceAsync even starts, while the player's item (time and duration) is still the old clip's until it resolves",
+        "Change: MascotClip knows which clip the player has loaded (the first clip, then each clip once replaceAsync resolves) and a timeUpdate / playToEnd counts as a boundary only when the loaded clip is the run's clip; the decision is a pure function (in clip-boundary.ts or a new pure module beside it, no React / expo imports) taking the loaded clip, the run's clip, the run, the run already reported, the time and the duration; replay() of the same file keeps working → DONE — ad39ba8: clip-boundary.ts pure clipEndRun({ loaded, clip, run, reported, seconds, duration }) → the run the event ends or null (loaded !== clip, reported === run, or not atClipBoundary), no React / expo imports (type-only MascotFile); MascotClip.tsx usePlayRuns returns the loaded clip (useRef of the first clip, set to each clip once its replaceAsync resolves, only for the newest swap asked for) and reportAt goes through clipEndRun; the replay() path is unchanged (same file, loaded unchanged)",
+        "Test (src/styles/mascot/__tests__/): the old clip's end arriving after the run moved on to another file reports nothing; the new clip's own end reports its run once; a replay of the same file reports each run once; a reported run is never reported twice → DONE — ad39ba8: src/styles/mascot/__tests__/clip-boundary.test.ts 'clipEndRun': the old clip's end (in the window, at and past the end) after the run moved to another file → null; the new clip's own end → its run, then null; a swap at a boundary fed end to end → [0, 1]; same-file replays → [0, 1, 2, 3]; a reported run never twice; no duration or away from the end → null (83 tests in the file)",
+        "npm run typecheck passes → DONE — npm run typecheck: tsc --noEmit clean",
+        "npm run lint passes (0 errors) → DONE — npm run lint: 0 errors (2 pre-existing line-count warnings, src/cc/strings.ts and src/styles/strings.ts, untouched)",
+        "npx vitest run passes → DONE — npx vitest run: 268 files, 4510 tests passed",
+        "npm run check:bundle passes → DONE — npm run check:bundle: iOS bundle exported to .expo/bundle-check",
+        "bash scripts/ralph/acceptance-prd001-styles.sh --no-ci passes → DONE — acceptance --no-ci: every check passes except 'every story of phase <= 2 passes' and 'every AC carries a DONE mark', red only for the open review stories RVW-4..7 (to pass once the last one is done)"
       ],
       "files": [
         "src/styles/mascot/MascotClip.tsx",
@@ -927,8 +927,8 @@
         "src/styles/mascot/__tests__/clip-boundary.test.ts"
       ],
       "priority": 25,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "DONE ad39ba8: MascotClip counts a timeUpdate / playToEnd only for the clip the player has loaded (the first, then each once replaceAsync resolves; pure clipEndRun in clip-boundary.ts), once per run; no seam edit, no foundation gap"
     },
     {
       "id": "P001S-RVW-4",
