@@ -376,15 +376,15 @@
       "title": "spokenMode through A2's request and controller (SEAM EDIT)",
       "description": "As quick-ask, I need my turn sent through the same chat controller as typed turns, flagged spokenMode so Auto answers in short spoken sentences (W1 US-007a), while a typed turn stays byte-identical.",
       "acceptanceCriteria": [
-        "src/chat/request.ts (A2's file, SEAM EDIT, additive): buildChatRequest gains an optional `spokenMode?: boolean`; the body carries `spokenMode: true` only when it is true, and the key is absent otherwise (a typed turn's body deep-equals A2's); planMode and missionMode are still never set",
-        "A2's controller (SEAM EDIT, additive, the files under src/chat/controller/ that carry the draft — RE-VERIFY after A2): the send action and the hook's send accept an optional spokenMode and pass it to buildChatRequest; nothing else in the controller changes; A2's tests pass unchanged (no file under src/chat/**/__tests__/ edited)",
-        "src/voice/quick-ask/spoken-mode.ts (pure): spokenModeFor(discovery) = canSpokenMode(discovery) (src/api/capabilities.ts); with the capability absent the turn is sent plainly and toSpeakable does the work (PRD-001 §4.4)",
-        "src/voice/__tests__/spoken-mode.test.ts: buildChatRequest with spokenMode true (the key present) and absent/false (deep-equal to the body without the option), the capability on and off",
-        "Each A2 file touched is recorded in the DONE notes as 'SEAM EDIT: <path> — spokenMode for quick-ask (A6)'",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes",
-        "npm run check:routes passes"
+        "src/chat/request.ts (A2's file, SEAM EDIT, additive): buildChatRequest gains an optional `spokenMode?: boolean`; the body carries `spokenMode: true` only when it is true, and the key is absent otherwise (a typed turn's body deep-equals A2's); planMode and missionMode are still never set → DONE — fb5096e: ChatRequestInput.spokenMode?: boolean; schema spokenMode: z.literal(true).optional(); the body spreads spokenMode: true only when it is true; spoken-mode.test.ts proves the key absent for false/absent (JSON byte-equal to a typed turn) and no planMode/missionMode",
+        "A2's controller (SEAM EDIT, additive, the files under src/chat/controller/ that carry the draft — RE-VERIFY after A2): the send action and the hook's send accept an optional spokenMode and pass it to buildChatRequest; nothing else in the controller changes; A2's tests pass unchanged (no file under src/chat/**/__tests__/ edited) → DONE — fb5096e: use-thread.ts ThreadSendInput = Omit<ChatRequestInput, 'chatId'> already carries spokenMode and the hook's send spreads it into buildChatRequest (a doc comment names it; no code change); the runner and reducer take the built body and the draft, unchanged; git diff e4336ff..HEAD -- src/chat/**/__tests__ is empty",
+        "src/voice/quick-ask/spoken-mode.ts (pure): spokenModeFor(discovery) = canSpokenMode(discovery) (src/api/capabilities.ts); with the capability absent the turn is sent plainly and toSpeakable does the work (PRD-001 §4.4) → DONE — fb5096e: spokenModeFor(discovery) = canSpokenMode(discovery); quickAskMessage(text, discovery) → frozen {text} or {text, spokenMode: true} for the thread's send",
+        "src/voice/__tests__/spoken-mode.test.ts: buildChatRequest with spokenMode true (the key present) and absent/false (deep-equal to the body without the option), the capability on and off → DONE — fb5096e: 11 tests (true → key present; false/absent → deep- and JSON-equal to the typed body; draft; D30; strict schema refuses false; frozen input; capability on/off/unloaded through the hook's spread)",
+        "Each A2 file touched is recorded in the DONE notes as 'SEAM EDIT: <path> — spokenMode for quick-ask (A6)' → DONE — notes: SEAM EDIT lines for src/chat/request.ts and src/chat/controller/use-thread.ts",
+        "npm run typecheck passes → DONE — npm run typecheck clean",
+        "npm run lint passes (0 errors) → DONE — npm run lint 0 errors (2 warnings in other kits' strings.ts files)",
+        "npx vitest run passes → DONE — npx vitest run: 272 files, 4766 tests passed",
+        "npm run check:routes passes → DONE — npm run check:routes exit 0 (pendingUpstream lines only)"
       ],
       "files": [
         "src/chat/request.ts",
@@ -393,8 +393,8 @@
         "src/voice/__tests__/spoken-mode.test.ts"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": "RE-VERIFY after W1 US-007a: the field is ChatRequest.spokenMode (camelCase, bool, default false) in orchestrator/api/chat_models.py; discovery lists 'spoken_mode'. Before W1 deploys, the server ignores the unknown key (Pydantic default), so quick-ask still works and toSpeakable carries it."
+      "passes": true,
+      "notes": "RE-VERIFY after W1 US-007a: the field is ChatRequest.spokenMode (camelCase, bool, default false) in orchestrator/api/chat_models.py; discovery lists 'spoken_mode'. Before W1 deploys, the server ignores the unknown key (Pydantic default), so quick-ask still works and toSpeakable carries it. | US-019f DONE (fb5096e): spokenMode in request.ts (literal true on the wire, key absent otherwise) and quick-ask/spoken-mode.ts (spokenModeFor, quickAskMessage); 11 tests. For US-019g: send thread.send(quickAskMessage(final, discovery)) through the voice screen's useThread, never a second request. SEAM EDIT: src/chat/request.ts — spokenMode for quick-ask (A6). SEAM EDIT: src/chat/controller/use-thread.ts — spokenMode for quick-ask (A6): a doc comment on ThreadSendInput, which already carries the field (Omit<ChatRequestInput, 'chatId'>) and spreads it into buildChatRequest. No foundation gap: automatos-ai main chat_models.py has ChatRequest.spokenMode: bool = False (the mobile-review-main pin predates it; the server ignores the key until W1 deploys)."
     },
     {
       "id": "US-019g",
