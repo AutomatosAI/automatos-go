@@ -11,7 +11,9 @@
 // under it gets its own safe-area provider, so a screen's top inset starts below the bar and the
 // bar never covers its header. Signed out, or sent back to Connect, the phone forgets the
 // session's cached data and workspace id (session-cache.ts). A hosted sign-in after an own server
-// refused this phone drops the refusal (refusalLeftBehind), so it is told once.
+// refused this phone drops the refusal (refusalLeftBehind), so it is told once. The layout's
+// optional `edge` (US-016j, the edge-screen slot) draws the 'error' and 'not_running' states in
+// the app's style, given the state, the server, Retry and the way out; LaunchState's without it.
 
 import { Redirect } from 'expo-router';
 import { useEffect, type ComponentType, type ReactNode } from 'react';
@@ -28,13 +30,39 @@ import { useConsentRecord } from '../consent/use-consent';
 import { logger } from '../lib/logger';
 import { connectWith, routes } from '../navigation/routes';
 import { serverLabel } from './account';
-import { accessView, refusalLeftBehind, shellStep } from './gate';
+import { accessView, refusalLeftBehind, shellStep, type LaunchStep, type LaunchView } from './gate';
 import { GateLoading, LaunchState } from './GateStates';
 import { appPersister, appQueryClient, PersistedCache } from './query-root';
 import { AppSessionProvider } from './session';
 import { forgetSession } from './session-cache';
 import { useLaunch } from './use-launch';
-import { useSignOutOnExpiry } from './use-sign-out';
+import { useSignOut, useSignOutOnExpiry, type SignOut } from './use-sign-out';
+
+/** The gate's states the layout's `edge` draws: an error, or an own server that does not answer. */
+export type GateEdgeView = Extract<LaunchView, { readonly kind: 'error' | 'not_running' }>;
+
+export type GateLeaveProps = {
+  /** Draws the way out from the gate's sign-out action. */
+  readonly children: (signOut: SignOut) => ReactNode;
+};
+
+export type GateEdgeProps = {
+  readonly view: GateEdgeView;
+  /** The server the gate launched against. */
+  readonly server: Server;
+  /** The server in words (an own server's name and address), as the gate's own states name it. */
+  readonly serverName: string;
+  /** The gate's Retry: the step that failed, again. */
+  readonly onRetry: () => void;
+  /**
+   * The gate's way out (use-sign-out.ts), handed to the function it is given: Sign out on the
+   * hosted server, Forget this server on an own one, which the gate's own screens ask first
+   * (src/connect/components/ForgetServer.tsx).
+   */
+  readonly leave: ComponentType<GateLeaveProps>;
+  /** What the gate shows without an `edge` (LaunchState), for a state the edge does not take. */
+  readonly fallback: ReactNode;
+};
 
 type LaunchProps = {
   readonly server: Server;
@@ -45,10 +73,12 @@ type LaunchProps = {
   readonly consent: ReactNode;
   /** Drawn above every state Launch shows, for this server. */
   readonly bar: ComponentType<{ readonly server: Server }>;
+  /** Draws the 'error' and 'not_running' states (AppGateProps.edge). */
+  readonly edge?: ComponentType<GateEdgeProps>;
   readonly children: ReactNode;
 };
 
-function Launch({ server, serverName, session, consent, bar: Bar, children }: LaunchProps) {
+function Launch({ server, serverName, session, consent, bar: Bar, edge, children }: LaunchProps) {
   const { view, client, retry } = useLaunch(server, session.clientAuth);
   const record = useConsentRecord(server.apiUrl, view.kind === 'ready' ? view.workspace.id : null);
   useSignOutOnExpiry(session.provider);
@@ -58,7 +88,13 @@ function Launch({ server, serverName, session, consent, bar: Bar, children }: La
       <Bar server={server} />
       <SafeAreaProvider style={styles.fill}>
         {step.kind === 'launch' ? (
-          <LaunchState view={step.view} serverName={serverName} onRetry={retry} />
+          <GateState
+            view={step.view}
+            server={server}
+            serverName={serverName}
+            onRetry={retry}
+            edge={edge}
+          />
         ) : (
           // keyed by the workspace: when a bootstrap resolves another one (the server falls back
           // to the person's other workspace when X-Workspace-ID is no longer theirs), the consent
@@ -77,6 +113,39 @@ function Launch({ server, serverName, session, consent, bar: Bar, children }: La
         )}
       </SafeAreaProvider>
     </View>
+  );
+}
+
+/** The gate's way out (use-sign-out.ts), read only where the edge draws it. */
+function GateLeave({ children }: GateLeaveProps) {
+  return <>{children(useSignOut())}</>;
+}
+
+function isEdgeView(view: LaunchView): view is GateEdgeView {
+  return view.kind === 'error' || view.kind === 'not_running';
+}
+
+type GateStateProps = {
+  readonly view: Exclude<LaunchView, { readonly kind: 'ready' }>;
+  readonly server: Server;
+  readonly serverName: string;
+  readonly onRetry: (step: LaunchStep) => void;
+  readonly edge?: ComponentType<GateEdgeProps>;
+};
+
+/** A whole-screen state: LaunchState's, or the edge's (when set) for an error or Not running. */
+function GateState({ view, server, serverName, onRetry, edge: Edge }: GateStateProps) {
+  const fallback = <LaunchState view={view} serverName={serverName} onRetry={onRetry} />;
+  if (Edge === undefined || !isEdgeView(view)) return fallback;
+  return (
+    <Edge
+      view={view}
+      server={server}
+      serverName={serverName}
+      onRetry={() => onRetry(view.step)}
+      leave={GateLeave}
+      fallback={fallback}
+    />
   );
 }
 
@@ -103,10 +172,15 @@ export type AppGateProps = {
   readonly consent: ReactNode;
   /** What sits above every state shown to a signed-in phone (the layout: the http line). */
   readonly bar: ComponentType<{ readonly server: Server }>;
+  /**
+   * Draws the 'error' and 'not_running' states (the layout: the style's edge screens, US-016j);
+   * LaunchState's own screens when omitted.
+   */
+  readonly edge?: ComponentType<GateEdgeProps>;
   readonly children: ReactNode;
 };
 
-export function AppGate({ consent, bar, children }: AppGateProps) {
+export function AppGate({ consent, bar, edge, children }: AppGateProps) {
   const session = useAuthSession();
   const current = useCurrentServer();
   const own = ownServer(current);
@@ -133,6 +207,7 @@ export function AppGate({ consent, bar, children }: AppGateProps) {
         session={session}
         consent={consent}
         bar={bar}
+        edge={edge}
       >
         {children}
       </Launch>

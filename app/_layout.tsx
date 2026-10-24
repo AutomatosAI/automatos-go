@@ -6,7 +6,9 @@
 // server changes. The cache's persister attaches in the signed-in gate (app/(app)/_layout.tsx),
 // keyed to the person signed in, because the saved cache belongs to one person
 // (src/app-state/query-root.tsx). StyleSyncSlot hands StyleSync to the signed-in layout, which
-// mounts it once inside the gate (src/styles/sync/ShellStyleSync.tsx, US-016j).
+// mounts it once inside the gate (src/styles/sync/ShellStyleSync.tsx, US-016j), and EdgeScreenSlot
+// holds GateEdge, the style's edge screens for the gate's error and Not running, for the signed-in
+// layout to give the gate (src/styles/edges/ShellEdgeScreen.tsx).
 import { Stack } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -15,6 +17,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryRoot } from '../src/app-state/query-root';
 import { AuthRoot } from '../src/auth/AuthRoot';
 import { InstallGate } from '../src/session/InstallGate';
+import { GateEdge } from '../src/styles/edges/GateEdge';
+import { EdgeScreenSlot } from '../src/styles/edges/ShellEdgeScreen';
 import { StyleSyncSlot } from '../src/styles/sync/ShellStyleSync';
 import { StyleSync } from '../src/styles/sync/StyleSync';
 import { ThemeProvider } from '../src/styles/theme';
@@ -30,7 +34,9 @@ export default function RootLayout() {
               <QueryRoot>
                 <AuthRoot>
                   <StyleSyncSlot sync={StyleSync}>
-                    <Stack screenOptions={{ headerShown: false }} />
+                    <EdgeScreenSlot edge={GateEdge}>
+                      <Stack screenOptions={{ headerShown: false }} />
+                    </EdgeScreenSlot>
                   </StyleSyncSlot>
                 </AuthRoot>
               </QueryRoot>
