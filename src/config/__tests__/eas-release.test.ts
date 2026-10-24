@@ -181,18 +181,18 @@ describe('.eas/workflows/testflight.yml (every push to main)', () => {
     });
   });
 
-  it('sends that build to TestFlight with the testflight submit profile and a changelog', () => {
-    expect(jobs.submit_testflight).toMatchObject({
-      type: 'testflight',
+  // EAS refuses the testflight job with an EAS build_id on the free plan (run 01a16b62, 24 Oct):
+  // the submit job is the same upload as eas submit and runs on every plan.
+  it('sends that build to TestFlight with the submit job and the testflight submit profile', () => {
+    expect(jobs.submit_testflight).toEqual({
+      name: 'Send the build to TestFlight',
       needs: ['build_ios'],
+      type: 'submit',
       params: {
         build_id: '${{ needs.build_ios.outputs.build_id }}',
         profile: 'testflight',
-        // a changelog makes the job wait for Apple's processing; the limit is chosen, not default
-        wait_processing_timeout_seconds: 1800,
       },
     });
-    expect(String(jobs.submit_testflight.params?.changelog)).toContain('github.commit_message');
   });
 
   it('has no other jobs', () => {

@@ -97,8 +97,9 @@ on Expo's servers with the EAS project's own credentials (no GitHub secret, no
   `testflight` channel; TestFlight installs of that build download it on launch
   and run it from the next launch. Not found: the merge changed something native
   (a native dependency, a config plugin, `app.json`), so EAS builds iOS with the
-  `testflight` profile, one of the month's iOS builds, and sends the build to
-  TestFlight with the commit message as "What to Test". If a build with the same
+  `testflight` profile, one of the month's iOS builds, and uploads the build to
+  TestFlight (the `submit` job, which runs on every plan; EAS's `testflight` job,
+  which would add "What to Test" notes, needs a paid plan). If a build with the same
   fingerprint has already started, the run waits for it and then ships an
   update.
 - **Every pull request to `main`** (`.eas/workflows/pr-check.yml`): the same
@@ -121,9 +122,7 @@ EAS runs two pushes side by side (it can cancel runs, not queue them):
 A build counts as found once EAS has built it, whether or not it reached
 TestFlight. If the "Send the build to TestFlight" job fails, re-send that build
 with `eas submit -p ios --profile testflight --id <build id>` before merging
-anything else; otherwise later updates go to a build nobody has. If that job
-times out waiting for Apple's processing (30 minutes), the upload still worked
-and automatic distribution still delivers it; only "What to Test" is missing.
+anything else; otherwise later updates go to a build nobody has.
 
 A commit message containing `[eas skip]`, `[skip eas]` or `[no eas]` skips both
 workflows: keep them out of pull request titles, bodies and squash messages.
@@ -154,8 +153,7 @@ These need a person with the accounts; nothing in this repository does them.
    assigned to the app on EAS (`eas credentials --platform ios` → App Store
    Connect: Manage your API Key), so the workflow can upload without a prompt.
    A TestFlight internal group with automatic distribution on: the workflow
-   uploads each build and sets "What to Test", and Apple hands it to those
-   groups. Signing credentials live on EAS (created at a terminal for the first
+   uploads each build and Apple hands it to those groups. Signing credentials live on EAS (created at a terminal for the first
    builds). Before an App Store submit, check that every framework the binary
    references has its usage string.
 4. **Push security.** Leave Expo's "enhanced push security" off on the EAS
