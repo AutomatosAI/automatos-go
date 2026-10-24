@@ -154,11 +154,18 @@ describe('afterwards the server is the truth', () => {
 });
 
 describe("the copy's owner (server, workspace, user)", () => {
-  it('lets the first owner keep the copy, merged at its first meeting', () => {
-    const state = reduce(phone([PHONE_ONLY], OBSIDIAN), { type: 'claimed', owner: OWNER });
+  it('takes a blank copy no one owns as it is; looks made after it merge at the first meeting', () => {
+    const state = reduce(phone([], DEFAULT_LOOK), { type: 'claimed', owner: OWNER });
     expect(state.owner).toBe(OWNER);
-    expect(state.saved).toEqual([PHONE_ONLY]);
-    expect(reduce(state, served([SERVER_TWO], null)).saved).toHaveLength(2);
+    const made = reduce(state, { type: 'savedChanged', saved: [PHONE_ONLY] });
+    expect(reduce(made, served([SERVER_TWO], null)).saved).toHaveLength(2);
+  });
+
+  it('fails closed: a copy with looks whose owner cannot be read starts from the defaults', () => {
+    for (const unowned of [phone([PHONE_ONLY], DEFAULT_LOOK), phone([], OBSIDIAN)]) {
+      const state = reduce(unowned, { type: 'claimed', owner: OWNER });
+      expect(state).toMatchObject({ owner: OWNER, saved: [], active: DEFAULT_LOOK });
+    }
   });
 
   it("puts another owner's copy back to the defaults, unmarked, before anything is read", () => {

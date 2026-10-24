@@ -11,9 +11,10 @@
 // is the truth, except for a part changed on the phone since the last read, which is sent next. One
 // rule set per theme (LookRules): Play's over the vendored looks engine, HUD's over HUD_LOOK_SPEC.
 // The copy belongs to one owner (the server, workspace and signed-in user, as the web keeps its
-// copy per user and workspace): a copy no one owns yet is claimed and merged at the first meeting;
-// one another account or workspace owns is put back to the theme's defaults before anything is
-// read, merged or sent, so one account's looks never reach another's.
+// copy per user and workspace), claimed before anything is read, merged or sent: a blank copy no
+// one owns is taken as it is; any other copy (another account's or workspace's, or one whose owner
+// cannot be read) goes back to the theme's defaults, so one account's looks never reach another's.
+// Looks made on the phone carry their owner, so the first meeting still merges them.
 
 import { isApiError, type ApiErrorKind } from '../../api/errors';
 import { API_ERROR_COPY } from '../../api/strings';
@@ -213,9 +214,16 @@ function failed<L extends LookDoc>(state: LookSyncState<L>, error: unknown): Loo
   return { ...state, ...marks, synced: 'pending', failure };
 }
 
+/** Nothing of anyone's: nothing saved, the theme's default look, nothing waiting to be sent. */
+function isBlank<L extends LookDoc>(rules: LookRules<L>, state: LookSyncState<L>): boolean {
+  const empty = state.saved.length === 0 && sameLook(state.active, rules.defaultLook);
+  return empty && !changed(state);
+}
+
 /**
- * The owner the looks are now for: the same one changes nothing; the first one takes the copy as
- * it is (it merges at the first meeting); another one starts from the theme's defaults, unmarked.
+ * The owner the looks are now for: the same one changes nothing; a blank copy no one owns is
+ * taken as it is; any other copy may be someone else's (fail closed) and starts again from the
+ * theme's defaults, unmarked.
  */
 function claimed<L extends LookDoc>(
   rules: LookRules<L>,
@@ -223,7 +231,7 @@ function claimed<L extends LookDoc>(
   owner: string,
 ): LookSyncState<L> {
   if (state.owner === owner) return state;
-  if (state.owner === null) return { ...state, owner };
+  if (state.owner === null && isBlank(rules, state)) return { ...state, owner };
   return { ...initialLookSync(rules), owner, edits: state.edits };
 }
 
