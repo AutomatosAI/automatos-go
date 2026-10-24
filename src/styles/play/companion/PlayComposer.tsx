@@ -4,12 +4,14 @@
 // with the ground as ink, Geist 600 14), 'Stop' with a 10 x 10 radius-2 square, the accent on
 // First open. Return inserts a newline: only the button sends (A2's D-COMPOSER). No AI label sits
 // beside it (D73: the caption opens the thread). A2's composerState (wired in US-016k) says when
-// the field takes no typing and the button does nothing, and gives a viewer's notice.
+// the field takes no typing and the button does nothing, and gives a viewer's notice. Given `voice`,
+// A6's voice button (US-019k) sits beside Send, in Play's dress; without it the box is as above.
 
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Text } from '../../../ui';
 import { DISABLED_OPACITY } from '../../../ui/paint';
+import { VoiceButton, type VoiceButtonProps } from '../../../voice/entry/VoiceButton';
 import {
   COMPANION,
   composerView,
@@ -29,6 +31,8 @@ export type PlayComposerProps = {
   readonly composerState?: PlayComposerState;
   /** First open (Ember 06): Send in the accent. */
   readonly firstOpen?: boolean;
+  /** The conversation's voice button (A6): the role and the chat's id; none by default. */
+  readonly voice?: VoiceButtonProps;
 };
 
 const { composer, target } = COMPANION;
@@ -89,6 +93,7 @@ export function PlayComposer({
   onStop,
   composerState,
   firstOpen = false,
+  voice,
 }: PlayComposerProps) {
   const paint = useCompanionPaint();
   if (!paint) return null;
@@ -140,6 +145,7 @@ export function PlayComposer({
             },
           ]}
         />
+        {voice ? <VoiceButton {...voice} /> : null}
         <ComposerButton view={view} paint={paint} onSend={onSend} onStop={onStop} />
       </View>
     </View>

@@ -171,3 +171,12 @@ export const VOICE_SCREEN_COPY = Object.freeze({
   close: 'Close voice',
   lookHint: 'Opens the look settings for this style',
 });
+
+/**
+ * The voice button beside a composer's send (US-019k): it opens the voice screen on the open
+ * conversation; the microphone opens only on HOLD TO TALK there (KV5).
+ */
+export const VOICE_ENTRY_COPY = Object.freeze({
+  label: 'Talk to Auto',
+  hint: 'Opens the voice screen. Hold to talk there.',
+});

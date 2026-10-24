@@ -10,11 +10,15 @@
 // included, shows the discussion bar under `above`, and holds the send until the ticket is in.
 // Files go with the words they were attached to (useAttachments, US-009b); Try again resends both.
 // Report this on Auto's messages opens the foundation's one ReportSheet (useMessageReport, US-009c).
+// Beside the send sits A6's voice button (US-019k): the voice screen on this conversation, by its id
+// once it has one; not there for a viewer.
 
 import { useCallback, useMemo, type ReactNode } from 'react';
 
 import { useAppSession } from '../../app-state/session';
+import { roleCan } from '../../auth/role';
 import { ErrorState, LoadingState, ReportSheet } from '../../ui';
+import { VoiceButton } from '../../voice/entry/VoiceButton';
 import { useAttachments } from '../attachments/use-attachments';
 import { MessageList } from '../components/MessageList';
 import { useFollowLink } from '../components/follow-link';
@@ -101,6 +105,9 @@ export function ChatScreen({ chatId, above, onBack, ticketId = null }: ChatScree
           files={files}
           onSend={onSend}
           onStop={stop}
+          accessory={
+            <VoiceButton roleCanChat={roleCan(workspace.role, 'chat')} chatId={state.chatId} />
+          }
         />
       }
     >
