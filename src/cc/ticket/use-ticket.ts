@@ -3,14 +3,17 @@
 // sheet.ts's. A verdict is sent at once, never queued (the client's mutations run networkMode
 // 'always'); its answer, a success or a refusal, refreshes the ticket, the Board and needs-you, so
 // what the sheet shows next is the server's (the stream's board_changed would follow anyway).
+// Approve asks for Face ID first (gated.ts, A4): a refused check sends and reads nothing, and the
+// sheet stays as it was. Send back never asks (KP13).
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
 import { queryKeys } from '../../api/query-keys';
 import { useAppSession } from '../../app-state/session';
+import { useStepUp } from '../../step-up/use-step-up';
 import { useToast } from '../../ui';
-import { approveTicket, sendBack, ticketQuery } from '../board/api';
+import { sendBack, ticketQuery } from '../board/api';
 import type { TicketDetail } from '../board/schemas';
 import { useMinuteClock, usePhoneTimeZone } from '../shell/use-shell';
 import {
@@ -20,6 +23,7 @@ import {
   ticketActions,
   type VerdictMode,
 } from './actions';
+import { approveTicketGated } from './gated';
 import { linkedDeliverablesQuery, linkedDeliverableViews } from './linked';
 import { ticketSheetView } from './sheet';
 
@@ -56,6 +60,28 @@ function useRefreshAfterVerdict(taskId: number) {
     );
 }
 
+type VerdictSettled = {
+  readonly onError: (error: unknown) => void;
+  readonly onSettled: () => Promise<unknown>;
+};
+
+/** Approve, Face ID first (gated.ts): a refused check sends and reads nothing. */
+function useApprove(ticket: TicketDetail, onDecided: () => void, settled: VerdictSettled) {
+  const { client } = useAppSession();
+  const { guard } = useStepUp();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: () => approveTicketGated(guard, client, ticket.id),
+    onSuccess: (sent) => {
+      if (!sent.ran) return;
+      toast.show(approvedMessage(sent.value, ticket));
+      onDecided();
+    },
+    onError: settled.onError,
+    onSettled: (sent) => (sent?.ran === false ? undefined : settled.onSettled()),
+  });
+}
+
 /** Approve and Send back on one ticket: the mode, the note, the refusal, and the two calls. */
 export function useVerdict(ticket: TicketDetail, onDecided: () => void) {
   const { client } = useAppSession();
@@ -68,14 +94,7 @@ export function useVerdict(ticket: TicketDetail, onDecided: () => void) {
     onError: (error: unknown) => setRefusal(refusalMessage(error)),
     onSettled: refresh,
   };
-  const approve = useMutation({
-    mutationFn: () => approveTicket(client, ticket.id),
-    onSuccess: (result) => {
-      toast.show(approvedMessage(result, ticket));
-      onDecided();
-    },
-    ...settled,
-  });
+  const approve = useApprove(ticket, onDecided, settled);
   const sendItBack = useMutation({
     mutationFn: (feedback: string) => sendBack(client, ticket.id, feedback),
     onSuccess: () => {
