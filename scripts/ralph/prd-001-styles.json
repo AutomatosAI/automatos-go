@@ -937,13 +937,13 @@
       "title": "Picker: the chosen card's ring and 'Selected' in its style's accent, not the error colour",
       "description": "Review finding (MEDIUM, US-016h AC 'the selected card carries a 2 pt ring in that style's accent', marked DONE). src/styles/picker/cards.ts:119-126 cardFrame paints the selected ring in the token 'accent', and src/styles/picker/StyleCard.tsx:37-38 draws the check and 'Selected' in colours.accent / tone 'accent' (frame at StyleCard.tsx:125). Studio's 'accent' key is the look's consequence (error) colour under every look, by the vendored engine's design (src/core/web/lib/look-kit/studio-tokens.ts:24-26, D-REVIEW F9), never the look's accent. Computed: Ember paints the ring #FF6B6B (the error colour) where its accent is #FF6A1F; Aurora, Obsidian and every HUD preset (accent #3FE0FF on ARC) also get #FF6B6B. So under Play and HUD the chosen card reads as an error. Studio is right as built (its accent and consequence colour are one).",
       "acceptanceCriteria": [
-        "Cause: cardFrame and SelectedWord read Studio's 'accent' key, which under Play and HUD is the error colour (studio-tokens.ts:24-26)",
-        "Change: the ring is the card's style's accent (Studio: colours.accent as today; Play: its look's accent, playVars accent; HUD: hudVars accent) and the check and 'Selected' are that style's readable accent text (Play: accentText; HUD: its accent, already AA on its ground; Studio unchanged), chosen by a pure helper in src/styles/picker/cards.ts (or the dress) from the resolved style; nothing else on the card changes",
-        "Test (src/styles/picker/__tests__/cards.test.ts): for every Play preset and every HUD preset the selected ring colour equals the look's accent and is not the error colour; Studio Light and Dark keep colours.accent; the 'Selected' word's colour is >= 4.5 on the card colour for every preset (the vendored contrastRatio)",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes",
-        "bash scripts/ralph/acceptance-prd001-styles.sh --no-ci passes"
+        "Cause: cardFrame and SelectedWord read Studio's 'accent' key, which under Play and HUD is the error colour (studio-tokens.ts:24-26) → DONE — c264fff: confirmed — cardFrame returned colour 'accent' and SelectedWord used colours.accent / tone 'accent'; under Play and HUD that key is the look's consequence colour (Ember: #FF6B6B, accent #FF6A1F)",
+        "Change: the ring is the card's style's accent (Studio: colours.accent as today; Play: its look's accent, playVars accent; HUD: hudVars accent) and the check and 'Selected' are that style's readable accent text (Play: accentText; HUD: its accent, already AA on its ground; Studio unchanged), chosen by a pure helper in src/styles/picker/cards.ts (or the dress) from the resolved style; nothing else on the card changes → DONE — c264fff: cards.ts pure selectedPaint(style) → { ring, word } (Play: play.accent / play.accentText; HUD: hud.accent / hud.accent; Studio and an installed theme: colours.accent / colours.accent); cardFrame(selected, style) paints the ring from it (idle: tokens' border, unchanged); StyleCard.tsx's frame, check and 'Selected' read it; nothing else on the card changed",
+        "Test (src/styles/picker/__tests__/cards.test.ts): for every Play preset and every HUD preset the selected ring colour equals the look's accent and is not the error colour; Studio Light and Dark keep colours.accent; the 'Selected' word's colour is >= 4.5 on the card colour for every preset (the vendored contrastRatio) → DONE — c264fff: cards.test.ts 'the chosen card's ring and Selected': every Play preset and type knob rings ACCENTS[look.accent].hex = play.accent, never ERROR_COLOUR nor the Studio-keyed accent; every HUD preset and font knob rings the catalogue accent = hud.accent, never HUD_FIXED.error nor the Studio-keyed accent; Studio Light, Dark and a theme keep colours.accent; 'Selected' >= 4.5 on colours.card for every style (vendored contrastRatio); cardFrame tests take the style (25 tests in the file)",
+        "npm run typecheck passes → DONE — npm run typecheck: tsc --noEmit clean",
+        "npm run lint passes (0 errors) → DONE — npm run lint: 0 errors (2 pre-existing line-count warnings, src/cc/strings.ts and src/styles/strings.ts, untouched)",
+        "npx vitest run passes → DONE — npx vitest run: 268 files, 4514 tests passed",
+        "bash scripts/ralph/acceptance-prd001-styles.sh --no-ci passes → DONE — acceptance --no-ci: every check passes except 'every story of phase <= 2 passes' and 'every AC carries a DONE mark', red only for the open review stories RVW-5..7 (to pass once the last one is done)"
       ],
       "files": [
         "src/styles/picker/cards.ts",
@@ -951,8 +951,8 @@
         "src/styles/picker/__tests__/cards.test.ts"
       ],
       "priority": 26,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "DONE c264fff: the picker's chosen card rings in its style's own accent and words 'Selected' in that accent's text (pure selectedPaint in cards.ts; Play accent / accentText, HUD accent, Studio colours.accent); no seam edit, no foundation gap"
     },
     {
       "id": "P001S-RVW-5",
