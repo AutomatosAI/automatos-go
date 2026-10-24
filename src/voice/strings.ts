@@ -2,7 +2,7 @@
 // voice is recognised on this phone (true by KV4: recognition runs on the phone or not at all); they
 // never claim more than that (KV18), and say nothing commercial (D8).
 
-import type { VoiceMessage } from './machine/voice-state';
+import type { RecognizerFailure, VoiceMessage } from './machine/voice-state';
 
 /** Which words say why hold to talk cannot start (recognition-policy.ts refusalCopyKey). */
 export type RecognitionCopyKey = 'androidTooOld' | 'notOnPhone' | 'download';
@@ -102,3 +102,63 @@ export const INTERRUPTION_COPY = Object.freeze({
   interrupted: "Interrupted. Hold to talk when you're ready.",
   micChanged: 'The microphone changed. Hold to talk again.',
 } satisfies Partial<Record<VoiceMessage, string>>);
+
+/**
+ * The state chip under the core (US-019i): what the voice screen is doing, in capitals, the text twin
+ * of the rings and the waveform; label is what VoiceOver and TalkBack read. A running tool's words
+ * replace THINKING ('SEARCHING THE WEB', the vendored caption in capitals).
+ */
+export const VOICE_CHIP = Object.freeze({
+  ready: { words: 'READY', label: 'Ready' },
+  listening: { words: 'LISTENING', label: 'Listening' },
+  thinking: { words: 'THINKING', label: 'Thinking' },
+  speaking: { words: 'SPEAKING', label: 'Speaking' },
+  unavailable: { words: 'VOICE UNAVAILABLE', label: 'Voice unavailable' },
+  micOff: { words: 'MIC OFF', label: 'Microphone off' },
+  error: { words: 'ERROR', label: 'Something went wrong' },
+});
+
+/**
+ * HOLD TO TALK (KV5): held, it talks while pressed and sends on release; under a screen reader it
+ * toggles instead (double-tap to talk, double-tap to send) and its hint says so.
+ */
+export const VOICE_CENTRE_COPY = Object.freeze({
+  hold: {
+    talk: {
+      label: 'HOLD TO TALK',
+      spoken: 'Hold to talk',
+      hint: 'Hold while you talk, then let go to send.',
+    },
+    send: { label: 'RELEASE TO SEND', spoken: 'Release to send', hint: 'Let go to send.' },
+  },
+  toggle: {
+    talk: {
+      label: 'TAP TO TALK',
+      spoken: 'Tap to talk',
+      hint: 'Double-tap to talk, then double-tap again to send.',
+    },
+    send: { label: 'TAP TO SEND', spoken: 'Tap to send', hint: 'Double-tap to send.' },
+  },
+});
+
+/**
+ * The line under the core for the reducer's messages (US-019i): a tap that was not a hold, a hold
+ * that heard nothing, the first-time permission grant, and the interruptions (KV10).
+ */
+export const VOICE_MESSAGE_COPY = Object.freeze({
+  holdHint: 'Hold the button while you talk.',
+  nothingHeard: 'Nothing was heard. Hold to talk and try again.',
+  ready: PERMISSION_COPY.ready,
+  interrupted: INTERRUPTION_COPY.interrupted,
+  micChanged: INTERRUPTION_COPY.micChanged,
+} satisfies Record<VoiceMessage, string>);
+
+/** The recognizer could not take the hold (US-019b's failures); the next hold may try again. */
+export const VOICE_ERROR_COPY = Object.freeze({
+  'mic-busy': "The microphone isn't free. Another app may be using it. Hold to talk again.",
+  busy: 'Speech recognition is busy. Hold to talk again in a moment.',
+  recognizer: 'Speech recognition stopped. Hold to talk again.',
+} satisfies Record<RecognizerFailure, string>);
+
+/** The reply came with cards or a list of what Auto did: the chat shows them (KV6, routes.chat). */
+export const SEE_IN_CHAT = 'See it in the chat';

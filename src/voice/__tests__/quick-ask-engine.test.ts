@@ -117,6 +117,20 @@ describe('a quick-ask, end to end', () => {
     h.feed({ type: 'settled', messages: EARLIER });
     expect(h.sends.map((message) => message.text)).toEqual(['First?', 'Second?']);
   });
+
+  it("the next send takes the last turn's reply off the snapshot until its own", async () => {
+    const h = harness();
+    await ask(h, ASKED);
+    h.feed(...frames(wire.taskCard(), wire.text('Filed it.'), wire.finish), { type: 'finished' });
+    expect(h.quickAsk.snapshot().reply).toMatchObject({ hasCards: true, finished: true });
+    h.feed({ type: 'settled', messages: EARLIER });
+    h.quickAsk.onSpeaker({ type: 'speak_done' });
+    await ask(h, 'And tomorrow?');
+    expect(h.sends).toHaveLength(2);
+    expect(h.quickAsk.snapshot().reply).toBeNull();
+    h.feed(...frames(wire.text('Nothing yet.')));
+    expect(h.quickAsk.snapshot().reply).toMatchObject({ text: 'Nothing yet.', hasCards: false });
+  });
 });
 
 describe('a hold that sends nothing', () => {

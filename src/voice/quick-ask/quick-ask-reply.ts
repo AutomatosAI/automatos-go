@@ -2,7 +2,8 @@
 // quick-ask-store.ts's).
 //   send → A2's thread send for the voice screen's conversation (spokenMode when the server lists it,
 //   US-019f), once the thread may send: a turn that barge-in cancelled settles first, and until then
-//   the words wait. The reducer hears 'sent' with the AI notice when it is the session's first.
+//   the words wait. The reducer hears 'sent' with the AI notice when it is the session's first; the
+//   last turn's reply leaves the snapshot until this turn's shows up.
 //   Each thread state → the turn quick-ask sent, followed by identity (reply-text.ts) → its reply fed
 //   (reply-feed.ts) → the reducer's events, and the new sentences to the speaker with the AI notice
 //   first once per session (US-019e). Only that turn is spoken: a typed turn never is.
@@ -22,6 +23,8 @@ export function send(engine: Engine, text: string): void {
   const { thread, discovery } = engine.deps.context();
   if (!canSend(thread.state)) return set(engine, { pending: text });
   set(engine, { tracking: awaitingTurn(thread.state), feed: createReplyFeed(), pending: null });
+  // The last turn's reply no longer describes the screen ('See it in the chat', its agent).
+  show(engine, { reply: null });
   thread.send(quickAskMessage(text, discovery));
   dispatch(engine, { type: 'sent', notice: noticeFor(get(engine).session) });
 }
