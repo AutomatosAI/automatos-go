@@ -2,6 +2,7 @@
 // words its cards and rows say to VoiceOver. Nothing commercial (D8), and nothing that points at
 // making an account (D63).
 
+import type { MascotName } from '../core/web/lib/mascot/types';
 import type { ThemeChoice } from './theme-choice';
 import type { BuiltInStyleId } from './registry/style-id';
 
@@ -132,4 +133,90 @@ export const STATUS_WORDS = Object.freeze({
 /** Auto on screen (US-017b): VoiceOver hears his name and what he is doing (the vendored caption). */
 export const MASCOT_COPY = Object.freeze({
   label: (caption: string) => `Auto, ${caption}`,
+});
+
+/**
+ * Play's status word beside Auto (Ember 01-03, US-017c): one short word per state, in the look's
+ * display face; the vendored chatCaption's detail (else its caption) sits under it.
+ */
+export const PLAY_STATUS = Object.freeze<Record<MascotName, string>>({
+  hello: 'Hi.',
+  idle: 'Ready.',
+  listening: 'Listening.',
+  thinking: 'Thinking.',
+  working: 'On it.',
+  searching: 'Searching.',
+  reading: 'Reading.',
+  celebrate: 'Ta-da.',
+  oops: 'Hm.',
+  sleeping: 'Asleep.',
+  lost: 'Lost.',
+  loading: 'Loading.',
+});
+
+/**
+ * Play's chat (Ember 01-02, US-017c): the header, the needs line (KS10), the tool chips' words for
+ * VoiceOver (the vendored toolLineLabel writes what they show), "What Auto did" (the web's
+ * receipts.tsx badges), the report card and the composer. No AI label beside the composer: the
+ * caption opens the thread (D73).
+ */
+export const PLAY_CHAT_COPY = Object.freeze({
+  chats: 'Chats',
+  shelf: 'Shelf',
+  /** 'Shelf +1' when Deliverables landed in this conversation. */
+  shelfFresh: (count: number) => `Shelf +${count}`,
+  shelfLabel: (count: number) => (count > 0 ? `Shelf, ${count} new in this chat` : 'Shelf'),
+  /** Shown in the label style's capitals: 'NEEDS YOU · 3'. */
+  needs: (total: number) => `Needs you · ${total}`,
+  needsLink: 'Command Centre',
+  /** After the link's words on screen; VoiceOver hears the words alone. */
+  linkArrow: '→',
+  needsLabel: (total: number) => `${total} need you. Opens the Command Centre`,
+  tool: Object.freeze({ running: 'Running', done: 'Done', failed: 'Failed' }),
+  receipts: Object.freeze({
+    title: 'What Auto did',
+    done: 'Done',
+    notDone: 'Not done',
+    skipped: 'Skipped',
+    joiner: ' — ',
+  }),
+  report: Object.freeze({
+    kind: 'Report',
+    justNow: 'just now',
+    /** 'Report · just now', in the label style's capitals. */
+    eyebrow: (kind: string, when: string) => `${kind} · ${when}`,
+    open: 'Open',
+    openLabel: (title: string) => `Open ${title}`,
+  }),
+  composer: Object.freeze({
+    placeholder: 'Message Auto',
+    send: 'Send',
+    stop: 'Stop',
+    stopHint: 'Stops Auto’s reply',
+  }),
+});
+
+/** Play's Conversations (Ember 03, US-017c): sections, relative times, previews and the badge. */
+export const PLAY_CONVERSATIONS_COPY = Object.freeze({
+  title: 'Chats',
+  newChat: 'New chat',
+  /** A conversation with no title yet (the web's UNTITLED_CONVERSATION). */
+  untitled: 'New chat',
+  sections: Object.freeze({ today: 'Today', week: 'This week', earlier: 'Earlier' }),
+  justNow: 'Just now',
+  minutes: (n: number) => `${n} min`,
+  hours: (n: number) => `${n} h`,
+  yesterday: 'Yesterday',
+  /** 'Auto: Three laptops make the cut…' / 'You: Shorter, and fewer…'. */
+  preview: Object.freeze({ auto: 'Auto', user: 'You', joiner: ': ' }),
+  /** '1 Report', '2 Reports', in the label style's capitals. */
+  reports: Object.freeze({ one: 'Report', other: 'Reports' }),
+  settings: 'Settings',
+});
+
+/** Play's bottom bar on Conversations and the Shelf (KS10): Centre is the Command Centre. */
+export const PLAY_TABS_COPY = Object.freeze({
+  chats: 'Chats',
+  shelf: 'Shelf',
+  centre: 'Centre',
 });

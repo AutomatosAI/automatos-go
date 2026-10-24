@@ -1,0 +1,158 @@
+// Play's message box (Ember 01-02, 06 and the style sheet's 'message box · Send / Stop'): a
+// radius-12 field on the ground's surface with a 1 pt line of the ground's text at 0.14 and
+// 'Message Auto' (Geist 16, text-3); the button 44 high, radius 10 — 'Send' (the ground's text
+// with the ground as ink, Geist 600 14), 'Stop' with a 10 x 10 radius-2 square, the accent on
+// First open. Return inserts a newline: only the button sends (A2's D-COMPOSER). No AI label sits
+// beside it (D73: the caption opens the thread). A2's composerState (wired in US-016k) says when
+// the field takes no typing and the button does nothing, and gives a viewer's notice.
+
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+
+import { Text } from '../../../ui';
+import { DISABLED_OPACITY } from '../../../ui/paint';
+import {
+  COMPANION,
+  composerView,
+  draftComposerState,
+  type ComposerView,
+  type PlayComposerState,
+} from './model';
+import { composerButtonPaint } from './paint';
+import { useCompanionPaint, type CompanionPaint } from './use-companion';
+
+export type PlayComposerProps = {
+  readonly value: string;
+  readonly onChangeText: (text: string) => void;
+  readonly onSend: () => void;
+  readonly onStop: () => void;
+  /** A2's composerState; until it is wired, Send once something is typed. */
+  readonly composerState?: PlayComposerState;
+  /** First open (Ember 06): Send in the accent. */
+  readonly firstOpen?: boolean;
+};
+
+const { composer, target } = COMPANION;
+
+function buttonOpacity(disabled: boolean, pressed: boolean): number {
+  if (disabled) return DISABLED_OPACITY;
+  return pressed ? COMPANION.pressedOpacity : 1;
+}
+
+type ButtonProps = {
+  readonly view: ComposerView;
+  readonly paint: CompanionPaint;
+  readonly onSend: () => void;
+  readonly onStop: () => void;
+};
+
+function ComposerButton({ view, paint, onSend, onStop }: ButtonProps) {
+  const { fill, ink } = composerButtonPaint(view, paint);
+  const { style } = paint;
+  return (
+    <Pressable
+      onPress={view.square ? onStop : onSend}
+      disabled={view.disabled}
+      accessibilityRole="button"
+      accessibilityLabel={view.label}
+      accessibilityHint={view.hint}
+      accessibilityState={{ disabled: view.disabled }}
+      style={({ pressed }) => [
+        styles.button,
+        {
+          gap: style.tokens.spacing.space3,
+          paddingHorizontal: view.square ? composer.stopPaddingX : composer.buttonPaddingX,
+          borderRadius: style.radii.control,
+          backgroundColor: fill,
+          opacity: buttonOpacity(view.disabled, pressed),
+        },
+      ]}
+    >
+      {view.square ? (
+        <View
+          style={{
+            width: composer.square,
+            height: composer.square,
+            borderRadius: composer.squareRadius,
+            backgroundColor: ink,
+          }}
+        />
+      ) : null}
+      <Text style={[style.type.button, { color: ink }]}>{view.label}</Text>
+    </Pressable>
+  );
+}
+
+export function PlayComposer({
+  value,
+  onChangeText,
+  onSend,
+  onStop,
+  composerState,
+  firstOpen = false,
+}: PlayComposerProps) {
+  const paint = useCompanionPaint();
+  if (!paint) return null;
+  const { vars, lines, style, text3 } = paint;
+  const view = composerView(composerState ?? draftComposerState(value), firstOpen);
+  const face = style.type.body(composer.size);
+  const padY = Math.max(0, (target - face.lineHeight) / 2);
+  const notice = composerState?.notice ?? null;
+  return (
+    <View style={{ gap: style.tokens.spacing.space2 }}>
+      {notice ? (
+        <Text style={[style.type.body(composer.noticeSize), { color: vars.groundText2 }]}>
+          {notice.text}
+        </Text>
+      ) : null}
+      <View
+        style={[
+          styles.field,
+          {
+            gap: style.tokens.spacing.space3,
+            padding: composer.fieldPad,
+            paddingLeft: composer.fieldPadLeft,
+            borderRadius: style.radii.input,
+            backgroundColor: vars.groundSurface,
+            borderColor: lines.fieldLine,
+          },
+        ]}
+      >
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={view.placeholder}
+          placeholderTextColor={text3}
+          editable={view.editable}
+          multiline
+          submitBehavior="newline"
+          returnKeyType="default"
+          allowFontScaling
+          accessibilityLabel={view.placeholder}
+          accessibilityState={{ disabled: !view.editable }}
+          selectionColor={vars.accent}
+          style={[
+            styles.input,
+            face,
+            {
+              color: vars.groundText,
+              paddingVertical: padY,
+              maxHeight: face.lineHeight * composer.maxLines + padY * 2,
+            },
+          ]}
+        />
+        <ComposerButton view={view} paint={paint} onSend={onSend} onStop={onStop} />
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  field: { flexDirection: 'row', alignItems: 'flex-end', borderWidth: 1 },
+  input: { flex: 1, minWidth: 0, minHeight: target, textAlignVertical: 'top' },
+  button: {
+    minHeight: target,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
