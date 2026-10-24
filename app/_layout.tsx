@@ -5,7 +5,8 @@
 // session with no ClerkProvider, or the hosted server's Clerk, and remounts the Stack when the
 // server changes. The cache's persister attaches in the signed-in gate (app/(app)/_layout.tsx),
 // keyed to the person signed in, because the saved cache belongs to one person
-// (src/app-state/query-root.tsx).
+// (src/app-state/query-root.tsx). StyleSyncSlot hands StyleSync to the signed-in layout, which
+// mounts it once inside the gate (src/styles/sync/ShellStyleSync.tsx, US-016j).
 import { Stack } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -14,6 +15,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryRoot } from '../src/app-state/query-root';
 import { AuthRoot } from '../src/auth/AuthRoot';
 import { InstallGate } from '../src/session/InstallGate';
+import { StyleSyncSlot } from '../src/styles/sync/ShellStyleSync';
+import { StyleSync } from '../src/styles/sync/StyleSync';
 import { ThemeProvider } from '../src/styles/theme';
 import { ToastProvider } from '../src/ui';
 
@@ -26,7 +29,9 @@ export default function RootLayout() {
             <ToastProvider>
               <QueryRoot>
                 <AuthRoot>
-                  <Stack screenOptions={{ headerShown: false }} />
+                  <StyleSyncSlot sync={StyleSync}>
+                    <Stack screenOptions={{ headerShown: false }} />
+                  </StyleSyncSlot>
                 </AuthRoot>
               </QueryRoot>
             </ToastProvider>

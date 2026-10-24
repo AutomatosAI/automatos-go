@@ -43,6 +43,8 @@ export const PICKER_COPY = Object.freeze({
   /** The screen's header (Settings → Style and look). */
   eyebrow: 'Settings',
   title: 'Style and look',
+  /** Settings' row to this screen (US-016j): what it opens, for VoiceOver. */
+  settingsHint: 'Choose how Automatos Go looks',
   back: 'Back',
   /** After a look link's words on screen ('Make it yours →'); VoiceOver hears the words alone. */
   linkArrow: '→',
