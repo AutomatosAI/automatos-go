@@ -1,20 +1,18 @@
-// The button: primary (ink, cream in Dark), outline (card) or ghost; sm (30) or md (40). Busy shows
-// a spinner and takes no presses; disabled dims to half. The label is the accessibility label
-// unless one is given; a small button reaches the 44 pt touch target through hitSlop.
+// The button: primary (ink, cream in Dark), secondary, outline (card) or ghost; sm (30) or md (40).
+// Busy shows a spinner and takes no presses; disabled dims to half. The label is the accessibility
+// label unless one is given; a small button reaches the 44 pt touch target through hitSlop. A5: the
+// dress gives its radius, least height (Play's and HUD's 44, HUD's 46 inside a panel), label face,
+// case and tracking, and its paints (Play's accent, cream and line; HUD's accent and accent line).
 
 import type { LucideIcon } from 'lucide-react-native';
 import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
 
-import { useTokens } from '../styles/theme';
+import { useDress, useInPanel } from '../styles/dress/use-dress';
+import { useStyle } from '../styles/theme';
 import { Text } from './Text';
+import { buttonHeight, controlLabel, dressedButtonPaint } from './dressed';
 import { ICON_STROKE, hitSlopFor } from './paint';
-import {
-  BUTTON_LABEL_WEIGHT,
-  BUTTON_SIZES,
-  buttonPaint,
-  type ButtonSize,
-  type ButtonVariant,
-} from './variants';
+import { BUTTON_SIZES, type ButtonSize, type ButtonVariant } from './variants';
 
 export type ButtonProps = {
   readonly label: string;
@@ -42,27 +40,32 @@ export function Button({
   accessibilityLabel,
   accessibilityHint,
 }: ButtonProps) {
-  const { colours, radii, spacing } = useTokens();
+  const style = useStyle();
+  const dress = useDress();
+  const inPanel = useInPanel();
+  const { spacing } = style.tokens;
   const metrics = BUTTON_SIZES[size];
+  const height = buttonHeight(dress, metrics.height, inPanel);
+  const labelFace = controlLabel(style, dress, metrics.level);
   const inactive = disabled || busy;
   return (
     <Pressable
       onPress={onPress}
       disabled={inactive}
-      hitSlop={hitSlopFor(metrics.height)}
+      hitSlop={hitSlopFor(height)}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: inactive, busy }}
       style={({ pressed }) => {
-        const tone = buttonPaint(colours, variant, { pressed, disabled });
+        const tone = dressedButtonPaint(dress, variant, { pressed, disabled });
         return [
           styles.button,
           {
-            minHeight: metrics.height,
+            minHeight: height,
             paddingHorizontal: spacing[metrics.paddingX],
             gap: spacing[metrics.gap],
-            borderRadius: radii.control,
+            borderRadius: dress.button.radius,
             backgroundColor: tone.backgroundColor,
             borderColor: tone.borderColor,
             opacity: tone.opacity,
@@ -72,7 +75,7 @@ export function Button({
       }}
     >
       {({ pressed }) => {
-        const { color } = buttonPaint(colours, variant, { pressed, disabled });
+        const { color } = dressedButtonPaint(dress, variant, { pressed, disabled });
         return (
           <>
             {busy ? (
@@ -80,12 +83,7 @@ export function Button({
             ) : Icon ? (
               <Icon size={metrics.iconSize} color={color} strokeWidth={ICON_STROKE} />
             ) : null}
-            <Text
-              level={metrics.level}
-              weight={BUTTON_LABEL_WEIGHT}
-              style={[styles.label, { color }]}
-              numberOfLines={2}
-            >
+            <Text style={[labelFace, styles.label, { color }]} numberOfLines={2}>
               {label}
             </Text>
           </>

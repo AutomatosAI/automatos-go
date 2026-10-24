@@ -112,3 +112,19 @@ export const HUD_LOOK_COPY = Object.freeze({
   /** A look saved with 'Save as new look': 'MINE 1', 'MINE 2'. */
   savedName: (n: number) => `MINE ${n}`,
 });
+
+/**
+ * The words HUD's statuses say beyond the board's own (dress/status-glyphs.ts; the board's are the
+ * web's STATUS_CONFIG labels): HUD shows each in capitals after its glyph, never colour alone.
+ */
+export const STATUS_WORDS = Object.freeze({
+  working: 'Working',
+  queued: 'Queued',
+  needs_you: 'Needs you',
+  approved: 'Approved',
+  error: 'Error',
+  paused: 'Paused',
+  idle: 'Idle',
+  offline: 'Offline',
+  running: 'Running',
+});

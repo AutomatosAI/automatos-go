@@ -3,7 +3,7 @@
 // in variants.ts (pure, tested).
 
 export { Button, type ButtonProps } from './Button';
-export { Card, type CardProps } from './Card';
+export { Card, type CardHeader, type CardProps } from './Card';
 export { Chip, type ChipProps } from './Chip';
 export { CommandCentreButton, type CommandCentreButtonProps } from './CommandCentreButton';
 export { CountBadge, type CountBadgeProps } from './CountBadge';

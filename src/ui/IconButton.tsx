@@ -1,17 +1,14 @@
 // An icon-only button: a lucide icon, and an accessibility label it cannot be without (the icon
 // says nothing to VoiceOver). Square (6 pt radius) or round (the composer's send); 30, 36 or 42.
+// A5: the dress gives its radius and paints (HUD: square, round too, as HUD rounds nothing).
 
 import type { LucideIcon } from 'lucide-react-native';
 import { Pressable, StyleSheet } from 'react-native';
 
-import { useTokens } from '../styles/theme';
+import { useDress } from '../styles/dress/use-dress';
+import { dressedButtonPaint } from './dressed';
 import { ICON_STROKE, hitSlopFor } from './paint';
-import {
-  ICON_BUTTON_SIZES,
-  buttonPaint,
-  type ButtonVariant,
-  type IconButtonSize,
-} from './variants';
+import { ICON_BUTTON_SIZES, type ButtonVariant, type IconButtonSize } from './variants';
 
 export type IconButtonProps = {
   readonly icon: LucideIcon;
@@ -34,7 +31,7 @@ export function IconButton({
   disabled = false,
   accessibilityHint,
 }: IconButtonProps) {
-  const { colours, radii } = useTokens();
+  const dress = useDress();
   const { box, icon } = ICON_BUTTON_SIZES[size];
   return (
     <Pressable
@@ -46,13 +43,13 @@ export function IconButton({
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled }}
       style={({ pressed }) => {
-        const tone = buttonPaint(colours, variant, { pressed, disabled });
+        const tone = dressedButtonPaint(dress, variant, { pressed, disabled });
         return [
           styles.button,
           {
             width: box,
             height: box,
-            borderRadius: round ? radii.full : radii.control,
+            borderRadius: round ? dress.radii.full : dress.button.radius,
             backgroundColor: tone.backgroundColor,
             borderColor: tone.borderColor,
             opacity: tone.opacity,
@@ -63,7 +60,7 @@ export function IconButton({
       {({ pressed }) => (
         <Icon
           size={icon}
-          color={buttonPaint(colours, variant, { pressed, disabled }).color}
+          color={dressedButtonPaint(dress, variant, { pressed, disabled }).color}
           strokeWidth={ICON_STROKE}
         />
       )}
