@@ -78,8 +78,13 @@ function isOffReason(reason: string | null): reason is (typeof OFF_REASONS)[numb
   return OFF_REASONS.some((known) => known === reason);
 }
 
-/** Nothing registers where the server cannot push, or this build cannot get a token. */
-function gateStatus(facts: PushFacts): PushStatus | null {
+/**
+ * Nothing registers where the server cannot push, or this build cannot get a token. The Settings
+ * screen reads it too, before the first registration run has answered.
+ */
+export function gateStatus(
+  facts: Pick<PushFacts, 'capabilityPush' | 'pushExpo' | 'projectId'>,
+): PushStatus | null {
   if (!facts.capabilityPush) return UNSUPPORTED;
   if (!facts.pushExpo) return OPERATOR_OFF;
   if (!facts.projectId) return NOT_CONFIGURED;

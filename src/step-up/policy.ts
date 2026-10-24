@@ -90,7 +90,7 @@ export function gateOf(action: StepUpAction, settingOn: boolean): Gate {
  * Both platforms report NONE when the phone has no passcode (iOS: no device-owner policy; Android:
  * no secure lock screen), and biometrics need one, so the level is what proves "no security".
  */
-function hasSecurity(hasHardware: boolean, enrolledLevel: number): boolean {
+export function hasSecurity(hasHardware: boolean, enrolledLevel: number): boolean {
   const passcode = enrolledLevel >= ENROLLED_LEVEL.SECRET;
   const biometrics = hasHardware && enrolledLevel >= ENROLLED_LEVEL.BIOMETRIC_WEAK;
   return passcode || biometrics;

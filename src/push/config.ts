@@ -91,3 +91,6 @@ export const RECOVERY_SCOPES_MAX = 16;
 
 /** A preference row's push switch for its event (W2 K7: a destination never delivered as a row). */
 export const PUSH_DESTINATION = 'push';
+
+/** W1's device status a PATCH (the digest time) is taken for: pending and revoked rows refuse it. */
+export const ACTIVE_DEVICE_STATUS = 'active';

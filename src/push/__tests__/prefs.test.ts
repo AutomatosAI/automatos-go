@@ -247,11 +247,24 @@ describe('hiding question text (D-PAYLOAD, D-ROLES, W2 US-014b)', () => {
   });
 });
 
+// The Notifications screen (US-014f) shares the folder: its components (.tsx) and hooks (use-*.ts)
+// are the React side; every other module there is logic and stays pure.
+const isLogic = (name: string) => name.endsWith('.ts') && !name.startsWith('use-');
+
 describe('the settings modules stay pure', () => {
   it('import no React, React Native or Expo module', () => {
-    const files = sources(path.resolve(__dirname, '../settings'));
+    const files = sources(path.resolve(__dirname, '../settings')).filter((file) =>
+      isLogic(path.basename(file.file)),
+    );
     expect(files.map((file) => path.basename(file.file))).toEqual(
-      expect.arrayContaining(['digest.ts', 'prefs.ts', 'redact.ts']),
+      expect.arrayContaining([
+        'digest.ts',
+        'prefs.ts',
+        'redact.ts',
+        'view-model.ts',
+        'phone-link.ts',
+        'cache.ts',
+      ]),
     );
     const native = files.flatMap((file) =>
       importsOf(file.text, /^(react|react-native|expo)(-|\/|$)/),

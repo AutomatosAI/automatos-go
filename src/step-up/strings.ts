@@ -30,9 +30,8 @@ export const STEP_UP_OUTCOME_COPY: Readonly<Record<Outcome, string>> = Object.fr
 export const STEP_UP_SETTING_COPY = Object.freeze({
   label: 'Face ID before approve or answer',
   detail:
-    'Asks for Face ID, or your passcode, before an approval or an answer goes out. Checked on this phone only.',
-  noSecurity:
-    "This phone has no passcode, so approvals and answers go out without a check. Set a passcode in the phone's Settings to be asked.",
+    'Asks for Face ID, or your passcode, before you approve or answer in the app. Checked on this phone only.',
+  noSecurity: 'This phone has no passcode or Face ID, so nothing is asked.',
 });
 
 /** Turning the switch off was refused: it stays on, and this line says why. */

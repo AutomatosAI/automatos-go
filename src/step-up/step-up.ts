@@ -14,6 +14,7 @@ import { logger } from '../lib/logger';
 import {
   decide,
   gateOf,
+  hasSecurity,
   outcomeOf,
   type AuthResult,
   type PromptedAction,
@@ -82,6 +83,22 @@ export function createStepUp(deps: StepUpDeps): StepUp {
   };
 }
 
+/**
+ * Whether the phone can be asked at all (a passcode, or biometrics over one), for the Settings line
+ * "This phone has no passcode or Face ID". null when it cannot be read: nothing is claimed then.
+ */
+export async function readPhoneSecurity(
+  auth: Pick<LocalAuthPort, 'hasHardwareAsync' | 'getEnrolledLevelAsync'>,
+): Promise<boolean | null> {
+  try {
+    const hasHardware = await auth.hasHardwareAsync();
+    return hasSecurity(hasHardware, await auth.getEnrolledLevelAsync());
+  } catch {
+    logger.warn('[step-up] could not read whether the phone has a passcode');
+    return null;
+  }
+}
+
 const nativeAuth: LocalAuthPort = Object.freeze({
   hasHardwareAsync: () => LocalAuthentication.hasHardwareAsync(),
   getEnrolledLevelAsync: () => LocalAuthentication.getEnrolledLevelAsync(),
@@ -93,3 +110,6 @@ export const stepUp: StepUp = createStepUp({
   auth: nativeAuth,
   settingOn: () => stepUpSetting.isOn(),
 });
+
+/** readPhoneSecurity over the phone's own module. */
+export const phoneSecurity = (): Promise<boolean | null> => readPhoneSecurity(nativeAuth);
