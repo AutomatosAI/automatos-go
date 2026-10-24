@@ -340,6 +340,12 @@ export const PLAY_CHAT_COPY = Object.freeze({
   }),
 });
 
+/** Play's home over A2's thread (US-016k): the header's title before the chat has its own. */
+export const PLAY_HOME_COPY = Object.freeze({
+  newChat: 'New chat',
+  untitled: 'Chat with Auto',
+});
+
 /** Play's Conversations (Ember 03, US-017c): sections, relative times, previews and the badge. */
 export const PLAY_CONVERSATIONS_COPY = Object.freeze({
   title: 'Chats',

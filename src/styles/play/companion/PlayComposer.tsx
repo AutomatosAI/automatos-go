@@ -4,8 +4,10 @@
 // with the ground as ink, Geist 600 14), 'Stop' with a 10 x 10 radius-2 square, the accent on
 // First open. Return inserts a newline: only the button sends (A2's D-COMPOSER). No AI label sits
 // beside it (D73: the caption opens the thread). A2's composerState (wired in US-016k) says when
-// the field takes no typing and the button does nothing, and gives a viewer's notice.
+// the field takes no typing and the button does nothing, and gives a viewer's notice. A2's
+// attachments sit in the slots: their chips above the field, the [+] at its start (US-016k).
 
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Text } from '../../../ui';
@@ -29,6 +31,10 @@ export type PlayComposerProps = {
   readonly composerState?: PlayComposerState;
   /** First open (Ember 06): Send in the accent. */
   readonly firstOpen?: boolean;
+  /** Above the field: the attached files' chips. */
+  readonly above?: ReactNode;
+  /** At the field's start: the [+] that attaches files. */
+  readonly leading?: ReactNode;
 };
 
 const { composer, target } = COMPANION;
@@ -89,6 +95,8 @@ export function PlayComposer({
   onStop,
   composerState,
   firstOpen = false,
+  above,
+  leading,
 }: PlayComposerProps) {
   const paint = useCompanionPaint();
   if (!paint) return null;
@@ -104,6 +112,7 @@ export function PlayComposer({
           {notice.text}
         </Text>
       ) : null}
+      {above}
       <View
         style={[
           styles.field,
@@ -117,6 +126,7 @@ export function PlayComposer({
           },
         ]}
       >
+        {leading}
         <TextInput
           value={value}
           onChangeText={onChangeText}

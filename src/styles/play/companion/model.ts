@@ -144,6 +144,10 @@ export type ReceiptRow = {
   readonly badgeTone: BadgeTone | null;
   /** A done write: Ember draws its line in the text colour, not text2. */
   readonly emphasis: boolean;
+  /** What VoiceOver reads (A2's words for the status and the line); the line itself when absent. */
+  readonly label?: string;
+  /** The receipt opens something (A2's link): the line is a link. */
+  readonly linked?: boolean;
 };
 
 const RECEIPT_MARKS: Readonly<Record<Receipt['status'], string>> = Object.freeze({

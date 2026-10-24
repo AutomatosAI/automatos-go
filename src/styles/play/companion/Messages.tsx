@@ -5,7 +5,8 @@
 // Reduce Motion). A new message rises 12 pt and fades in over 180 ms; history never replays (the
 // caller says which are new) and Reduce Motion stills it. PlayThreadCaption is Play's thread's
 // first row: the AI label, one muted caption that scrolls away with the thread (D73) — never a
-// pill beside the composer.
+// pill beside the composer. An Auto message may draw its words itself (`children`: A2's markdown,
+// US-016k) in the thread's face; the caret still follows them.
 
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -68,21 +69,32 @@ export function UserMessage({ text, rise: rises = false }: PlayMessageProps) {
 export type AutoMessageProps = PlayMessageProps & {
   /** The reply is still being written: the caret follows the words. */
   readonly streaming?: boolean;
+  /** The words drawn by the caller (A2's markdown) in place of `text` as plain text. */
+  readonly children?: ReactNode;
 };
 
-export function AutoMessage({ text, streaming = false, rise: rises = false }: AutoMessageProps) {
+export function AutoMessage({
+  text,
+  streaming = false,
+  rise: rises = false,
+  children,
+}: AutoMessageProps) {
   const paint = useCompanionPaint();
   if (!paint) return null;
   const { vars, style } = paint;
   return (
     <Rise rise={rises} loops={paint.loops}>
       <View style={styles.reply}>
-        <Text
-          selectable
-          style={[style.type.body(THREAD_SIZE), styles.words, { color: vars.groundText }]}
-        >
-          {text}
-        </Text>
+        {children ? (
+          <View style={styles.words}>{children}</View>
+        ) : (
+          <Text
+            selectable
+            style={[style.type.body(THREAD_SIZE), styles.words, { color: vars.groundText }]}
+          >
+            {text}
+          </Text>
+        )}
         {streaming ? (
           <Blink
             animate={paint.loops}
