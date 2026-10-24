@@ -6,25 +6,60 @@
 // buttons (14 / 24 / 34). LOOK opens the Looks drawer over it all (US-018c), the same drawer
 // Settings hosts. Phase 2 (US-016k) feeds it A2's newest turn, Auto's state and the needs-you
 // number; A6 opens the mic and gives HOLD TO TALK its voice. Outside HUD it draws nothing.
+//   A6's voice screen (US-019j, D-ONE-VOICE) passes `voice`: the core then draws in every style,
+// painted by voiceDress — on the style's own background, with HUD's ground and scanlines only where
+// the dress says, the rings' structure in its line colour, Auto in the core only where the dress
+// puts him — with the voice view-model's chip and status words, its line under the chip, HOLD TO
+// TALK's hold, STOP and TYPE as the voice says, the menu square named for closing the screen, and
+// LOOK going to the style's look page (onLook) instead of opening HUD's drawer here.
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { MascotName } from '../../../core/web/lib/mascot/types';
-import { hudGroundPlan } from '../../ground/hud-ground';
+import { hudGroundPlan, type HudGroundPlan } from '../../ground/hud-ground';
 import { HudOverlay } from '../../ground/HudOverlay';
 import { Mascot } from '../../mascot/Mascot';
 import type { MascotController } from '../../mascot/use-mascot';
 import { LooksDrawer } from '../LooksDrawer';
 import { HudButtons } from './HudButtons';
 import { HudTopBar } from './HudTopBar';
-import { HUD_CORE, coreSizeFor, mascotPlace, type HudTurn } from './model';
+import {
+  HUD_CORE,
+  coreSizeFor,
+  mascotPlace,
+  type ChipView,
+  type HudTalk,
+  type HudTurn,
+} from './model';
 import { RingCore } from './RingCore';
 import { StateChip } from './StateChip';
 import { Transcript } from './Transcript';
 import { useVoiceCore } from './use-voice-core';
 import { Waveform } from './WaveformView';
+
+/** A6's voice screen: the core in every style, with the voice's words and HOLD TO TALK live. */
+export type HudCoreVoice = {
+  /** The rings' structure (Studio's ink); their motion keeps the accent. */
+  readonly ringLine: string;
+  /** HUD's ground and scanlines; otherwise the style's own background alone. */
+  readonly overlay: boolean;
+  /** Auto (the Mascot) in the centre of the rings. */
+  readonly mascotInCore: boolean;
+  /** The chip's words, and the status row's word (chip.label). */
+  readonly chip: ChipView;
+  readonly talk: HudTalk;
+  /** STOP is on: the mic is held or Auto has the voice's turn. */
+  readonly stopEnabled: boolean;
+  readonly typeEnabled: boolean;
+  /** What the menu square says ('Close voice'); onMenu closes the screen. */
+  readonly menuLabel: string;
+  /** LOOK's hint: it opens the style's look page (onLook). */
+  readonly lookHint: string;
+  /** Drawn under the state chip: the voice's line and its button. */
+  readonly line?: ReactNode;
+};
 
 export type HudCoreProps = {
   /** The newest turn (US-016k maps it from A2's thread). */
@@ -45,6 +80,8 @@ export type HudCoreProps = {
   readonly onMenu: () => void;
   /** A6's live mic levels for the waveform, 0 to 1. */
   readonly levels?: readonly number[] | null;
+  /** A6's voice screen; absent, HUD's home exactly as A5 built it. */
+  readonly voice?: HudCoreVoice;
 };
 
 /** The state Auto should show: the one held, or the controller's target. */
@@ -52,37 +89,85 @@ function stateOf(state: MascotName | MascotController): MascotName {
   return typeof state === 'string' ? state : state.driver.mascot.mascot;
 }
 
-function Core({ size, mascotState }: Pick<HudCoreProps, 'mascotState'> & { readonly size: number }) {
+type CoreProps = Pick<HudCoreProps, 'mascotState' | 'voice'> & { readonly size: number };
+
+function Core({ size, mascotState, voice }: CoreProps) {
   const { paint } = useVoiceCore();
   const place = useMemo(() => mascotPlace(size), [size]);
   return (
     <View style={[styles.core, { width: size, height: size, marginTop: HUD_CORE.core.marginTop }]}>
-      <RingCore size={size} colour={paint.accent} />
-      <View pointerEvents="none" style={[styles.mascot, { left: place.left, top: place.top }]}>
-        <Mascot size={place.size} state={mascotState} />
-      </View>
+      <RingCore size={size} colour={paint.accent} lineColour={voice?.ringLine} />
+      {voice && !voice.mascotInCore ? null : (
+        <View pointerEvents="none" style={[styles.mascot, { left: place.left, top: place.top }]}>
+          <Mascot size={place.size} state={mascotState} />
+        </View>
+      )}
     </View>
   );
 }
 
-export function HudCore(props: HudCoreProps) {
-  const { turn, mascotState, micOpen, onType, onStop, needsYou, onLook, onMenu, levels } = props;
-  const { style, paint } = useVoiceCore();
-  const insets = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
-  const [looking, setLooking] = useState(false);
-  const openLooks = useCallback(() => {
-    setLooking(true);
-    onLook?.();
-  }, [onLook]);
-  const closeLooks = useCallback(() => setLooking(false), []);
+type Frame = { readonly background: string; readonly plan: HudGroundPlan | null };
+
+/**
+ * What the core stands on: HUD's background, ground and scanlines (nothing outside HUD); the voice
+ * screen's in every style, the style's background with HUD's overlay where the dress says.
+ */
+function useFrame(voice: HudCoreVoice | undefined): Frame | null {
+  const { style } = useVoiceCore();
   const { hud, hudLook } = style;
   const plan = useMemo(() => (hud && hudLook ? hudGroundPlan(hudLook, hud) : null), [hud, hudLook]);
-  if (!plan || !hud) return null;
+  if (voice)
+    return { background: style.tokens.colours.background, plan: voice.overlay ? plan : null };
+  return plan && hud ? { background: hud.bg, plan } : null;
+}
+
+type OverlayProps = {
+  readonly plan: HudGroundPlan | null;
+  readonly layer: 'ground' | 'scanlines';
+};
+
+/** HUD's ground or scanlines, where the frame has them. */
+function Overlay({ plan, layer }: OverlayProps) {
+  return plan ? <HudOverlay plan={plan} layer={layer} /> : null;
+}
+
+/** What the voice group changes in the column; HUD's home's own values without it. */
+function columnParts(voice: HudCoreVoice | undefined, turn: HudTurn) {
+  if (!voice)
+    return { bar: {}, chip: undefined, line: null, buttons: { streaming: turn.streaming } };
+  return {
+    bar: { menuLabel: voice.menuLabel, lookHint: voice.lookHint, stateWord: voice.chip.label },
+    chip: voice.chip,
+    line: voice.line ?? null,
+    buttons: { streaming: voice.stopEnabled, talk: voice.talk, typeEnabled: voice.typeEnabled },
+  };
+}
+
+/** LOOK: HUD's drawer over the core on HUD's home; the voice screen's onLook alone. */
+function useLooks(onLook: (() => void) | undefined, inPlace: boolean) {
+  const [looking, setLooking] = useState(false);
+  const openLooks = useCallback(() => {
+    if (inPlace) setLooking(true);
+    onLook?.();
+  }, [onLook, inPlace]);
+  const closeLooks = useCallback(() => setLooking(false), []);
+  return { looking, openLooks, closeLooks };
+}
+
+export function HudCore(props: HudCoreProps) {
+  const { turn, mascotState, micOpen, onType, onStop, needsYou, onLook, onMenu, levels } = props;
+  const { voice } = props;
+  const { paint } = useVoiceCore();
+  const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
+  const { looking, openLooks, closeLooks } = useLooks(onLook, voice === undefined);
+  const frame = useFrame(voice);
+  if (!frame) return null;
   const state = stateOf(mascotState);
+  const parts = columnParts(voice, turn);
   return (
-    <View style={[styles.screen, { backgroundColor: hud.bg }]}>
-      <HudOverlay plan={plan} layer="ground" />
+    <View style={[styles.screen, { backgroundColor: frame.background }]}>
+      <Overlay plan={frame.plan} layer="ground" />
       <View style={[styles.column, { paddingTop: insets.top }]}>
         <HudTopBar
           turn={turn}
@@ -91,23 +176,25 @@ export function HudCore(props: HudCoreProps) {
           needsYou={needsYou}
           onLook={openLooks}
           onMenu={onMenu}
+          {...parts.bar}
         />
-        <Core size={coreSizeFor(height)} mascotState={mascotState} />
+        <Core size={coreSizeFor(height)} mascotState={mascotState} voice={voice} />
         <View style={{ marginTop: HUD_CORE.chip.marginTop }}>
-          <StateChip state={state} />
+          <StateChip state={state} words={parts.chip} />
         </View>
+        {parts.line}
         <Transcript turn={turn} />
         <View style={{ paddingHorizontal: HUD_CORE.wave.padX }}>
           <Waveform colour={paint.accent} levels={levels} />
         </View>
         <HudButtons
-          streaming={turn.streaming}
           onType={onType}
           onStop={onStop}
           bottomInset={insets.bottom}
+          {...parts.buttons}
         />
       </View>
-      <HudOverlay plan={plan} layer="scanlines" />
+      <Overlay plan={frame.plan} layer="scanlines" />
       {looking ? <LooksDrawer overlay onClose={closeLooks} /> : null}
     </View>
   );

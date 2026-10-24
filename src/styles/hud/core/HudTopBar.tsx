@@ -4,6 +4,8 @@
 // phone adds, 34 high in 1 pt accent lines — 'COMMAND · N' to the Board with the server's needs-you
 // number (the caller's useNeedsYou), 'LOOK' and a menu square to Settings; and the status row,
 // '<AGENT> · <STATE>' and the turn's mm:ss (Geist Mono 11 .1em, text2), ticking while it streams.
+// A6's voice screen (US-019j) names the menu square for what it does there ('Close voice'), LOOK's
+// hint and the status row's state word; without them the bar is HUD's home's.
 
 import { useRouter } from 'expo-router';
 import Menu from 'lucide-react-native/icons/menu';
@@ -100,9 +102,11 @@ type CommandRowProps = {
   readonly needsYou: number;
   readonly onLook: () => void;
   readonly onMenu: () => void;
+  readonly menuLabel?: string;
+  readonly lookHint?: string;
 };
 
-function CommandRow({ core, needsYou, onLook, onMenu }: CommandRowProps) {
+function CommandRow({ core, needsYou, onLook, onMenu, menuLabel, lookHint }: CommandRowProps) {
   const router = useRouter();
   const { paint, style } = core;
   const command = commandView(needsYou);
@@ -115,17 +119,26 @@ function CommandRow({ core, needsYou, onLook, onMenu }: CommandRowProps) {
     <View
       style={[
         styles.row,
-        { paddingVertical: commandRow.padY, paddingHorizontal: commandRow.padX, gap: commandRow.gap },
+        {
+          paddingVertical: commandRow.padY,
+          paddingHorizontal: commandRow.padX,
+          gap: commandRow.gap,
+        },
       ]}
     >
       <RowButton core={core} label={command.label} onPress={() => router.push(routes.cc.board)}>
         <Text style={face}>{command.text}</Text>
       </RowButton>
       <View style={[styles.end, { gap: commandRow.gap }]}>
-        <RowButton core={core} label={said.lookLabel} hint={said.lookHint} onPress={onLook}>
+        <RowButton
+          core={core}
+          label={said.lookLabel}
+          hint={lookHint ?? said.lookHint}
+          onPress={onLook}
+        >
           <Text style={face}>{said.look}</Text>
         </RowButton>
-        <RowButton core={core} label={said.menuLabel} square onPress={onMenu}>
+        <RowButton core={core} label={menuLabel ?? said.menuLabel} square onPress={onMenu}>
           <Menu size={ICON_SIZE} color={paint.accent} strokeWidth={ICON_STROKE} />
         </RowButton>
       </View>
@@ -137,11 +150,12 @@ type StatusRowProps = {
   readonly core: VoiceCore;
   readonly turn: HudTurn;
   readonly state: MascotName;
+  readonly stateWord?: string;
 };
 
-function StatusRow({ core, turn, state }: StatusRowProps) {
+function StatusRow({ core, turn, state, stateWord }: StatusRowProps) {
   const now = useNow(turn.streaming);
-  const view = statusRow(turn, state, now);
+  const view = statusRow(turn, state, now, stateWord);
   const face = [
     core.style.type.mono(HUD_CORE.monoSize, 400, { trackingEm: tracking.mono }),
     { color: core.paint.text2 },
@@ -168,15 +182,29 @@ export type HudTopBarProps = {
   readonly needsYou: number;
   readonly onLook: () => void;
   readonly onMenu: () => void;
+  /** A6: what the menu square says to a screen reader ('Close voice'); else 'Settings'. */
+  readonly menuLabel?: string;
+  /** A6: LOOK's hint where it opens a style's look page; else HUD's. */
+  readonly lookHint?: string;
+  /** A6: the status row's state word (the voice screen's, 'Speaking'); else Auto's state's. */
+  readonly stateWord?: string;
 };
 
-export function HudTopBar({ turn, state, micOpen, needsYou, onLook, onMenu }: HudTopBarProps) {
+export function HudTopBar(props: HudTopBarProps) {
+  const { turn, state, micOpen, needsYou, onLook, onMenu, menuLabel, lookHint, stateWord } = props;
   const core = useVoiceCore();
   return (
     <View>
       <BrandRow core={core} micOpen={micOpen} />
-      <CommandRow core={core} needsYou={needsYou} onLook={onLook} onMenu={onMenu} />
-      <StatusRow core={core} turn={turn} state={state} />
+      <CommandRow
+        core={core}
+        needsYou={needsYou}
+        onLook={onLook}
+        onMenu={onMenu}
+        menuLabel={menuLabel}
+        lookHint={lookHint}
+      />
+      <StatusRow core={core} turn={turn} state={state} stateWord={stateWord} />
     </View>
   );
 }

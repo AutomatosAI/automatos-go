@@ -162,3 +162,12 @@ export const VOICE_ERROR_COPY = Object.freeze({
 
 /** The reply came with cards or a list of what Auto did: the chat shows them (KV6, routes.chat). */
 export const SEE_IN_CHAT = 'See it in the chat';
+
+/**
+ * The voice screen's own words around A5's core (US-019j): the menu square closes the screen, and
+ * LOOK opens the style's look page (src/voice/nav.ts voiceLookPath).
+ */
+export const VOICE_SCREEN_COPY = Object.freeze({
+  close: 'Close voice',
+  lookHint: 'Opens the look settings for this style',
+});
