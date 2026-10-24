@@ -1,9 +1,9 @@
 // The gate's edge screens in the shell (US-016j): the slot draws the edge the root layout hands it
 // with the gate's props, and the gate's own state without one (rendered with react-dom's server
 // renderer, as the connect kit's shell test does), and the wiring, read from the source: the root
-// layout puts GateEdge in the slot around the screens, and GateEdge renders EdgeScreen for an error
-// and the styled Not running for an own server that does not answer. The signed-in layout handing
-// the gate ShellEdgeScreen waits on the lead (US-016j notes: two connect-kit tests pin its line).
+// layout puts GateEdge in the slot around the screens, the signed-in layout gives the gate
+// ShellEdgeScreen as its edge, and GateEdge renders EdgeScreen for an error and the styled Not
+// running for an own server that does not answer.
 
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -72,6 +72,18 @@ describe('the wiring (read from the source)', () => {
     expect(opens).toBeGreaterThan(root.indexOf('<AuthRoot>'));
     expect(root.indexOf('<Stack')).toBeGreaterThan(opens);
     expect(root.indexOf('</EdgeScreenSlot>')).toBeGreaterThan(root.indexOf('<Stack'));
+  });
+
+  it('the signed-in layout gives the gate ShellEdgeScreen, and imports no edge screen itself', () => {
+    const layout = read('app/(app)/_layout.tsx');
+    expect(layout).toContain(
+      "import { ShellEdgeScreen } from '../../src/styles/edges/ShellEdgeScreen';",
+    );
+    expect(layout).toContain(
+      '<AppGate consent={<ConsentSheet />} bar={NetworkBar} edge={ShellEdgeScreen}>',
+    );
+    const edgeImports = [...layout.matchAll(/from '\.\.\/\.\.\/src\/styles\/edges\/([^']+)'/g)];
+    expect(edgeImports.map((match) => match[1])).toEqual(['ShellEdgeScreen']);
   });
 
   it('GateEdge: Not running for an own server asleep, else EdgeScreen over the fallback', () => {

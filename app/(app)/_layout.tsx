@@ -15,7 +15,9 @@
 // on a later bootstrap takes the screens away until it is agreed to.
 // Beside the screens, after the bootstrap and the consent step, the StyleSync the root layout hands
 // in (src/styles/sync/ShellStyleSync) keeps the phone's looks and the workspace's theme in step with
-// the server from launch, once for the app (US-016j).
+// the server from launch, once for the app (US-016j). The gate's error and Not running are the
+// style's edge screens: ShellEdgeScreen draws the GateEdge the root layout hands in, with the
+// gate's Retry and way out (src/styles/edges/ShellEdgeScreen.tsx, US-016j).
 import { Stack } from 'expo-router';
 
 import type { Server } from '../../src/api/server';
@@ -24,6 +26,7 @@ import { InsecureNetworkBanner } from '../../src/connect/components/InsecureNetw
 import { shellNetworkLine } from '../../src/connect/edges';
 import { ConsentSheet } from '../../src/consent/ConsentSheet';
 import { useSessionRefresh } from '../../src/session/use-session-refresh';
+import { ShellEdgeScreen } from '../../src/styles/edges/ShellEdgeScreen';
 import { ShellStyleSync } from '../../src/styles/sync/ShellStyleSync';
 
 /** The gate's bar: the line for an own server while it is http, never the hosted server's. */
@@ -35,7 +38,7 @@ function NetworkBar({ server }: { readonly server: Server }) {
 export default function SignedInLayout() {
   useSessionRefresh();
   return (
-    <AppGate consent={<ConsentSheet />} bar={NetworkBar}>
+    <AppGate consent={<ConsentSheet />} bar={NetworkBar} edge={ShellEdgeScreen}>
       <ShellStyleSync />
       <Stack screenOptions={{ headerShown: false }} />
     </AppGate>

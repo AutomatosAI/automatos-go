@@ -2,12 +2,11 @@
 // layout (app/_layout.tsx) puts GateEdge in EdgeScreenSlot, and the signed-in layout
 // (app/(app)/_layout.tsx) gives ShellEdgeScreen to the gate as its `edge`
 // (src/app-state/AppGate.tsx), so the gate's 'error' and 'not_running' are the style's edge
-// screens — that one attribute waits on the lead, because two connect-kit tests pin the gate's
-// line (US-016j notes). The signed-in layout imports only this file, which loads React and
-// nothing native: the connect kit's shell test (src/app-state/__tests__/shell-bar.test.ts) renders
-// the real layout and gate in node over a fixed set of mocks, and the edge screens' chain (the
-// style store, Skia, expo-video) cannot load there. With no slot above it, ShellEdgeScreen shows
-// the gate's own state (`fallback`).
+// screens. The signed-in layout imports only this file, which loads React and nothing native: the
+// connect kit's shell test (src/app-state/__tests__/shell-bar.test.ts) renders the real layout and
+// gate in node over a fixed set of mocks, and the edge screens' chain (the style store, Skia,
+// expo-video) cannot load there. With no slot above it, ShellEdgeScreen shows the gate's own state
+// (`fallback`).
 
 import { createContext, useContext, type ComponentType, type ReactNode } from 'react';
 
