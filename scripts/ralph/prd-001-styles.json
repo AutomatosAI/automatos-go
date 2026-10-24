@@ -885,14 +885,14 @@
       "title": "Auto: a tinted clip Skia cannot load falls back to stills instead of freezing him",
       "description": "Review finding (MEDIUM, US-017b / KS11 / D-MASCOT). src/styles/mascot/MascotSkia.tsx:54-86 TintedClip has no failure path: Skia's useVideoLoading (node_modules/@shopify/react-native-skia/src/external/reanimated/useVideoLoading.ts) swallows a failed Skia.Video(...) and leaves the video null, so duration stays 0 (useVideo.ts:79). The backstop timer then never starts (MascotSkia.tsx:72 'if (duration <= 0) return') and nearClipEnd is always false (clip-boundary.ts:21), so no boundary is ever reported. Mascot's clipFailed (Mascot.tsx:60) is only set by the expo-video path (MascotClip.tsx:55-57, 78-82), so stage.stills stays false (stage.ts:112) and every non-urgent state change waits for a clip boundary that never comes: on a Gold, Silver or Cobalt shell (and on sleeping, which stage.ts:82-86 also routes through Skia) Auto stays on one still while the chat thinks, works or finishes, and a one-shot never ends. The Skia video path is exactly the one KS11 calls unproven on a device (OT-S2), and MASCOT_TINTED_CLIPS only helps after someone notices and ships an update.",
       "acceptanceCriteria": [
-        "Cause: TintedClip reports neither a load failure nor a stall, so the driver never learns the clip is not playing (MascotSkia.tsx:54-86)",
-        "Change: a tinted clip that has no duration (or no first frame) within a load deadline (a named constant beside CLIP_BACKSTOP_MS in clip-boundary.ts, decided by a pure helper there) calls the same onError path the expo-video clip uses, so Mascot sets clipFailed and the stage shows the tinted still (stage.ts reduceMotion || clipFailed) and the driver runs on stillBoundaryMs; the deadline timer is cleared on unmount, on a new file and once the clip loads; nothing else about tinted clips changes",
-        "Test: src/styles/mascot/__tests__/clip-boundary.test.ts covers the pure stall decision (no duration before the deadline → waiting; at the deadline → failed; a duration → loaded) and src/styles/mascot/__tests__/stage.test.ts shows a tinted shell with clipFailed true gives 'tinted-still' and stills true",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes",
-        "npm run check:bundle passes",
-        "bash scripts/ralph/acceptance-prd001-styles.sh --no-ci passes"
+        "Cause: TintedClip reports neither a load failure nor a stall, so the driver never learns the clip is not playing (MascotSkia.tsx:54-86) → DONE — da81054: confirmed in node_modules/@shopify/react-native-skia useVideoLoading.ts (a throwing Skia.Video never reaches setVideo) and useVideo.ts:79 (duration stays 0), so MascotSkia's backstop (duration <= 0 returns) and nearClipEnd never fired and nothing set clipFailed",
+        "Change: a tinted clip that has no duration (or no first frame) within a load deadline (a named constant beside CLIP_BACKSTOP_MS in clip-boundary.ts, decided by a pure helper there) calls the same onError path the expo-video clip uses, so Mascot sets clipFailed and the stage shows the tinted still (stage.ts reduceMotion || clipFailed) and the driver runs on stillBoundaryMs; the deadline timer is cleared on unmount, on a new file and once the clip loads; nothing else about tinted clips changes → DONE — da81054: clip-boundary.ts CLIP_LOAD_DEADLINE_MS (= CLIP_MS, one clip's length) beside CLIP_BACKSTOP_MS and pure clipLoad(durationMs, elapsedMs) → loaded / waiting(leftMs) / failed; MascotSkia.tsx useLoadDeadline(uri, duration, onError) arms a timer for leftMs from the clip's mount, cleared on unmount, on a new uri (TintedClip is also keyed by file) and once the duration arrives, then logs and calls onError; Mascot.tsx Figure passes the same onClipError MascotClip uses → clipFailed → tinted-still, stills → driver on stillBoundaryMs; the duration is the signal (a clip with a duration but no frames is already ended by the CLIP_BACKSTOP_MS timer)",
+        "Test: src/styles/mascot/__tests__/clip-boundary.test.ts covers the pure stall decision (no duration before the deadline → waiting; at the deadline → failed; a duration → loaded) and src/styles/mascot/__tests__/stage.test.ts shows a tinted shell with clipFailed true gives 'tinted-still' and stills true → DONE — da81054: clip-boundary.test.ts 'clipLoad' (waiting with leftMs before the deadline, failed at and after it, loaded with a duration, -1/NaN/Infinity no duration, a clock gone back waits at most the deadline; 76 tests); stage.test.ts Gold shell + clipFailed → tinted-still with the gold matrix, stills true, and sleeping + clipFailed → the dimmed tinted-still, stills true (45 tests)",
+        "npm run typecheck passes → DONE — npm run typecheck: tsc --noEmit clean",
+        "npm run lint passes (0 errors) → DONE — npm run lint: 0 errors (2 pre-existing line-count warnings, src/cc/strings.ts and src/styles/strings.ts, untouched)",
+        "npx vitest run passes → DONE — npx vitest run: 268 files, 4503 tests passed",
+        "npm run check:bundle passes → DONE — npm run check:bundle: iOS bundle exported to .expo/bundle-check; the new warning \"Auto's tinted clip did not load\" is in the .hbc",
+        "bash scripts/ralph/acceptance-prd001-styles.sh --no-ci passes → DONE — acceptance --no-ci: every check passes except 'every story of phase <= 2 passes' and 'every AC carries a DONE mark', red only for the open review stories RVW-3..7 (to pass once the last one is done)"
       ],
       "files": [
         "src/styles/mascot/MascotSkia.tsx",
@@ -902,8 +902,8 @@
         "src/styles/mascot/__tests__/stage.test.ts"
       ],
       "priority": 24,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "DONE da81054: a tinted clip with no duration by CLIP_LOAD_DEADLINE_MS (= CLIP_MS; pure clipLoad in clip-boundary.ts) calls MascotSkia's new onError → Mascot's clipFailed → tinted still and stills; no seam edit, no foundation gap"
     },
     {
       "id": "P001S-RVW-3",
