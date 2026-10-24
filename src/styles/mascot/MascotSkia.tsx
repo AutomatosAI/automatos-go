@@ -5,7 +5,9 @@
 // A tinted clip has no loop flag either: near its end (nearClipEnd on the UI thread) it pauses and
 // reports the run's boundary; a new run with the same file seeks to 0 and plays again, a new file
 // mounts a new clip (keyed by file), and a finished one-shot stays paused on its last frame. Skia
-// gives no 'ended', so a timer of the clip's length is the backstop (clip-boundary.ts).
+// gives no 'ended', so a timer of the clip's length is the backstop (clip-boundary.ts). Nor does it
+// say when a clip will not open: one with no duration by CLIP_LOAD_DEADLINE_MS (clipLoad) calls
+// onError, as expo-video's error does, and the Mascot shows stills from then on.
 
 import { Canvas, ColorMatrix, Image, useImage, useVideo } from '@shopify/react-native-skia';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
@@ -18,7 +20,7 @@ import {
 } from 'react-native-reanimated';
 
 import { logger } from '../../lib/logger';
-import { CLIP_BACKSTOP_MS, nearClipEnd } from './clip-boundary';
+import { CLIP_BACKSTOP_MS, clipLoad, nearClipEnd } from './clip-boundary';
 import type { MascotFile } from './media';
 import type { SkiaMedia } from './stage';
 
@@ -44,20 +46,40 @@ function useReportOnce(run: number, onBoundary: (run: number) => void) {
   );
 }
 
+/** Calls onError when the file still has no duration CLIP_LOAD_DEADLINE_MS after it mounted. */
+function useLoadDeadline(uri: string, duration: number, onError: () => void) {
+  const mounted = useRef<{ readonly uri: string; readonly at: number } | null>(null);
+  useEffect(() => {
+    if (mounted.current?.uri !== uri) mounted.current = { uri, at: Date.now() };
+    const load = clipLoad(duration, Date.now() - mounted.current.at);
+    if (load.kind === 'loaded') return undefined;
+    const timer = setTimeout(
+      () => {
+        logger.warn("[styles] Auto's tinted clip did not load, so he is a still");
+        onError();
+      },
+      load.kind === 'waiting' ? load.leftMs : 0,
+    );
+    return () => clearTimeout(timer);
+  }, [uri, duration, onError]);
+}
+
 type TintedClipProps = Drawn & {
   readonly clip: MascotFile;
   readonly poster: ReturnType<typeof useImage>;
   readonly run: number;
   readonly onBoundary: (run: number) => void;
+  readonly onError: () => void;
 };
 
-function TintedClip({ clip, poster, side, matrix, run, onBoundary }: TintedClipProps) {
+function TintedClip({ clip, poster, side, matrix, run, onBoundary, onError }: TintedClipProps) {
   const paused = useSharedValue(false);
   const seek = useSharedValue<number | null>(null);
   const uri = useMemo(() => fileUri(clip), [clip]);
   const video = useVideo(uri, { looping: false, paused, seek, volume: 0 });
   const { currentFrame, currentTime, duration } = video;
   const report = useReportOnce(run, onBoundary);
+  useLoadDeadline(uri, duration, onError);
   const playing = useSharedValue(run);
   const started = useRef(run);
 
@@ -105,9 +127,11 @@ export type MascotSkiaProps = {
   readonly side: number;
   readonly run: number;
   readonly onBoundary: (run: number) => void;
+  /** A tinted clip did not load: the Mascot shows stills from then on. */
+  readonly onError: () => void;
 };
 
-export function MascotSkia({ media, side, run, onBoundary }: MascotSkiaProps) {
+export function MascotSkia({ media, side, run, onBoundary, onError }: MascotSkiaProps) {
   const still = useImage(media.still, onStillError);
   const filter = useMemo(() => [...media.matrix], [media.matrix]);
   if (media.clip !== null) {
@@ -120,6 +144,7 @@ export function MascotSkia({ media, side, run, onBoundary }: MascotSkiaProps) {
         matrix={media.matrix}
         run={run}
         onBoundary={onBoundary}
+        onError={onError}
       />
     );
   }
