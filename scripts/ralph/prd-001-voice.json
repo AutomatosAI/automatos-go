@@ -1,0 +1,787 @@
+{
+  "project": "Automatos Go — PRD-001 wave A6: Voice (quick-ask, the voice screen, Auto Live)",
+  "prd": "docs/prd/PRD-001-AUTOMATOS-GO-V1.md (AutomatosAI/automatos-go#2) §4.9 Voice, §4.7 (Voice screen), Wave A6. Stories US-019 and US-020 re-cut for one session each, in two phases (KV3).",
+  "backendPrd": "automatos-ai docs/PRDS/PRD-266-AUTOMATOS-GO-BACKEND.md §4.7 (AutomatosAI/automatos-ai#1257): W1 US-007a (spokenMode on POST /api/chat, capability spoken_mode), W1 US-008a (the mint passes Retell's transport, url, ice_servers, expires_at through; Business-only Auto Live on SaaS; capability voice_live), W1 US-008b (the live-only socket); W3 US-017b/c (ai_providers names Retell when the workspace can use Auto Live).",
+  "branchName": "feat/a6-voice",
+  "base": "origin/feat/a0-a1-foundation",
+  "worktree": "/Users/gkavanagh/Development/Automatos-AI-Platform/.worktrees/automatos-go/feat+a6-voice",
+  "needsInBase": {
+    "phase1": "The base must already carry A2 chat (feat/a2-studio-chat, every story of prd-001-chat.json DONE: src/chat/routes.ts, src/chat/request.ts, src/chat/controller/, src/chat/composer/Composer.tsx) AND A5 styles phase 1 (feat/a5-styles, every phase-1 story of prd-001-styles.json DONE: src/styles/hud/core/HudCore.tsx, src/styles/provider/resolve.ts, src/styles/mascot/Mascot.tsx, src/styles/play/companion/). Merge both into origin/feat/a0-a1-foundation (or into main, then launch with RALPH_BASE_REF=origin/main) before the first launch.",
+    "phase2": "RETELL_LIVEKIT_CONFIRMED true in the BRANCH's copy of this json, AND the A1 connect kit's consent (src/consent/policy.ts, src/consent/store.ts) in the branch (the launcher's base move, RALPH_BASE_MOVE=1, merges the ref that carries it). Not needed to build, needed to test on a device: PRD-266 W1 US-008a and W3 US-017b/c deployed."
+  },
+  "description": "Talk to Auto with your voice, in every style (D32, D60). Phase 1: quick-ask for everyone on every plan and edition — HOLD TO TALK with on-device speech recognition only (expo-speech-recognition, forced on device; where the phone cannot recognise on device, hold to talk says so and typing stays), the words shown as you speak, then sent through A2's chat controller with spokenMode, Auto's reply spoken by expo-speech with a voice on the phone, STOP and 'Auto, stop' cancelling the turn on the server, the AI notice shown and spoken once, at the start of a voice session (D73: no repeats); the microphone and speech permissions asked at the first press; the voice screen driven by ONE reducer (idle, listening, thinking, speaking, error) and built on A5's HUD phone core dressed by each style (Studio ink and orange rings, Play's Ember rings with Auto in the centre, HUD its accent), Reduce Motion, the AI label; interruptions (calls, route changes, backgrounding); the ways in (the composer's voice button, the HUD home). Phase 2 (only after Retell confirms: RETELL_LIVEKIT_CONFIRMED): Auto Live — the mint, the gate (voice_live + Retell in ai_providers: Business-only on SaaS, any armed self-hosted install), consent naming Retell, the join over LiveKit's React Native SDK speaking Retell's own LiveKit protocol (retellLiveKitProtocol below), the audio session, the live transcript, MUTE and END, leave, errors and the plan gate's words. JavaScript only: every native module (expo-speech-recognition, expo-speech, @livekit/react-native, @livekit/react-native-webrtc, livekit-client, expo-keep-awake via expo) is already in the foundation's build, so no dependency, native module or app.json change (it ships over the air). Native always: NO WebView anywhere. THIS JSON IS THE BINDING CONTRACT.",
+  "references": {
+    "prd": "docs/prd/PRD-001-AUTOMATOS-GO-V1.md — §4.4 (capabilities: no spoken_mode → quick-ask reads plain text; no voice_live → no Live button), §4.6 (the AI label on the voice screen; one voice screen, three dresses), §4.7 (Voice: Hold to talk, Live where allowed, Type, Stop, MIC LIVE, transcript, AI label), §4.9 Voice, §4.11, Wave A6 (US-019, US-020), §8 'Retell and LiveKit'.",
+    "decisions": "/Users/gkavanagh/Development/Automatos-AI-Platform/reports/mobile-review-2026-10-20/decisions.md — 32 (no WebView; Auto Live through LiveKit's React Native SDK; quick-ask ships regardless, forced on-device; spokenMode; the client shows and speaks the AI notice once at the start of a voice session (D73)), 33 (screen on, app open; no background microphone, no Android microphone foreground service), 34 (Auto Live Business-only on SaaS at the mint; self-hosted unrestricted; quick-ask never gated), 53 (Retell audio retention off: Gerard's dashboard), 60 (one voice screen, three dresses), 64 (no pointer to creating an account), 70 (the consent sheet names Retell for Auto Live; never 'nothing leaves your server').",
+    "foundation": "This branch's foundation (feat/a0-a1-foundation) — RE-VERIFY every contract by reading the file (only US-001..US-002e were built when this kit was written, 21 Oct): src/api/{client,errors,strings,capabilities (canSpokenMode, canVoiceLive),discovery,workspace (ai_providers optional, exposure),query-keys,routes}.ts, src/auth/role.ts (roleCan 'chat'), src/styles/ai-label.tsx (AiLabel: one small muted caption, D73; there is no useAiLabelVisible), src/ui/ (IconButton, Button, Sheet, Toast, index.ts), src/navigation/routes.ts (read only), src/lib/logger.ts, scripts/check-routes.ts, the vendored src/core/web/lib/ai-label/copy.ts (aiLabelText), lib/mascot/{media,types}.ts (captionFor, MASCOT_STATES), components/play/chat/labels.ts (toolLineLabel). docs/native-modules.md (the voice rows, the blocked FOREGROUND_SERVICE row) and app.json (expo-speech-recognition plugin with androidSpeechServicePackages, @livekit/react-native-expo-plugin android.audioType 'communication', no UIBackgroundModes 'audio').",
+    "chatKit": "scripts/ralph/prd-001-chat.json (A2, branch feat/a2-studio-chat) and its DONE notes: src/chat/request.ts (buildChatRequest), src/chat/controller/{thread.ts, use-thread.ts} (threadReducer, send, Stop = abort + cancelTurn, ensureLiveChatId), src/chat/view-model.ts (message → rows), src/chat/composer/{Composer.tsx, composer-state.ts}, src/chat/screens/ChatScreen.tsx, KC4 (the home thread rule). RE-VERIFY after A2: every name above.",
+    "stylesKit": "scripts/ralph/prd-001-styles.json (A5, branch feat/a5-styles) phase 1 and its DONE notes: US-018b src/styles/hud/core/ (ring-specs.ts, RingCore.tsx, waveform.ts, Waveform.tsx with a levels prop 'for A6's live mic', StateChip, Transcript, HudTopBar with micOpen, HudButtons with HOLD TO TALK inert 'Voice comes with the voice update', HudCore.tsx from props only), US-016e src/styles/provider/ (resolveStyle → ResolvedStyle {layout, tokens, play?, hud?, motion.loops, mascot}; useStyle()), US-017a/b src/styles/mascot/ (Mascot, use-mascot, chat-events, driver), US-017c src/styles/play/companion/PlayComposer.tsx, src/styles/nav.ts (settingsStyle, lookPlay, lookHud), D-ONE-VOICE. Phase 2 of A5 (US-016k src/styles/homes/HudHome.tsx: 'HOLD TO TALK stays inert (A6)') may or may not be in the base. RE-VERIFY after styles phase 1: every name above.",
+    "connectKit": "scripts/ralph/prd-001-connect.json (A1, branch feat/a1-connect): KC11 (the consent sheet is a step of the shell's gate; names every ai_providers entry including Retell; asks again when the list changes), US-007b src/consent/{providers,policy,store}.ts, US-007c src/consent/{ConsentSheet.tsx,use-consent.ts}, KC16 (the one allowed data statement; no 'nothing leaves your server'). Phase 2 reads src/consent read-only. RE-VERIFY after connect.",
+    "automatosAi": "/Users/gkavanagh/Development/Automatos-AI-Platform/.worktrees/automatos-ai/mobile-review-main — READ ONLY, HEAD 7ae677b52 (origin/main on 21 Oct). Server: orchestrator/api/voice_retell.py (mint_web_call :67-256: the four gates :86-125 — 503 'Auto Live is switched off platform-wide', 503 'Auto Live is not armed — Retell credentials are missing in Settings', 403 'Live voice requires a signed-in user', 403 'Auto Live is not enabled for this workspace', 429 the budget sentence; the response {call_id, access_token, chat_id} :252-256; 'The token dies in ~30s unused'; the custom-LLM socket :611 speaks the AI greeting and reminder in the call through _socket_ports :594), orchestrator/modules/voice/retell_api.py (RETELL_CREATE_WEB_CALL_URL = https://api.retellai.com/v2/create-web-call; RetellWebCall(call_id, access_token)), orchestrator/modules/voice/voice_meter.py:60 cap_allows_mint ('Voice budget used: N/M min this month'), orchestrator/modules/policy/ai_disclosure.py:80-81 (VOICE_GREETING 'Hi, this is Auto, your AI assistant.', VOICE_REMINDER \"Just so you know, I'm an AI assistant.\"), orchestrator/modules/voice/ai_notice.py (the server's reminder interval VOICE_AI_REMINDER_MINUTES), orchestrator/reports/route-manifest.json (POST /api/voice/web-call is in the pinned manifest at 630fc1c85). Web (behaviour references, never vendored): frontend/hooks/use-retell-call.ts (mint → RetellWebClient.startCall({accessToken}) → events → captions from 'update'), frontend/lib/voice/orb-state.ts (the live state machine: THINKING_AFTER_MS 700, USER_SPEECH_THRESHOLD), frontend/components/voice/{LiveVoiceMode,VoiceCallPanel,AiVoiceLabel}.tsx; frontend/package-lock.json pins retell-client-js-sdk 2.0.8.",
+    "backendW1": "/Users/gkavanagh/Development/Automatos-AI-Platform/automatos-ai/scripts/ralph/prd-266w1.json — US-007a (ChatRequest.spokenMode: bool = False; spoken frames pass through modules.voice.spoken_style.speechify; discovery capability 'spoken_mode'), US-008a (SaaS: 403 'Auto Live is on the Business plan' unless plan exposure families.voice; the mint response ADDS transport, url, ice_servers, expires_at whenever Retell returns them; a paired device and the local operator can mint; capability 'voice_live'), US-008b (4409 for any call that is not live). Not merged when this kit was written: every app seam on them is RE-VERIFY after W1.",
+    "backendW3": "/Users/gkavanagh/Development/Automatos-AI-Platform/automatos-ai/scripts/ralph/prd-266w3.json — US-017b (ai_providers lists {id 'retell', name 'Retell AI'} exactly when the workspace can use Auto Live: the platform switch, Retell armed, the workspace's switch and, on SaaS, the plan's families.voice; the monthly cap is not part of it), US-017c (GET /api/workspaces/current returns ai_providers; null on a read failure). RE-VERIFY after W3.",
+    "retellSdk": "Evidence for Auto Live (read 21 Oct 2026 from the npm registry, not installed in the app): retell-client-js-sdk 3.0.2 (latest, published 2026-09-30, tarball sha256 1adbbd10be9ba810e66048bbdf60dc6d53b487596dd9032cdd5c3236616af86a, dependencies livekit-client ^2.5.1 and eventemitter3 only): src/livekit-transport.ts, src/gateway-transport.ts, src/transport.ts, src/types.ts, src/session/{base-session,web-call-session,events}.ts, src/legacy/retell-web-client.ts, README.md; and 2.0.8 (the version automatos-ai's web uses, tarball sha256 52eb38cee805eb00a90172b49594a145595903b7a871db910e6406cd278142c2): src/index.ts. The protocol the app speaks is written out in retellLiveKitProtocol; the app never installs or imports retell-client-js-sdk (a browser SDK: DOM Audio elements, window.requestAnimationFrame, navigator.mediaDevices).",
+    "modules": "Read the installed APIs in node_modules, never guess (versions from the foundation's committed package.json): expo-speech-recognition 3.1.3 (build/ExpoSpeechRecognitionModule.types.d.ts; android/src/main/java/expo/modules/speechrecognition/ExpoSpeechService.kt:93-105 creates the on-device recognizer only on API 33+ with requiresOnDeviceRecognition; ExpoSpeechRecognitionModule.kt:227-232 supportsOnDeviceRecognition, :373-450 getSupportedLocales without a package uses the on-device recognizer; ios/ExpoSpeechRecognizer.swift:579-580 sets requiresOnDeviceRecognition ONLY when the recognizer supports on-device, else silently uses Apple's servers; :720-775 interruption and route-change handling), expo-speech 14.0.8 (build/Speech.types.d.ts; android SpeechModule.kt:78-99 voice names; ios SpeechModule.swift:30-75), @livekit/react-native 3.1.0 (lib/typescript/src/index.d.ts registerGlobals, audio/AudioSession.d.ts configureAudio/startAudioSession/stopAudioSession, AndroidAudioTypePresets), livekit-client 2.23.0 (Room, RoomEvent), @livekit/react-native-expo-plugin 1.1.0 (plugin/build: Podfile source, android.audioType meta-data, optional enableScreenShareService; android/src/main/AndroidManifest.xml is empty), expo-keep-awake 15.0.8 (a dependency of expo 54: node_modules/expo/package.json).",
+    "designHud": "/Users/gkavanagh/Development/Automatos-AI-Platform/DUMPING AREA/automatos-play-command/README.md 'Core (voice)': push-to-talk only (HOLD TO TALK on the phone); MIC LIVE visible whenever the mic is open; 'Auto, stop' or STOP cancels the turn (same as Studio's Stop); typing always available; the waveform shows the live mic level while held and an idle shimmer while Auto speaks; the state chip names the state in words. 'Automatos Command HUD.dc.html' phone core (390x844). READ ONLY."
+  },
+  "retellLiveKitProtocol": {
+    "verdict": "Technically workable, not yet confirmed by Retell. The official browser SDK's LiveKit path is a thin wrapper over livekit-client: it joins Retell's LiveKit room with the minted access_token and nothing else, publishes the microphone, plays the remote track 'agent_audio', and reads JSON data packets from the participant 'server'. livekit-client runs in React Native through @livekit/react-native (registerGlobals supplies WebRTC), so the phone can speak the same protocol natively. Open risks: Retell's support statement (US-020 AC1), the 'gateway' transport Retell added in SDK 3.0.0 (Sep 2026: WHIP-style signalling, not LiveKit) if Retell moves web calls to it, and the v3 note that calls made by /v3/create-web-call send no talking/transcript events (our server mints with /v2/create-web-call).",
+    "mint": "POST /api/voice/web-call {chat_id?} with the app's bearer + X-Workspace-ID → today {call_id, access_token, chat_id} (api/voice_retell.py:252-256); after W1 US-008a also transport?, url?, ice_servers?, expires_at? whenever Retell returns them. The server calls https://api.retellai.com/v2/create-web-call with the workspace's secret Retell key (modules/voice/retell_api.py); the phone never sees a Retell key. The access_token dies in about 30 s unused: join at once.",
+    "transportChoice": "transport absent or 'livekit' → LiveKit. Absent means a LiveKit-only backend (retell-client-js-sdk 3.0.2 src/types.ts CreateWebCallResponse: 'Missing on older backends, which are LiveKit-only'; src/transport.ts selectTransport defaults to 'livekit'; the legacy RetellWebClient's defaultTransport is 'livekit'). transport 'gateway' (or anything else) → not LiveKit: refused honestly in v1 (KV16).",
+    "join": "new Room({audioCaptureDefaults: {autoGainControl: true, echoCancellation: true, noiseSuppression: true, channelCount: 1}}); await room.connect(url ?? 'wss://retell-ai-4ihahnq7.livekit.cloud', access_token) — the token carries the room, no room name is passed; then room.localParticipant.setMicrophoneEnabled(true). Sources: 3.0.2 src/livekit-transport.ts:24 LIVEKIT_HOST and :41-112 connect(); 2.0.8 src/index.ts:15 hostUrl and startCall(). Nothing browser-specific is part of the join: no Origin, cookie or Retell key, only the URL and the token.",
+    "agentAudio": "Retell's agent publishes an audio track whose publication.trackName is 'agent_audio'; its RoomEvent.TrackSubscribed is the 'call ready' signal (3.0.2 src/livekit-transport.ts:79-99). React Native plays a subscribed remote audio track by itself (the browser SDK's track.attach() is DOM-only).",
+    "dataPackets": "RoomEvent.DataReceived(payload, participant): only from participant.identity === 'server'; payload = UTF-8 JSON (src/livekit-transport.ts:101-108). event_type 'update' {transcript: [{role 'agent' | 'user', content, metadata?}], turntaking?: 'agent_turn' | 'user_turn'} carries the WHOLE running transcript each time (replace, never append; the web takes the last utterance of each speaker: frontend/hooks/use-retell-call.ts); 'agent_start_talking' and 'agent_stop_talking' (no payload); 'metadata' {metadata}; 'node_transition'. The gateway's control envelope {type: 'status', state: 'ended' | 'replaced'} ends the call (src/session/base-session.ts handleDataEvent). Anything else is ignored (the SDK drops unknown events: src/session/events.ts DATA_CHANNEL_EVENTS).",
+    "eventsCaveat": "retell-client-js-sdk 3.0.2 README 'Migrating from 2.x': 2.x calls emitted agent_start_talking, agent_stop_talking, update and metadata; calls created by the v3 createWebCall() (/v3/create-web-call) do not, and their transcript comes from Retell's monitor WebSocket, which carries an API key (never on a phone). automatos-ai mints with /v2/create-web-call, so the events flow today. Fallback the app builds anyway: speaking/listening from LiveKit's ActiveSpeakersChanged (a remote speaker = Auto speaking; the local participant = the user) and Auto's words from the thread (the server saves every turn and sends chat_changed).",
+    "leave": "room.disconnect(). 'Leaving is what ends a web call; there is no one else to tell' (src/session/web-call-session.ts end()). The server's call-ended webhook stamps the call; the app makes no Retell call.",
+    "mute": "room.localParticipant.setMicrophoneEnabled(false | true) (src/livekit-transport.ts setMicEnabled).",
+    "aiNotice": "Inside Live the server speaks the AI greeting and the reminder itself (api/voice_retell.py _socket_ports → modules/voice/live_socket.py; modules/policy/ai_disclosure.py VOICE_GREETING / VOICE_REMINDER; modules/voice/ai_notice.py interval), so the app shows the AiLabel and speaks nothing extra.",
+    "gatewayForTheRecord": "Not built in v1. POST {baseURL ?? 'https://api.retellai.com'}/webrtc-proxy/{call_id}/v1/webrtc/sessions with 'Authorization: Bearer <access_token>' and 'X-Retell-Client-JS-SDK-Version', body {identity: 'client', sdp: <offer>} → {session_id, sdp: <answer>}; trickle ICE as PATCH …/sessions/{session_id} {candidate}; DELETE …/sessions/{session_id} on close; ICE servers from the mint's ice_servers (the SDK's default stun:stun.l.google.com:19302); a data channel 'control' that Retell does not use yet (3.0.2 src/gateway-transport.ts). It is plain WebRTC plus HTTPS, so @livekit/react-native-webrtc's RTCPeerConnection (already in the binary) could speak it natively, no WebView — only if Retell moves web calls to it and allows a client that is not its SDK (open question for the lead).",
+    "evidenceFiles": "3.0.2: src/livekit-transport.ts, src/gateway-transport.ts, src/transport.ts, src/types.ts, src/session/base-session.ts, src/session/web-call-session.ts, src/session/events.ts, src/legacy/retell-web-client.ts, src/control/api.ts (/v3/create-web-call), README.md. 2.0.8: src/index.ts. Both from `npm pack retell-client-js-sdk@<v>` on 21 Oct 2026 (hashes in references.retellSdk)."
+  },
+  "localChecks": {
+    "allowed": "npm run typecheck, npm run lint, npx vitest run, npm run check:bundle, npm run check:core, npm run check:routes, bash scripts/ralph/acceptance-prd001-voice.sh --no-ci | --print-base | --print-phase; reading files under node_modules (the installed module APIs) and the automatos-ai checkout (READ ONLY: `git -C <that path> show <ref>:<path>`). node_modules comes from setup-worktree.sh.",
+    "never": "npm install / npx expo install / any dependency change (never install retell-client-js-sdk), expo start, expo run:*, expo prebuild, any eas command, a simulator, Metro's dev server, any server, gh workflow run, git push, opening a PR, git merge (the phase-2 base move is the launcher's, RALPH_BASE_MOVE=1)."
+  },
+  "decisions": [
+    {
+      "id": "RETELL_LIVEKIT_CONFIRMED",
+      "value": false,
+      "text": "Retell has NOT confirmed (as of 21 Oct 2026) that a client other than its browser SDK may join a web call over LiveKit with the minted access_token (decision 32's first task; PRD-001 US-020 AC1). While value is false: no phase-2 story starts, no Live button exists, and quick-ask carries voice (PRD-001 §4.9). The lead flips value to true on the BRANCH's copy of this file (<worktree>/scripts/ralph/prd-001-voice.json; the runner never re-seeds a tracked kit json) in one signed '[skip ci]' commit whose body quotes Retell's answer, after recording it in PRD-001 US-020 (AC1). If Retell says no, or says web calls move to the gateway transport, value stays false and the lead decides between a gateway client (retellLiveKitProtocol.gatewayForTheRecord) and leaving Live out of v1. A build session NEVER edits this decision.",
+      "source": "PRD-001 §4.9, US-020 AC1, §8; decision 32; lead brief 21 Oct",
+      "evidence": "retellLiveKitProtocol"
+    },
+    {
+      "id": "D-NO-WEBVIEW",
+      "text": "No WebView anywhere (Gerard: a WebView for voice 'sounds like a hack'). Quick-ask is expo-speech-recognition + expo-speech; Auto Live is LiveKit's React Native SDK. Nothing from Retell's browser SDK is loaded, embedded or imported.",
+      "source": "decision 32, FR-9, FR-10, D3"
+    },
+    {
+      "id": "D-QUICK-ASK",
+      "text": "Quick-ask for everyone, on every plan and edition, never gated: HOLD TO TALK, on-device speech recognition only (audio never goes to Apple or Google), the transcript sent through the normal chat with spokenMode, the reply spoken by the phone's text to speech; the client shows and speaks the AI notice once, at the start of a voice session; no ten-minute reminder (D73).",
+      "source": "decision 32, 34; PRD-001 §4.9, US-019"
+    },
+    {
+      "id": "D-LIVE",
+      "text": "Auto Live joins Retell's call natively through LiveKit's React Native SDK with the mint's transport fields; full duplex with barge-in; the server speaks the AI greeting; receipts arrive in the thread over chat_changed. Business-only on SaaS (enforced at the mint, W1 US-008a); any armed self-hosted install; hidden until Retell confirms.",
+      "source": "decision 32, 34; PRD-001 §4.9, US-020"
+    },
+    {
+      "id": "D-SCREEN-ON",
+      "text": "Hands-free means screen on, app open. No background microphone, no Android microphone foreground service. The mic never opens without a press; MIC LIVE is visible whenever it is open.",
+      "source": "decision 33; PRD-001 §4.9"
+    },
+    {
+      "id": "D-ONE-VOICE",
+      "text": "The HUD voice layout (A5's phone core) is the voice screen in every style, painted by that style's look: Studio ink and orange rings, Play's Ember rings with Auto in the centre, HUD its accent. Built on A5's components, never a copy.",
+      "source": "decision 60; PRD-001 §4.6"
+    },
+    {
+      "id": "D-AI-LABEL",
+      "text": "The foundation's AiLabel ('Auto is an AI' / '{agent} is an AI') is one small muted caption (Body 6, the muted token) and sits on the voice screen, small and out of the way. Nothing is ever disabled on its visibility: there is no fence, and HOLD TO TALK, LIVE and typing never wait for it (useAiLabelVisible and AI_LABEL_PAUSED_TEXT no longer exist). (D73, Gerard 23 Oct: the AI label is one small muted caption, never a pill and never a lock; the voice notice is spoken once per session) src/styles/ai-label.tsx is never edited (gate-enforced).",
+      "source": "FR-8, PRD-001 §4.6, PRD-264 EUAI-11a"
+    },
+    {
+      "id": "D-ROLES",
+      "text": "Viewers get no voice: HOLD TO TALK disabled with 'Ask your workspace owner for editor access to talk to Auto' (src/auth/strings.ts) and no Live button; owners, admins and editors talk (roleCan 'chat').",
+      "source": "D16, D17"
+    },
+    {
+      "id": "D-CAPABILITIES",
+      "text": "No spoken_mode → quick-ask sends a plain turn and reads its plain text (the app strips markdown itself); no voice_live → no Live button (canSpokenMode, canVoiceLive from src/api/capabilities.ts). Gated on capabilities, never on a server version.",
+      "source": "PRD-001 §4.4, FR-3"
+    },
+    {
+      "id": "D-NO-BILLING",
+      "text": "Nothing about plans, credits or prices: the Business-only refusal is never shown as written (W1's 403 'Auto Live is on the Business plan'); a workspace that cannot use Live never sees the button.",
+      "source": "D8, FR-11"
+    },
+    {
+      "id": "D-NO-SIGNUP",
+      "text": "No pointer to creating an account anywhere on the voice screens ('Create an account', 'Sign up', 'No account?'). Gate-enforced on the wave's added lines.",
+      "source": "decision 64, D63"
+    },
+    {
+      "id": "D-NATIVE-ONCE",
+      "text": "No dependency, native module, config plugin or app.json change (package.json, package-lock.json, app.json and eas.json untouched — gate-enforced). Every module this wave uses is in the foundation's build (docs/native-modules.md 'Voice' rows).",
+      "source": "PRD-001 §4.2, D43"
+    },
+    {
+      "id": "D-ONE-CLIENT",
+      "text": "All HTTP through the foundation's src/api client with this kit's route table src/voice/routes.ts (phase 2); zod at every boundary; unknown fields and unknown Retell packets ignored. Chat turns go through A2's controller only, never a second chat request.",
+      "source": "PRD-001 §4.4, §4.11"
+    },
+    {
+      "id": "D-TOKENS",
+      "text": "Tokens only: colours come from the resolved style (A5's useStyle()); no colour literal outside src/styles/tokens/ (the lint rule).",
+      "source": "PRD-001 §4.11, K14"
+    },
+    {
+      "id": "D-A11Y",
+      "text": "Nothing under 11 pt; every animated signal (rings, waveform, cursor, the mascot) has a text twin (the chip, MIC LIVE, the transcript); Reduce Motion stops every loop; tap targets 44 pt; HOLD TO TALK works with a screen reader (KV5).",
+      "source": "D38, PRD-001 §4.6, HUD README 'Accessibility'"
+    },
+    {
+      "id": "D-SHAPE",
+      "text": "Files 200-400 lines (never over 800), functions under 50, components under 150, nesting under 4; pure logic in plain TS with vitest tests (pure modules import no react, react-native, expo-*, @livekit/* or livekit-client, so node can run them); immutability; copy in src/voice/strings.ts.",
+      "source": "PRD-001 §4.11"
+    },
+    {
+      "id": "KV1-FILES",
+      "text": "This kit may create or change ONLY: src/voice/**, app/(app)/voice.tsx, its own kit files under scripts/ralph/, and the NAMED seams of KV2. Never: src/core/**, src/api/**, src/auth/**, src/ui/**, src/navigation/** (this kit's app path lives in src/voice/nav.ts, KV17), src/storage/**, src/app-state/**, src/consent/** (read only), src/connect/**, src/cc/**, src/styles/** outside KV2's seams (and never src/styles/ai-label.tsx), src/chat/** outside KV2's seams, app/_layout.tsx, app/(app)/_layout.tsx, every other app route, any __tests__ folder of A2 or A5 (their tests pass unchanged), package.json, package-lock.json, app.json, eas.json, plugins/**, .github/**, scripts/* outside scripts/ralph/. Gate-enforced allowlist.",
+      "source": "kit"
+    },
+    {
+      "id": "KV2-SEAMS",
+      "text": "Named seams into A2 and A5, each edit ADDITIVE (no prop, export or type renamed or removed; without the new optional prop every component behaves exactly as its kit built it) and recorded in that story's DONE notes as 'SEAM EDIT: <path> — <why>' (gate-enforced): A2 — src/chat/request.ts (buildChatRequest's optional spokenMode, US-019f), src/chat/controller/** (send carries spokenMode, US-019f), src/chat/composer/Composer.tsx (the voice button, US-019k); A5 — src/styles/hud/core/** (HudCore's optional voice props; HudButtons' hold handlers and labels; StateChip's words; RingCore's lineColour; HudTopBar's menu label; US-019j), src/styles/play/companion/PlayComposer.tsx (the voice button, US-019k), src/styles/homes/HudHome.tsx (HOLD TO TALK on the HUD home, US-019k, only when A5 phase 2 is in the base). A contract that is missing or wrong in A2, A5, connect or the foundation: build the smallest adapter inside src/voice/ and write 'FOUNDATION GAP: <what, where>' (also for A2/A5/connect gaps) in the DONE mark.",
+      "source": "kit"
+    },
+    {
+      "id": "KV3-PHASES",
+      "text": "Each story has a 'phase'. Phase 1 (US-019a..US-019k: quick-ask and the voice screen) needs A2 and A5 phase 1 in the base (needsInBase.phase1). Phase 2 (US-020a..US-020e: Auto Live) needs RETELL_LIVEKIT_CONFIRMED true in the branch's kit json AND the connect kit's src/consent/policy.ts in the branch: the gate's --print-phase prints 2 only then. A build session never starts a story above the current phase; when every story of the current phase is done it finishes the phase (gate, CI commit, RALPH_COMPLETE). Phase 2 is a second launch (after the lead flips the flag; with RALPH_BASE_MOVE=1 when the consent code must be merged in). In phase 1 nothing under src/voice/live/ exists and nothing imports @livekit/react-native or livekit-client (gate-enforced).",
+      "source": "kit (lead brief: Live depends on an explicit RETELL_LIVEKIT_CONFIRMED line)"
+    },
+    {
+      "id": "KV4-ON-DEVICE",
+      "text": "Speech recognition runs on the phone or not at all. iOS: start only when ExpoSpeechRecognitionModule.supportsOnDeviceRecognition() is true — the module sets requiresOnDeviceRecognition only when the recognizer supports it and otherwise silently uses Apple's servers (ios/ExpoSpeechRecognizer.swift:579-580), so the app checks first and never starts otherwise. Android: start only on API 33+ (the module creates SpeechRecognizer.createOnDeviceSpeechRecognizer only on TIRAMISU with requiresOnDeviceRecognition: ExpoSpeechService.kt:93-109; below 33 it falls through to SpeechRecognizer.createSpeechRecognizer, the phone's default recognition service, where EXTRA_PREFER_OFFLINE is only a preference and the audio may go to Google), with supportsOnDeviceRecognition() true and the language in getSupportedLocales({}).installedLocales (no service package: the on-device recognizer answers); a language that is supported but not installed offers androidTriggerOfflineModelDownload ('It stays on your phone'). Otherwise — Android 12 or older, no on-device recognizer, the language missing, an iPhone or language without on-device support — HOLD TO TALK is unavailable with a plain reason and typing stays; the app NEVER falls back to network recognition (the privacy policy says quick-ask speech stays on the phone: release-kit privacy audit, 21 Oct). Every start passes requiresOnDeviceRecognition: true; never androidRecognitionServicePackage (app.json's androidSpeechServicePackages only lists the Google app in <queries>); never recordingOptions.persist or audioSource (audio is never saved). The recognition language is the phone's first locale (expo-localization), the same one text to speech uses.",
+      "source": "decision 32 ('forced on-device'), PRD-001 §4.9, lead brief ('on Android require on-device recognition where available and say what happens otherwise')"
+    },
+    {
+      "id": "KV5-PUSH-TO-TALK",
+      "text": "The mic opens only while HOLD TO TALK is held (press in → listen, release → send); a hold under HOLD_MIN_MS 300 is a tap ('Hold the button while you talk'), and listening stops itself at HOLD_MAX_MS 60 s. With a screen reader on (AccessibilityInfo.isScreenReaderEnabled) the button toggles instead (double-tap to talk, double-tap to send) and says so. Pressing while Auto speaks stops the speech at once (barge-in) and, if the turn still streams, cancels it on the server through A2's Stop. STOP aborts listening (nothing sent), stops speech and cancels a streaming turn. 'Auto, stop' (KV config STOP_PHRASES, whole utterance only) said during a hold acts as STOP and sends nothing. MIC LIVE follows the recognizer's audiostart/audioend events (the real capture), never the button state.",
+      "source": "HUD README 'Voice rules', PRD-001 §4.9, D-A11Y"
+    },
+    {
+      "id": "KV6-SPOKEN",
+      "text": "Only turns started by quick-ask are spoken, and only while the voice screen is mounted; a typed turn (TYPE) is never spoken. Spoken: Auto's text parts of that turn only (A2's view-model rows: no receipts, tool lines, cards or retracted narration), passed through toSpeakable (markdown stripped even when spokenMode is on), queued sentence by sentence as the text streams (so Auto starts speaking before the turn ends). Voice: the phone's own (iOS: every AVSpeechSynthesisVoice is on the device, Enhanced first; Android: a voice whose name says 'local' and never one that says 'network', Google TTS's naming; none → the engine's default for the language). iOS speaks with useApplicationAudioSession: false (the system manages speech's own audio session after recognition left the session in playAndRecord/measurement; owner check OT-V3). A turn with cards or receipts also shows 'See it in the chat' (routes.chat(id)).",
+      "source": "kit (D-QUICK-ASK, PRD-001 §4.9)"
+    },
+    {
+      "id": "KV7-AI-NOTICE",
+      "text": "Quick-ask shows AND speaks the AI notice ONCE, before the first spoken reply of a voice session ('Hi, this is Auto, your AI assistant.', the server's own words: orchestrator/modules/policy/ai_disclosure.py VOICE_GREETING), with the answering agent's name when it is not Auto. No ten-minute reminder, no repeat within a session (D73, Gerard 23 Oct: the AI label is one small muted caption, never a pill and never a lock; the voice notice is spoken once per session). A session starts at the first quick-ask after the voice screen mounts and ends when it unmounts or the app goes to the background. Auto Live adds nothing spoken: the server speaks its greeting in the call.",
+      "source": "PRD-001 §4.9 (PRD-264 EUAI-04), decision 32"
+    },
+    {
+      "id": "KV8-ONE-REDUCER",
+      "text": "One pure reducer (src/voice/machine/voice-reducer.ts) drives the voice screen for quick-ask and, in phase 2, Live: phases idle | listening | thinking | speaking | error; micOpen separately (the capture truth); the view-model derives every word on screen from it. Hooks feed it events and run its effects; nothing else holds voice state.",
+      "source": "lead brief (the voice screen states driven by one reducer)"
+    },
+    {
+      "id": "KV9-DRESS",
+      "text": "voiceDress(resolvedStyle) paints A5's core: Studio (and an installed theme, which uses the Studio layout) → the rings' structure (outer ring, ticks, dashed ring, crosshair) in --foreground (ink) and their motion (arcs, segments, pulse) in --accent (orange), no HUD overlay, Auto only when the theme brings a mascot; Play → the look's accent for both with Auto (A5's Mascot) in the centre always; HUD → hud.accent for both, its overlay, Auto when the look's auto is 'on'. Colours from the resolved style only. motion = resolved.motion.loops (Reduce Motion, HUD's motion off).",
+      "source": "decision 60, D-ONE-VOICE"
+    },
+    {
+      "id": "KV10-INTERRUPTIONS",
+      "text": "AppState 'background' (including the screen locking) → abort listening (nothing sent), stop speech, end the AI-notice session and (phase 2) leave Live. iOS 'inactive' (Control Centre, an incoming-call banner) does nothing by itself; the audio-session interruption that a real call, Siri or an alarm causes reaches the app as the recognizer's 'interrupted' error → abort, keep the words heard on screen un-sent, 'Interrupted. Hold to talk when you're ready.' A route change the module cannot recover (a headset or Bluetooth device going away) → abort with 'The microphone changed. Hold to talk again.' Coming back to 'active' never reopens the mic, resumes speech or rejoins Live by itself.",
+      "source": "decision 33, PRD-001 §4.9 (the mic never opens without a press); expo-speech-recognition ios/ExpoSpeechRecognizer.swift:720-775"
+    },
+    {
+      "id": "KV11-NO-BACKGROUND-AUDIO",
+      "text": "Decision (a): Auto Live ENDS — and quick-ask aborts — when the app leaves the screen, on Android and iOS alike, and the copy says so on return ('Auto Live ended when Automatos Go left the screen.'). Option (b), unblocking FOREGROUND_SERVICE + FOREGROUND_SERVICE_MICROPHONE with a Play declaration, is not taken: (1) Gerard decided it (decision 33: 'No background microphone, no Android microphone foreground service'); (2) it is a native change (app.json → a new fingerprint and an iOS build from the shared quota, D43) in a wave that ships over the air; (3) iOS has no UIBackgroundModes 'audio' either (foundation K11), so a background call would differ by platform; (4) the module evidence: @livekit/react-native-expo-plugin 1.1.0 adds NO permission (its android/src/main/AndroidManifest.xml is empty; its plugin only adds the livekit/podspecs Podfile source, the android.audioType meta-data and an optional screen-share-service flag that needs FOREGROUND_SERVICE + FOREGROUND_SERVICE_MEDIA_PROJECTION); FOREGROUND_SERVICE comes from @livekit/react-native's own library manifest and its only service is @livekit/react-native-webrtc's MediaProjectionService (foregroundServiceType mediaProjection, screen share), which the app never starts; no installed module declares FOREGROUND_SERVICE_MICROPHONE. Android 14 also stops a backgrounded app's microphone without a microphone-type foreground service started in the foreground, so ending the call is the honest behaviour, not a degraded one. The screen stays on while voice is active (KV12) so a hands-free call does not end by itself. Revisit only if Gerard reverses decision 33.",
+      "source": "coordinator question 21 Oct; decision 33; app.json blockedPermissions; docs/native-modules.md 'Blocked' FOREGROUND_SERVICE row"
+    },
+    {
+      "id": "KV12-KEEP-AWAKE",
+      "text": "The screen stays on while the mic is open, a reply is being spoken or a Live call is up (expo-keep-awake activateKeepAwakeAsync / deactivateKeepAwake with one tag, in src/voice/interruptions/keep-awake.ts only), and is released otherwise. expo-keep-awake is a dependency of expo 54 (~15.0.8 in node_modules/expo/package.json), autolinked into the foundation's binary: import it, never add it to package.json. If typecheck or lint refuses the import, write 'FOUNDATION GAP: expo-keep-awake not a direct dependency' and keep the rest of the story.",
+      "source": "decision 33 (screen on), D-NATIVE-ONCE"
+    },
+    {
+      "id": "KV13-AUDIO-OWNER",
+      "text": "One audio owner at a time: none | recognizer | speaker | live. Claiming the recognizer stops the speaker (barge-in); Live takes the audio from both (aborts recognition, stops speech); quick-ask is disabled while Live is up.",
+      "source": "kit"
+    },
+    {
+      "id": "KV14-LIVE-GATE",
+      "text": "The Live button shows only when: canVoiceLive(discovery) AND the bootstrap's ai_providers is a list that names id 'retell' (W3 US-017b lists Retell exactly when the workspace can use Auto Live — platform switch, Retell armed, the workspace's switch and, on SaaS, the plan; so a Basic or Pro SaaS workspace never sees it, and a self-hosted install sees it once its operator armed Retell) AND roleCan(role, 'chat'). ai_providers absent (a server before W3) or null → hidden. A refusal at the mint is still handled: a 403 whose detail names a plan, tier, Business, upgrade, credit or price shows the fixed 'Auto Live isn't available for this workspace. Ask your workspace owner.' (D8); every other refusal detail is a user-facing sentence and is shown as written (PRD-001 US-020); 502 'Auto Live couldn't start the call. Try again.'. Local edition: the same gate, no plan words ever.",
+      "source": "decision 34, D8, PRD-001 US-020 AC3, W1 US-008a, W3 US-017b"
+    },
+    {
+      "id": "KV15-ONE-LIVEKIT-FILE",
+      "text": "Only src/voice/live/livekit-session.ts imports @livekit/react-native and livekit-client; it calls registerGlobals() once, lazily, before the first Room (app/_layout.tsx is not this kit's; if the device check OT-V9 shows LiveKit needs it at app start, that is a FOUNDATION GAP for the lead). Only src/voice/quick-ask/recognizer.ts and src/voice/permissions/permissions.ts import expo-speech-recognition; only src/voice/speech/speaker.ts imports expo-speech; only src/voice/interruptions/keep-awake.ts imports expo-keep-awake (gate-enforced).",
+      "source": "kit"
+    },
+    {
+      "id": "KV16-TRANSPORT",
+      "text": "v1 joins over LiveKit only: the mint's transport absent or 'livekit'. 'gateway' (Retell's WHIP-style signalling since SDK 3.0.0) or anything else → no join, 'Auto Live can't connect from this phone yet. Hold to talk still works.', logged without the token. A native gateway client is possible on @livekit/react-native-webrtc's RTCPeerConnection (retellLiveKitProtocol.gatewayForTheRecord) but is an open question for the lead, not this wave.",
+      "source": "kit (evidence: retell-client-js-sdk 3.0.2 src/gateway-transport.ts)"
+    },
+    {
+      "id": "KV17-NAV",
+      "text": "The voice screen is app/(app)/voice.tsx at '/voice' (optionally '/voice?chat=<id>'); the path and its builder live in src/voice/nav.ts (VOICE_SCREENS, voiceRoute) — src/navigation/routes.ts is never edited (the foundation owns it and the connect kit edits it). Every other destination uses the foundation's builders (routes.chat, routes.cc.board, routes.settings) and A5's src/styles/nav.ts.",
+      "source": "kit, foundation K5"
+    },
+    {
+      "id": "KV18-DATA-CLAIMS",
+      "text": "No copy says 'nothing leaves your server' or anything as broad (never leaves, no data is sent, 100% local, fully private, stays entirely on). Quick-ask's copy may say the voice recognition runs on the phone (true by KV4); the words still go to Auto's AI providers as any chat does (the consent sheet names them). Live's copy says the voice goes to Retell: 'Auto Live sends your voice to Retell while the call is on.' Gate-enforced on added lines.",
+      "source": "decision 70, connect KC16"
+    },
+    {
+      "id": "KV19-LIVE-CONSENT",
+      "text": "Consent for Retell is the shell's (connect KC11: the sheet names every ai_providers entry, Retell included, and asks again when the list changes). Before a mint, Live reads the connect kit's consent record read-only (src/consent/policy.ts consentNeeded or its equivalent — RE-VERIFY after connect): when the record does not cover the current list, no mint, the copy 'Auto Live sends your voice to Retell, an AI voice service. Agree to the updated list of AI providers first.' and the connect kit's way back to its consent step (its exported hook; none exported → FOUNDATION GAP and the copy alone). This kit builds no second consent sheet.",
+      "source": "decision 70, Apple 5.1.2(i), connect KC11"
+    }
+  ],
+  "userStories": [
+    {
+      "id": "US-019a",
+      "prdStory": "US-019",
+      "phase": 1,
+      "title": "The voice machine: one reducer for idle, listening, thinking, speaking and error",
+      "description": "As the voice screen, I need one pure state machine every word and button reads (KV8), so quick-ask (and later Live) can never show two truths.",
+      "acceptanceCriteria": [
+        "src/voice/machine/voice-state.ts (pure): VoicePhase 'idle' | 'listening' | 'thinking' | 'speaking' | 'error'; VoiceState {phase, mode 'quick' (phase 2 adds 'live'), micOpen, heard (the YOU words: partial while listening, final after), reply (Auto's words so far), replyStreaming, toolCaption?, notice ('greeting' | 'reminder' | null), errorKind?, message? (a copy key), holdStartedAt?, bargedIn}; INITIAL_VOICE_STATE deep-frozen",
+        "src/voice/machine/voice-reducer.ts (pure): voiceReducer(state, event) for hold_start(now), mic_open, partial(text), mic_closed, final(text), hold_too_short, nothing_heard, stop_phrase, sent, turn_text(text), turn_tool(caption), turn_finished, turn_failed(kind), speak_start, speak_done, stop, unavailable(reason), permission(step), interrupted(reason), reset — as a table: idle → listening on hold_start; listening → thinking on final with words; listening → idle on hold_too_short (hint), nothing_heard (hint), stop_phrase; thinking → speaking on speak_start; turn_text/turn_tool update the reply and caption in thinking or speaking; speaking → idle on speak_done once the turn finished; stop from any phase → idle (micOpen false, replyStreaming false, the words kept on screen); interrupted from any phase → idle with the interruption message; unavailable and a denied permission → error with its kind; error → listening on hold_start only for retryable kinds",
+        "hold_start while thinking or speaking → listening with bargedIn true (the hook then stops speech and cancels a streaming turn: KV5)",
+        "micOpen is true only between mic_open and mic_closed (the capture truth for MIC LIVE, KV5), never derived from the phase",
+        "Immutability: a deep-frozen state never throws; an unknown event returns the same state object",
+        "src/voice/config.ts: named constants HOLD_MIN_MS 300, HOLD_MAX_MS 60000, AI_NOTICE_INTERVAL_MS 600000, THINKING_AFTER_MS 700 (phase 2), VOLUME_MIN -2, VOLUME_MAX 10, SPEECH_RATE 1, STOP_PHRASES ['stop', 'auto stop', 'stop auto', 'stop it', 'cancel'], WAVEFORM_BARS 44 (A5's phone waveform)",
+        "src/voice/__tests__/voice-reducer.test.ts: every row of the table, barge-in from thinking and speaking, micOpen truth (hold without mic_open stays false), stop and interrupted from each phase, retryable vs not, frozen inputs",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes"
+      ],
+      "files": [
+        "src/voice/machine/voice-state.ts",
+        "src/voice/machine/voice-reducer.ts",
+        "src/voice/config.ts",
+        "src/voice/__tests__/voice-reducer.test.ts"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "Behaviour reference for the shape: automatos-ai frontend/lib/voice/orb-state.ts (pure, explicit now, no Date.now() inside). Keep event and state types open for phase 2's live events (US-020c) without adding them now."
+    },
+    {
+      "id": "US-019b",
+      "prdStory": "US-019",
+      "phase": 1,
+      "title": "On-device speech recognition only: the policy per platform and the recognizer adapter",
+      "description": "As a user, I want my voice turned into words on my phone, never on Apple's or Google's servers (KV4, decision 32), and a plain reason when my phone cannot do it.",
+      "acceptanceCriteria": [
+        "src/voice/quick-ask/recognition-policy.ts (pure): recognitionPolicy({platform 'ios' | 'android', androidApiLevel?, supportsOnDevice, recognitionAvailable, locale, supportedLocales?, installedLocales?}) → {kind 'ready', options} | {kind 'download', locale} | {kind 'unavailable', reason 'no-on-device' | 'android-too-old' | 'language-missing' | 'no-recognizer'}: iOS ready only when supportsOnDevice; Android ready only when androidApiLevel >= 33 AND supportsOnDevice AND the locale (or its language, 'en' for 'en-GB') is in installedLocales; supported but not installed → 'download'; anything else → unavailable",
+        "The 'ready' options (pure, frozen): lang = the locale, interimResults true, continuous true, requiresOnDeviceRecognition true, addsPunctuation true, maxAlternatives 1, volumeChangeEventOptions {enabled: true, intervalMillis: 100}, iosCategory playAndRecord with defaultToSpeaker and allowBluetooth (the module's constants, RE-VERIFY names in build/constants.d.ts); NO androidRecognitionServicePackage, NO recordingOptions, NO audioSource",
+        "src/voice/quick-ask/locale.ts: the phone's first locale from expo-localization (getLocales()[0].languageTag), else 'en-US'; the same locale goes to speech (US-019d)",
+        "src/voice/quick-ask/recognizer-core.ts (pure): createRecognizer(port) over a ModulePort interface (start, stop, abort, addListener, supportsOnDeviceRecognition, isRecognitionAvailable, getSupportedLocales, androidTriggerOfflineModelDownload) — the privacy rule lives here: start(policy) calls port.start ONLY for a 'ready' policy and always with requiresOnDeviceRecognition: true, on iOS and Android alike; an 'unavailable' or 'download' policy refuses with its plain copy key and never calls port.start; there is no code path to a network recogniser (the privacy policy says quick-ask speech stays on the phone)",
+        "src/voice/quick-ask/recognizer.ts — one of the two files that import expo-speech-recognition (KV15), a thin binding of createRecognizer to ExpoSpeechRecognitionModule: probe() reads supportsOnDeviceRecognition(), isRecognitionAvailable(), Platform.Version and, on Android, getSupportedLocales({}) (no service package: the on-device recognizer answers, ExpoSpeechRecognitionModule.kt:373-450); start(options) only with a 'ready' policy; stop() (release → the final result); abort() (STOP, background: nothing sent); downloadModel(locale) → androidTriggerOfflineModelDownload; listen(handler) subscribes start, audiostart, audioend, result, nomatch, error, end, volumechange via ExpoSpeechRecognitionModule.addListener and returns one unsubscribe",
+        "src/voice/quick-ask/recognizer-events.ts (pure): native event → voice event: result with isFinal false → partial(results[0].transcript), isFinal true → final; audiostart → mic_open; audioend → mic_closed; nomatch → nothing_heard; error codes: aborted → ignored, no-speech and speech-timeout → nothing_heard, not-allowed → permission 'settings', interrupted → interrupted('audio-session'), audio-capture → error 'mic-busy', language-not-supported and service-not-allowed → unavailable('no-on-device'), network → unavailable('no-on-device') (on-device recognition never needs the network), busy → error 'busy', client and unknown → error 'recognizer'; volumechange value (-2..10) → a level 0..1, clamped, below 0 → 0",
+        "src/voice/strings.ts: the unavailable copy — Android below 13: 'Hold to talk needs Android 13 or later, so your voice is recognised on this phone. You can type to Auto instead.'; no on-device recognizer or language: 'Hold to talk needs speech recognition that runs on this phone, and it isn't available for {language}. You can type to Auto instead.'; download: 'Download the {language} speech model to talk to Auto. It stays on your phone.' with 'Download'",
+        "src/voice/__tests__/recognizer-core.test.ts with a spy port: for every 'unavailable' reason and 'download' on both platforms, start() refuses with the copy key and port.start is never called; for 'ready', port.start is called exactly once with requiresOnDeviceRecognition === true and without androidRecognitionServicePackage, recordingOptions or audioSource; abort() and stop() pass through",
+        "src/voice/__tests__/recognition-policy.test.ts and recognizer-events.test.ts: the policy matrix (iOS on-device yes/no; Android API 31, 32, 33, 34; on-device yes/no; language installed, downloadable, missing; 'en' matching 'en-GB'); 'ready' options always carry requiresOnDeviceRecognition true and never a service package, recording or audio source; every native event and error code; the volume clamp",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": [
+        "src/voice/quick-ask/recognition-policy.ts",
+        "src/voice/quick-ask/locale.ts",
+        "src/voice/quick-ask/recognizer-core.ts",
+        "src/voice/quick-ask/recognizer.ts",
+        "src/voice/quick-ask/recognizer-events.ts",
+        "src/voice/strings.ts",
+        "src/voice/__tests__/recognition-policy.test.ts",
+        "src/voice/__tests__/recognizer-core.test.ts",
+        "src/voice/__tests__/recognizer-events.test.ts"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "Read the installed module, never guess: node_modules/expo-speech-recognition (3.1.3) build/ExpoSpeechRecognitionModule.types.d.ts and build/constants.d.ts; the Android and iOS lines cited in KV4. The airplane-mode check (OT-V1, OT-V2) is the device proof that recognition is on the phone."
+    },
+    {
+      "id": "US-019c",
+      "prdStory": "US-019",
+      "phase": 1,
+      "title": "Microphone and speech permissions: asked at the first press, never at launch",
+      "description": "As a user, I want the app to ask for my microphone only when I first try to talk, and to tell me plainly how to fix it when I said no.",
+      "acceptanceCriteria": [
+        "src/voice/permissions/permission-flow.ts (pure): permissionStep({purpose 'quick-ask' | 'live', platform, mic {status 'granted' | 'denied' | 'undetermined', canAskAgain}, speech? {status, canAskAgain, restricted?}}) → 'granted' | 'ask' | 'settings' (denied and cannot ask again) | 'restricted' (iOS Content & Privacy restrictions); quick-ask needs the microphone and, on iOS, speech recognition; Live needs the microphone only",
+        "src/voice/permissions/permissions.ts — the second file allowed to import expo-speech-recognition (KV15): read(purpose) with getPermissionsAsync / getMicrophonePermissionsAsync; ask(purpose) with requestPermissionsAsync (quick-ask: iOS shows the microphone then the speech prompt; Android RECORD_AUDIO) or requestMicrophonePermissionsAsync (Live); openSettings() → Linking.openSettings()",
+        "Asked ONLY from the press handler of HOLD TO TALK or LIVE: nothing reads-and-asks at mount, launch or navigation (the hook calls ask() only inside the press path; a test of the pure flow proves 'undetermined' → 'ask' happens only on a press event)",
+        "After a first-time grant, the hold that raised the prompt is not treated as speech (the prompt interrupted it): idle with 'Ready. Hold to talk.'",
+        "src/voice/permissions/PermissionNotice.tsx: per step — 'settings': \"Automatos Go can't hear you: the microphone is off for it. Turn it on in Settings.\" (or the speech-recognition variant on iOS) with 'Open Settings'; 'restricted': 'The microphone or speech recognition is restricted on this phone (Screen Time).' with no button; tokens only, text >= 11 pt, the button 44 pt",
+        "src/voice/__tests__/permission-flow.test.ts: the matrix per purpose and platform (granted, undetermined, denied with and without canAskAgain, restricted; Live ignoring speech)",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": [
+        "src/voice/permissions/permission-flow.ts",
+        "src/voice/permissions/permissions.ts",
+        "src/voice/permissions/PermissionNotice.tsx",
+        "src/voice/strings.ts",
+        "src/voice/__tests__/permission-flow.test.ts"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "The usage strings are the foundation's (app.json NSMicrophoneUsageDescription, NSSpeechRecognitionUsageDescription 'using speech recognition on this iPhone'): never edit them. LiveKit's WebRTC would raise its own mic prompt; asking first through this flow keeps one wording (phase 2)."
+    },
+    {
+      "id": "US-019d",
+      "prdStory": "US-019",
+      "phase": 1,
+      "title": "Speaking Auto's reply: plain speakable text, sentences as they stream, a voice on the phone",
+      "description": "As a user, I want Auto's answer read aloud quickly, in plain words, by a voice that lives on my phone (KV6).",
+      "acceptanceCriteria": [
+        "src/voice/speech/speakable.ts (pure): toSpeakable(text) strips what speech cannot say — **bold**, _italics_, `code`, headers, bullets and numbered lists (each item a sentence), [label](url) → label, bare URLs → 'a link', code fences → \"There's code in the chat.\", tables → \"There's a table in the chat.\" — and collapses whitespace; idempotent (toSpeakable(toSpeakable(x)) === toSpeakable(x))",
+        "src/voice/speech/sentences.ts (pure): sentenceChunker() → {push(textSoFar) → the complete sentences new since the last push, flush() → the rest}; a sentence ends at . ! ? or … followed by whitespace or the end; 'e.g.', 'i.e.', 'Mr.', 'Dr.', decimals (3.5), versions (2.0.8) and ticket numbers (#0419) never split; nothing is emitted twice; a text that shrinks or changes earlier (narration retraction) restarts from the common prefix",
+        "src/voice/speech/voice-pick.ts (pure): pickVoice(voices, locale, platform) → identifier | undefined: the exact tag first, then the language; iOS: Enhanced before Default; Android: only names containing 'local' and not 'network' (Google TTS: 'en-us-x-iol-local' vs 'en-us-x-iol-network'), Enhanced first; none → undefined (the engine's default for the language)",
+        "src/voice/speech/speaker.ts — the only file that imports expo-speech (KV15): voices() once per launch (getAvailableVoicesAsync); speak(sentence, {language, voice}) queues (expo-speech queues on both platforms); stop() → Speech.stop(); callbacks folded to speak_start (first sentence), speak_done (after the LAST queued sentence ends) and stopped; iOS useApplicationAudioSession: false (KV6); rate SPEECH_RATE",
+        "src/voice/__tests__/speakable.test.ts, sentences.test.ts, voice-pick.test.ts: markdown cases including a '**' split across two pushes, links, lists, code, tables; word-by-word streaming, retraction, flush, abbreviations; voice choice per platform with Google-style names, iOS Enhanced, the language fallback, none",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": [
+        "src/voice/speech/speakable.ts",
+        "src/voice/speech/sentences.ts",
+        "src/voice/speech/voice-pick.ts",
+        "src/voice/speech/speaker.ts",
+        "src/voice/__tests__/speakable.test.ts",
+        "src/voice/__tests__/sentences.test.ts",
+        "src/voice/__tests__/voice-pick.test.ts"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "Read node_modules/expo-speech (14.0.8) build/Speech.types.d.ts and android/src/main/java/expo/modules/speech/SpeechModule.kt (voice identifier = the Android voice name; quality Enhanced above QUALITY_NORMAL). expo-speech exposes no network flag, hence the name rule. With spokenMode on, the server already speechifies (W1 US-007a); toSpeakable is the client's guarantee for both cases."
+    },
+    {
+      "id": "US-019e",
+      "prdStory": "US-019",
+      "phase": 1,
+      "title": "The AI notice: shown and spoken once, at the start of a voice session",
+      "description": "As a user, I want to hear once that Auto is an AI when I start talking (PRD-264 EUAI-04, KV7, D73).",
+      "acceptanceCriteria": [
+        "src/voice/notice/ai-notice.ts (pure): noticeFor({sessionNoticed}) → 'greeting' | null: the greeting before the first spoken reply of a voice session, nothing after it in the same session; newSession() and noted() return new values (immutability)",
+        "noticeText(agentName?) (pure): the server's words, copied with provenance from automatos-ai orchestrator/modules/policy/ai_disclosure.py into src/voice/strings.ts — AI_VOICE_GREETING 'Hi, this is Auto, your AI assistant.' — with Auto replaced by the answering agent's name when the turn's agent is not Auto (the vendored DEFAULT_AGENT_NAME / UNNAMED_AGENT rule of lib/ai-label/copy.ts); no reminder text",
+        "The notice is queued BEFORE the first reply's first sentence (US-019d) and shown as its own AUTO line in the transcript; the foundation's AiLabel caption stays on the voice screen (US-019j)",
+        "src/voice/__tests__/ai-notice.test.ts: first reply → greeting; the second reply, and one 30 minutes later in the same session → null; a new session → greeting; a named agent; frozen inputs",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes"
+      ],
+      "files": [
+        "src/voice/notice/ai-notice.ts",
+        "src/voice/strings.ts",
+        "src/voice/__tests__/ai-notice.test.ts"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "RE-VERIFY the greeting at the backend HEAD (orchestrator/modules/policy/ai_disclosure.py). The session boundary (screen unmount, background) is wired in US-019g and US-019h."
+    },
+    {
+      "id": "US-019f",
+      "prdStory": "US-019",
+      "phase": 1,
+      "title": "spokenMode through A2's request and controller (SEAM EDIT)",
+      "description": "As quick-ask, I need my turn sent through the same chat controller as typed turns, flagged spokenMode so Auto answers in short spoken sentences (W1 US-007a), while a typed turn stays byte-identical.",
+      "acceptanceCriteria": [
+        "src/chat/request.ts (A2's file, SEAM EDIT, additive): buildChatRequest gains an optional `spokenMode?: boolean`; the body carries `spokenMode: true` only when it is true, and the key is absent otherwise (a typed turn's body deep-equals A2's); planMode and missionMode are still never set",
+        "A2's controller (SEAM EDIT, additive, the files under src/chat/controller/ that carry the draft — RE-VERIFY after A2): the send action and the hook's send accept an optional spokenMode and pass it to buildChatRequest; nothing else in the controller changes; A2's tests pass unchanged (no file under src/chat/**/__tests__/ edited)",
+        "src/voice/quick-ask/spoken-mode.ts (pure): spokenModeFor(discovery) = canSpokenMode(discovery) (src/api/capabilities.ts); with the capability absent the turn is sent plainly and toSpeakable does the work (PRD-001 §4.4)",
+        "src/voice/__tests__/spoken-mode.test.ts: buildChatRequest with spokenMode true (the key present) and absent/false (deep-equal to the body without the option), the capability on and off",
+        "Each A2 file touched is recorded in the DONE notes as 'SEAM EDIT: <path> — spokenMode for quick-ask (A6)'",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:routes passes"
+      ],
+      "files": [
+        "src/chat/request.ts",
+        "src/chat/controller/",
+        "src/voice/quick-ask/spoken-mode.ts",
+        "src/voice/__tests__/spoken-mode.test.ts"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "RE-VERIFY after W1 US-007a: the field is ChatRequest.spokenMode (camelCase, bool, default false) in orchestrator/api/chat_models.py; discovery lists 'spoken_mode'. Before W1 deploys, the server ignores the unknown key (Pydantic default), so quick-ask still works and toSpeakable carries it."
+    },
+    {
+      "id": "US-019g",
+      "prdStory": "US-019",
+      "phase": 1,
+      "title": "Quick-ask: hold, hear, send through the chat controller, speak the reply; STOP and 'Auto, stop'",
+      "description": "As a user, I want to hold the button, say what I want, let go, and hear Auto answer — and stop it with STOP or 'Auto, stop' (KV5, KV6).",
+      "acceptanceCriteria": [
+        "src/voice/quick-ask/stop-phrase.ts (pure): isStopPhrase(text) after lowercasing, dropping punctuation and a leading 'auto' / 'hey auto' matches STOP_PHRASES as the WHOLE utterance ('Auto, stop.' yes; 'stop the deploy' no)",
+        "src/voice/quick-ask/reply-text.ts (pure, over A2's thread state and view-model types — RE-VERIFY after A2): for the turn quick-ask sent → {text (Auto's text parts only: no receipts, tool lines, cards or retracted narration), streaming, finished, failedKind?, toolCaption? (the running tool's words from the vendored toolLineLabel / captionFor), hasCards, agentName?}",
+        "src/voice/quick-ask/quick-ask-plan.ts (pure): onPress({phase, replyStreaming, roleCanChat, policy, permission}) → {blocked: copy key} | {stopSpeech, cancelTurn, start}; onRelease({heard, heldMs}) → 'too-short' | 'nothing' | 'stop' | {send: text}",
+        "src/voice/audio/audio-owner.ts (pure): claim(owner, next) for none | recognizer | speaker | live → {owner, stop: [...]} — the recognizer stops the speaker (barge-in); live stops both (phase 2)",
+        "src/voice/quick-ask/use-quick-ask.ts wires it: press → permission flow (US-019c) → recognition policy (US-019b; 'download' shows the offer) → audio owner → recognizer.start → reducer; partials into YOU; release → recognizer.stop → final → the plan → send through A2's controller for the voice screen's conversation with spokenModeFor(discovery) (US-019f) → thinking (tool caption) → AUTO streams → each new sentence of toSpeakable(text), the AI notice first (US-019e), to the speaker → speak_done after the last → idle; STOP → recognizer.abort, speaker.stop and A2's Stop when the turn streams (cancels on the server, D-STOP); 'Auto, stop' during a hold → STOP, nothing sent; HOLD_MAX_MS → stop() as a release",
+        "Only quick-ask turns are spoken, only while the voice screen is mounted; a typed turn is never spoken (KV6); a viewer gets the D17 copy and the mic never opens (nothing waits on the AI label, D73)",
+        "src/voice/__tests__/: stop-phrase.test.ts (positives, negatives, punctuation, wake word), reply-text.test.ts (over A2's real message and frame types: receipts excluded, narration retracted, a waiting tool, a failed turn), quick-ask-plan.test.ts (every branch incl. barge-in ordering: stop speech before start, cancel only while streaming), audio-owner.test.ts",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": [
+        "src/voice/quick-ask/stop-phrase.ts",
+        "src/voice/quick-ask/reply-text.ts",
+        "src/voice/quick-ask/quick-ask-plan.ts",
+        "src/voice/quick-ask/use-quick-ask.ts",
+        "src/voice/audio/audio-owner.ts",
+        "src/voice/__tests__/stop-phrase.test.ts",
+        "src/voice/__tests__/reply-text.test.ts",
+        "src/voice/__tests__/quick-ask-plan.test.ts",
+        "src/voice/__tests__/audio-owner.test.ts"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Read A2's built code before planning: src/chat/controller/{thread.ts,use-thread.ts}, src/chat/view-model.ts, src/chat/request.ts and A2's DONE notes in scripts/ralph/prd-001-chat.json. The conversation: the chat param of the voice screen, else A2's KC4 home thread (newest after the stale check, else a draft whose first message creates the chat). Never a second chat request or a second stream."
+    },
+    {
+      "id": "US-019h",
+      "prdStory": "US-019",
+      "phase": 1,
+      "title": "Interruptions: calls, route changes, backgrounding — and the screen staying on while voice works",
+      "description": "As a user, I want a phone call, a headset change or leaving the app to stop voice cleanly and never reopen my microphone by itself (KV10, KV11, KV12).",
+      "acceptanceCriteria": [
+        "src/voice/interruptions/interruption-policy.ts (pure): (event, state) → actions: app 'background' → abort recognition (nothing sent), stop speech, end the AI-notice session (phase 2 adds: leave Live); iOS 'inactive' → nothing; the recognizer's interrupted error → abort, keep the words heard on screen un-sent, 'Interrupted. Hold to talk when you're ready.'; an audio-capture error after a route change → abort, 'The microphone changed. Hold to talk again.'; back to 'active' → NO action (the mic, speech and Live never resume by themselves)",
+        "src/voice/interruptions/use-interruptions.ts: AppState.addEventListener('change') and the recognizer/speaker error streams → the policy → the quick-ask hook's actions; every listener removed on unmount",
+        "src/voice/interruptions/keep-awake.ts — the only file that imports expo-keep-awake (KV12, KV15): keepAwakeFor(state) (pure, exported for tests: true while micOpen, speaking or Live is up) and the effect that calls activateKeepAwakeAsync / deactivateKeepAwake with one VOICE_KEEP_AWAKE_TAG; always released on unmount",
+        "Nothing in this wave asks for background audio, a foreground service or a background task (KV11; gate-enforced on added lines)",
+        "src/voice/__tests__/interruption-policy.test.ts: every event × phase, the 'never resume' rule on 'active', keep-awake on and off per state",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": [
+        "src/voice/interruptions/interruption-policy.ts",
+        "src/voice/interruptions/use-interruptions.ts",
+        "src/voice/interruptions/keep-awake.ts",
+        "src/voice/strings.ts",
+        "src/voice/__tests__/interruption-policy.test.ts"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "Device facts the policy rests on (expo-speech-recognition ios/ExpoSpeechRecognizer.swift:720-775): an AVAudioSession interruption while recognising emits error 'interrupted' then 'end'; a route change while active restarts the engine, and emits 'interrupted' when the app is not active. The real-device checks are OT-V4. KV11 answers the coordinator's FOREGROUND_SERVICE question."
+    },
+    {
+      "id": "US-019i",
+      "prdStory": "US-019",
+      "phase": 1,
+      "title": "The voice screen's model and dress: chip words, MIC LIVE, buttons, transcript, each style's paint",
+      "description": "As the voice screen, I need every word, state and colour computed by pure functions from the one reducer and the resolved style (KV8, KV9, D-A11Y).",
+      "acceptanceCriteria": [
+        "src/voice/screen/voice-view-model.ts (pure): voiceView({state, policy, permission, roleCanChat, screenReader, mascotState}) → {chipWords: 'READY' | 'LISTENING' | the tool caption in capitals ('SEARCHING THE WEB') | 'THINKING' | 'SPEAKING' | 'VOICE UNAVAILABLE' | 'MIC OFF' | 'ERROR', mic 'live' | 'off' (live exactly when state.micOpen), transcript {you, auto, autoStreaming, notice}, centre {label 'HOLD TO TALK' | 'RELEASE TO SEND' | (screen reader) 'TAP TO TALK' | 'TAP TO SEND', enabled, hint}, type {enabled}, stop {enabled while listening, thinking or speaking}, message? (the copy for an error, unavailable, permission, a hint, 'See it in the chat' when the turn has cards)}; the mascot state: 'listening' while the mic is open, else the A5 driver's state",
+        "src/voice/screen/dress.ts (pure, over A5's ResolvedStyle — RE-VERIFY after styles phase 1): voiceDress(resolved) → {ringLine, ringAccent, waveform, chipLine, chipText, cursor, overlay, mascotInCore, motion}: Studio and installed themes → ringLine = tokens['--foreground'], ringAccent = tokens['--accent'], overlay false, mascotInCore only when resolved.mascot === 'theme'; Play → the look's accent for both, mascotInCore true; HUD → hud.accent for both, overlay true, mascotInCore when the look's auto is 'on'; motion = resolved.motion.loops",
+        "No colour literal: every colour comes from the resolved style",
+        "src/voice/__tests__/voice-view-model.test.ts and dress.test.ts: the view per phase incl. barge-in, unavailable, permission steps, a viewer, the label off screen, screen-reader labels, MIC LIVE only with micOpen; the dress for Studio light, Studio dark, Play, HUD with auto on and off, a theme with and without a mascot, Reduce Motion — each value equal to the resolved style's",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes"
+      ],
+      "files": [
+        "src/voice/screen/voice-view-model.ts",
+        "src/voice/screen/dress.ts",
+        "src/voice/strings.ts",
+        "src/voice/__tests__/voice-view-model.test.ts",
+        "src/voice/__tests__/dress.test.ts"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "Build the test's ResolvedStyle fixtures with A5's own resolveStyle (src/styles/provider/resolve.ts is pure), never by hand-writing colours. The chip words are uppercase text twins of the rings and waveform."
+    },
+    {
+      "id": "US-019j",
+      "prdStory": "US-019",
+      "phase": 1,
+      "title": "The voice screen: A5's HUD core in every dress, HOLD TO TALK live, the AI label, Reduce Motion",
+      "description": "As a user in any style, I want one voice screen: rings, the state in words, MIC LIVE, the transcript, the waveform, TYPE · HOLD TO TALK · STOP, and the AI label (D60, PRD-001 §4.7).",
+      "acceptanceCriteria": [
+        "src/voice/nav.ts: VOICE_SCREENS {voice: '/voice'}, voiceRoute(chatId?) → '/voice' or '/voice?chat=<encoded id>', parseVoiceParams (pure); src/navigation/routes.ts untouched (KV17)",
+        "app/(app)/voice.tsx renders src/voice/screen/VoiceScreen.tsx for the chat param (else A2's KC4 home thread) full screen with the header hidden (RE-VERIFY the (app) group's navigator; set the screen's own options, never edit app/(app)/_layout.tsx)",
+        "VoiceScreen composes A5's HudCore (src/styles/hud/core/HudCore.tsx) — never a copy of it — with voiceDress, the view-model's words, the transcript and MIC state, the Waveform levels from the recognizer's volume while the mic is open (null otherwise: the idle shimmer while Auto speaks), HOLD TO TALK wired to useQuickAsk (onPressIn / onPressOut; toggle under a screen reader with accessibilityActions 'activate'), TYPE → A2's Composer in the foundation's Sheet (typing always available; a typed turn is not spoken), STOP → the hook's stop, COMMAND · N → routes.cc.board, LOOK → the style's look page (A5's src/styles/nav.ts), the menu square → close the voice screen",
+        "SEAM EDITs in src/styles/hud/core (additive; each recorded 'SEAM EDIT: <path> — <why>'; A5's tests unchanged): HudButtons takes optional hold handlers, centre label, state and hint (without them HOLD TO TALK stays inert exactly as A5 built it); StateChip takes optional words (else captionFor); RingCore takes an optional lineColour (default its colour) for Studio's ink structure; HudCore passes an optional `voice` prop group through; HudTopBar takes an optional menu label ('Close voice')",
+        "The foundation's AiLabel (one small muted caption, D73) sits on the voice screen; nothing is disabled on its visibility (D-AI-LABEL)",
+        "Reduce Motion: rings, waveform and cursor still (dress.motion), the text twins present; nothing below 11 pt; tap targets 44 pt; the screen uses keep-awake and the interruption hook (US-019h) and starts a new AI-notice session on mount",
+        "src/voice/__tests__/nav.test.ts: the builder and parser (ids with spaces and slashes, no id)",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": [
+        "app/(app)/voice.tsx",
+        "src/voice/nav.ts",
+        "src/voice/screen/VoiceScreen.tsx",
+        "src/voice/screen/use-voice-screen.ts",
+        "src/styles/hud/core/",
+        "src/voice/__tests__/nav.test.ts"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "Read A5's built core first (src/styles/hud/core/* and US-018b's DONE notes); its HudCore takes props only (turn, mascotState, micOpen, onType, onStop, needsYou, onLook, onMenu) — extend, never fork. The screenshots in every style, light and dark, are OT-V5."
+    },
+    {
+      "id": "US-019k",
+      "prdStory": "US-019",
+      "phase": 1,
+      "title": "Ways in: the voice button in A2's and Play's composers, and HOLD TO TALK on the HUD home",
+      "description": "As a user, I want to reach the voice screen from every chat in every style (PRD-001 §4.7: the composer's voice button), and to hold to talk right on the HUD home.",
+      "acceptanceCriteria": [
+        "src/voice/entry/voice-entry.ts (pure): voiceEntry({roleCanChat, chatId}) → {visible (false for viewers), enabled, route voiceRoute(chatId)} — never gated on the AI label (D73)",
+        "src/voice/entry/VoiceButton.tsx: a 42 pt round IconButton (lucide 'mic', accessibilityLabel 'Talk to Auto') that opens the voice screen; tapping never opens the microphone (only HOLD TO TALK does); it imports nothing from src/chat or src/styles (only src/voice/nav.ts, src/voice/entry/voice-entry.ts, the foundation's src/ui and expo-router), so A2's and A5's composers can import it without an import cycle",
+        "A2's Composer (src/chat/composer/Composer.tsx, SEAM EDIT): VoiceButton beside the send button inside the pill; nothing else of the composer changes; A2's tests unchanged. Play's PlayComposer (src/styles/play/companion/PlayComposer.tsx, SEAM EDIT): the same button in Play's dress",
+        "HUD home: when HEAD carries src/styles/homes/HudHome.tsx (A5 phase 2 in the base), its HOLD TO TALK is wired to useQuickAsk in place and its STOP stops speech too (SEAM EDIT); when it is absent, the DONE mark says 'HudHome absent: A5 US-016k must pass useQuickAsk's hold handlers' (the lead updates the styles kit; OT-V14)",
+        "src/voice/__tests__/voice-entry.test.ts: per role and label state",
+        "Phase-1 gate: bash scripts/ralph/acceptance-prd001-voice.sh --no-ci passes",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": [
+        "src/voice/entry/voice-entry.ts",
+        "src/voice/entry/VoiceButton.tsx",
+        "src/chat/composer/Composer.tsx",
+        "src/styles/play/companion/PlayComposer.tsx",
+        "src/styles/homes/HudHome.tsx",
+        "src/voice/__tests__/voice-entry.test.ts"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": "A2's composer AC said 'no voice button (A6) in the composer': this story is that A6 button. The HUD home is the voice layout itself, so it holds to talk in place rather than opening the voice screen."
+    },
+    {
+      "id": "US-020a",
+      "prdStory": "US-020",
+      "phase": 2,
+      "title": "Auto Live data: the mint route and schema, the gate that shows Live, and the refusal words",
+      "description": "As a Business user on SaaS, or the user of an armed self-hosted install, I want a Live button only where Live can work, and honest words when it cannot (KV14, D8). NEEDS RETELL_LIVEKIT_CONFIRMED (KV3).",
+      "acceptanceCriteria": [
+        "src/voice/routes.ts: VOICE_ROUTES {mintWebCall: {method: 'POST', path: '/api/voice/web-call'}} in the shape scripts/check-routes.ts reads (RE-VERIFY); the route is in the pinned manifest (orchestrator/reports/route-manifest.json at 630fc1c85), so no pendingUpstream; npm run check:routes passes",
+        "src/voice/live/mint-schema.ts (zod, unknown fields ignored): {call_id: string, access_token: string, chat_id?: string | null, transport?: string, url?: string, ice_servers?: unknown[], expires_at?: number} — RE-VERIFY after W1 US-008a (today's server returns call_id, access_token, chat_id only: api/voice_retell.py:252-256)",
+        "src/voice/live/mint.ts: mintLiveCall(client, {chatId?}) → POST {chat_id?} as a JSON body through the foundation client (no agent_id: the workspace's default answers, as the web)",
+        "The Live call_id and access_token never go into a URL the app builds (no route param, deep link or query string: voiceRoute takes a chat id only), a log line (src/lib/logger.ts or console), a Sentry breadcrumb or event, an error message or a toast (release-kit privacy audit, 21 Oct; D44): src/voice/live/live-start.ts (pure) runs mint → plan → join over injected ports {mint, plan (US-020b's joinPlan, wired in US-020d), join, log, toast, now} and maps every failure to copy without them; src/voice/__tests__/live-secrets.test.ts drives it with a fake mint returning a distinctive token and call id and spies on log, toast and join: on success and on every failure path (mint refused, network, a fake plan answering 'unsupported', join throws an Error whose message contains the token, an expired token) no spied call's arguments, JSON-stringified, contain either value — the token reaches join() only",
+        "src/voice/live/live-gate.ts (pure): liveOffer({voiceLive: canVoiceLive(discovery), aiProviders (the bootstrap's ai_providers: a list, null or absent), roleCanChat}) → {show}: true only with the capability AND a list naming id 'retell' AND the role (KV14)",
+        "src/voice/live/refusal.ts (pure): refusalCopy({kind, status?, detail?}) → copy: 403 whose detail matches /plan|tier|business|upgrade|credit|price|pricing|subscription/i → the fixed 'Auto Live isn't available for this workspace. Ask your workspace owner.'; any other 403, 503 or 429 detail → shown as written (the server's sentences: 'Auto Live is switched off platform-wide', 'Auto Live is not armed — Retell credentials are missing in Settings', 'Auto Live is not enabled for this workspace', 'Voice budget used: N/M min this month'); 502 → \"Auto Live couldn't start the call. Try again.\"; network and others → the foundation's taxonomy copy",
+        "Local edition (discovery edition 'local'): the same gate and copy; no plan words; KV18's Live line names Retell",
+        "src/voice/__tests__/: live-gate.test.ts (capability on/off × ai_providers absent, null, empty, without and with retell × viewer), mint.test.ts (the schema with and without W1's fields, unknown fields, the request body with and without a chat), live-secrets.test.ts (above), refusal.test.ts (W1's exact 'Auto Live is on the Business plan' → the fixed copy; each server sentence as written; 502)",
+        "A foreground security-reviewer run on src/voice/live/ and src/voice/routes.ts finds no HIGH/CRITICAL, or each is fixed in this story",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:routes passes"
+      ],
+      "files": [
+        "src/voice/routes.ts",
+        "src/voice/live/mint-schema.ts",
+        "src/voice/live/mint.ts",
+        "src/voice/live/live-start.ts",
+        "src/voice/live/live-gate.ts",
+        "src/voice/live/refusal.ts",
+        "src/voice/strings.ts",
+        "src/voice/__tests__/live-gate.test.ts",
+        "src/voice/__tests__/mint.test.ts",
+        "src/voice/__tests__/refusal.test.ts",
+        "src/voice/__tests__/live-secrets.test.ts"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": "RE-VERIFY after W1 US-008a (the four optional fields, the Business 403 text, the device and local-operator mint) and after W3 US-017b/c (ai_providers on GET /api/workspaces/current; Retell's entry {id 'retell', name 'Retell AI'}). The foundation's workspace schema keeps ai_providers optional (US-004b): read it from there, never a second bootstrap call."
+    },
+    {
+      "id": "US-020b",
+      "prdStory": "US-020",
+      "phase": 2,
+      "title": "The Retell protocol over LiveKit: the transport choice, the server's data packets, the live transcript",
+      "description": "As Auto Live, I need to speak exactly the protocol Retell's own SDK speaks over LiveKit (retellLiveKitProtocol), as pure, tested code. NEEDS RETELL_LIVEKIT_CONFIRMED (KV3).",
+      "acceptanceCriteria": [
+        "src/voice/live/transport.ts (pure): joinPlan(mint) → {kind 'livekit', url: mint.url ?? RETELL_LIVEKIT_URL, token: mint.access_token} when transport is absent or 'livekit'; {kind 'unsupported', transport} for 'gateway' or anything else (KV16)",
+        "src/voice/config.ts gains, each with its provenance comment: RETELL_LIVEKIT_URL 'wss://retell-ai-4ihahnq7.livekit.cloud' (retell-client-js-sdk 3.0.2 src/livekit-transport.ts:24 LIVEKIT_HOST; 2.0.8 src/index.ts:15), AGENT_AUDIO_TRACK 'agent_audio', RETELL_SERVER_IDENTITY 'server', MINT_TOKEN_TTL_MS 30000 (api/voice_retell.py 'The token dies in ~30s unused')",
+        "src/voice/live/retell-protocol.ts (pure): parsePacket(text, participantIdentity) → null unless the identity is 'server' and the text is JSON; event_type 'update' → {kind 'update', transcript [{role 'agent' | 'user', content}], turntaking?}; 'agent_start_talking' / 'agent_stop_talking' → {kind 'talking', talking}; 'metadata' and 'node_transition' → null; {type 'status', state 'ended' | 'replaced'} → {kind 'ended', reason}; anything else → null; never throws",
+        "src/voice/live/live-transcript.ts (pure): fromUpdate(transcript) → {you: the last user utterance, auto: the last agent utterance} (the whole transcript arrives each time: replace, never append); roles other than agent and user ignored",
+        "src/voice/__tests__/__fixtures__/retell/*.json: one file per packet kind, built from the SDK source's shapes, each carrying \"provenance\": \"contract (retell-client-js-sdk 3.0.2 src/types.ts, src/session/events.ts)\" — never labelled recorded (a recording is OT-V9's)",
+        "src/voice/__tests__/retell-protocol.test.ts: the join plan (absent, livekit with and without url, gateway, unknown), every packet kind from the fixtures, a packet from another participant ignored, bad JSON, a non-object, the transcript extraction",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes"
+      ],
+      "files": [
+        "src/voice/live/transport.ts",
+        "src/voice/live/retell-protocol.ts",
+        "src/voice/live/live-transcript.ts",
+        "src/voice/config.ts",
+        "src/voice/__tests__/retell-protocol.test.ts",
+        "src/voice/__tests__/__fixtures__/retell/"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": "Everything here is written in retellLiveKitProtocol (top of this json). Do not install or read retell-client-js-sdk from node_modules: it is not a dependency."
+    },
+    {
+      "id": "US-020c",
+      "prdStory": "US-020",
+      "phase": 2,
+      "title": "Live in the one reducer: connecting, listening, thinking, speaking, reconnecting, ended",
+      "description": "As the voice screen, I need Live's states in the same reducer as quick-ask (KV8), with the web's honest 'thinking' for dead air. NEEDS RETELL_LIVEKIT_CONFIRMED (KV3).",
+      "acceptanceCriteria": [
+        "src/voice/machine/ gains mode 'live' and the events live_connecting, live_connected, live_ready (agent_audio subscribed), agent_talking(talking, now), user_voice(now), tick(now), live_transcript({you, auto}), live_muted(muted), live_reconnecting, live_reconnected, live_ended(reason), live_failed(kind) — additive to US-019a's types",
+        "Phases in Live: connecting → thinking with chip words 'CONNECTING'; Auto talking → speaking; otherwise listening, and thinking once the user's voice has been quiet for THINKING_AFTER_MS while Auto has not started (port of frontend/lib/voice/orb-state.ts deriveLiveState, the behaviour reference); micOpen true from live_connected until the end (muted keeps it open: the view says 'MIC LIVE · MUTED'); quick-ask events are ignored while live",
+        "live_ended → idle with the reason's copy: the user ended it → none; the server ended it → 'Auto Live ended.'; replaced or superseded → 'This call moved to another device.'; background → 'Auto Live ended when Automatos Go left the screen.' (KV11); the network → 'Auto Live lost the connection.'",
+        "src/voice/__tests__/voice-reducer-live.test.ts: the full path (connecting → ready → listening → user voice → thinking after 700 ms → speaking → listening → ended), mute, reconnect, every end reason, quick-ask events ignored while live, frozen inputs; US-019a's tests unchanged",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes"
+      ],
+      "files": [
+        "src/voice/machine/voice-state.ts",
+        "src/voice/machine/voice-reducer.ts",
+        "src/voice/machine/live-events.ts",
+        "src/voice/strings.ts",
+        "src/voice/__tests__/voice-reducer-live.test.ts"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": "Read automatos-ai frontend/lib/voice/orb-state.ts at HEAD (pure; explicit now). If voice-reducer.ts would pass 400 lines, split the live transitions into src/voice/machine/live-transitions.ts and keep one exported reducer."
+    },
+    {
+      "id": "US-020d",
+      "prdStory": "US-020",
+      "phase": 2,
+      "title": "Joining over LiveKit React Native: the audio session, the room, mute, leave, one call at a time",
+      "description": "As a Business user, I want Live to connect at once, with Auto's voice on the speaker and barge-in by just talking, and to end cleanly when I leave (D-LIVE). NEEDS RETELL_LIVEKIT_CONFIRMED (KV3).",
+      "acceptanceCriteria": [
+        "src/voice/live/livekit-session.ts — the only file that imports @livekit/react-native and livekit-client (KV15): registerGlobals() once before the first Room; AudioSession.configureAudio(LIVE_AUDIO_CONFIG) then AudioSession.startAudioSession() before connect, AudioSession.stopAudioSession() after leave; new Room({audioCaptureDefaults: {autoGainControl: true, echoCancellation: true, noiseSuppression: true, channelCount: 1}}); room.connect(plan.url, plan.token) immediately after the mint (within MINT_TOKEN_TTL_MS); room.localParticipant.setMicrophoneEnabled(true) after connect; mute(m) → setMicrophoneEnabled(!m); leave() → room.disconnect() (leaving ends a web call; no Retell request from the phone); every listener removed on leave; LiveKit's own logging set to 'warn' before the first Room (setLogLevel('warn', {liveKitClientLogLevel: 'warn'}) from @livekit/react-native: lib/typescript/src/logger.d.ts sets both its own and livekit-client's level) so its debug lines, which can name the signalling URL that carries the token, never reach the console or Sentry breadcrumbs; a Room error is mapped by live-start.ts (US-020a) to copy, never echoed",
+        "The token travels only inside LiveKit's own signalling (its wss handshake to the LiveKit host, exactly as Retell's SDK does: the protocol requires it); the app never builds a URL with it, never stores it (not in MMKV, SecureStore, the query cache or state that outlives the join) and drops it once the join resolves; use-live-call.ts wires live-start.ts with the real ports, and live-secrets.test.ts (US-020a) gains a case where the session's error message names the token — still no spied log or toast carries it",
+        "src/voice/live/audio-config.ts (pure data): LIVE_AUDIO_CONFIG {android: {audioTypeOptions: the communication preset (as app.json's @livekit/react-native-expo-plugin android.audioType 'communication')}, ios: {defaultOutput: 'speaker'}} — read the installed AudioSession types, never guess",
+        "src/voice/live/room-events.ts (pure): LiveKit events → voice events: TrackSubscribed of an audio publication named AGENT_AUDIO_TRACK → live_ready; DataReceived → decode UTF-8 (TextDecoder from @livekit/react-native's polyfill, in the session file) → retell-protocol (US-020b) → live_transcript / agent_talking / live_ended; ActiveSpeakersChanged → user_voice when the local participant speaks, and agent_talking from a remote speaker ONLY when no Retell talking packet arrived this call (the v3 caveat in retellLiveKitProtocol.eventsCaveat); Reconnecting / Reconnected; Disconnected → live_ended",
+        "src/voice/live/use-live-call.ts: Live = the mint (US-020a) → joinPlan (US-020b; 'unsupported' → KV16's copy, no join) → the session; ONE Room at a time (a press while connecting does nothing; the server also supersedes older calls); the audio owner takes the audio from quick-ask (US-019g: abort recognition, stop speech); leave on END, on unmount and on AppState 'background' (the interruption policy, extended: KV11); keep-awake while up (US-019h); after leaving, A2's controller refetches the call's thread (chat_id from the mint) so its receipts show",
+        "src/voice/__tests__/audio-config.test.ts and room-events.test.ts: the config values; every event mapping incl. a non-server data packet, another track name, the active-speaker fallback on and off; the hook's pure decisions (double press, owner hand-over, background → leave)",
+        "A foreground security-reviewer run on src/voice/live/ finds no HIGH/CRITICAL, or each is fixed in this story (the access token is a credential: never logged, never stored, used once)",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": [
+        "src/voice/live/livekit-session.ts",
+        "src/voice/live/audio-config.ts",
+        "src/voice/live/room-events.ts",
+        "src/voice/live/use-live-call.ts",
+        "src/voice/interruptions/interruption-policy.ts",
+        "src/voice/__tests__/audio-config.test.ts",
+        "src/voice/__tests__/room-events.test.ts",
+        "src/voice/__tests__/interruption-policy.test.ts",
+        "src/voice/__tests__/live-secrets.test.ts"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": "The privacy AC (21 Oct): call_id and access_token never in a URL, a log line, a Sentry breadcrumb or a toast — proven by live-secrets.test.ts's logger and toast spies, which this story keeps green. Read node_modules/@livekit/react-native (3.1.0) lib/typescript/src/{index,audio/AudioSession,audio/AudioManager}.d.ts and node_modules/livekit-client (2.23.0) for Room, RoomEvent and their payload types. registerGlobals is lazy here (KV15): if OT-V9 shows it must run at app start, the lead moves one line into app/_layout.tsx. No UIBackgroundModes, no foreground service (KV11)."
+    },
+    {
+      "id": "US-020e",
+      "prdStory": "US-020",
+      "phase": 2,
+      "title": "The Live button and the Live screen: consent naming Retell, MUTE · END, the live transcript, errors",
+      "description": "As a Business user, I want to press LIVE, talk with Auto hands-free, see what we both said, and end it — with Retell named before my voice goes there (KV19, KV18). NEEDS RETELL_LIVEKIT_CONFIRMED (KV3).",
+      "acceptanceCriteria": [
+        "src/voice/live/LiveButton.tsx: shown only when liveOffer (US-020a) says so and nothing else owns the audio; 'LIVE' with a dot, 44 pt high, in the dress's line style; its press runs the microphone permission flow (US-019c 'live'), the consent check, then use-live-call",
+        "src/voice/live/live-consent.ts (pure, over the connect kit's consent policy and record, read only — RE-VERIFY after connect): mintAllowed({record, providers}) → true when the record covers the current ai_providers list naming Retell; false → no mint, 'Auto Live sends your voice to Retell, an AI voice service. Agree to the updated list of AI providers first.' and the connect kit's way back to its consent step (FOUNDATION GAP when it exports none)",
+        "In Live the voice screen's buttons are MUTE / UNMUTE (TYPE's place) · END (HOLD TO TALK's place) and STOP hidden (barge-in is speaking: Retell interrupts Auto); the chip CONNECTING · LISTENING · THINKING · SPEAKING · RECONNECTING; MIC LIVE throughout (· MUTED when muted); the transcript from live_transcript; 'See it in the chat' → routes.chat(mint.chat_id) (voice and text are one conversation)",
+        "The Live screen shows 'Auto Live sends your voice to Retell while the call is on.' (KV18) and the AiLabel; it speaks nothing itself (the server speaks the AI greeting and reminder in the call: KV7)",
+        "Errors render US-020a's refusal copy; 'unsupported' transport → \"Auto Live can't connect from this phone yet. Hold to talk still works.\"; a denied microphone → US-019c's notice; quick-ask is disabled while Live is up (KV13)",
+        "Background → leave; on return the ended copy (KV11); an audio interruption or a dropped connection → LiveKit's reconnect, then ended if it fails",
+        "src/voice/__tests__/live-consent.test.ts and voice-view-model-live.test.ts: the consent matrix (record covering, a list grown by Retell, no record), the Live view per phase incl. mute and every end reason, the button hidden for a viewer and without retell",
+        "Phase-2 gate: bash scripts/ralph/acceptance-prd001-voice.sh --no-ci passes",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": [
+        "src/voice/live/LiveButton.tsx",
+        "src/voice/live/live-consent.ts",
+        "src/voice/screen/VoiceScreen.tsx",
+        "src/voice/screen/use-voice-screen.ts",
+        "src/voice/screen/voice-view-model.ts",
+        "src/voice/strings.ts",
+        "src/voice/__tests__/live-consent.test.ts",
+        "src/voice/__tests__/voice-view-model-live.test.ts"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": "HudButtons' optional labels and handlers from US-019j carry MUTE and END: no further edit of A5's files should be needed (if one is, it is an additive SEAM EDIT recorded as such). The device run against hosted Studio (Business) and the VPS install is OT-V9 / OT-V10."
+    }
+  ],
+  "ownerTest": [
+    {
+      "id": "OT-V1",
+      "what": "iPhone (the foundation's build + this wave over the air): quick-ask in airplane mode with Wi-Fi off — the words still appear while holding (recognition is on the phone), then the send waits for the network; with the network on, Auto answers and the reply is spoken; MIC LIVE only while holding; 'Auto, stop' during a hold sends nothing.",
+      "why": "The only proof that recognition never leaves the phone (KV4)."
+    },
+    {
+      "id": "OT-V2",
+      "what": "Android: a phone on Android 13+ with the language model installed works as OT-V1 (airplane mode too); a phone without the model offers the download; an Android 12 phone shows the 'needs Android 13' copy and typing works.",
+      "why": "KV4 on real recognizers."
+    },
+    {
+      "id": "OT-V3",
+      "what": "The reply's loudness and voice after recognition on iOS (useApplicationAudioSession false) and the voice chosen on Android (a 'local' voice); Bluetooth headphones.",
+      "why": "Audio-session behaviour is device-only (KV6)."
+    },
+    {
+      "id": "OT-V4",
+      "what": "Interruptions: a phone call during a hold and during a spoken reply; unplugging or switching a headset mid-hold; locking the screen and returning: the mic never reopens by itself, the copy matches KV10, nothing is sent.",
+      "why": "Device-only (KV10)."
+    },
+    {
+      "id": "OT-V5",
+      "what": "Screenshots of the voice screen in Studio light and dark, Play, HUD (auto on and off), and with Reduce Motion on (rings and waveform still).",
+      "why": "PRD-001 §5: UI stories attach screenshots in every style they touch."
+    },
+    {
+      "id": "OT-V6",
+      "what": "The AI notice is shown and heard once, before the first reply of a voice session, and not repeated later in it.",
+      "why": "PRD-264 EUAI-04 on a device (KV7)."
+    },
+    {
+      "id": "OT-V7",
+      "what": "VoiceOver: TAP TO TALK / TAP TO SEND works and every state is announced.",
+      "why": "D-A11Y (KV5)."
+    },
+    {
+      "id": "OT-V8",
+      "what": "Retell's answer on whether a LiveKit client other than its SDK may join a web call with the minted token, recorded in PRD-001 US-020 AC1; then flip RETELL_LIVEKIT_CONFIRMED on the branch (signed, [skip ci]) and relaunch for phase 2 (RALPH_BASE_MOVE=1 if the connect kit must be merged in).",
+      "why": "The lead's gate for phase 2 (KV3)."
+    },
+    {
+      "id": "OT-V9",
+      "what": "Auto Live against hosted Studio on a Business workspace (after W1 and W3 deploy): connect within the token's life, Auto's greeting heard, barge-in by speaking, the transcript live, receipts in the thread after the call, END ends it on the server, locking the screen ends it; record one real packet sequence for the protocol tests if wanted (real data only, never c1's).",
+      "why": "Needs Retell, LiveKit and a live server; also proves registerGlobals is fine lazily (KV15)."
+    },
+    {
+      "id": "OT-V10",
+      "what": "Auto Live on Gerard's VPS install (self-hosted, Retell armed by the operator): the button shows without any plan word; a paired phone mints (W1 US-004b).",
+      "why": "Local-edition rules (KV14)."
+    },
+    {
+      "id": "OT-V11",
+      "what": "A Basic or Pro SaaS workspace: no Live button; a forced mint (dev menu or a stale list) shows 'Auto Live isn't available for this workspace. Ask your workspace owner.', never the Business wording.",
+      "why": "D8 (KV14)."
+    },
+    {
+      "id": "OT-V12",
+      "what": "The consent sheet names Retell AI when the workspace can use Live, and asks again when Live is switched on later.",
+      "why": "Apple 5.1.2(i); connect KC11, KV19."
+    },
+    {
+      "id": "OT-V13",
+      "what": "Retell dashboard: audio recording retention off, transcripts kept, the EU region if offered (decision 53).",
+      "why": "Gerard's setting, not code."
+    },
+    {
+      "id": "OT-V14",
+      "what": "If A5 phase 2 merges after this wave: HudHome's HOLD TO TALK wired to useQuickAsk (update A5 US-016k, which says 'stays inert (A6)').",
+      "why": "Cross-kit seam (US-019k)."
+    },
+    {
+      "id": "OT-V15",
+      "what": "Decide the kit calls: KV4 (no network fallback on phones without on-device recognition), KV6 (sentence-by-sentence speech; the 'local' voice rule), KV11 (Live ends when the app leaves the screen), KV12 (expo-keep-awake as a transitive dependency), KV16 (gateway refused in v1).",
+      "why": "Open questions for Gerard and the lead."
+    }
+  ]
+}

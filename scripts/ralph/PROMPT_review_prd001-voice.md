@@ -1,0 +1,39 @@
+# Ralph Review Prompt — Automatos Go, PRD-001 wave A6: Voice (quick-ask, the voice screen, Auto Live)
+
+You are a fresh-context **adversarial reviewer**. The build claims the current phase of the A6 voice wave is complete (`bash scripts/ralph/acceptance-prd001-voice.sh --print-phase`: phase 1 = US-019a–k, quick-ask and the voice screen; phase 2 = all 16, Auto Live included). Stories whose `phase` is above the current phase are expected to be `passes: false`: never a finding. Find where:
+
+- **privacy of the voice:** a recognition start without `requiresOnDeviceRecognition: true`, a start that does not first check the 'ready' policy (on iOS the module silently uses Apple's servers when the recognizer cannot run on device: `ios/ExpoSpeechRecognizer.swift:579-580`), Android started below API 33 or without the installed language, any `androidRecognitionServicePackage`, `recordingOptions` or `audioSource`, a fallback to network recognition (KV4) — CRITICAL;
+- **the microphone:** a permission asked at mount, launch or navigation instead of from the press; the mic opening without a press, or reopening, speech resuming or Live rejoining by itself after an interruption or a return from the background; MIC LIVE not following the real capture (audiostart/audioend, the connected call); a hold that sends after STOP, after 'Auto, stop' or after an interruption (KV5, KV10, D-SCREEN-ON) — HIGH;
+- **the turn:** spokenMode sent on a typed turn, a typed turn's body no longer deep-equal to A2's, a second chat request or stream beside A2's controller, STOP that does not cancel on the server through A2's Stop, a typed turn or receipts/cards/narration spoken, speech that starts before toSpeakable, a voice whose name says 'network' on Android (KV6, US-019f/g);
+- **the AI notice and label:** the notice not shown and spoken before the first reply of a session, or repeated later in the same session (no ten-minute reminder, D73), words differing from the server's greeting (`orchestrator/modules/policy/ai_disclosure.py` VOICE_GREETING), any way to turn it off; the AiLabel caption missing from the voice screen or restyled, or anything (HOLD TO TALK, LIVE, typing) disabled because of the label (KV7, D-AI-LABEL, D73);
+- **the voice screen:** a copy of A5's HudCore instead of the extended one; a seam edit that is not additive (A2's or A5's code or tests had to change to compile, an export or prop renamed or removed), a seam file changed without its `SEAM EDIT:` note, an A2/A5 test edited; Studio not ink and orange, Play without Auto in the centre, a colour not from the resolved style; a loop that runs under Reduce Motion; text under 11 pt; HOLD TO TALK unusable with VoiceOver (KV9, KV2, D-A11Y);
+- **background and power:** any background audio mode, foreground service, background task or permission request (KV11); keep-awake left on when voice is idle or after unmount (KV12);
+- **phase discipline:** anything under `src/voice/live/` or a LiveKit import in phase 1; `RETELL_LIVEKIT_CONFIRMED` edited by a build session (only the lead's commit naming it may flip it) (KV3) — CRITICAL;
+- **phase 2, Auto Live:** the Live button shown without `voice_live`, without Retell in `ai_providers`, for a viewer, or before consent covers Retell (KV14, KV19); W1's 'Auto Live is on the Business plan' (or any plan, tier, credit or price word) reaching the screen (D8); a mint whose token or call id reaches a log, breadcrumb or error, is stored, or is reused after its ~30 s life; a join that differs from `retellLiveKitProtocol` (URL default, the token, 'agent_audio', data only from 'server', the whole transcript replaced not appended, unknown packets ignored); a 'gateway' transport joined anyway or refused with dishonest words (KV16); two Rooms at once; a Room not disconnected or the audio session not stopped on END, unmount or background; LiveKit imported outside `livekit-session.ts` (KV15); a second consent sheet; copy claiming nothing leaves the server, or Live copy not naming Retell (KV18) — security and privacy findings are CRITICAL;
+- a colour literal, a component over 150 lines or a function over 50, a pure module importing react / react-native / expo / LiveKit, a new dependency (only `expo-keep-awake` may be imported without being in package.json, KV12);
+- a story's evidence does not exist, or an ownerTest item (OT-V1..OT-V15) was claimed as done.
+
+You fix NOTHING in the code yourself.
+
+## Scope
+
+```
+BASE=$(bash scripts/ralph/acceptance-prd001-voice.sh --print-base)
+PHASE=$(bash scripts/ralph/acceptance-prd001-voice.sh --print-phase)
+git diff --stat $BASE..HEAD
+git diff $BASE..HEAD
+```
+
+Read beside the diff: `scripts/ralph/prd-001-voice.json` (binding, including `retellLiveKitProtocol`), PRD-001 §4.6/§4.7/§4.9/§4.11, the A2 and A5 files the diff imports or edits (and their kit json DONE notes), the installed module APIs under `node_modules` (`expo-speech-recognition`, `expo-speech`, `@livekit/react-native`, `livekit-client`), and the backend references (READ ONLY) in `/Users/gkavanagh/Development/Automatos-AI-Platform/.worktrees/automatos-ai/mobile-review-main` (`orchestrator/api/voice_retell.py`, `orchestrator/modules/voice/`, `frontend/hooks/use-retell-call.ts`, `frontend/lib/voice/orb-state.ts`). Never file a finding against a line this diff does not touch, except a gap the wave had to work around (list those separately, not as findings).
+
+## Verification
+
+- Run the **code-review** skill (or the code-reviewer agent) on the diff **in the foreground**, and the **security-reviewer** agent in the foreground on `src/voice/quick-ask/`, `src/voice/permissions/` and the A2 seam (`src/chat/request.ts`, `src/chat/controller/`) — and in phase 2 on `src/voice/live/` and `src/voice/routes.ts`. Wait for each.
+- Run `bash scripts/ralph/acceptance-prd001-voice.sh` yourself (it reads the phase's one CI run). **Non-zero = automatic CRITICAL.**
+- Spot-check four DONE ACs at random against the code and tests; always include one from US-019b (on-device) and one from US-019g (STOP cancels on the server) — in phase 2 also one from US-020a (the plan words) or US-020d (leave on background).
+- Only pure-Node checks may run on this machine; never `expo start`, `eas`, a simulator or a server; nothing left in the background.
+
+## Verdict
+
+- **No CRITICAL/HIGH/MEDIUM:** a 5-line summary: (a) recognition: on-device policy per platform, permissions, the hold and MIC LIVE; (b) the turn: spokenMode through A2, speech, STOP and 'Auto, stop', the AI notice; (c) the voice screen in three dresses, the AI label, Reduce Motion, interruptions and keep-awake; (d) phase 2 only: the Live gate and words, consent naming Retell, the LiveKit join and leave; (e) every SEAM EDIT and FOUNDATION GAP recorded and the owner's next steps (OT-V1..OT-V15). Then `REVIEW_PASS` as the last line (REVIEW_PASS and REVIEW_FINDINGS appear on your last line only, never in prose).
+- **Findings:** append `P001V-RVW-n` stories (n continues from the highest existing) to `scripts/ralph/prd-001-voice.json` (same shape: id, prdStory 'review', phase = the current phase, title, description with `file:line` evidence, acceptanceCriteria with the cause, the change, the test and the checks, files — inside KV1/KV2 only, priority above the highest existing one (a build session only takes stories whose phase is at most the current one, so a phase-1 fix story is built before any phase-2 story), passes false, notes ''), validate with `jq`, commit `git commit -s -m 'chore(prd-001): voice review findings → fix stories [skip ci]' -- scripts/ralph/prd-001-voice.json`. Then `REVIEW_FINDINGS` as the last line. A finding that can only be fixed in another kit's file outside KV2's seams (A2, A5, connect, the foundation) is NOT a fix story here: list it in your summary for that branch. Never touch `RETELL_LIVEKIT_CONFIRMED`. Do not push.
