@@ -1,14 +1,17 @@
 // The seven-day strip (handoff §2 'Calendar'): today and the six days after it in seven equal
 // cells, each the weekday, the date and a dot when the day has items; the chosen day is the solid
 // ink chip and today sits on the card. VoiceOver hears the date, 'today' and how many items. The
-// cells are view-model.ts's; the paints chrome.ts's.
+// cells are view-model.ts's; the sizes chrome.ts's. A5: the paints are the dress's chosen and resting
+// chip (src/styles/dress/cc-dress.ts; Studio's are stripCellPaint's, unchanged).
 
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { dressedStripCell } from '../../styles/dress/cc-dress';
+import { useDress } from '../../styles/dress/use-dress';
 import { useTokens } from '../../styles/theme';
 import { Text } from '../../ui';
 import { CALENDAR_COPY } from '../strings';
-import { DAY_STRIP, stripCellPaint } from './chrome';
+import { DAY_STRIP } from './chrome';
 import type { StripCellView } from './view-model';
 
 function DayCell({
@@ -19,7 +22,7 @@ function DayCell({
   readonly onPress: () => void;
 }) {
   const { colours, radii } = useTokens();
-  const paint = stripCellPaint(colours, cell);
+  const paint = dressedStripCell(useDress(), colours, cell);
   return (
     <Pressable
       onPress={onPress}
@@ -32,7 +35,7 @@ function DayCell({
           paddingTop: DAY_STRIP.paddingTop,
           paddingBottom: DAY_STRIP.paddingBottom,
           gap: DAY_STRIP.lineGap,
-          borderWidth: DAY_STRIP.borderWidth,
+          borderWidth: paint.borderWidth,
           borderRadius: radii[DAY_STRIP.radius],
           backgroundColor: paint.backgroundColor,
           borderColor: paint.borderColor,

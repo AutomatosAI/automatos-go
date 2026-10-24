@@ -40,15 +40,17 @@ function BrandRow({ core, micOpen }: { readonly core: VoiceCore; readonly micOpe
   const mic = micView(micOpen);
   const said = HUD_CORE_COPY;
   const monoFace = style.type.mono(HUD_CORE.monoSize, 500, { trackingEm: tracking.mono });
+  const brandFace = style.type.display('brand');
   return (
     <View style={[styles.row, { paddingVertical: topBar.padY, paddingHorizontal: topBar.padX }]}>
       <Text
         accessibilityRole="header"
         accessibilityLabel={said.brandLabel}
-        style={[style.type.display('brand'), { color: paint.text }]}
+        style={[brandFace, { color: paint.text }]}
       >
         {`${said.brand} `}
-        <Text style={{ color: paint.accent }}>{said.brandMark}</Text>
+        {/* a nested Text sets its own face, so the mark repeats the brand's */}
+        <Text style={[brandFace, { color: paint.accent }]}>{said.brandMark}</Text>
       </Text>
       <Text
         accessibilityLabel={mic.label}

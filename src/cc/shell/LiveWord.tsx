@@ -1,6 +1,7 @@
 // '● STREAMING LIVE' (handoff §2 top bar): the foundation's one stream status (useLiveStatus, D-LIVE)
 // as a dot and a word, the word for every state (chrome.ts liveWord). The dot pulses only while live
-// and holds still under Reduce Motion.
+// and holds still under Reduce Motion. A5: HUD says it as glyph + WORD through the StatusPip
+// primitive ('● STREAMING LIVE', '○ CONNECTING', '— OFFLINE'; src/styles/dress/cc-dress.ts).
 
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -15,15 +16,27 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { useLiveStatus } from '../../api/live';
+import type { LiveStatus } from '../../api/live-events';
+import { liveGlyphStatus } from '../../styles/dress/cc-dress';
+import { useShellDress } from '../../styles/dress/use-cc-dress';
 import { useTokens } from '../../styles/theme';
-import { Text } from '../../ui';
-import { LIVE_PULSE, TOP_BAR, liveWord } from './chrome';
+import { StatusPip, Text } from '../../ui';
+import { LIVE_PULSE, TOP_BAR, liveWord, type LiveWord as LiveWordSpec } from './chrome';
 
 const PULSE_EASING = Easing.inOut(Easing.ease);
 
-export function LiveWord() {
+/** HUD's: the glyph and the WORD, still (the word is the signal; HUD draws no pulse here). */
+function LiveGlyph({ status, spec }: { readonly status: LiveStatus; readonly spec: LiveWordSpec }) {
+  const { spacing } = useTokens();
+  return (
+    <View style={[styles.row, { paddingRight: spacing[TOP_BAR.liveInset] }]}>
+      <StatusPip status={liveGlyphStatus(status)} word={spec.word} tone={spec.tone} />
+    </View>
+  );
+}
+
+function LiveDot({ spec }: { readonly spec: LiveWordSpec }) {
   const { colours, radii, spacing } = useTokens();
-  const spec = liveWord(useLiveStatus(), useReducedMotion());
   const opacity = useSharedValue(1);
 
   useEffect(() => {
@@ -60,6 +73,16 @@ export function LiveWord() {
         {spec.word}
       </Text>
     </View>
+  );
+}
+
+export function LiveWord() {
+  const status = useLiveStatus();
+  const spec = liveWord(status, useReducedMotion());
+  return useShellDress().live === 'glyph' ? (
+    <LiveGlyph status={status} spec={spec} />
+  ) : (
+    <LiveDot spec={spec} />
   );
 }
 
