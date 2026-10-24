@@ -94,3 +94,12 @@ export const PUSH_DESTINATION = 'push';
 
 /** W1's device status a PATCH (the digest time) is taken for: pending and revoked rows refuse it. */
 export const ACTIVE_DEVICE_STATUS = 'active';
+
+/** The MMKV item of the handled response keys (dedupe.ts's stored form: keys only, never a payload). */
+export const HANDLED_KEYS_ITEM = 'push.handled-responses.v1';
+
+/** The answer route recorded the answer (the grant's status after pending, approval_grants.py). */
+export const GRANTED_STATUS = 'granted';
+
+/** The answer route's refusal of a question that is not open any more (approval_grants.py). */
+export const UNPROCESSABLE_STATUS = 422;

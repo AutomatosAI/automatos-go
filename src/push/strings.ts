@@ -117,3 +117,16 @@ export const PUSH_PHONE_COPY = Object.freeze({
   turnOnAgain: 'Turn on again',
   tryAgain: 'Try again',
 });
+
+/**
+ * What an action on a notification ends in (KP8): the server's own terms only. The answer route
+ * cannot tell whether the work picked up again, so no line claims it.
+ */
+export const PUSH_ACTION_COPY = Object.freeze({
+  answered: (ticket: string | null) => (ticket ? `Answered ${ticket}.` : 'Answered.'),
+  alreadyAnswered: 'That question was already answered.',
+  notSent: 'Not sent. Open the question to answer it.',
+  unverified: "This notification couldn't be checked, so nothing was sent.",
+  otherWorkspace: 'That notification is from another workspace.',
+  answerHere: 'Answer it here.',
+});
