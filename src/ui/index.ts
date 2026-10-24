@@ -22,6 +22,7 @@ export {
   type SegmentOption,
   type SegmentedControlProps,
 } from './SegmentedControl';
+export { Slider, type SliderProps } from './Slider';
 export { StatusPip, type StatusPipProps } from './StatusPip';
 export { Text, type TextProps } from './Text';
 export { TextField, type TextFieldProps } from './TextField';
