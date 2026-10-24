@@ -352,13 +352,13 @@
       "title": "The AI notice: shown and spoken once, at the start of a voice session",
       "description": "As a user, I want to hear once that Auto is an AI when I start talking (PRD-264 EUAI-04, KV7, D73).",
       "acceptanceCriteria": [
-        "src/voice/notice/ai-notice.ts (pure): noticeFor({sessionNoticed}) → 'greeting' | null: the greeting before the first spoken reply of a voice session, nothing after it in the same session; newSession() and noted() return new values (immutability)",
-        "noticeText(agentName?) (pure): the server's words, copied with provenance from automatos-ai orchestrator/modules/policy/ai_disclosure.py into src/voice/strings.ts — AI_VOICE_GREETING 'Hi, this is Auto, your AI assistant.' — with Auto replaced by the answering agent's name when the turn's agent is not Auto (the vendored DEFAULT_AGENT_NAME / UNNAMED_AGENT rule of lib/ai-label/copy.ts); no reminder text",
-        "The notice is queued BEFORE the first reply's first sentence (US-019d) and shown as its own AUTO line in the transcript; the foundation's AiLabel caption stays on the voice screen (US-019j)",
-        "src/voice/__tests__/ai-notice.test.ts: first reply → greeting; the second reply, and one 30 minutes later in the same session → null; a new session → greeting; a named agent; frozen inputs",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes"
+        "src/voice/notice/ai-notice.ts (pure): noticeFor({sessionNoticed}) → 'greeting' | null: the greeting before the first spoken reply of a voice session, nothing after it in the same session; newSession() and noted() return new values (immutability) → DONE — aa07afb: newSession/noted return new frozen values; noticeFor → 'greeting' | null; tests 'newSession and noted', 'noticeFor'",
+        "noticeText(agentName?) (pure): the server's words, copied with provenance from automatos-ai orchestrator/modules/policy/ai_disclosure.py into src/voice/strings.ts — AI_VOICE_GREETING 'Hi, this is Auto, your AI assistant.' — with Auto replaced by the answering agent's name when the turn's agent is not Auto (the vendored DEFAULT_AGENT_NAME / UNNAMED_AGENT rule of lib/ai-label/copy.ts); no reminder text → DONE — aa07afb: AI_VOICE_GREETING in strings.ts with provenance (ai_disclosure.py VOICE_GREETING @ 7ae677b52, re-verified at HEAD); noticeText(agent?) puts the agent's name in place of Auto by the AI label's rule (DEFAULT_AGENT_NAME, UNNAMED_AGENT as 'this agent' mid-sentence); no reminder text",
+        "The notice is queued BEFORE the first reply's first sentence (US-019d) and shown as its own AUTO line in the transcript; the foundation's AiLabel caption stays on the voice screen (US-019j) → DONE — aa07afb: queueWithNotice(session, sentences, agent?) queues the greeting ahead of the first sentence and notes the session then; noticeFor(session) is the 'sent' event's notice (the AUTO line, shown by US-019i's view-model); the AiLabel caption is US-019j's",
+        "src/voice/__tests__/ai-notice.test.ts: first reply → greeting; the second reply, and one 30 minutes later in the same session → null; a new session → greeting; a named agent; frozen inputs → DONE — aa07afb: ai-notice.test.ts, 17 tests: first reply, second reply, 30 minutes later (fake timers), new session, named and unnamed agents, '$&' in a name, queue order, frozen inputs",
+        "npm run typecheck passes → DONE — npm run typecheck clean",
+        "npm run lint passes (0 errors) → DONE — npm run lint 0 errors (2 warnings in other kits' strings.ts files)",
+        "npx vitest run passes → DONE — npx vitest run: 271 files, 4755 tests passed"
       ],
       "files": [
         "src/voice/notice/ai-notice.ts",
@@ -366,8 +366,8 @@
         "src/voice/__tests__/ai-notice.test.ts"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": "RE-VERIFY the greeting at the backend HEAD (orchestrator/modules/policy/ai_disclosure.py). The session boundary (screen unmount, background) is wired in US-019g and US-019h."
+      "passes": true,
+      "notes": "RE-VERIFY the greeting at the backend HEAD (orchestrator/modules/policy/ai_disclosure.py). The session boundary (screen unmount, background) is wired in US-019g and US-019h. | US-019e DONE (aa07afb): ai-notice.ts (newSession, noted, noticeFor, noticeText, queueWithNotice) + AI_VOICE_GREETING; 17 tests. For US-019g: noticeFor(session) at the send is the 'sent' event's notice; feed each chunker batch through queueWithNotice and keep its session (the greeting is noted only once queued, so a failed or wordless turn greets on the next spoken reply); newSession() at mount, unmount and background (US-019h). Choice beyond the AC: noticeText takes the AI label's AiLabelAgent ({name} | null), not a bare string, so 'Auto' and 'a picked agent whose name is not loaded' stay distinct, as in aiLabelWords; the unnamed greeting says 'Hi, this is this agent, your AI assistant.' (UNNAMED_AGENT lower-cased mid-sentence). No seam edit, no foundation gap."
     },
     {
       "id": "US-019f",
