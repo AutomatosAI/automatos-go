@@ -48,3 +48,14 @@ export const ANSWER_MAX_CHARS = 4000;
 
 /** The handled responses remembered across launches: keys only, the oldest dropped first. */
 export const HANDLED_KEYS_MAX = 50;
+
+/** The link types a push opens a record for (W2 US-011a's producers; the web's linkFor). */
+export const TASK_LINK_TYPE = 'task';
+export const SOCIAL_POST_LINK_TYPE = 'social_post';
+export const CHAT_LINK_TYPE = 'chat';
+
+/** The one status a social post waits on a person in (modules/socials/service.py NEEDS_APPROVAL). */
+export const SOCIAL_NEEDS_APPROVAL_STATUS = 'needs_approval';
+
+/** How long a link's stale check may take before its screen opens unchecked (KP9). */
+export const STALE_CHECK_TIMEOUT_MS = 4000;
