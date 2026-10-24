@@ -53,7 +53,7 @@ describe('VoiceButton', () => {
   it('is never held by the AI label (D73)', () => {
     const model = read('voice/entry/voice-entry.ts');
     for (const source of [button, model])
-      expect(code(source)).not.toMatch(/AiLabel|aiLabel|useAiLabelVisible|fence/);
+      expect(code(source)).not.toMatch(/AiLabel|aiLabel|fence/);
   });
 });
 
