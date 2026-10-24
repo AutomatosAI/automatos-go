@@ -35,3 +35,16 @@ export const STOP_PHRASES: readonly string[] = Object.freeze([
 
 /** A5's phone waveform (src/styles/hud/core/waveform.ts WAVE.phone.bars). */
 export const WAVEFORM_BARS = 44;
+
+/** expo-speech-recognition's volumechange interval (its iOS default), for the waveform's level. */
+export const VOLUME_INTERVAL_MS = 100;
+
+/**
+ * Android 13 (API 33): the first release where the module creates the on-device recognizer
+ * (SpeechRecognizer.createOnDeviceSpeechRecognizer, ExpoSpeechService.kt:93-109). Below it, hold to
+ * talk is unavailable: the phone's default recognition service may send the audio to Google (KV4).
+ */
+export const ANDROID_ON_DEVICE_API = 33;
+
+/** The recognition and speech language when the phone reports no locale (KV4). */
+export const FALLBACK_LOCALE = 'en-US';
