@@ -5,9 +5,11 @@
 // for a change made on the phone (the look page, HUD's drawer) and sends the whole set through the
 // outbox (one PUT at a time, a newer waiting save replacing an older). A part changed on the phone
 // wins until the server keeps it. Not installed (404): the looks stay on the phone. 401, 403, 5xx
-// and no answer: kept, sent after the next read. No timers and no polling. One read at a time per
-// session: a second call joins it, and an answer for an older session, or one read while a save
-// was sent, is dropped (the next foreground reads again). Pure TypeScript (no React).
+// and no answer: kept, sent after the next read. No timers and no polling. The target's session is
+// the copy's owner (server, workspace, user): a copy another owner left is put back to the theme's
+// defaults when a new one attaches or reads, before anything is read, merged or sent. One read at
+// a time per session: a second call joins it, and an answer for an older session, or one read
+// while a save was sent, is dropped (the next foreground reads again). Pure TypeScript (no React).
 
 import type { ApiClient } from '../../api/client';
 import { logger } from '../../lib/logger';
@@ -26,12 +28,17 @@ import type { StyleState, StyleStoreApi } from '../provider/store';
 import { createLookOutbox, type LookOutbox } from './look-outbox';
 import { HUD_LOOK_THEME, PLAY_LOOK_THEME, type LookTheme } from './look-themes';
 
-/** Where the looks are read from and sent to: the session's client, and which session it is. */
+/** Where the looks are read from and sent to: the session's client, and whose looks they are. */
 export type LookSyncTarget = {
   readonly client: ApiClient;
-  /** The server and workspace (themes/sync.ts sessionKey). */
+  /** The copy's owner: the server, workspace and signed-in user (lookOwner). */
   readonly session: string;
 };
+
+/** The owner of a copy of looks: '<server>|<workspace>|<user>' (the web keeps one per scope). */
+export function lookOwner(apiUrl: string, workspaceId: string, userId: string | null): string {
+  return `${apiUrl}|${workspaceId}|${userId ?? ''}`;
+}
 
 export type LookSyncRunner = {
   /** Reads the server's looks and sends what the phone changed; joins a read already running. */
@@ -61,7 +68,7 @@ function currentState<L extends LookDoc>(rt: Runtime<L>): LookSyncState<L> {
 }
 
 function sameStatus(a: LookSyncStatus, b: LookSyncStatus): boolean {
-  const keys = ['serverSeen', 'lookChanged', 'savedChanged', 'synced', 'failure'] as const;
+  const keys = ['owner', 'serverSeen', 'lookChanged', 'savedChanged', 'synced', 'failure'] as const;
   return keys.every((key) => a[key] === b[key]);
 }
 
@@ -80,8 +87,8 @@ function dispatch<L extends LookDoc>(rt: Runtime<L>, action: LookSyncAction<L>):
   const next = reduceLookSync(rt.theme.rules, before, action);
   rt.edits = next.edits;
   if (next.saved !== before.saved || next.active !== before.active) writeLooks(rt, next);
-  const { serverSeen, lookChanged, savedChanged, synced, failure } = next;
-  const status: LookSyncStatus = { serverSeen, lookChanged, savedChanged, synced, failure };
+  const { owner, serverSeen, lookChanged, savedChanged, synced, failure } = next;
+  const status: LookSyncStatus = { owner, serverSeen, lookChanged, savedChanged, synced, failure };
   const { key } = rt.theme;
   if (!sameStatus(status, rt.store.getState().lookSync[key])) {
     rt.store.getState().setLookSync(key, status);
@@ -93,15 +100,19 @@ function stale<L extends LookDoc>(rt: Runtime<L>, target: LookSyncTarget): boole
   return rt.latest !== target.session;
 }
 
-/** Queues the phone's whole set; its answer clears the marks if nothing changed after it. */
+/**
+ * Queues the phone's whole set; its answer clears the marks if nothing changed after it. A save
+ * whose owner is no longer the phone's when its turn comes is never sent.
+ */
 function queueSend<L extends LookDoc>(rt: Runtime<L>, target: LookSyncTarget): void {
   const state = currentState(rt);
   const sentAfter = state.edits;
   const body = lookBody(state);
   const { themeId } = rt.theme.rules;
   rt.sends += 1;
-  rt.outbox.queue(`${themeId}|${target.session}`, () =>
-    saveLooks(target.client, themeId, body).then(
+  rt.outbox.queue(`${themeId}|${target.session}`, async () => {
+    if (stale(rt, target)) return;
+    await saveLooks(target.client, themeId, body).then(
       () => {
         if (!stale(rt, target)) dispatch(rt, { type: 'kept', edits: sentAfter });
       },
@@ -109,8 +120,8 @@ function queueSend<L extends LookDoc>(rt: Runtime<L>, target: LookSyncTarget): v
         logger.warn(`[styles] the ${themeId} looks were not saved; the phone keeps them`, error);
         if (!stale(rt, target)) dispatch(rt, { type: 'failed', error });
       },
-    ),
-  );
+    );
+  });
 }
 
 async function readAndApply<L extends LookDoc>(rt: Runtime<L>, target: LookSyncTarget) {
@@ -128,8 +139,14 @@ async function readAndApply<L extends LookDoc>(rt: Runtime<L>, target: LookSyncT
   }
 }
 
-function refresh<L extends LookDoc>(rt: Runtime<L>, target: LookSyncTarget): Promise<void> {
+/** The looks are now this target's owner's: another owner's copy goes before anything else. */
+function claim<L extends LookDoc>(rt: Runtime<L>, target: LookSyncTarget): void {
   rt.latest = target.session;
+  dispatch(rt, { type: 'claimed', owner: target.session });
+}
+
+function refresh<L extends LookDoc>(rt: Runtime<L>, target: LookSyncTarget): Promise<void> {
+  claim(rt, target);
   if (rt.running?.session === target.session) return rt.running.read;
   const read = readAndApply(rt, target).finally(() => {
     if (rt.running?.read === read) rt.running = null;
@@ -139,7 +156,7 @@ function refresh<L extends LookDoc>(rt: Runtime<L>, target: LookSyncTarget): Pro
 }
 
 function attach<L extends LookDoc>(rt: Runtime<L>, target: LookSyncTarget): () => void {
-  rt.latest = target.session;
+  claim(rt, target);
   rt.targets = [...rt.targets, target];
   return () => {
     rt.targets = rt.targets.filter((attached) => attached !== target);

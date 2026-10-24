@@ -1,9 +1,10 @@
-// The look sync's marks on the phone (US-017d): per theme, whether the phone has met the server's
-// copy (serverSeen) and which part was changed on the phone and not kept by the server yet
-// (lookChanged, savedChanged), so a change made offline is still sent after the app is closed and
-// opened again, and the first meeting merges once. Beside each theme's looks in the app's encrypted
-// MMKV store (styles.play.looks.sync, styles.hud.looks.sync), through themes/cache.ts storedPart.
-// Pure over the KeyValueStorage port; anything that does not fit reads as no marks.
+// The look sync's marks on the phone (US-017d): per theme, whose looks the copy is (owner: server,
+// workspace and user), whether the phone has met the server's copy (serverSeen) and which part was
+// changed on the phone and not kept by the server yet (lookChanged, savedChanged), so a change made
+// offline is still sent after the app is closed and opened again, and the first meeting merges
+// once. Beside each theme's looks in the app's encrypted MMKV store (styles.play.looks.sync,
+// styles.hud.looks.sync), through themes/cache.ts storedPart. Pure over the KeyValueStorage port;
+// anything that does not fit reads as no marks.
 
 import { z } from 'zod';
 
@@ -25,14 +26,15 @@ export const LOOK_MARKS_VERSION = 1;
 
 const StoredMarksSchema = z.object({
   v: z.literal(LOOK_MARKS_VERSION),
+  owner: z.string().min(1).nullable(),
   serverSeen: z.boolean(),
   lookChanged: z.boolean(),
   savedChanged: z.boolean(),
 });
 
 export function serialiseLookMarks(marks: LookMarks): string {
-  const { serverSeen, lookChanged, savedChanged } = marks;
-  return JSON.stringify({ v: LOOK_MARKS_VERSION, serverSeen, lookChanged, savedChanged });
+  const { owner, serverSeen, lookChanged, savedChanged } = marks;
+  return JSON.stringify({ v: LOOK_MARKS_VERSION, owner, serverSeen, lookChanged, savedChanged });
 }
 
 export function parseLookMarks(raw: unknown): LookMarks {
@@ -45,8 +47,8 @@ export function parseLookMarks(raw: unknown): LookMarks {
   }
   const parsed = StoredMarksSchema.safeParse(json);
   if (!parsed.success) return NO_MARKS;
-  const { serverSeen, lookChanged, savedChanged } = parsed.data;
-  return Object.freeze({ serverSeen, lookChanged, savedChanged });
+  const { owner, serverSeen, lookChanged, savedChanged } = parsed.data;
+  return Object.freeze({ owner, serverSeen, lookChanged, savedChanged });
 }
 
 export type LookMarksParts = Readonly<Record<LookThemeKey, StoredPart<LookMarks>>>;

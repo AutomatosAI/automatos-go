@@ -10,6 +10,10 @@
 // editor's fresh-id rule); the active look is the server's, else the phone's. Afterwards the server
 // is the truth, except for a part changed on the phone since the last read, which is sent next. One
 // rule set per theme (LookRules): Play's over the vendored looks engine, HUD's over HUD_LOOK_SPEC.
+// The copy belongs to one owner (the server, workspace and signed-in user, as the web keeps its
+// copy per user and workspace): a copy no one owns yet is claimed and merged at the first meeting;
+// one another account or workspace owns is put back to the theme's defaults before anything is
+// read, merged or sent, so one account's looks never reach another's.
 
 import { isApiError, type ApiErrorKind } from '../../api/errors';
 import { API_ERROR_COPY } from '../../api/strings';
@@ -48,6 +52,8 @@ export type LookSynced = 'server' | 'local-only' | 'pending';
 
 /** What the phone keeps between launches beside its copy. */
 export type LookMarks = {
+  /** Whose looks the copy is ('<server>|<workspace>|<user>'); null until the first is known. */
+  readonly owner: string | null;
   readonly serverSeen: boolean;
   readonly lookChanged: boolean;
   readonly savedChanged: boolean;
@@ -69,6 +75,8 @@ export type LookSyncState<L extends LookDoc> = LookSet<L> &
 export type LookSyncAction<L extends LookDoc> =
   /** The phone's copy and marks, as read from the phone. */
   | { readonly type: 'loaded'; readonly local: LookSet<L>; readonly marks: LookMarks }
+  /** The signed-in owner the looks are read and sent for. */
+  | { readonly type: 'claimed'; readonly owner: string }
   /** GET /api/themes/looks/{themeId}, every look checked. */
   | { readonly type: 'served'; readonly server: ServedSet<L> }
   /** The active look changed on the phone. */
@@ -89,6 +97,7 @@ const NOT_FOUND = 404;
 const REFUSED_STATUSES: readonly number[] = Object.freeze([400, 409, 413, 422]);
 
 export const NO_MARKS: LookMarks = Object.freeze({
+  owner: null,
   serverSeen: false,
   lookChanged: false,
   savedChanged: false,
@@ -100,9 +109,9 @@ function changed(marks: LookMarks): boolean {
 
 /** The standing a phone starts a launch with: pending while a change waits, else in step. */
 export function statusFromMarks(marks: LookMarks): LookSyncStatus {
-  const { serverSeen, lookChanged, savedChanged } = marks;
+  const { owner, serverSeen, lookChanged, savedChanged } = marks;
   const synced: LookSynced = changed(marks) ? 'pending' : 'server';
-  return Object.freeze({ serverSeen, lookChanged, savedChanged, synced, failure: null });
+  return Object.freeze({ owner, serverSeen, lookChanged, savedChanged, synced, failure: null });
 }
 
 /** A look's fields in a fixed order: the server and the vendored check order keys differently. */
@@ -204,6 +213,20 @@ function failed<L extends LookDoc>(state: LookSyncState<L>, error: unknown): Loo
   return { ...state, ...marks, synced: 'pending', failure };
 }
 
+/**
+ * The owner the looks are now for: the same one changes nothing; the first one takes the copy as
+ * it is (it merges at the first meeting); another one starts from the theme's defaults, unmarked.
+ */
+function claimed<L extends LookDoc>(
+  rules: LookRules<L>,
+  state: LookSyncState<L>,
+  owner: string,
+): LookSyncState<L> {
+  if (state.owner === owner) return state;
+  if (state.owner === null) return { ...state, owner };
+  return { ...initialLookSync(rules), owner, edits: state.edits };
+}
+
 function loaded<L extends LookDoc>(
   state: LookSyncState<L>,
   local: LookSet<L>,
@@ -220,6 +243,8 @@ export function reduceLookSync<L extends LookDoc>(
   switch (action.type) {
     case 'loaded':
       return loaded(state, action.local, action.marks);
+    case 'claimed':
+      return claimed(rules, state, action.owner);
     case 'served':
       return served(rules, state, action.server);
     case 'edited':

@@ -8,20 +8,21 @@
 import { useEffect } from 'react';
 
 import { useAppSession } from '../../app-state/session';
+import { useAuthSession } from '../../auth/AuthRoot';
 import { lookSyncNotice, type LookSyncStatus } from '../play/look-sync';
 import { useStyleRoot, useStyleStore } from '../provider/context';
-import { sessionKey } from '../themes/sync';
 import { onForegroundReturn } from './foreground';
 import type { LookThemeKey } from './look-marks';
-import { lookSyncRunners, type LookSyncTarget } from './look-sync-run';
+import { lookOwner, lookSyncRunners, type LookSyncTarget } from './look-sync-run';
 import { NOT_INSTALLED_COPY } from './look-themes';
 
 export function LookSync(): null {
   const { client, workspace } = useAppSession();
+  const { ownerId } = useAuthSession();
   const { store } = useStyleRoot();
-  const session = sessionKey(client.server.apiUrl, workspace.id);
+  const session = lookOwner(client.server.apiUrl, workspace.id, ownerId);
 
-  // a new server or workspace is a new target: read again
+  // a new server, workspace or user is a new owner: its own looks, read again
   useEffect(() => {
     const target: LookSyncTarget = { client, session };
     const { play, hud } = lookSyncRunners(store);

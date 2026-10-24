@@ -19,7 +19,7 @@ import { lookSyncNotice } from '../../play/look-sync';
 import { PLAY_THEME_ID } from '../../play/play-looks';
 import { appStyleSources, createStyleStore } from '../../provider/store';
 import { LOOK_MARKS_KEYS } from '../look-marks';
-import { lookSyncRunners, type LookSyncTarget } from '../look-sync-run';
+import { lookOwner, lookSyncRunners, type LookSyncTarget } from '../look-sync-run';
 import { NOT_INSTALLED_COPY } from '../look-themes';
 
 const NOVA = HUD_PRESET_LOOKS.find((look) => look.id === 'nova') ?? HUD_DEFAULT_LOOK;
@@ -72,7 +72,7 @@ const settle = async () => {
   for (let i = 0; i < 5; i += 1) await new Promise((resolve) => setTimeout(resolve, 0));
 };
 
-function target(client: LookSyncTarget['client'], session = 'api|ws-1'): LookSyncTarget {
+function target(client: LookSyncTarget['client'], session = 'api|ws-1|user_1'): LookSyncTarget {
   return { client, session };
 }
 
@@ -198,14 +198,50 @@ describe('Play in step with the web', () => {
     expect(server.kept[PLAY_THEME_ID]?.active).toEqual(AURORA);
   });
 
+  it("never sends one account's looks to another signed in on the same phone", async () => {
+    const storage = memoryStorage();
+    const server = fakeServer({ [PLAY_THEME_ID]: { looks: [], active: DEFAULT_LOOK } });
+    const store = storeOn(storage);
+    const { play } = lookSyncRunners(store);
+    const first = target(server.client, lookOwner(SERVER.apiUrl, 'ws-1', 'user_1'));
+    const detach = play.attach(first);
+    await play.refresh(first);
+    server.setOffline(true);
+    store.getState().setPlayLooks({ saved: [SAVED], active: OBSIDIAN }); // unsent: offline
+    await settle();
+    detach();
+    server.setOffline(false);
+    const other = target(server.client, lookOwner(SERVER.apiUrl, 'ws-1', 'user_2'));
+    play.attach(other);
+    expect(store.getState().playLooks).toEqual({ saved: [], active: DEFAULT_LOOK });
+    await play.refresh(other);
+    await settle();
+    expect(server.puts).toEqual([]);
+    expect(store.getState().lookSync.play.owner).toBe(other.session);
+  });
+
+  it("drops a save still waiting when another owner claims the phone's looks", async () => {
+    const server = fakeServer({ [PLAY_THEME_ID]: { looks: [], active: DEFAULT_LOOK } }, 20);
+    const store = storeOn();
+    const { play } = lookSyncRunners(store);
+    const first = target(server.client, lookOwner(SERVER.apiUrl, 'ws-1', 'user_1'));
+    play.attach(first);
+    await play.refresh(first);
+    store.getState().setPlayLook(OBSIDIAN); // sent at once, in flight
+    store.getState().setPlayLook(AURORA); // waits behind it
+    play.attach(target(server.client, lookOwner(SERVER.apiUrl, 'ws-1', 'user_2')));
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(server.puts.map((put) => (put.body.active as Look).id)).toEqual(['obsidian']);
+  });
+
   it('joins a read already running and drops an answer for another workspace', async () => {
     const slow = fakeServer({ [PLAY_THEME_ID]: { looks: [], active: AURORA } }, 20);
     const next = fakeServer({ [PLAY_THEME_ID]: { looks: [], active: OBSIDIAN } });
     const store = storeOn();
     const { play } = lookSyncRunners(store);
-    const first = play.refresh(target(slow.client, 'api|ws-1'));
-    expect(play.refresh(target(slow.client, 'api|ws-1'))).toBe(first);
-    const other = play.refresh(target(next.client, 'api|ws-2'));
+    const first = play.refresh(target(slow.client, 'api|ws-1|user_1'));
+    expect(play.refresh(target(slow.client, 'api|ws-1|user_1'))).toBe(first);
+    const other = play.refresh(target(next.client, 'api|ws-2|user_1'));
     await Promise.all([first, other]);
     expect(slow.calls).toHaveLength(1);
     // ws-2 answered first; ws-1's later answer is for a workspace the phone has left

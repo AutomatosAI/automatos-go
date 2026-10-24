@@ -126,7 +126,7 @@ describe('hydration: the first frame paints the chosen style (D54)', () => {
   });
 
   it("starts each theme's look sync from its kept marks (US-017d)", () => {
-    const marks = { serverSeen: true, lookChanged: true, savedChanged: false };
+    const marks = { owner: 'api|ws-1|user_1', serverSeen: true, lookChanged: true, savedChanged: false };
     const state = storeOver(
       phoneOn({ [LOOK_MARKS_KEYS.hud]: serialiseLookMarks(marks) }),
     ).getState();
@@ -247,6 +247,7 @@ describe('the setters', () => {
     const storage = memoryStorage();
     const store = storeOver(storage);
     const status = {
+      owner: 'api|ws-1|user_1',
       serverSeen: true,
       lookChanged: true,
       savedChanged: false,

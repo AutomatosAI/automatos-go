@@ -198,8 +198,8 @@ export function createStyleStore(sources: StyleSources): StyleStoreApi {
       return saved;
     },
     setLookSync: (key, status) => {
-      const { serverSeen, lookChanged, savedChanged } = status;
-      const saved = marks[key].set({ serverSeen, lookChanged, savedChanged });
+      const { owner, serverSeen, lookChanged, savedChanged } = status;
+      const saved = marks[key].set({ owner, serverSeen, lookChanged, savedChanged });
       const held = Object.freeze({ ...status, ...marks[key].get() });
       set((state) => ({ lookSync: Object.freeze({ ...state.lookSync, [key]: held }) }));
       return saved;

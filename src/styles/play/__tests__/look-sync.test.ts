@@ -45,7 +45,8 @@ function phone(saved: readonly Look[], active: Look, marks = NO_MARKS): LookSync
   return reduce(initialLookSync(RULES), { type: 'loaded', local: { saved, active }, marks });
 }
 
-const MET = { serverSeen: true, lookChanged: false, savedChanged: false };
+const OWNER = 'https://api.example.test|ws-1|user_1';
+const MET = { owner: OWNER, serverSeen: true, lookChanged: false, savedChanged: false };
 
 function served(saved: readonly Look[], active: Look | null): LookSyncAction<Look> {
   return { type: 'served', server: { saved, active } };
@@ -149,6 +150,31 @@ describe('afterwards the server is the truth', () => {
     expect(state.lookChanged).toBe(true);
     expect(state.savedChanged).toBe(true);
     expect(reduce(state, { type: 'kept', edits: second.edits }).synced).toBe('server');
+  });
+});
+
+describe("the copy's owner (server, workspace, user)", () => {
+  it('lets the first owner keep the copy, merged at its first meeting', () => {
+    const state = reduce(phone([PHONE_ONLY], OBSIDIAN), { type: 'claimed', owner: OWNER });
+    expect(state.owner).toBe(OWNER);
+    expect(state.saved).toEqual([PHONE_ONLY]);
+    expect(reduce(state, served([SERVER_TWO], null)).saved).toHaveLength(2);
+  });
+
+  it("puts another owner's copy back to the defaults, unmarked, before anything is read", () => {
+    const edited = reduce(phone([PHONE_ONLY], OBSIDIAN, MET), { type: 'edited', look: AURORA });
+    const state = reduce(edited, { type: 'claimed', owner: 'https://api.example.test|ws-1|user_2' });
+    expect(state.saved).toEqual([]);
+    expect(state.active).toBe(DEFAULT_LOOK);
+    expect(state).toMatchObject({ serverSeen: false, lookChanged: false, savedChanged: false });
+    const met = reduce(state, served([SERVER_TWO], null));
+    expect(met.saved).toEqual([SERVER_TWO]); // nothing of the other account's joins
+    expect(met.synced).toBe('server');
+  });
+
+  it('changes nothing for the owner it already has', () => {
+    const state = phone([PHONE_ONLY], OBSIDIAN, MET);
+    expect(reduce(state, { type: 'claimed', owner: OWNER })).toBe(state);
   });
 });
 
