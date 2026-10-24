@@ -1,0 +1,218 @@
+import { describe, expect, it } from 'vitest';
+
+import { PRESETS } from '../../../core/web/lib/looks/presets';
+import { HUD_PRESET_LOOKS } from '../../hud/look-schema';
+import type { StyleMotion } from '../../provider/resolve';
+import { pickerState, type PickerInput } from '../../registry/picker';
+import { builtinChoice, themeChoice } from '../../registry/style-id';
+import { MIN_TEXT_SIZE } from '../../type';
+import { hudVars } from '../../tokens/hud';
+import { playVars } from '../../tokens/play';
+import {
+  CARD_RING,
+  PREVIEW,
+  cardFrame,
+  hudChipWords,
+  pickerCards,
+  playToolLine,
+  previewAnimates,
+} from '../cards';
+import {
+  autoStandIn,
+  autoStandInPaint,
+  playGlowStops,
+  ringStandIn,
+  ringStandInPaint,
+} from '../stand-ins';
+
+const HARBOUR = { installId: 'inst-harbour', name: 'Harbour', version: '1.1.0' };
+
+function cardsFor(overrides: Partial<PickerInput> = {}) {
+  return pickerCards(
+    pickerState({
+      choice: builtinChoice('studio'),
+      studioScheme: 'system',
+      installedThemes: [],
+      canMobileTheme: false,
+      ...overrides,
+    }),
+  );
+}
+
+describe('the picker cards', () => {
+  it('are Studio, Play and HUD in order with their names and taglines', () => {
+    expect(cardsFor().map(({ id, name, tagline }) => ({ id, name, tagline }))).toEqual([
+      { id: 'studio', name: 'Studio', tagline: 'Cream paper or Studio Dark' },
+      { id: 'play', name: 'Play', tagline: 'Auto and the Ember look' },
+      { id: 'hud', name: 'HUD', tagline: 'Voice first, glow and grid' },
+    ]);
+  });
+
+  it("name each card '<Style> style' and leave the selected state to accessibilityState", () => {
+    const cards = cardsFor({ choice: builtinChoice('play') });
+    expect(cards.map((c) => c.accessibilityLabel)).toEqual([
+      'Studio style',
+      'Play style',
+      'HUD style',
+    ]);
+    expect(cards.map((c) => c.selected)).toEqual([false, true, false]);
+    expect(cards.map((c) => c.accessibilityHint)).toEqual([
+      'Paints Automatos Go in Studio',
+      'Paints Automatos Go in Play',
+      'Paints Automatos Go in HUD',
+    ]);
+  });
+
+  it("put the word 'Selected' on the chosen card only (never colour alone)", () => {
+    expect(cardsFor({ choice: builtinChoice('hud') }).map((c) => c.selectedWord)).toEqual([
+      null,
+      null,
+      'Selected',
+    ]);
+  });
+
+  it('give Studio Light / Dark / System and the others no scheme', () => {
+    const [studio, play, hud] = cardsFor({ studioScheme: 'dark' });
+    expect(studio.schemes.map(({ value, label, selected }) => [value, label, selected])).toEqual([
+      ['light', 'Light', false],
+      ['dark', 'Dark', true],
+      ['system', 'System', false],
+    ]);
+    expect(studio.schemeGroup).toBe('Studio appearance');
+    expect(play.schemes).toEqual([]);
+    expect(hud.schemes).toEqual([]);
+  });
+
+  it("link Play to 'Make it yours →' and HUD to 'Looks →', and Studio to none", () => {
+    const [studio, play, hud] = cardsFor();
+    expect(studio.lookLink).toBeNull();
+    expect(play.lookLink).toEqual({
+      label: 'Make it yours →',
+      accessibilityLabel: 'Make it yours',
+      accessibilityHint: "Opens Play's looks",
+      href: '/settings/look/play',
+    });
+    expect(hud.lookLink).toEqual({
+      label: 'Looks →',
+      accessibilityLabel: 'Looks',
+      accessibilityHint: "Opens HUD's looks",
+      href: '/settings/look/hud',
+    });
+  });
+
+  it('list installed themes under Studio only when the server offers them', () => {
+    expect(cardsFor({ installedThemes: [HARBOUR] })[0].themes).toEqual([]);
+    const offered = cardsFor({
+      installedThemes: [HARBOUR],
+      canMobileTheme: true,
+      choice: themeChoice('inst-harbour'),
+    });
+    const [studio, play, hud] = offered;
+    expect(
+      studio.themes.map(({ title, selected, selectedWord }) => [title, selected, selectedWord]),
+    ).toEqual([['Harbour · 1.1.0', true, 'Selected']]);
+    expect(studio.selectedWord).toBeNull();
+    expect(play.themes).toEqual([]);
+    expect(hud.themes).toEqual([]);
+  });
+
+  it('carry no pointer to making an account and nothing about plans', () => {
+    const words = JSON.stringify(cardsFor({ installedThemes: [HARBOUR], canMobileTheme: true }));
+    expect(words).not.toMatch(/sign up|create an account|no account|plan|credit|price/i);
+  });
+
+  it('are frozen', () => {
+    const cards = cardsFor();
+    expect(Object.isFrozen(cards)).toBe(true);
+    expect(cards.every((c) => Object.isFrozen(c) && Object.isFrozen(c.themes))).toBe(true);
+  });
+});
+
+describe("the card's frame", () => {
+  it('rings the chosen card 2 pt in its accent', () => {
+    expect(cardFrame(true)).toEqual({ borderWidth: 2, margin: 0, colour: 'accent' });
+  });
+
+  it('keeps the others the same size with a 1 pt border and a 1 pt margin', () => {
+    const idle = cardFrame(false);
+    expect(idle).toEqual({ borderWidth: 1, margin: 1, colour: 'border' });
+    expect(idle.borderWidth + idle.margin).toBe(CARD_RING.selected);
+  });
+});
+
+describe('preview motion', () => {
+  const looping: StyleMotion = { loops: true, reason: null };
+  const reduced: StyleMotion = { loops: false, reason: 'reduce-motion' };
+  const lookOff: StyleMotion = { loops: false, reason: 'look' };
+
+  it('moves only while the screen is focused and the style may loop', () => {
+    expect(previewAnimates(true, looping)).toBe(true);
+    expect(previewAnimates(false, looping)).toBe(false);
+    expect(previewAnimates(true, reduced)).toBe(false);
+    expect(previewAnimates(true, lookOff)).toBe(false);
+  });
+});
+
+describe('the previews', () => {
+  it("draw Auto at 84 and HUD's core at 120", () => {
+    expect(PREVIEW.autoSize).toBe(84);
+    expect(PREVIEW.ringCore).toBe(120);
+  });
+
+  it('say nothing under 11 pt', () => {
+    expect(PREVIEW.toolLineSize).toBeGreaterThanOrEqual(MIN_TEXT_SIZE);
+    expect(PREVIEW.chip.size).toBeGreaterThanOrEqual(MIN_TEXT_SIZE);
+  });
+
+  it("word Play's tool chip and HUD's chip as the real screens do", () => {
+    expect(playToolLine()).toBe('✓ Searched the web · 3 results');
+    expect(hudChipWords()).toBe('READY WHEN YOU ARE');
+  });
+
+  it('pulse on one 2.4 s loop: Ember 1 → 1.06, the HUD disc 0.96 ↔ 1.04', () => {
+    expect(PREVIEW.pulseMs).toBe(2400);
+    expect(PREVIEW.playPulse).toEqual({ from: 1, to: 1.06 });
+    expect(PREVIEW.hudPulse).toEqual({ from: 0.96, to: 1.04 });
+  });
+});
+
+describe('the stand-ins', () => {
+  it('size Auto as Mascot.dc.html does: box 0.9s, ring 0.8s x 0.18s, figure 0.62s x 0.74s', () => {
+    const auto = autoStandIn(100);
+    expect(auto.box).toEqual({ width: 90, height: 100 });
+    expect(auto.ring).toEqual({ width: 80, height: 18, stroke: 2 });
+    expect(auto.body.width).toBeCloseTo(62);
+    expect(auto.body.height).toBeCloseTo(74);
+    expect(auto.body.bottom).toBeCloseTo(13);
+  });
+
+  it("paint Auto's ring in his light at rest under every Play preset", () => {
+    for (const look of PRESETS) {
+      const vars = playVars(look);
+      const paint = autoStandInPaint(look, vars);
+      expect(paint.ring.toLowerCase()).toBe(vars.autoLight.toLowerCase());
+      expect(paint.ringGlow).toMatch(/^rgba\(\d+,\d+,\d+,0\.35\)$/);
+      expect(paint.eye).toBe(vars.autoLight);
+      const [from, to] = playGlowStops(vars);
+      expect(from).toMatch(/,0\)$/);
+      expect(to).toBe(vars.glow);
+    }
+  });
+
+  it("size HUD's rings from core(): the dashed ring at 22 %, the disc at 30 %", () => {
+    const core = ringStandIn(120);
+    expect(core.outer).toBe(120);
+    expect(core.dashed).toBeCloseTo(67.2);
+    expect(core.disc).toBeCloseTo(48);
+  });
+
+  it("paint HUD's rings in each preset's accent", () => {
+    for (const preset of HUD_PRESET_LOOKS) {
+      const vars = hudVars(preset);
+      const paint = ringStandInPaint(vars);
+      expect(paint.outer).toMatch(/,0\.22\)$/);
+      expect(paint.dashed).toMatch(/,0\.4\)$/);
+      expect(paint.disc).toMatch(/,0\.28\)$/);
+    }
+  });
+});

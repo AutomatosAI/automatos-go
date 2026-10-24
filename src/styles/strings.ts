@@ -39,6 +39,40 @@ export const PICKER_COPY = Object.freeze({
     system: 'System',
   }),
   schemeGroup: 'Studio appearance',
+  /** The screen's header (Settings → Style and look). */
+  eyebrow: 'Settings',
+  title: 'Style and look',
+  back: 'Back',
+  /** After a look link's words on screen ('Make it yours →'); VoiceOver hears the words alone. */
+  linkArrow: '→',
+  /** What a card does and where its look link goes, for VoiceOver. */
+  styleHint: (name: string) => `Paints Automatos Go in ${name}`,
+  lookHint: (name: string) => `Opens ${name}'s looks`,
+});
+
+/**
+ * The live previews on the picker's cards (US-016h): sample words in each style's own layout,
+ * hidden from VoiceOver (the card says its name and state). Play's tool line and HUD's chip take
+ * their words from the vendored labels and captions, so they read as the real screens do.
+ */
+export const PREVIEW_COPY = Object.freeze({
+  studio: Object.freeze({
+    wordmark: 'automatos',
+    needs: 'NEEDS YOU · 2',
+    needTitle: 'Approve the launch plan',
+    needMeta: 'Mission · 2 min ago',
+  }),
+  play: Object.freeze({
+    /** Ember's status word beside Auto ('Searching.'), for Auto at rest. */
+    status: 'Ready.',
+    /** The sample call Play's tool chip describes (the vendored toolLineLabel words it). */
+    toolName: 'platform_web_search',
+    toolSummary: '3 results',
+  }),
+  hud: Object.freeze({
+    brand: 'AUTOMATOS',
+    brandMark: '//',
+  }),
 });
 
 /**
