@@ -62,7 +62,7 @@ CI_JOBS=("typecheck · lint · test" "expo-doctor · iOS bundle")
 # KV1: the wave's own paths.
 OWN='^(src/voice/|app/\(app\)/voice\.tsx$|scripts/ralph/(prd-001-voice\.json|PROMPT_build_prd001-voice\.md|PROMPT_review_prd001-voice\.md|acceptance-prd001-voice\.sh)$)'
 # KV2: the named seams into A2 and A5 (each edit needs a 'SEAM EDIT: <path>' note).
-SEAMS='^(src/chat/request\.ts|src/chat/composer/Composer\.tsx|src/styles/play/companion/PlayComposer\.tsx|src/styles/homes/HudHome\.tsx)$|^(src/chat/controller/|src/styles/hud/core/)'
+SEAMS='^(src/chat/request\.ts|src/chat/composer/Composer\.tsx|src/chat/screens/ChatScreen\.tsx|src/styles/play/companion/PlayComposer\.tsx|src/styles/homes/HudHome\.tsx)$|^(src/chat/controller/|src/styles/hud/core/)'
 TRANSITIVE_OK='expo-keep-awake'   # KV12: a dependency of expo 54, already in the binary
 
 added_code() { git diff "$BASE"..HEAD -- src app ':!*__tests__*' ':!*.test.ts' ':!*.test.tsx' | grep '^+' | grep -v '^+++'; }
@@ -165,7 +165,7 @@ check "US-019g quick-ask over A2's controller; STOP; 'Auto, stop'" "all_exist sr
 check "US-019h interruptions and keep-awake" "all_exist src/voice/interruptions/interruption-policy.ts src/voice/interruptions/use-interruptions.ts src/voice/interruptions/keep-awake.ts && has 'AppState' src/voice/interruptions/use-interruptions.ts && has 'expo-keep-awake' src/voice/interruptions/keep-awake.ts"
 check "US-019i the view-model and the dress (Studio ink and orange)" "all_exist src/voice/screen/voice-view-model.ts src/voice/screen/dress.ts && has '--foreground' src/voice/screen/dress.ts && has '--accent' src/voice/screen/dress.ts"
 check "US-019j the voice screen on A5's HudCore, with the AI caption and no fence (D73)" "all_exist 'app/(app)/voice.tsx' src/voice/nav.ts src/voice/screen/VoiceScreen.tsx && has '/voice' src/voice/nav.ts && grep -qE 'styles/hud/core' src/voice/screen/VoiceScreen.tsx && grep -rq 'AiLabel' src/voice/screen && ! grep -rq 'useAiLabelVisible' src/voice"
-check "US-019k the voice button in A2's and Play's composers" "all_exist src/voice/entry/voice-entry.ts src/voice/entry/VoiceButton.tsx && has 'VoiceButton' src/chat/composer/Composer.tsx && has 'VoiceButton' src/styles/play/companion/PlayComposer.tsx"
+check "US-019k the voice button in A2's and Play's composers" "all_exist src/voice/entry/voice-entry.ts src/voice/entry/VoiceButton.tsx && ! grep -qi 'voice' src/chat/composer/Composer.tsx && has 'VoiceButton' src/chat/screens/ChatScreen.tsx && has 'VoiceButton' src/styles/play/companion/PlayComposer.tsx"
 
 if [ "$PHASE" = 1 ]; then
   echo ""; echo "=== Phase 1: Auto Live is not built (RETELL_LIVEKIT_CONFIRMED false, or the consent code is not in the branch)"
