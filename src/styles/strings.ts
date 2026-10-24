@@ -427,7 +427,7 @@ export const HUD_STATE_WORDS = Object.freeze<Record<MascotName, string>>({
  * running, Something went wrong and Lost. Not running names the server: the hosted one by its
  * host, a self-hosted one as Automatos asleep with the command that starts it (edges/edges.ts).
  * Something went wrong shows the API taxonomy's own words for the error, never internals. Nothing
- * here points at making an account (D63) or is about plans, credits or prices (D8).
+ * here points at making an account (D63), and nothing commercial (D8).
  */
 export const EDGE_COPY = Object.freeze({
   /** The line over an edge screen: Play's 'Automatos Play', HUD's 'AUTOMATOS //' (none in Studio). */
