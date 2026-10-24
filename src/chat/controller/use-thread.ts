@@ -36,6 +36,7 @@ import {
 } from './thread';
 import { createTurnRunner, type TurnRunner } from './turn-runner';
 
+/** One message; spokenMode is quick-ask's (A6) and passes through to buildChatRequest as it is. */
 export type ThreadSendInput = Omit<ChatRequestInput, 'chatId'>;
 
 export type ThreadView = {
