@@ -251,8 +251,8 @@ If the hosted server answers 404, the app uses built-in defaults with no capabil
 | `spoken_mode` | Spoken-style replies for voice (A6) | yes |
 | `voice_live` | The Auto Live button (A6) | yes |
 | `report_content` | Report this (**Gated**) | no: Report this stays hidden on every server |
-| `push` (with `push.expo: true`) | Notifications (A4) | no: comes with the W2 branch |
-| `digest` | Daily digest time (A4) | no: comes with the W2 branch |
+| `push` (with `push.expo: true`) | Notifications (A4) | yes, since #1300 (W2, 24 Oct); `push.expo` is true on SaaS, and self-hosted once its operator agrees |
+| `digest` | Daily digest time (A4) | yes, since #1300 (W2, 24 Oct) |
 
 The server side is automatos-ai `orchestrator/services/mobile/discovery.py` (`CAPABILITY_ROUTES`).
 

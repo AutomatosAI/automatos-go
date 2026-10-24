@@ -5,23 +5,30 @@ do from one, and where each setting lives.
 
 ## Status (24 Oct 2026)
 
-**On branches, not merged.**
+**The app side is on a branch, not merged.** The server side (W2) merged into automatos-ai `main`
+late on 24 Oct as #1300 (`bd0e60b2b`). This page was written from the W2 branch at `c1577f457`.
+Checked against the merge: in the files W2 changed, `main` differs from `c1577f457` only in the
+pairing QR's console warning (`frontend/components/settings/phones-devices/pair-phone-qr.tsx`),
+`mobile_theme` back in discovery's `CAPABILITY_ROUTES` (the branch at `c1577f457` had dropped it),
+and two tests.
 
 | Part | Where | State |
 |---|---|---|
-| App side | automatos-go `feat/a4-push` at `64eb2b5` | Built. Draft PR #12, CI green |
-| Server side | automatos-ai `feat/prd-266-w2-push` (W2) at `c1577f457` | Built. Draft PR #1300 |
+| App side | automatos-go `feat/a4-push` at `64eb2b5` | Built. PR #12 open (ready for review), CI green |
+| Server side | automatos-ai `main`, #1300 (`bd0e60b2b`) | Merged 24 Oct |
 
 The app shows notifications only when discovery lists the `push` capability **and**
 `push.expo: true` ([src/api/capabilities.ts](../src/api/capabilities.ts), `canPush`). automatos-ai
-`main` lists neither (`PUSH_EXPO_ENABLED = False` in `orchestrator/services/mobile/discovery.py`),
-so nothing below runs against a server until W2 merges. The daily digest also needs `digest`.
+`main` lists `push` and `digest` (`CAPABILITY_ROUTES` in `orchestrator/services/mobile/discovery.py`).
+`push.expo` is always true on SaaS and, on a self-hosted install, only once its operator agreed
+(`orchestrator/services/push/consent.py`, `expo_push_allowed`). The daily digest also needs
+`digest`.
 
 A4 adds no native module: `expo-notifications` and `expo-local-authentication` are already in the
 build, and the iOS background mode is `remote-notification` ([app.json](../app.json)). So A4 ships
 as an over-the-air update.
 
-Paths below marked `A4:` are on `feat/a4-push`; `W2:` are on the automatos-ai W2 branch.
+Paths below marked `A4:` are on `feat/a4-push`; `W2:` are automatos-ai's, on `main` since #1300.
 
 ## The path of one notification
 
@@ -252,13 +259,15 @@ Document the code:
   with `iat`.
 - **PRD-266 §4.5** says the digest goes only to devices with a `digest_time`. The code defaults to
   08:00.
-- **Merge seam.** W2's discovery `CAPABILITY_ROUTES` drops `mobile_theme`. The merge must keep
-  `digest`, `mobile_theme`, `push`, `spoken_mode` and `voice_live`.
-- **Studio's QR copy on W2** says "Scan the QR code with the phone". The iPhone Camera app opens the
-  web page, not the app; it should say to scan from Automatos Go.
+- **Merge seam, checked.** #1300 merged on 24 Oct (`bd0e60b2b`), after the W2 branch merged `main`
+  (`b34876498`). `main`'s discovery lists all five capabilities: `digest`, `mobile_theme`, `push`,
+  `spoken_mode` and `voice_live`.
+- **Studio's QR copy** (W2, now on `main`, `pair-phone-panel.tsx`) says "Scan the QR code with the
+  phone". The iPhone Camera app opens the web page, not the app; it should say to scan from
+  Automatos Go.
 
 ## Related
 
 - [connecting.md](connecting.md): device rows, revoke, and Forget this server.
-- automatos-ai `docs/PRDS/PRD-266-AUTOMATOS-GO-BACKEND.md` §4.4–§4.5, and W2's QUICKSTART.md and
-  SETUP.md "Notifications" paragraphs.
+- automatos-ai `docs/PRDS/PRD-266-AUTOMATOS-GO-BACKEND.md` §4.4–§4.5, and the QUICKSTART.md and
+  SETUP.md "Notifications" paragraphs W2 added (on `main`).

@@ -36,8 +36,8 @@ and the routes. Mostly on branch (A5). The theme contract itself is in automatos
 
 **[push.md](push.md).** Notifications: what triggers a push on the server, how the phone registers
 and checks each push's signature, the notification buttons, Face ID before approving, the
-notification settings, links into the app, and what the operator sets. On branch (A4 in this repo,
-W2 in automatos-ai).
+notification settings, links into the app, and what the operator sets. On branch (A4 in this repo);
+the server side, W2, merged into automatos-ai `main` on 24 Oct (#1300).
 
 **[voice.md](voice.md).** Talking to Auto: quick-ask (hold to talk, recognition on the phone, the
 reply spoken by the phone, the AI notice once per voice session) and, later, Auto Live through
@@ -73,7 +73,8 @@ decisions, waves and stories. Where it and the code differ, the code is right. K
 - [QUICKSTART.md, "Reach your install from your phone"](https://github.com/AutomatosAI/automatos-ai/blob/main/QUICKSTART.md#reach-your-install-from-your-phone-optional):
   the operator's steps for phones.
 - [docs/theme-host/mobile.md](https://github.com/AutomatosAI/automatos-ai/blob/main/docs/theme-host/mobile.md):
-  the theme contract for phones.
+  the theme contract for phones. The rest of the theme docs: [docs/theme-host/](https://github.com/AutomatosAI/automatos-ai/blob/main/docs/theme-host/_index.md)
+  for engineers, [docs/themes/](https://github.com/AutomatosAI/automatos-ai/blob/main/docs/themes/_index.md) for people who install themes.
 
 ## In this repository
 

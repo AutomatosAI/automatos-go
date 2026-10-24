@@ -1,8 +1,8 @@
 # Connecting a phone to a server
 
 How Automatos Go finds its server and proves who it is: hosted sign-in with an Automatos account,
-or pairing with a server you run. State on 24 Oct 2026. Everything here is **on `main`**, except
-the QR image in Studio, which comes with the automatos-ai W2 branch (`feat/prd-266-w2-push`).
+or pairing with a server you run. State on 24 Oct 2026. Everything here is **on `main`**. Studio's
+QR image of the pairing link merged into automatos-ai `main` with W2 (#1300, 24 Oct).
 
 Code: [src/connect/](../src/connect/), [src/auth/](../src/auth/),
 [src/api/discovery.ts](../src/api/discovery.ts). Server: automatos-ai
@@ -93,7 +93,7 @@ fresh on each call (automatos-ai `orchestrator/services/mobile/discovery.py`).
   "auth": { "modes": ["device"], "clerk": null },
   "pairing": { "enabled": true },
   "push": { "expo": false },
-  "capabilities": ["mobile_theme", "spoken_mode", "voice_live"]
+  "capabilities": ["digest", "mobile_theme", "push", "spoken_mode", "voice_live"]
 }
 ```
 
@@ -130,8 +130,11 @@ on a local install in `paired` mode.
   so a code minted from Studio opened on the server itself can carry `http://localhost:8000`.
   Once it is set, the link names `https://<PUBLIC_API_HOST>` (automatos-ai
   `services/mobile/urls.py`, `api_url`).
-- Studio shows the code, "Expires in m:ss" and the link with Copy. The QR image of the link is on
-  the W2 branch.
+- Studio shows the code, "Expires in m:ss" and the link with Copy, and a QR image of the link
+  while the code is live (automatos-ai `frontend/components/settings/phones-devices/pair-phone-qr.tsx`,
+  on `main` since #1300).
+- While the operator has never answered the notifications question, the first **Get a pairing
+  code** asks it before the code ([push.md](push.md#operator-side-self-hosted-w2)).
 
 From a terminal on the server, for the first phone:
 
