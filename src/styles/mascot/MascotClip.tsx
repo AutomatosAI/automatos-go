@@ -5,16 +5,18 @@
 // each clip boundary the driver says what happens (use-mascot.ts) — a new run with the same file
 // plays it again from the start, a new file replaces the player's source (replaceAsync), and a
 // one-shot that finished rests on its last frame. The boundary is timeUpdate (every 250 ms) inside
-// the vendored BOUNDARY_MS of the end, with playToEnd as the backstop, once per run (the web's
-// hooks/use-mascot-player.ts). A clip that will not load calls onError: the Mascot shows stills.
+// the vendored BOUNDARY_MS of the end, with playToEnd as the backstop, once per run and only for the
+// clip the player has loaded (clip-boundary.ts clipEndRun): until replaceAsync resolves, the old
+// clip's late end is not the new run's (the web's hooks/use-mascot-player.ts, P260-FX-15). A clip
+// that will not load calls onError: the Mascot shows stills.
 
 import { useEventListener } from 'expo';
 import { useVideoPlayer, VideoView, type VideoPlayer } from 'expo-video';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { StyleSheet } from 'react-native';
 
-import { atClipBoundary } from '../../core/web/lib/mascot/player';
 import { logger } from '../../lib/logger';
+import { clipEndRun } from './clip-boundary';
 import type { MascotFile } from './media';
 
 /** timeUpdate every 250 ms: at most as far apart as the web's timeupdate. */
@@ -38,9 +40,20 @@ export type MascotClipProps = {
   readonly onError: () => void;
 };
 
-/** Plays the clip again or swaps the source when the run moves on; the player stays the same. */
-function usePlayRuns(player: VideoPlayer, clip: MascotFile, run: number, onError: () => void) {
+/**
+ * Plays the clip again or swaps the source when the run moves on; the player stays the same. Gives
+ * back the clip the player has loaded: the first one, then each one once its replaceAsync resolves
+ * (only the newest asked for, so an older swap that resolves late never names the wrong clip).
+ */
+function usePlayRuns(
+  player: VideoPlayer,
+  clip: MascotFile,
+  run: number,
+  onError: () => void,
+): RefObject<MascotFile> {
   const playing = useRef({ clip, run });
+  const loaded = useRef(clip);
+  const swaps = useRef(0);
   useEffect(() => {
     const was = playing.current;
     if (was.clip === clip && was.run === run) return;
@@ -49,29 +62,43 @@ function usePlayRuns(player: VideoPlayer, clip: MascotFile, run: number, onError
       player.replay();
       return;
     }
+    const swap = swaps.current + 1;
+    swaps.current = swap;
     player
       .replaceAsync(clip)
-      .then(() => player.play())
+      .then(() => {
+        if (swap === swaps.current) loaded.current = clip;
+        player.play();
+      })
       .catch((error: unknown) => {
         logger.warn("[styles] Auto's clip could not be loaded, so he is a still", error);
         onError();
       });
   }, [player, clip, run, onError]);
+  return loaded;
 }
 
 export function MascotClip({ clip, run, onBoundary, onError }: MascotClipProps) {
   const [first] = useState(clip);
   const player = useVideoPlayer(first, setUp);
-  usePlayRuns(player, clip, run, onError);
+  const loaded = usePlayRuns(player, clip, run, onError);
 
   const reported = useRef<number | null>(null);
   const reportAt = useCallback(
     (seconds: number) => {
-      if (reported.current === run || !atClipBoundary(seconds, player.duration)) return;
-      reported.current = run;
-      onBoundary(run);
+      const ended = clipEndRun({
+        loaded: loaded.current,
+        clip,
+        run,
+        reported: reported.current,
+        seconds,
+        duration: player.duration,
+      });
+      if (ended === null) return;
+      reported.current = ended;
+      onBoundary(ended);
     },
-    [player, run, onBoundary],
+    [player, loaded, clip, run, onBoundary],
   );
   useEventListener(player, 'timeUpdate', ({ currentTime }) => reportAt(currentTime));
   useEventListener(player, 'playToEnd', () => reportAt(player.currentTime));

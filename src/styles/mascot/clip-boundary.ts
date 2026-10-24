@@ -8,8 +8,15 @@
 // a clip it cannot open never gets a duration, so neither the window nor the timer ever ends a run;
 // clipLoad gives it CLIP_LOAD_DEADLINE_MS from its mount to get one, after which it has failed and
 // Auto turns to stills, as he does when expo-video reports an error.
+//
+// An untinted clip plays through expo-video, one player for the stage, whose new file arrives only
+// once replaceAsync resolves: until then its timeUpdate and playToEnd are still the old clip's, at
+// the old clip's end, while React already holds the next run. clipEndRun counts an event only for
+// the clip the player has loaded being the run's clip, once per run (the web's P260-FX-15: each
+// handler names the clip it belongs to).
 
-import { BOUNDARY_MS, CLIP_MS } from '../../core/web/lib/mascot/player';
+import { atClipBoundary, BOUNDARY_MS, CLIP_MS } from '../../core/web/lib/mascot/player';
+import type { MascotFile } from './media';
 
 /** After the clip's length, this long again before the timer calls its boundary. */
 export const CLIP_BACKSTOP_MS = 250;
@@ -46,4 +53,24 @@ export function clipLoad(durationMs: number, elapsedMs: number): ClipLoad {
   const elapsed = Number.isFinite(elapsedMs) ? Math.max(0, elapsedMs) : 0;
   const leftMs = CLIP_LOAD_DEADLINE_MS - elapsed;
   return leftMs > 0 ? Object.freeze({ kind: 'waiting', leftMs }) : FAILED;
+}
+
+/** What MascotClip knows when expo-video reports a time (timeUpdate) or an end (playToEnd). */
+export type ClipEvent = {
+  /** The clip the player has loaded: the first one, then each one once replaceAsync resolves. */
+  readonly loaded: MascotFile;
+  /** The clip of the run React holds now. */
+  readonly clip: MascotFile;
+  readonly run: number;
+  /** The run whose end was already reported; null before the first. */
+  readonly reported: number | null;
+  /** The player's time and the loaded clip's duration, in seconds. */
+  readonly seconds: number;
+  readonly duration: number;
+};
+
+/** The run this event ends, or null: another clip's event, a run already ended, not at the end. */
+export function clipEndRun(event: ClipEvent): number | null {
+  if (event.loaded !== event.clip || event.reported === event.run) return null;
+  return atClipBoundary(event.seconds, event.duration) ? event.run : null;
 }
