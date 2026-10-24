@@ -421,3 +421,53 @@ export const HUD_STATE_WORDS = Object.freeze<Record<MascotName, string>>({
   lost: 'Lost',
   loading: 'Loading',
 });
+
+/**
+ * The edge screens (US-017f, PRD-001 §4.7 Edges, Ember 06-09) in every style: First open, Not
+ * running, Something went wrong and Lost. Not running names the server: the hosted one by its
+ * host, a self-hosted one as Automatos asleep with the command that starts it (edges/edges.ts).
+ * Something went wrong shows the API taxonomy's own words for the error, never internals. Nothing
+ * here points at making an account (D63) or is about plans, credits or prices (D8).
+ */
+export const EDGE_COPY = Object.freeze({
+  /** The line over an edge screen: Play's 'Automatos Play', HUD's 'AUTOMATOS //' (none in Studio). */
+  brand: Object.freeze({
+    play: Object.freeze({ name: 'Automatos', mark: 'Play', label: 'Automatos Play' }),
+    hud: Object.freeze({ name: 'AUTOMATOS', mark: '//', label: 'Automatos' }),
+  }),
+  firstOpen: Object.freeze({
+    /** Play's greeting, the second line in the accent text. */
+    play: Object.freeze(['Your Automatos,', 'the fun way.'] as const),
+    studio: 'Talk to Auto',
+    lede: "I'm Auto. Tell me what you need and I'll get it done.",
+    /** Play's starter chips (KS13): a tap fills the message box and never sends. */
+    starters: Object.freeze(['Plan my week', 'What needs me today?', 'Summarise what my agents did']),
+    starterHint: 'Puts this in the message box',
+    /** HUD's transcript before the first message. */
+    hud: 'Say or type what you need.',
+  }),
+  notRunning: Object.freeze({
+    /** Beside the dimmed light, the state in words. */
+    status: 'Not connected',
+    hostedTitle: (host: string) => `${host} isn't answering.`,
+    hostedMessage: 'Check your connection, then try again.',
+    ownTitle: 'Automatos is asleep.',
+    ownMessage: 'Start it on the computer it runs on:',
+    /** Read out for the command's box. */
+    command: (command: string) => `Command: ${command}`,
+    checkAgain: 'Check again',
+    recheck: (seconds: number) => `Automatos Go also checks every ${seconds} seconds.`,
+    /** HUD's panel line after the stopped glyph: '— NOT ANSWERING'. */
+    panel: 'Not answering',
+  }),
+  somethingWrong: Object.freeze({
+    title: 'I hit a snag.',
+    retry: 'Try again',
+  }),
+  lost: Object.freeze({
+    number: '404',
+    title: 'This page wandered off.',
+    message: "Auto looked everywhere. It's not here.",
+    back: 'Back to chat',
+  }),
+});

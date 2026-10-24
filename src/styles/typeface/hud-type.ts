@@ -72,7 +72,7 @@ function displaySize(font: HudFontKey, slot: DisplaySlot): HudDisplay {
     case 'lostNumber':
       return HUD_LOST_NUMBER;
     default:
-      return HUD_BIG; // hero, screenLg, screen, notRunning, status, number
+      return HUD_BIG; // hero, screenLg, screen, notRunning, snag, status, number
   }
 }
 

@@ -1,7 +1,8 @@
 // Play's type on the phone (Ember, PRD-001 §4.6): the display slots of Ember's 390 pt screens at
 // the Editorial look (Instrument Serif), and for Clean, Characterful and Playful each slot scaled by
 // the web's own ratio, TYPE_STYLES[font].sizes / TYPE_STYLES.serif.sizes (hero, screen*, notRunning
-// and lostNumber by hero; status by status; header by brand; card* by card), rounded to whole points.
+// and lostNumber by hero; status and snag by status; header by brand; card* by card), rounded to
+// whole points.
 // Instrument Serif is never drawn below 19 pt (Ember README), and a title takes the display face
 // only at 19 and above: anything smaller falls to Geist 600, the Clean face. Text is Geist (16/1.6
 // in the thread, 15/1.5 in bubbles), buttons Geist 600 14, labels Geist 500 11 caps at .14em
@@ -43,6 +44,7 @@ export const PLAY_SLOTS: Readonly<Record<PlaySlot, SlotSize>> = Object.freeze({
   screenLg: slot(48, 0.9, 'hero'),
   screen: slot(44, 0.95, 'hero'), // 03 'Chats', 09 Lost
   notRunning: slot(52, 0.92, 'hero'), // 07 Not running
+  snag: slot(28, 1, 'status'), // 08 'I hit a snag.'
   status: slot(26, 1, 'status'), // Auto's status word
   header: slot(22, 1.1, 'brand'), // the chat's title, a conversation row (Ember's 22px/1.1)
   card: slot(24, 1, 'card'), // 02 the report card

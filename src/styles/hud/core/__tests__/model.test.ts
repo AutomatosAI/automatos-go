@@ -1,5 +1,6 @@
-// HUD's phone core in words (US-018b): the chip, the transcript, the top bar's mic, status row,
-// clock and command row, the buttons (HOLD TO TALK inert), and where the core and Auto sit.
+// HUD's phone core in words (US-018b): the chip, the transcript (and First open's hint, US-017f),
+// the top bar's mic, status row, clock and command row, the buttons (HOLD TO TALK inert), and
+// where the core and Auto sit.
 
 import { describe, expect, it } from 'vitest';
 
@@ -20,6 +21,7 @@ import {
   micView,
   statusRow,
   transcriptAlign,
+  transcriptHint,
   transcriptRows,
   turnElapsedMs,
   type HudTurn,
@@ -97,6 +99,18 @@ describe('the transcript', () => {
     expect(HUD_CORE.transcript.you).toEqual({ size: 15, leading: 1.5 });
     expect(HUD_CORE.transcript.auto).toEqual({ size: 19, leading: 1.45 });
     expect(HUD_CORE.transcript.cursor).toMatchObject({ width: 9, height: 18, blinkMs: 1000 });
+  });
+});
+
+describe("First open's hint (US-017f)", () => {
+  it("says 'Say or type what you need.' while the transcript is empty, and only then", () => {
+    expect(transcriptHint(EMPTY_TURN)).toBe('Say or type what you need.');
+    expect(transcriptHint({ you: '  ', auto: null, streaming: false })).toBe(
+      'Say or type what you need.',
+    );
+    expect(transcriptHint({ you: 'Plan my week', auto: null, streaming: false })).toBeNull();
+    expect(transcriptHint({ you: null, auto: 'Hello.', streaming: false })).toBeNull();
+    expect(transcriptHint({ you: null, auto: null, streaming: true })).toBeNull();
   });
 });
 

@@ -14,6 +14,7 @@ export const DISPLAY_SLOTS = [
   'screenLg', // a large screen title
   'screen', // a screen title: 'Chats', Lost's line
   'notRunning', // Not running's title
+  'snag', // Something went wrong's card: 'I hit a snag.'
   'status', // Auto's status word beside the mascot
   'header', // a conversation title in a header, a list row's title
   'card', // a report card's title

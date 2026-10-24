@@ -2,7 +2,7 @@
 // (the style's sans 15/1.5 in text2) and Auto's (19/1.45 in text) with a 9 x 18 block cursor in the
 // accent after them while he streams, blinking each second (step-end, as hudBlink) while loops run
 // and lit and still while they may not. It opens with the AI label, the thread's one muted caption
-// (D73). Centred while it fits; past that the newest lines show and the oldest go off the top.
+// (D73); before the first words, First open's 'Say or type what you need.' (US-017f). Centred while it fits; past that the newest lines show and the oldest go off the top.
 
 import { StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
@@ -10,7 +10,14 @@ import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { Text } from '../../../ui';
 import { AiLabel } from '../../ai-label';
 import { useLayoutSize } from '../../ground/use-size';
-import { HUD_CORE, transcriptAlign, transcriptRows, type HudTurn, type TranscriptRow } from './model';
+import {
+  HUD_CORE,
+  transcriptAlign,
+  transcriptHint,
+  transcriptRows,
+  type HudTurn,
+  type TranscriptRow,
+} from './model';
 import { useLoop } from './use-loop';
 import { useVoiceCore, type VoiceCore } from './use-voice-core';
 
@@ -54,6 +61,14 @@ function Row({ row, core }: { readonly row: TranscriptRow; readonly core: VoiceC
   );
 }
 
+/** First open's words while the turn is empty: the user's line's face, in text2. */
+function Hint({ turn, core }: { readonly turn: HudTurn; readonly core: VoiceCore }) {
+  const hint = transcriptHint(turn);
+  if (hint === null) return null;
+  const face = core.style.type.body(transcript.you.size, 400, { leading: transcript.you.leading });
+  return <Text style={[face, { color: core.paint.text2 }]}>{hint}</Text>;
+}
+
 export type TranscriptProps = { readonly turn: HudTurn };
 
 export function Transcript({ turn }: TranscriptProps) {
@@ -74,6 +89,7 @@ export function Transcript({ turn }: TranscriptProps) {
     >
       <View onLayout={onContentLayout} style={[styles.content, { gap: transcript.gap }]}>
         <AiLabel agent={turn.agent} />
+        <Hint turn={turn} core={core} />
         {transcriptRows(turn).map((row) => (
           <Row key={row.who} row={row} core={core} />
         ))}

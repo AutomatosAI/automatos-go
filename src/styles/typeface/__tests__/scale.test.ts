@@ -168,6 +168,7 @@ describe('Play at the Editorial look (Ember’s 390 pt screens)', () => {
     screenLg: [48, 43.2],
     screen: [44, 41.8],
     notRunning: [52, 47.84],
+    snag: [28, 28],
     status: [26, 26],
     header: [22, 24.2],
     card: [24, 24],
@@ -246,12 +247,13 @@ describe('Play at the Editorial look (Ember’s 390 pt screens)', () => {
 describe("Play's other looks: each slot scaled by the web's ratio", () => {
   // TYPE_STYLES sizes: serif hero 72 brand 28 status 40 card 22; clean and bric 58 18 30 17;
   // round 58 20 30 17. hero 58·58/72 = 46.7, header 22·18/28 = 14.1 (round 22·20/28 = 15.7),
-  // status 26·30/40 = 19.5, card 24·17/22 = 18.5, cardSm 19·17/22 = 14.7, 404 200·58/72 = 161.1.
+  // status 26·30/40 = 19.5, snag 28·30/40 = 21, card 24·17/22 = 18.5, cardSm 19·17/22 = 14.7, 404 200·58/72 = 161.1.
   const clean = {
     hero: 47,
     screenLg: 39,
     screen: 35,
     notRunning: 42,
+    snag: 21,
     status: 20,
     header: 14,
     card: 19,

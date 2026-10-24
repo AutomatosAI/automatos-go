@@ -1,8 +1,8 @@
 // HUD's phone core (D54, US-018b), pure: what the core's words say, so the components only draw. The
 // state chip is the vendored captionFor in capitals; the transcript is the turn's two rows, the
-// user's words in quotes and Auto's with the cursor while he streams; the top bar's mic, status row,
-// clock and command row (KS10); the three buttons (HOLD TO TALK inert until A6, STOP only while a
-// turn streams); and the drawing's numbers. Props only: phase 2 (US-016k) maps A2's thread to a
+// user's words in quotes and Auto's with the cursor while he streams, and before any words First
+// open's hint (US-017f); the top bar's mic, status row, clock and command row (KS10); the three
+// buttons (HOLD TO TALK inert until A6, STOP only while a turn streams); and the drawing's numbers. Props only: phase 2 (US-016k) maps A2's thread to a
 // HudTurn. The chip, the status words and the transcript say everything the rings and the waveform
 // show (the README's text twins).
 
@@ -11,7 +11,7 @@ import type { MascotName } from '../../../core/web/lib/mascot/types';
 import { badgeText, commandCentreLabel } from '../../../ui/variants';
 import type { AiLabelAgent } from '../../ai-label-state';
 import { mascotGeometry } from '../../mascot/geometry';
-import { HUD_CORE_COPY, HUD_STATE_WORDS } from '../../strings';
+import { EDGE_COPY, HUD_CORE_COPY, HUD_STATE_WORDS } from '../../strings';
 import { CORE_SIZE } from './ring-specs';
 import { WAVE } from './waveform';
 
@@ -132,6 +132,14 @@ export function transcriptRows(turn: HudTurn): readonly TranscriptRow[] {
     rows.push({ who: 'auto', text: auto, label, cursor: turn.streaming });
   }
   return Object.freeze(rows);
+}
+
+/**
+ * First open's words in the transcript (US-017f: HUD's First open is the core with an empty
+ * transcript): 'Say or type what you need.' while the turn has no rows yet, and never after.
+ */
+export function transcriptHint(turn: HudTurn): string | null {
+  return transcriptRows(turn).length === 0 ? EDGE_COPY.firstOpen.hud : null;
 }
 
 export type TranscriptAlign = 'center' | 'end';

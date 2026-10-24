@@ -2,7 +2,8 @@
 // Busy shows a spinner and takes no presses; disabled dims to half. The label is the accessibility
 // label unless one is given; a small button reaches the 44 pt touch target through hitSlop. A5: the
 // dress gives its radius, least height (Play's and HUD's 44, HUD's 46 inside a panel), label face,
-// case and tracking, and its paints (Play's accent, cream and line; HUD's accent and accent line).
+// case and tracking, and its paints (Play's accent, cream and line; HUD's accent and accent line);
+// a screen may ask for more height (the edge screens' 48 pt actions).
 
 import type { LucideIcon } from 'lucide-react-native';
 import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
@@ -24,6 +25,8 @@ export type ButtonProps = {
   readonly busy?: boolean;
   /** Stretches across its container (the ticket sheet's 'Ask Auto about #0419'). */
   readonly fullWidth?: boolean;
+  /** The least height where a screen draws the button taller than its size (the edges' 48). */
+  readonly minHeight?: number;
   readonly accessibilityLabel?: string;
   readonly accessibilityHint?: string;
 };
@@ -37,6 +40,7 @@ export function Button({
   disabled = false,
   busy = false,
   fullWidth = false,
+  minHeight = 0,
   accessibilityLabel,
   accessibilityHint,
 }: ButtonProps) {
@@ -45,7 +49,7 @@ export function Button({
   const inPanel = useInPanel();
   const { spacing } = style.tokens;
   const metrics = BUTTON_SIZES[size];
-  const height = buttonHeight(dress, metrics.height, inPanel);
+  const height = Math.max(buttonHeight(dress, metrics.height, inPanel), minHeight);
   const labelFace = controlLabel(style, dress, metrics.level);
   const inactive = disabled || busy;
   return (
