@@ -220,3 +220,62 @@ export const PLAY_TABS_COPY = Object.freeze({
   shelf: 'Shelf',
   centre: 'Centre',
 });
+
+/**
+ * HUD's phone core (US-018b, 'Automatos Command HUD.dc.html'): the top bar, the status row's word
+ * for Auto's state, the mic (A6 opens it: 'MIC LIVE' shows whenever it is open), the command row
+ * (KS10), the three buttons and what the transcript says to VoiceOver. HOLD TO TALK does nothing
+ * until the voice update (A6, D60), and says so.
+ */
+export const HUD_CORE_COPY = Object.freeze({
+  brand: 'AUTOMATOS',
+  brandMark: '//',
+  brandLabel: 'Automatos',
+  micLive: '● MIC LIVE',
+  micOff: '○ MIC OFF',
+  micLiveLabel: 'Microphone on',
+  micOffLabel: 'Microphone off',
+  /** Who answers when no agent is picked, and when a picked one has no name yet. */
+  auto: 'Auto',
+  unnamedAgent: 'Agent',
+  /** The status row: 'RESEARCHER · SEARCHING' (the row draws it in capitals). */
+  status: (agent: string, state: string) => `${agent} · ${state}`,
+  statusLabel: (agent: string, state: string, elapsed: string) =>
+    `${agent}, ${state.toLowerCase()}, ${elapsed}`,
+  command: 'COMMAND',
+  commandCount: (count: string) => `COMMAND · ${count}`,
+  look: 'LOOK',
+  lookLabel: 'Look',
+  lookHint: 'Changes how HUD looks',
+  menuLabel: 'Settings',
+  type: 'TYPE',
+  typeLabel: 'Type to Auto',
+  talk: 'HOLD\nTO TALK',
+  talkLabel: 'Hold to talk',
+  talkHint: 'Voice comes with the voice update',
+  stop: 'STOP',
+  stopLabel: 'Stop',
+  stopHint: 'Stops Auto’s reply',
+  /** The user's words as the transcript shows them. */
+  quote: (words: string) => `"${words}"`,
+  youLabel: (words: string) => `You said: ${words}`,
+  autoLabel: (agent: string, words: string) => `${agent}: ${words}`,
+  /** The blinking cursor's text twin. */
+  streamingLabel: (agent: string, words: string) => `${agent}, still answering: ${words}`,
+});
+
+/** The status row's word for Auto's state, as HUD's statuses read ('SEARCHING', 'IDLE'). */
+export const HUD_STATE_WORDS = Object.freeze<Record<MascotName, string>>({
+  hello: 'Hello',
+  idle: 'Ready',
+  listening: 'Listening',
+  thinking: 'Thinking',
+  working: 'Working',
+  searching: 'Searching',
+  reading: 'Reading',
+  celebrate: 'Done',
+  oops: 'Snag',
+  sleeping: 'Asleep',
+  lost: 'Lost',
+  loading: 'Loading',
+});
