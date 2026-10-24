@@ -1,0 +1,53 @@
+# Pull request check on EAS Workflows: says on the PR whether merging it ships as an
+# over-the-air update or needs a native iOS build, so a native build never surprises us.
+# Cheap: a fingerprint and a lookup, never a build or an update. Pull requests from forks do
+# not trigger EAS Workflows runs.
+#
+# Same lookup as testflight.yml (iOS fingerprint, profile testflight, environment preview),
+# except it does not wait for a build that is still in progress.
+name: PR check
+
+on:
+  pull_request:
+    branches: ['main']
+
+concurrency:
+  cancel_in_progress: true
+  group: ${{ workflow.filename }}-${{ github.ref }}
+
+jobs:
+  fingerprint:
+    name: Fingerprint
+    type: fingerprint
+    environment: preview
+
+  get_ios_build:
+    name: Find a TestFlight build with this fingerprint
+    needs: [fingerprint]
+    type: get-build
+    params:
+      platform: ios
+      profile: testflight
+      fingerprint_hash: ${{ needs.fingerprint.outputs.ios_fingerprint_hash }}
+
+  comment_ota:
+    name: 'Comment: ships over the air'
+    needs: [fingerprint, get_ios_build]
+    if: ${{ needs.get_ios_build.outputs.build_id }}
+    type: github-comment
+    params:
+      payload: |
+        **Automatos Go: merging this PR ships as an over-the-air update.**
+
+        Its iOS fingerprint `${{ needs.fingerprint.outputs.ios_fingerprint_hash }}` matches EAS build ${{ needs.get_ios_build.outputs.app_build_version }} of the testflight profile (`${{ needs.get_ios_build.outputs.build_id }}`). On merge, the TestFlight workflow publishes an update to the `testflight` channel for that build: no native build, no build quota.
+
+  comment_native:
+    name: 'Comment: needs a native build'
+    needs: [fingerprint, get_ios_build]
+    if: ${{ !needs.get_ios_build.outputs.build_id }}
+    type: github-comment
+    params:
+      payload: |
+        **Automatos Go: merging this PR needs a native iOS build.**
+
+        No finished EAS build of the testflight profile has its iOS fingerprint `${{ needs.fingerprint.outputs.ios_fingerprint_hash }}`: the PR changes something native (a native dependency, a config plugin, app.json), or a build with this fingerprint is still in progress. On merge, the TestFlight workflow builds iOS (one of the month's iOS builds) and sends it to TestFlight. Batch native changes into one PR where you can.

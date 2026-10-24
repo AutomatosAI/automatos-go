@@ -10,6 +10,8 @@ import { describe, expect, it } from 'vitest';
 
 import packageJson from '../../../package.json';
 import {
+  EAS_OWNER,
+  EAS_UPDATES_URL,
   expo,
   infoPlist,
   privacy,
@@ -256,10 +258,17 @@ type ManifestFilter = {
 };
 
 type Introspected = {
+  owner?: string;
+  runtimeVersion?: unknown;
+  updates?: { url?: string };
   ios: { privacyManifests?: unknown };
   _internal: {
     modResults: {
-      ios: { infoPlist: Record<string, unknown>; entitlements: Record<string, unknown> };
+      ios: {
+        infoPlist: Record<string, unknown>;
+        entitlements: Record<string, unknown>;
+        expoPlist: Record<string, unknown>;
+      };
       android: {
         manifest: {
           manifest: {
@@ -295,6 +304,22 @@ describe('the evaluated native config (expo config --type introspect)', () => {
   // ios.privacyManifests, so no plugin may drop or change it.
   it('keeps the privacy manifest exactly as app.json declares it', () => {
     expect(evaluated.ios.privacyManifests).toEqual(privacy);
+  });
+
+  it('resolves the EAS owner, the update URL and the fingerprint runtime policy', () => {
+    expect(evaluated.owner).toBe(EAS_OWNER);
+    expect(evaluated.updates?.url).toBe(EAS_UPDATES_URL);
+    expect(evaluated.runtimeVersion).toEqual({ policy: 'fingerprint' });
+  });
+
+  // What expo-updates bakes into the binary: without EXUpdatesURL (builds 5–7) a build never
+  // asks EAS Update for an update.
+  it('Expo.plist turns updates on against the EAS update URL, runtime from the fingerprint', () => {
+    expect(ios.expoPlist).toMatchObject({
+      EXUpdatesEnabled: true,
+      EXUpdatesURL: EAS_UPDATES_URL,
+      EXUpdatesRuntimeVersion: 'file:fingerprint',
+    });
   });
 
   it('the Android application sets allowBackup false', () => {
@@ -355,19 +380,5 @@ describe('the evaluated native config (expo config --type introspect)', () => {
 
   it('the Android application allows cleartext traffic (K11)', () => {
     expect(android.manifest.manifest.application[0].$['android:usesCleartextTraffic']).toBe('true');
-  });
-});
-
-describe('app.json carries no EAS project link (OT-1, D-NO-SECRETS)', () => {
-  it('has no owner', () => {
-    expect(expo).not.toHaveProperty('owner');
-  });
-
-  it('has no extra.eas.projectId', () => {
-    expect(expo.extra).not.toHaveProperty('eas');
-  });
-
-  it('has no updates.url', () => {
-    expect(expo).not.toHaveProperty('updates');
   });
 });

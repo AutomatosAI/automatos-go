@@ -2,6 +2,7 @@
   "expo": {
     "name": "Automatos Go",
     "slug": "automatos-go",
+    "owner": "gerard161",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/brand/icon.png",
@@ -319,10 +320,16 @@
       "./plugins/with-sentry-upload-guard"
     ],
     "extra": {
-      "router": {}
+      "router": {},
+      "eas": {
+        "projectId": "7b4ae66f-9733-4d53-a221-182c1692d574"
+      }
     },
     "runtimeVersion": {
       "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/7b4ae66f-9733-4d53-a221-182c1692d574"
     }
   }
 }

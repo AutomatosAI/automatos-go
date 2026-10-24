@@ -5,7 +5,7 @@
 **Scope:** the Automatos Go app, iOS first through internal TestFlight, Android testers by EAS internal link [D10]. This repo (`AutomatosAI/automatos-go`, renamed from `automotas-mobile` on 20 Oct, public, Apache-2.0 [D42]).
 **Depends on:** automatos-ai **PRD-266** (pairing, discovery, push, store duties; waves W1–W3); automatos-ai **PRD-261** stories P261-M-01..M-07 (the theme `mobile` block and `GET /api/themes/mobile/{install_id}`, PLAY session); the Clerk production cutover on Tue 27 Oct (PR #1198) and the native `azp` marker on PR #1216 (PRD-266 US-020); Retell confirming a LiveKit client may join a web call (A6).
 **Ralph config:** launch is human-only, with `RALPH_MODEL` pinned. One branch, one push, one PR and one CI run per wave. Parallelism is sized to the remaining usage budget, not a fixed number (Gerard, 20 Oct); PRD-261 and PRD-266 draw on the same budget in the same window.
-**Human-gated:** the App Store Connect record "Automatos Go" (bundle id `com.automatos.app`) and adding Dave as an App Store Connect user [D9, D11]; the first iOS build's credentials (EAS asks interactively; Gerard at a terminal, as for the academy app); EXPO_TOKEN in the `testflight` GitHub environment, restricted to `main` [D50]; the Sentry account (EU region) [D44]; Gerard's VPS demo install [D13]; on-device checks on Gerard's phone.
+**Human-gated:** the App Store Connect record "Automatos Go" (bundle id `com.automatos.app`) and adding Dave as an App Store Connect user [D9, D11]; the first iOS build's credentials (EAS asks interactively; Gerard at a terminal, as for the academy app); the Expo GitHub app linked to this repository for EAS Workflows (24 Oct: delivery moved from GitHub Actions to EAS Workflows, so no EXPO_TOKEN and no `testflight` GitHub environment; supersedes D50); the Sentry account (EU region) [D44]; Gerard's VPS demo install [D13]; on-device checks on Gerard's phone.
 
 ## 1. Introduction
 
@@ -55,7 +55,7 @@ Hosted Studio users sign in with Clerk. Self-hosted users pair their phone with 
 Start fresh from the academy app's TestFlight tree (`.worktrees/automatos-academy-app/testflight-main`). Expo SDK 54, React Native 0.81.5, React 19.1, TypeScript 5.9, expo-router 6, `@clerk/expo` on the newest 3.2.x that accepts Expo SDK 54 (3.0.x clashes with `expo-doctor`), vitest. Lift verbatim and then rename:
 
 - `eas.json` (profiles development, preview, testflight, production; `appVersionSource: remote`); add an Android preview profile that builds an installable APK for testers.
-- `.github/workflows/ci.yml` (typecheck, lint, test:coverage; switch `npm install` to `npm ci`), `malware-scan.yml` (already on this repo's main), `testflight.yml` (the fingerprint loop) with two changes: it waits for or skips when a testflight build is already in progress, so two quick merges never start two native builds [D48]; and the `testflight` environment only serves `main` [D50].
+- `.github/workflows/ci.yml` (typecheck, lint, test:coverage; switch `npm install` to `npm ci`), `malware-scan.yml` (already on this repo's main), `testflight.yml` (the fingerprint loop) with two changes: it waits for or skips when a testflight build is already in progress, so two quick merges never start two native builds [D48]; and the `testflight` environment only serves `main` [D50]. *24 Oct: replaced by EAS Workflows, `.eas/workflows/testflight.yml` (push to `main`: fingerprint, then an OTA update or a native build sent to TestFlight; it waits for a same-fingerprint build that has already started, so D48 holds only when the next merge comes after the first run's build has started; only `main`'s head publishes an update) and `.eas/workflows/pr-check.yml` (a PR comment: OTA or native build); see README 'CI and release'.*
 - `scripts/check-release-env.js` as the `eas-build-pre-install` hook, with this app's required variables.
 - The Clerk plumbing that must travel with `@clerk/expo`: `metro.config.js` with the `react-dom` shims, `babel.config.js`, and `.npmrc`. The `expo-build-properties` `extraPods` for GoogleUtilities and RecaptchaInterop stay only while Clerk's Google sign-in pod still autolinks. The academy's explicit `expo-modules-core` dependency does not travel: Clerk 3.2.x no longer needs it.
 - No `.env.example` file. The README and CLAUDE.md list every `EXPO_PUBLIC_*` variable with a one-line comment, and `scripts/check-release-env.js` enforces them at build time.
@@ -210,7 +210,7 @@ Every story: typecheck, lint and vitest pass in CI (nothing runs on a maintainer
 - [ ] App from the academy template per §4.1, app name "Automatos Go", bundle id and package `com.automatos.app`, scheme `automatos`, iPhone only (`supportsTablet: false`), 16+ in the store metadata notes
 - [ ] `CLAUDE.md`, `LICENSE` (Apache-2.0), `README.md`; `malware-scan.yml` kept
 - [ ] `runtimeVersion` policy `fingerprint`; `check-release-env.js` requires the Clerk `pk_live_` key for production
-- [ ] `testflight.yml` with the in-progress-build guard; the `testflight` environment limited to `main`
+- [ ] `testflight.yml` with the in-progress-build guard; the `testflight` environment limited to `main` (24 Oct: superseded by `.eas/workflows/testflight.yml` and `pr-check.yml`)
 - [ ] Branch protection on `main` requires the CI and malware-scan checks
 
 #### US-002: Every native module, one build

@@ -1,0 +1,91 @@
+# TestFlight delivery on EAS Workflows. Runs on Expo's servers for every push to main, with the
+# EAS project's own credentials: no GitHub secret, no EXPO_TOKEN. Needs the GitHub repository
+# linked to the EAS project (expo.dev → project → GitHub).
+#
+#   fingerprint      the iOS fingerprint of the pushed tree (runtimeVersion policy "fingerprint")
+#   get_ios_build    a finished testflight build with that fingerprint? If one with it has already
+#                    started building, wait for it (D48). Two runs whose lookups both come before
+#                    the first one's build exists both build: after a native merge, merge the next
+#                    PR once that run's "Build iOS" job is running.
+#   found     →      publish_update: an over-the-air update on channel "testflight" (minutes,
+#                    no build quota); TestFlight installs of that build pick it up on next launch.
+#   not found →      build_ios: a native build (profile testflight, one of the month's iOS builds)
+#                    → submit_testflight: upload it to TestFlight with the commit message as
+#                    "What to Test". Internal groups with automatic distribution get it.
+#
+# Fingerprint and update run in the "preview" environment, the testflight build profile's
+# environment in eas.json, so their hash and EXPO_PUBLIC_* values match the build's.
+name: TestFlight
+
+on:
+  push:
+    branches: ['main']
+
+# Never cancel a running delivery: a cancelled build would leave its merge off TestFlight.
+# EAS can cancel but not queue runs, so two pushes run side by side; publish_update's
+# before_update hook keeps an older run from publishing over a newer one.
+concurrency:
+  cancel_in_progress: false
+  group: ${{ workflow.filename }}-${{ github.ref }}
+
+jobs:
+  fingerprint:
+    name: Fingerprint
+    type: fingerprint
+    environment: preview
+
+  get_ios_build:
+    name: Find a TestFlight build with this fingerprint
+    needs: [fingerprint]
+    type: get-build
+    params:
+      platform: ios
+      profile: testflight
+      fingerprint_hash: ${{ needs.fingerprint.outputs.ios_fingerprint_hash }}
+      wait_for_in_progress: true
+
+  publish_update:
+    name: Publish an over-the-air update (JS only)
+    needs: [get_ios_build]
+    if: ${{ needs.get_ios_build.outputs.build_id }}
+    type: update
+    environment: preview
+    params:
+      # no message: the update job uses the commit message
+      channel: testflight
+      platform: ios
+      # the repository holds no Sentry token (D-NO-SECRETS); turn on with SENTRY_AUTH_TOKEN on EAS
+      upload_sentry_sourcemaps: false
+    hooks:
+      before_update:
+        # The newest update on the channel is the one phones run, and main's newer commit
+        # carries this one's change, so only main's head publishes. eas workflow:run has no sha.
+        - name: Stop if main has moved on (its own run ships this change too)
+          run: |
+            sha="${{ github.sha }}"
+            [ -n "$sha" ] || exit 0
+            head=$(git ls-remote https://github.com/AutomatosAI/automatos-go.git refs/heads/main | cut -f1)
+            [ -n "$head" ] || { echo "Could not read main's head from GitHub; re-run."; exit 1; }
+            [ "$head" = "$sha" ] || { echo "main is at $head, past $sha: that run publishes both."; exit 1; }
+
+  build_ios:
+    name: Build iOS (native change)
+    needs: [get_ios_build]
+    if: ${{ !needs.get_ios_build.outputs.build_id }}
+    type: build
+    params:
+      platform: ios
+      profile: testflight
+
+  submit_testflight:
+    name: Send the build to TestFlight
+    needs: [build_ios]
+    type: testflight
+    params:
+      build_id: ${{ needs.build_ios.outputs.build_id }}
+      profile: testflight
+      # App Store Connect caps "What to Test" at 4000 characters
+      changelog: "${{ substring(github.commit_message || 'A native build from main', 0, 4000) }}"
+      # With a changelog the job waits for Apple's processing. Past this the job fails although
+      # the upload worked: automatic distribution still delivers it, only "What to Test" is lost.
+      wait_processing_timeout_seconds: 1800
