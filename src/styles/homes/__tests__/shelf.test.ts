@@ -13,16 +13,24 @@ import {
 } from '../../../cc/deliverables/gallery';
 import type { DeliverableRow } from '../../../cc/deliverables/schemas';
 import { DELIVERABLES_COPY } from '../../../cc/strings';
+import { TYPE_STYLE_KEYS } from '../../../core/web/lib/looks/catalogue';
+import { PRESETS } from '../../../core/web/lib/looks/presets';
 import { historyState, mergePages as mergeHistory } from '../../../chat/history/history';
 import { HistoryRowSchema, type HistoryRow } from '../../../chat/schemas';
 import { routes } from '../../../navigation/routes';
 import { COMPANION, conversationSections } from '../../play/companion/model';
 import { PLAY_SHELF_COPY } from '../../strings';
+import { MIN_TEXT_SIZE } from '../../type';
+import { PLAY_DISPLAY_MIN, playDisplayAt } from '../../typeface/play-type';
+import { styleType } from '../../typeface/scale';
 import { chatsPlaceholder, playConversationOf, playConversationsOf } from '../play-chats';
 import {
+  SHELF,
   deliverableEyebrow,
   gradientPoints,
   newestLabel,
+  paperSheet,
+  paperTitle,
   shelfCountLine,
   shelfDate,
   shelfEyebrow,
@@ -192,6 +200,72 @@ describe('where Play draws its own screen', () => {
 
   it('a landing Deliverable drops 16 pt and overshoots to 1.04 over 420 ms', () => {
     expect(COMPANION.drop).toMatchObject({ distance: 16, overshoot: 1.04, durationMs: 420 });
+  });
+});
+
+describe('the papers’ titles: Play’s type, never Instrument Serif under 19 pt', () => {
+  const SERIF = 'InstrumentSerif-Italic';
+  const PAPERS = [
+    ['hero', 16],
+    ['tile', 11],
+  ] as const;
+  const lookFace = (font: (typeof TYPE_STYLE_KEYS)[number]) =>
+    styleType({ layout: 'play', font }).display('hero').fontFamily;
+
+  it('sets the newest’s at 16 and a tile’s at 11, leading 1, the sheets unchanged', () => {
+    expect(SHELF.heroPaper.title).toBe(16);
+    expect(SHELF.tilePaper.title).toBe(11);
+    for (const font of TYPE_STYLE_KEYS) {
+      for (const [paper, size] of PAPERS) {
+        expect(paperSheet(paper).title).toBe(size);
+        expect(paperTitle(font, paper)).toMatchObject({ fontSize: size, lineHeight: size });
+        expect(paperTitle(font, paper).fontSize).toBeGreaterThanOrEqual(MIN_TEXT_SIZE);
+      }
+    }
+  });
+
+  it('never draws either in Instrument Serif, at any preset or type look', () => {
+    const fonts = new Set([...TYPE_STYLE_KEYS, ...PRESETS.map((look) => look.font)]);
+    for (const font of fonts) {
+      for (const [paper] of PAPERS) {
+        expect({ font, paper, face: paperTitle(font, paper).fontFamily }).not.toMatchObject({
+          face: SERIF,
+        });
+      }
+    }
+  });
+
+  it('falls the Editorial look (Ember, Daylight) to Geist 600; the others keep their face', () => {
+    expect(PRESETS.filter((look) => look.font === 'serif').map((look) => look.id)).toEqual([
+      'ember',
+      'daylight',
+    ]);
+    for (const [paper] of PAPERS) {
+      expect(paperTitle('serif', paper).fontFamily).toBe('Geist-SemiBold');
+      for (const font of TYPE_STYLE_KEYS.filter((key) => key !== 'serif')) {
+        expect(paperTitle(font, paper).fontFamily).toBe(lookFace(font));
+      }
+    }
+  });
+
+  it('keeps the look’s display face at 19 and above, by the same rule as the type', () => {
+    expect(PLAY_DISPLAY_MIN).toBe(19);
+    expect(playDisplayAt('serif', 'cardSm', 18).fontFamily).toBe('Geist-SemiBold');
+    for (const font of TYPE_STYLE_KEYS) {
+      const type = styleType({ layout: 'play', font });
+      for (const size of [PLAY_DISPLAY_MIN, 24, 44]) {
+        expect(playDisplayAt(font, 'cardSm', size).fontFamily).toBe(lookFace(font));
+      }
+      expect(playDisplayAt(font, 'cardSm', type.display('cardSm').fontSize)).toEqual(
+        type.display('cardSm'),
+      );
+    }
+    expect(lookFace('serif')).toBe(SERIF);
+  });
+
+  it('holds a size asked under 11 at the floor', () => {
+    expect(playDisplayAt('serif', 'cardSm', 8).fontSize).toBe(MIN_TEXT_SIZE);
+    expect(playDisplayAt('serif', 'cardSm', 8).fontFamily).not.toBe(SERIF);
   });
 });
 

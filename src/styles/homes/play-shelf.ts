@@ -19,11 +19,14 @@ import {
   type TypePillView,
 } from '../../cc/deliverables/gallery';
 import type { DeliverableRow } from '../../cc/deliverables/schemas';
+import { TYPE_STYLE_KEYS, type TypeStyleKey } from '../../core/web/lib/looks/catalogue';
 import { routes } from '../../navigation/routes';
 import { joinLabel } from '../../ui/paint';
 import { countPhrase } from '../../ui/variants';
 import { relativeTime, sectionOf, type Clock } from '../play/companion/conversations';
 import { PLAY_SHELF_COPY } from '../strings';
+import type { TypeStyle } from '../type';
+import { playDisplayAt } from '../typeface/play-type';
 
 /** Ember 04's and 05's phone numbers, in points (the 10 pt labels raised to 11, D-A11Y). */
 export const SHELF = Object.freeze({
@@ -74,6 +77,36 @@ export const SHELF = Object.freeze({
     primaryGrow: 1.4,
   }),
 });
+
+export type PaperSize = 'hero' | 'tile';
+
+const PAPERS = Object.freeze({ hero: SHELF.heroPaper, tile: SHELF.tilePaper });
+
+/** Each look's paper titles, built once: the small card slot at the sheet's size. */
+const PAPER_TITLES = Object.freeze(
+  Object.fromEntries(
+    TYPE_STYLE_KEYS.map((font) => [
+      font,
+      Object.freeze({
+        hero: playDisplayAt(font, 'cardSm', PAPERS.hero.title),
+        tile: playDisplayAt(font, 'cardSm', PAPERS.tile.title),
+      }),
+    ]),
+  ),
+) as Readonly<Record<TypeStyleKey, Readonly<Record<PaperSize, TypeStyle>>>>;
+
+/**
+ * A printed sheet's title (16 on the newest, 11 on a tile): the look's display face only at 19 and
+ * above, as the type's own rule says, so Instrument Serif falls to Geist 600 on both sheets.
+ */
+export function paperTitle(font: TypeStyleKey, paper: PaperSize): TypeStyle {
+  return PAPER_TITLES[font][paper];
+}
+
+/** A paper's box: the newest's sheet or a tile's. */
+export function paperSheet(paper: PaperSize) {
+  return PAPERS[paper];
+}
 
 export type ShelfCard = DeliverableCardView & {
   /** 'Report · Today', in the label style's capitals. */

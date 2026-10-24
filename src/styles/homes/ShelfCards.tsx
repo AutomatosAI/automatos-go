@@ -16,21 +16,29 @@ import { StatusPip, Text } from '../../ui';
 import { COMPANION } from '../play/companion';
 import { useCompanionPaint, type CompanionPaint } from '../play/companion/use-companion';
 import { PLAY_SHELF_COPY } from '../strings';
-import { SHELF, gradientPoints, newestLabel, type ShelfCard } from './play-shelf';
+import {
+  SHELF,
+  gradientPoints,
+  newestLabel,
+  paperSheet,
+  paperTitle,
+  type PaperSize,
+  type ShelfCard,
+} from './play-shelf';
 
-const { hero, badge, heroPaper, heroChart, tile, tilePaper, tileRules, rule } = SHELF;
+const { hero, badge, heroChart, tile, tileRules, rule } = SHELF;
 const HERO_GRADIENT = gradientPoints(hero.angle);
 const HERO_STOPS = [0, hero.fadeAt] as const;
 const LAST_BAR = heroChart.bars.length - 1;
 
-type PaperProps = { readonly title: string; readonly size: 'hero' | 'tile' };
+type PaperProps = { readonly title: string; readonly size: PaperSize };
 
 function Paper({ title, size }: PaperProps) {
   const paint = useCompanionPaint();
-  if (!paint) return null;
-  const { vars, style } = paint;
-  const sheet = size === 'hero' ? heroPaper : tilePaper;
-  const face = { ...style.type.display('cardSm'), fontSize: sheet.title, lineHeight: sheet.title };
+  if (!paint?.style.playLook) return null;
+  const { vars } = paint;
+  const sheet = paperSheet(size);
+  const face = paperTitle(paint.style.playLook.font, size);
   return (
     <View
       accessibilityElementsHidden
