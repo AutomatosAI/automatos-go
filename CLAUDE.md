@@ -49,6 +49,11 @@ never builds). Both are pinned by `src/config/__tests__/eas-release.test.ts`. De
 does not wait for GitHub CI: a merge ships at once. Until `typecheck · lint · test`,
 `expo-doctor · iOS bundle` and `scan` are required checks on `main` (a repository setting,
 Gerard's), nothing stops a red PR from merging and shipping: merge green PRs only.
+Until the repository is linked to the EAS project on expo.dev (no push trigger fires
+without it), Claude starts the run after each green merge, from a clean checkout of
+`main`: `npx eas-cli workflow:run .eas/workflows/testflight.yml --non-interactive`
+(Gerard, 24 Oct: "let's do it ourselves"). Once linked, stop: the push trigger would
+run it a second time.
 
 ## Environment
 
@@ -140,7 +145,7 @@ functions < 50 lines, components < 150; pure logic outside React with tests in
 - **"Found" means an EAS build, not a TestFlight upload.** If `submit_testflight` fails (no App
   Store Connect API key assigned, Apple down), the build still matches its fingerprint and
   every later JS merge updates a binary nobody has. Re-send that build before merging
-  anything else: `eas submit -p ios --profile testflight --id <build id>` (Gerard; never Claude).
+  anything else: `eas submit -p ios --profile testflight --id <build id>` (Claude or Gerard).
 - **The `preview` EAS environment holds only public `EXPO_PUBLIC_*` values.** `pr-check.yml`'s
   fingerprint runs a PR branch's config plugins in it (fork PRs never trigger EAS), so a secret
   added to `preview` would be readable by any branch: secrets go in an environment only `main`'s
