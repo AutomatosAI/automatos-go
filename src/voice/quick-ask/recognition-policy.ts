@@ -3,6 +3,10 @@
 //   iOS: ready only when the recognizer supports on-device recognition (and is available). The module
 //   sets requiresOnDeviceRecognition only when supported and otherwise silently uses Apple's servers
 //   (ios/ExpoSpeechRecognizer.swift:579-580), so the app checks first and never starts otherwise.
+//   Limit: the module's iOS check takes no locale (SFSpeechRecognizer(), the user's default
+//   language) while start() listens in the phone's first preferred language; where the two differ
+//   the check may vouch for the wrong recognizer. Closing that needs a per-locale native check
+//   (a FOUNDATION GAP in the kit's US-019b notes); the airplane-mode device checks prove it.
 //   Android: ready only on API 33+ (the module's on-device recognizer, ExpoSpeechService.kt:93-109)
 //   with on-device recognition supported and the locale (or its language: 'en' for 'en-GB') among
 //   the on-device recognizer's installed languages; supported but not installed → 'download'.
