@@ -141,6 +141,13 @@ export function endHold(engine: Engine): void {
   set(engine, { hold: null });
 }
 
+/** The recognizer stops if it may be running (a hold under way, or its audio not yet given back). */
+export function abortListening(engine: Engine): void {
+  const { hold, owner } = get(engine);
+  if (hold !== null || owner === 'recognizer') engine.deps.recognizer.abort();
+  endHold(engine);
+}
+
 /** Quick-ask's turn is no longer followed: nothing more of it is spoken, nothing waits to send. */
 export function letGo(engine: Engine): void {
   set(engine, { tracking: null, feed: null, pending: null });

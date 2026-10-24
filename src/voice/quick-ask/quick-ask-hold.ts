@@ -9,10 +9,13 @@
 //   recognizer's final (said once, at its end) decides through onRelease: a stop phrase is STOP with
 //   nothing sent, nothing sayable is nothing heard, words go to A2's thread (quick-ask-reply.ts).
 //   HOLD_MAX_MS releases by itself. MIC LIVE is the recognizer's audiostart/audioend, never this.
+//   A call, Siri or a lost microphone mid-hold goes to the interruption policy (US-019h,
+//   quick-ask-interrupt.ts): abort, the words kept on screen un-sent, the reason's message.
 
 import { logger } from '../../lib/logger';
 import { claim, release } from '../audio/audio-owner';
 import { HOLD_MAX_MS } from '../config';
+import { interruptionOf } from '../interruptions/interruption-policy';
 import {
   isStartPlan,
   isTap,
@@ -21,6 +24,7 @@ import {
   type PressStart,
   type PressStep,
 } from './quick-ask-plan';
+import { interrupt } from './quick-ask-interrupt';
 import { send } from './quick-ask-reply';
 import {
   cancelTurn,
@@ -35,13 +39,12 @@ import {
 } from './quick-ask-store';
 import type { RecognizerEvent, RecognizerVoiceEvent } from './recognizer-events';
 
-/** Recognizer events after which the hold is over: no final will come. */
+/** Recognizer events after which the hold is over: no final will come (interruptions aside). */
 const ENDS_HOLD: ReadonlySet<RecognizerVoiceEvent['type']> = new Set([
   'nothing_heard',
   'permission',
   'unavailable',
   'error',
-  'interrupted',
 ]);
 
 /** The recognizer is done with the audio, and the hold is over. */
@@ -163,6 +166,8 @@ function heard(engine: Engine, text: string): void {
 }
 
 function onVoice(engine: Engine, event: RecognizerVoiceEvent): void {
+  const interruption = interruptionOf(event, get(engine).snapshot.voice);
+  if (interruption !== null) return interrupt(engine, interruption);
   if (event.type === 'final') return heard(engine, event.text);
   dispatch(engine, event);
   if (ENDS_HOLD.has(event.type)) endHold(engine);

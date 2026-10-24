@@ -2,6 +2,8 @@
 // voice is recognised on this phone (true by KV4: recognition runs on the phone or not at all); they
 // never claim more than that (KV18), and say nothing commercial (D8).
 
+import type { VoiceMessage } from './machine/voice-state';
+
 /** Which words say why hold to talk cannot start (recognition-policy.ts refusalCopyKey). */
 export type RecognitionCopyKey = 'androidTooOld' | 'notOnPhone' | 'download';
 
@@ -90,3 +92,13 @@ export const SPOKEN_COPY = Object.freeze({
   table: "There's a table in the chat.",
   link: 'a link',
 });
+
+/**
+ * The line under the core after an interruption (KV10): the reducer's 'interrupted' (a call, Siri or
+ * an alarm took the audio, or the app left the screen) and 'micChanged' (the microphone went away
+ * mid-hold) messages. Nothing reopens the mic by itself: the words ask for the next hold.
+ */
+export const INTERRUPTION_COPY = Object.freeze({
+  interrupted: "Interrupted. Hold to talk when you're ready.",
+  micChanged: 'The microphone changed. Hold to talk again.',
+} satisfies Partial<Record<VoiceMessage, string>>);

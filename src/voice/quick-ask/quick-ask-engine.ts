@@ -7,19 +7,22 @@
 //   STOP → the recognizer aborts (nothing sent), the speech stops and A2's Stop cancels quick-ask's
 //   turn while it streams (D-STOP); a typed turn is left alone.
 //   The screen: mount starts an AI-notice session (KV7); unmount stops the mic and the speech and
-//   ends the session, and the turn runs on with nothing more spoken (KV6).
+//   ends the session, and the turn runs on with nothing more spoken (KV6). interrupt() takes what
+//   use-interruptions.ts hears (AppState) through the interruption policy (US-019h).
 
 import type { ThreadState } from '../../chat/controller/thread';
 import { claim } from '../audio/audio-owner';
+import type { InterruptionEvent } from '../interruptions/interruption-policy';
 import { newSession } from '../notice/ai-notice';
 import type { SpeakerEvent } from '../speech/speaker-core';
 import { onRecognizer, press, releaseHold } from './quick-ask-hold';
+import { interrupt } from './quick-ask-interrupt';
 import { onSpeaker, onThread } from './quick-ask-reply';
 import {
+  abortListening,
   cancelTurn,
   createEngine,
   dispatch,
-  endHold,
   get,
   set,
   show,
@@ -49,20 +52,15 @@ export type QuickAsk = {
   readonly onRecognizer: (event: RecognizerEvent) => void;
   readonly onSpeaker: (event: SpeakerEvent) => void;
   readonly onThread: (state: ThreadState) => void;
-  /** A new AI-notice session (the app went to the background, US-019h). */
+  /** A new AI-notice session (the next spoken reply greets again). */
   readonly newSession: () => void;
+  /** The app's state changed (use-interruptions.ts): the interruption policy decides (US-019h). */
+  readonly interrupt: (event: InterruptionEvent) => void;
   /** The voice screen mounted: a new AI-notice session (KV7). */
   readonly mount: () => void;
   /** The voice screen unmounted: the mic and the speech stop, and nothing more is spoken (KV6). */
   readonly unmount: () => void;
 };
-
-/** The recognizer stops if it may be running: a hold under way, or its audio not yet given back. */
-function abortListening(engine: Engine): void {
-  const { hold, owner } = get(engine);
-  if (hold !== null || owner === 'recognizer') engine.deps.recognizer.abort();
-  endHold(engine);
-}
 
 /** STOP: listening aborted (nothing sent), the speech stopped, a streaming turn cancelled. */
 function stop(engine: Engine): void {
@@ -105,6 +103,7 @@ export function createQuickAsk(deps: QuickAskDeps): QuickAsk {
     onSpeaker: (event: SpeakerEvent) => onSpeaker(engine, event),
     onThread: (state: ThreadState) => onThread(engine, state),
     newSession: () => set(engine, { session: newSession() }),
+    interrupt: (event: InterruptionEvent) => interrupt(engine, event),
     mount: () => set(engine, { session: newSession(), mounted: true }),
     unmount: () => unmount(engine),
   });

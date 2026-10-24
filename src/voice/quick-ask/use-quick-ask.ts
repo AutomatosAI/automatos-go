@@ -9,6 +9,8 @@
 //   The speech is in the phone's language (the one recognition listens in) with the voice picked
 //   for it once (US-019d); until that voice is known, the engine's default for the language.
 //   Nothing asks a permission at mount: only press() does (KV5).
+//   Leaving the screen goes through the interruption policy (use-interruptions.ts, US-019h), and the
+//   screen stays on while the mic is open or a reply is under way (keep-awake.ts, KV12).
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
@@ -16,6 +18,8 @@ import { useAppSession } from '../../app-state/session';
 import { roleCan } from '../../auth/role';
 import type { ThreadView } from '../../chat/controller/use-thread';
 import { logger } from '../../lib/logger';
+import { useVoiceKeepAwake } from '../interruptions/keep-awake';
+import { useInterruptions } from '../interruptions/use-interruptions';
 import { permissions } from '../permissions/permissions';
 import { speaker } from '../speech/speaker';
 import { phoneLocale } from './locale';
@@ -34,7 +38,7 @@ export type QuickAskView = QuickAskSnapshot & {
   readonly release: () => void;
   readonly stop: () => void;
   readonly download: () => void;
-  /** The app went to the background: the next spoken reply greets again (US-019h). */
+  /** A new AI-notice session: the next spoken reply greets again (KV7). */
   readonly newSession: () => void;
 };
 
@@ -111,7 +115,9 @@ export function useQuickAsk(thread: ThreadView): QuickAskView {
   const context = useEngineContext(thread);
   const engine = useEngine(context);
   useEffect(() => engine.onThread(thread.state), [engine, thread.state]);
+  useInterruptions(engine.interrupt);
   const snapshot = useSyncExternalStore(engine.subscribe, engine.snapshot);
+  useVoiceKeepAwake(snapshot.voice);
   return useMemo(
     () => ({
       ...snapshot,
