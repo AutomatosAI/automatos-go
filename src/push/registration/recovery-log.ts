@@ -13,7 +13,7 @@ import { parseJson } from '../../api/json';
 import { logger } from '../../lib/logger';
 import type { KeyValueStorage } from '../../storage/encrypted-storage';
 import { KEY_RECOVERY_ITEM, RECOVERY_MIN_INTERVAL_MS, RECOVERY_SCOPES_MAX } from '../config';
-import type { RecordScope } from './record';
+import { scopeKey, type RecordScope } from './record';
 
 export type RecoveryLog = Readonly<{
   lastAt: (scope: RecordScope) => number | null;
@@ -29,10 +29,6 @@ export function recoveryAllowed(lastAt: number | null, now: number): boolean {
   if (lastAt === null) return true;
   const since = now - lastAt;
   return since < 0 || since >= RECOVERY_MIN_INTERVAL_MS;
-}
-
-function scopeKey(scope: RecordScope): string {
-  return JSON.stringify([scope.serverOrigin, scope.workspaceId]);
 }
 
 function timesOf(stored: string | null): Times {

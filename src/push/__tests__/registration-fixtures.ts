@@ -12,6 +12,7 @@ import type { DeviceFacts, DeviceSource } from '../registration/device-facts';
 import { createPushKeyStore } from '../registration/key-store';
 import type { PushRecord } from '../registration/record';
 import { recoveryLogOver } from '../registration/recovery-log';
+import { removalHoldOver } from '../registration/removal-hold';
 import type { RegisterDeps, RegistrationSession } from '../registration/register';
 import type { PushFacts } from '../registration/state';
 import type { PermissionAnswer } from '../platform/port';
@@ -99,6 +100,7 @@ export function facts(overrides: Partial<PushFacts> = {}): PushFacts {
     record: storedRecord(),
     serverRow: null,
     lastConflict: null,
+    held: false,
     ...overrides,
   };
 }
@@ -215,6 +217,7 @@ export function setup(options: Setup = {}) {
     device: device.source,
     store: keys.store,
     recoveries: recoveryLogOver(storage),
+    hold: removalHoldOver(storage),
     now: () => clock.now,
   };
   return { deps, clock, permission, api, keys, device, storage, portCalls };

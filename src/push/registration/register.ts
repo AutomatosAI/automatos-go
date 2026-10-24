@@ -8,8 +8,10 @@
 // RECOVERY_MIN_INTERVAL_MS; an own server stays 'key_missing' (a DELETE would end its device token).
 // An OS switch-off sends PATCH push_enabled false once; granted again registers (W2 US-009 turns
 // push back on). A 409 becomes a status, never retried here; a network failure keeps the record and
-// waits for the next trigger. Once the session has ended (deps.active false) nothing more is sent or
-// kept. Never throws. Logs carry kinds and codes only: never the token or key.
+// waits for the next trigger. A scope the person removed this phone from (removal-hold.ts, KP16)
+// takes no step and answers 'ask', with no row remembered, until a person's tap releases it. Once
+// the session has ended (deps.active false) nothing more is sent or kept. Never throws. Logs carry
+// kinds and codes only: never the token or key.
 
 import type { ApiClient } from '../../api/client';
 import { isApiError } from '../../api/errors';
@@ -22,6 +24,7 @@ import type { PushKeyStore } from './key-store';
 import { readPermission } from './permission';
 import { fingerprintOf, isRegistrationDue, recordFor, type PushRecord } from './record';
 import { recoveryAllowed, type RecoveryLog } from './recovery-log';
+import type { RemovalHold } from './removal-hold';
 import {
   nextStep,
   pushStatus,
@@ -50,6 +53,8 @@ export type RegisterDeps = Readonly<{
   device: DeviceSource;
   store: PushKeyStore;
   recoveries: RecoveryLog;
+  /** Remove this phone's hold (KP16): read on each run, released by a person's tap. */
+  hold: Pick<RemovalHold, 'held' | 'release'>;
   now: () => number;
   /** false once the session ended (the registrar's close()): no write is sent, no record kept. */
   active?: () => boolean;
@@ -273,6 +278,9 @@ export async function register(
   const device = deps.device.read();
   const stored = await storedRecord(deps.store);
   const force = options.force === true;
+  // a person's tap turns notifications back on after Remove this phone
+  if (force && isActive(deps)) deps.hold.release(deps.session);
+  const held = !force && deps.hold.held(deps.session);
   const facts: PushFacts = Object.freeze({
     capabilityPush: deps.session.capabilityPush,
     pushExpo: deps.session.pushExpo,
@@ -280,8 +288,10 @@ export async function register(
     projectId: device.projectId,
     permission: await readPermission(deps.port),
     record: recordFor(stored ?? null, deps.session),
-    serverRow: memory.serverRow,
+    // a removed phone's row is gone: the tap that turns it on registers afresh, never recovers
+    serverRow: held ? null : memory.serverRow,
     lastConflict: force ? null : memory.lastConflict,
+    held,
   });
   const step = stored === undefined ? 'none' : nextStep(facts);
   const after = await runStep(step, { deps, device, force }, facts);

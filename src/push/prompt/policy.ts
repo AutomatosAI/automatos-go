@@ -4,8 +4,10 @@
 // total above zero) or from the second session on. 'Not now' holds it back PROMPT_COOLDOWN_MS (a
 // decline dated ahead of the clock holds it back too); after PROMPT_MAX_DECLINES only Settings →
 // Notifications offers it. The sheet never asks the OS by itself: its 'Turn on' is a person's tap.
+// A phone the person removed (KP16) is never asked here: only Settings → Notifications turns it on.
 
 import { PROMPT_COOLDOWN_MS, PROMPT_MAX_DECLINES, PROMPT_MIN_SESSIONS } from '../config';
+import type { RegistrationOutcome } from '../registration/register';
 import type { PushStatus } from '../registration/state';
 
 export type PromptInput = Readonly<{
@@ -31,4 +33,11 @@ export function offerPrompt(input: PromptInput): boolean {
   if (input.declines >= PROMPT_MAX_DECLINES) return false;
   if (coolingDown(input.lastDeclinedAt, input.now)) return false;
   return input.needsYouTotal > 0 || input.sessionCount >= PROMPT_MIN_SESSIONS;
+}
+
+/** The status a registrar run hands the ask: none while the person's Remove this phone holds. */
+export function promptStatusOf(
+  outcome: Pick<RegistrationOutcome, 'status' | 'facts'>,
+): PushStatus | null {
+  return outcome.facts.held ? null : outcome.status;
 }

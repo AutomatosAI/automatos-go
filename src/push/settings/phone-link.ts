@@ -3,9 +3,11 @@
 // of the screens (mounted once in the shell, US-014h), not a provider around them, so the link is a
 // small store: PushRoot attaches what the screen may call while it is mounted and detaches it on
 // unmount (sign-out, Forget this server); a later attach wins, and a stale detach changes nothing.
-// With nothing attached the screen says it is checking and offers no button. Pure: no React.
+// With nothing attached the screen says it is checking and offers no button, and Account offers no
+// Remove this phone (US-014h, KP16: the link carries the session's removal). Pure: no React.
 
 import { logger } from '../../lib/logger';
+import type { PhoneRemoval } from '../bind/remove-phone';
 import type { PermissionState } from '../registration/state';
 import type { RegisterOptions, RegistrationOutcome } from '../registration/register';
 import type { Registrar } from '../registration/registrar';
@@ -15,6 +17,8 @@ export type PhoneLink = Readonly<{
   registrar: Pick<Registrar, 'run' | 'latest'>;
   /** permission.ts askPermission over the app's port: called only from a person's tap (KP11). */
   askPermission: () => Promise<PermissionState>;
+  /** Remove this phone, bound to the session's registrar, client and push record (KP16). */
+  removal: PhoneRemoval;
 }>;
 
 export type PhoneLinkStore = Readonly<{

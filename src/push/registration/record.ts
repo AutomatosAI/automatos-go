@@ -32,6 +32,11 @@ export type PushRecord = Readonly<z.output<typeof pushRecordSchema>>;
 /** The server and workspace a record belongs to: the session's, or the record is not this one's. */
 export type RecordScope = Readonly<{ serverOrigin: string; workspaceId: string }>;
 
+/** One string per server and workspace, for the MMKV items kept per scope (recovery, removal). */
+export function scopeKey(scope: RecordScope): string {
+  return JSON.stringify([scope.serverOrigin, scope.workspaceId]);
+}
+
 /** The record when it was made for this server and workspace, else null (another session's). */
 export function recordFor(record: PushRecord | null, scope: RecordScope): PushRecord | null {
   if (!record) return null;

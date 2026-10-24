@@ -140,3 +140,22 @@ export const PUSH_PROMPT_COPY = Object.freeze({
   turnOn: 'Turn on',
   notNow: 'Not now',
 });
+
+const REMOVE_PHONE = 'Remove this phone';
+
+/**
+ * Settings → Account's push rows (US-014h, KP16, D63): the way to Notifications, and Remove this
+ * phone on a hosted phone. It removes this phone from the workspace's devices and nothing else.
+ */
+export const PUSH_ACCOUNT_COPY = Object.freeze({
+  notifications: 'Notifications',
+  removePhone: REMOVE_PHONE,
+  removeTitle: `${REMOVE_PHONE}?`,
+  removeQuestion:
+    "Remove this phone from your workspace's devices? Notifications stop here until you turn them on again. You stay signed in.",
+  removeConfirm: REMOVE_PHONE,
+  removeCancel: 'Cancel',
+  removed: "This phone was removed from your workspace's devices.",
+  removeFailed:
+    "This phone couldn't be removed from your workspace's devices. Studio may still list this phone.",
+});

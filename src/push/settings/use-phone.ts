@@ -11,11 +11,10 @@ import { AppState, Linking } from 'react-native';
 
 import { useAppSession } from '../../app-state/session';
 import { ownServer } from '../../connect/current-server';
-import { ownServerInWords } from '../../connect/edges';
-import { SERVER_SECTION_COPY } from '../../connect/strings';
 import { useCurrentServer } from '../../connect/use-current-server';
 import { logger } from '../../lib/logger';
 import { listDevices } from '../api';
+import { serverNameOf } from '../bind/build-session';
 import { pushQueryKeys } from '../query-keys';
 import { readDeviceFacts, type DeviceFacts } from '../registration/device-facts';
 import type { RegistrationOutcome } from '../registration/register';
@@ -93,8 +92,7 @@ function openPhoneSettings(): void {
 }
 
 function useServerName(): string {
-  const own = ownServer(useCurrentServer());
-  return own ? ownServerInWords(own) : SERVER_SECTION_COPY.hostedName;
+  return serverNameOf(ownServer(useCurrentServer()));
 }
 
 /** The status card's words and button, this phone's device row and its time zone. */

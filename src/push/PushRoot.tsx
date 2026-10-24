@@ -5,9 +5,10 @@
 // new token and after the in-context ask; it sets the foreground handler (receive.ts: verified
 // within FOREGROUND_VERIFY_TIMEOUT_MS, or nothing is shown), handles notification responses
 // (useNotificationResponses), keeps the badge on the needs-you number, and attaches the registrar
-// for Settings → Notifications. Unmount takes every listener, the handler and the link away and
-// closes the registrar. It renders only the in-context ask. Push is wired again only when the
-// session's server or push gates change (sessionKeyOf), never for a rebuilt object.
+// and Remove this phone for Settings (the phone link). Unmount takes every listener, the handler
+// and the link away and closes the registrar. It renders only the in-context ask, never while the
+// person's Remove this phone holds (promptStatusOf). Push is wired again only when the session's
+// server or push gates change (sessionKeyOf), never for a rebuilt object.
 
 import { useQueryClient } from '@tanstack/react-query';
 import { usePathname } from 'expo-router';
@@ -25,6 +26,7 @@ import { pushNatives } from './natives';
 import type { ListenerHandle } from './platform/port';
 import { setupNotificationPlatform } from './platform/setup';
 import { NO_PROMPT_COUNTS, type PromptCounts } from './prompt/memory';
+import { promptStatusOf } from './prompt/policy';
 import { PushPrompt } from './prompt/PushPrompt';
 import type { RegistrationOutcome } from './registration/register';
 import { watchPushToken } from './registration/registrar';
@@ -97,7 +99,7 @@ function listenSafely(listen: () => ListenerHandle, what: string): ListenerHandl
 }
 
 /** Setup, then the launch run; again on resume and on a new token. Settings reads the registrar. */
-function useRegistration({ registrar, askPermission }: PushWiring): void {
+function useRegistration({ registrar, askPermission, removal }: PushWiring): void {
   useEffect(() => {
     const { port } = NATIVES;
     void setupNotificationPlatform(port, Platform.OS).then(() => registrar.run());
@@ -105,14 +107,14 @@ function useRegistration({ registrar, askPermission }: PushWiring): void {
       if (state === 'active') void registrar.run();
     });
     const token = listenSafely(() => watchPushToken(port, registrar), 'a new push token');
-    const detach = phoneLinks.attach({ registrar, askPermission });
+    const detach = phoneLinks.attach({ registrar, askPermission, removal });
     return () => {
       detach();
       token.remove();
       resume.remove();
       void registrar.close();
     };
-  }, [registrar, askPermission]);
+  }, [registrar, askPermission, removal]);
 }
 
 /** While the app is open, a push shows only once it verifies (receive.ts). */
@@ -146,7 +148,10 @@ function usePromptCounts({ prompt }: PushWiring) {
 
 export function PushRoot({ session }: PushRootProps) {
   const [status, setStatus] = useState<PushStatus | null>(null);
-  const onOutcome = useCallback((outcome: RegistrationOutcome) => setStatus(outcome.status), []);
+  const onOutcome = useCallback(
+    (outcome: RegistrationOutcome) => setStatus(promptStatusOf(outcome)),
+    [],
+  );
   const wiring = useWiring(session, onOutcome);
   useRegistration(wiring);
   useForegroundHandler(wiring);

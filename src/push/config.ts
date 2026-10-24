@@ -89,6 +89,13 @@ export const RECOVERY_MIN_INTERVAL_MS = 24 * 60 * 60 * 1000;
 export const KEY_RECOVERY_ITEM = 'push.key-recovery.v1';
 export const RECOVERY_SCOPES_MAX = 16;
 
+/**
+ * The MMKV item of the scopes whose phone the person removed (KP16): server and workspace pairs,
+ * nothing else. Registration waits there until the person's tap.
+ */
+export const REMOVED_SCOPES_ITEM = 'push.removed.v1';
+export const REMOVED_SCOPES_MAX = 16;
+
 /** A preference row's push switch for its event (W2 K7: a destination never delivered as a row). */
 export const PUSH_DESTINATION = 'push';
 

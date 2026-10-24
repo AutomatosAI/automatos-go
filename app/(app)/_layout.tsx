@@ -13,7 +13,13 @@
 // person who can send and has not agreed to the bootstrap's providers (US-007c, KC11): the home
 // thread, older chats and every Command Centre surface wait for the yes, and a list that changes
 // on a later bootstrap takes the screens away until it is agreed to.
+// Push (US-014h) is mounted once beside the screens, under the ready session: PushRoot with the
+// session usePushSession builds from the current server, its install id, the sign-in provider and
+// discovery (src/push/bind/session.ts). It is imported lazily, behind its own Suspense boundary,
+// so this layout imports no native module (shell-bar.test.ts renders it over mocked natives) and
+// the screens never wait for it.
 import { Stack } from 'expo-router';
+import { lazy, Suspense } from 'react';
 
 import type { Server } from '../../src/api/server';
 import { AppGate } from '../../src/app-state/AppGate';
@@ -28,11 +34,26 @@ function NetworkBar({ server }: { readonly server: Server }) {
   return <InsecureNetworkBanner origin={server.apiUrl} placement="top" />;
 }
 
+/** Push for the ready session, mounted once (it reads useAppSession, so only under the gate). */
+const SessionPush = lazy(async () => {
+  const [{ PushRoot }, { usePushSession }] = await Promise.all([
+    import('../../src/push/PushRoot'),
+    import('../../src/push/bind/session'),
+  ]);
+  function SessionPushRoot() {
+    return <PushRoot session={usePushSession()} />;
+  }
+  return { default: SessionPushRoot };
+});
+
 export default function SignedInLayout() {
   useSessionRefresh();
   return (
     <AppGate consent={<ConsentSheet />} bar={NetworkBar}>
       <Stack screenOptions={{ headerShown: false }} />
+      <Suspense fallback={null}>
+        <SessionPush />
+      </Suspense>
     </AppGate>
   );
 }

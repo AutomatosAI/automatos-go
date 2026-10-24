@@ -2,8 +2,10 @@
 // workspace (memoised), so there is ONE registrar, ONE handled-response store and ONE set of ask
 // counters per session (two live handled stores could both pass a claim). Every registrar run —
 // launch, resume, a new token, the in-context ask, Settings → Notifications — reports its outcome
-// to PushRoot through reportingRegistrar, so the ask sees the status the screen just changed. Pure
-// over the natives (natives.ts and PushRoot bind the app's; tests pass fakes).
+// to PushRoot through reportingRegistrar, so the ask sees the status the screen just changed. Remove
+// this phone (KP16) runs over that same registrar, the session's client and its teardown, with the
+// removal hold the registrar reads. Pure over the natives (natives.ts and PushRoot bind the app's;
+// tests pass fakes).
 
 import type { QueryClient } from '@tanstack/react-query';
 
@@ -11,6 +13,8 @@ import type { ApiClient } from '../api/client';
 import type { WorkspaceRole } from '../api/workspace';
 import { logger } from '../lib/logger';
 import type { KeyValueStorage } from '../storage/encrypted-storage';
+import { revokeDevice } from './api';
+import { phoneRemovalFor, type PhoneRemoval } from './bind/remove-phone';
 import { MS_PER_SECOND } from './config';
 import { handledStoreOver, type HandledStore } from './inbound/handled-store';
 import { refreshAfterPush, type IncomingDeps } from './inbound/receive';
@@ -24,6 +28,7 @@ import { askPermission } from './registration/permission';
 import { recoveryLogOver } from './registration/recovery-log';
 import type { RegistrationOutcome } from './registration/register';
 import { createRegistrar, type Registrar } from './registration/registrar';
+import { removalHoldOver, type RemovalHold } from './registration/removal-hold';
 import type { PermissionState } from './registration/state';
 import { registrationSessionOf, responseSessionOf, type PushSession } from './session';
 import type { Sha256 } from './signature/hmac';
@@ -64,6 +69,8 @@ export type PushWiring = Readonly<{
   incoming: IncomingDeps;
   prompt: PromptMemory;
   teardown: TeardownDeps;
+  /** Remove this phone, for a hosted phone's Account (through the phone link). */
+  removal: PhoneRemoval;
 }>;
 
 /** The registrar, with each run's outcome reported; a report that throws changes nothing. */
@@ -86,7 +93,12 @@ export function reportingRegistrar(
   });
 }
 
-function registrarFor(input: WiringInput, natives: PushNatives, storage: KeyValueStorage) {
+function registrarFor(
+  input: WiringInput,
+  natives: PushNatives,
+  storage: KeyValueStorage,
+  hold: RemovalHold,
+) {
   const registrar = createRegistrar({
     session: registrationSessionOf(input.session, input.workspaceId),
     client: input.client,
@@ -94,6 +106,7 @@ function registrarFor(input: WiringInput, natives: PushNatives, storage: KeyValu
     device: natives.device,
     store: natives.store,
     recoveries: recoveryLogOver(storage),
+    hold,
     now: natives.now,
   });
   return reportingRegistrar(registrar, input.onOutcome);
@@ -119,14 +132,37 @@ function responsesFor(
   });
 }
 
+type RemovalParts = Readonly<{ hold: RemovalHold; registrar: Registrar; teardown: TeardownDeps }>;
+
+/** Remove this phone in this session's server and workspace (KP16). */
+function removalFor(input: WiringInput, natives: PushNatives, parts: RemovalParts): PhoneRemoval {
+  return phoneRemovalFor({
+    ...parts,
+    scope: Object.freeze({
+      serverOrigin: input.session.serverOrigin,
+      workspaceId: input.workspaceId,
+    }),
+    store: natives.store,
+    revoke: (deviceId) => revokeDevice(input.client, deviceId),
+  });
+}
+
 export function pushWiringFor(input: WiringInput, natives: PushNatives): PushWiring {
   const storage = natives.storage();
   const handled = handledStoreOver(storage);
   const refresh = () => refreshAfterPush(input.queryClient);
   const responses = responsesFor(input, natives, { handled, refresh });
   const prompt = promptMemoryOver(storage);
+  const hold = removalHoldOver(storage);
+  const registrar = registrarFor(input, natives, storage, hold);
+  const teardown: TeardownDeps = Object.freeze({
+    store: natives.store,
+    port: natives.port,
+    handled,
+    prompt,
+  });
   return Object.freeze({
-    registrar: registrarFor(input, natives, storage),
+    registrar,
     askPermission: () => askPermission(natives.port),
     responses,
     incoming: Object.freeze({
@@ -138,6 +174,7 @@ export function pushWiringFor(input: WiringInput, natives: PushNatives): PushWir
       refresh,
     }),
     prompt,
-    teardown: Object.freeze({ store: natives.store, port: natives.port, handled, prompt }),
+    teardown,
+    removal: removalFor(input, natives, { hold, registrar, teardown }),
   });
 }

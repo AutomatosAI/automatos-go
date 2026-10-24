@@ -2,8 +2,9 @@
 // the Notifications screen says, and the one step registration takes next. Pure: no I/O, and the
 // facts are never changed. The server must list 'push' and send through Expo (push.expo), and the
 // build must carry its EAS projectId, before anything registers; then the OS permission decides;
-// then what the server last answered. A 409 is remembered as a status for this launch and never
-// retried by itself (a person's tap or the next launch tries again).
+// then the person's Remove this phone (held, KP16: 'ask' until their tap); then what the server
+// last answered. A 409 is remembered as a status for this launch and never retried by itself (a
+// person's tap or the next launch tries again).
 
 import type { Device, DeviceConflictCode } from '../schemas/server';
 import type { PushRecord } from './record';
@@ -35,6 +36,8 @@ export type PushFacts = Readonly<{
   record: PushRecord | null;
   serverRow: ServerRow | null;
   lastConflict: DeviceConflictCode | null;
+  /** The person removed this phone here (removal-hold.ts): nothing registers until their tap. */
+  held: boolean;
 }>;
 
 export type PushStatusKind =
@@ -112,6 +115,7 @@ export function pushStatus(facts: PushFacts): PushStatus {
   if (gated) return gated;
   if (facts.permission === 'undetermined') return ASK;
   if (facts.permission === 'denied') return DENIED;
+  if (facts.held) return ASK;
   return registrationStatus(facts);
 }
 
@@ -125,7 +129,7 @@ export function nextStep(facts: PushFacts): NextStep {
   if (facts.permission === 'denied') {
     return facts.record && !facts.record.switchedOff ? 'switch_off' : 'none';
   }
-  if (facts.permission !== 'granted' || facts.lastConflict) return 'none';
+  if (facts.permission !== 'granted' || facts.lastConflict || facts.held) return 'none';
   if (isKeyless(facts)) return facts.source === 'hosted' ? 'recover_key' : 'none';
   return 'register';
 }
