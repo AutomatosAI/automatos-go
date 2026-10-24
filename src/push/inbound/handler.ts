@@ -56,7 +56,7 @@ export type HandlerDeps = Readonly<{
   sha256: Sha256;
   /** The phone's clock in epoch seconds (the signature's freshness window). */
   nowSeconds: () => number;
-  /** Opens a route (expo-router's router.push). */
+  /** Opens a route (expo-router's router.push, past an open sheet route: navigate.ts). */
   navigate: (route: string) => void;
   /** Shows a line (the foundation's Toast). */
   notify: (message: string) => void;
