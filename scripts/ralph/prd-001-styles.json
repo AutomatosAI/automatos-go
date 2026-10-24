@@ -34,7 +34,7 @@
     },
     {
       "id": "D-PHONE-CHOICE",
-      "text": "The phone's style choice defaults to 'Same as Studio' (Gerard, 24 Oct: 'install a theme in Studio and the phone changes with it' — Same as Studio is the default): the phone follows the workspace's active theme (GET /api/themes/active) until the user picks a style on the phone; picking one stores it on the phone (encrypted MMKV) and overrides; choosing 'Same as Studio' again follows the server once more. Play's looks sync with the web through GET/PUT /api/themes/looks/automatos/play, so a look changed on the phone repaints Play in the browser; HUD looks stay on the phone.",
+      "text": "The phone's style choice defaults to 'Same as Studio' (Gerard, 24 Oct: 'install a theme in Studio and the phone changes with it' — Same as Studio is the default): the phone follows the workspace's active theme (GET /api/themes/active) until the user picks a style on the phone; picking one stores it on the phone (encrypted MMKV) and overrides; choosing 'Same as Studio' again follows the server once more. Play's and HUD's looks sync with the web through GET/PUT /api/themes/looks/automatos/play and /api/themes/looks/automatos/hud (the web HUD theme ships the phone's HUD_LOOK_SCHEMA and presets byte for byte), so a look changed in Studio repaints the phone and a look changed on the phone repaints the browser (Gerard, 24 Oct (via session PLAY): 'auto flip themes on all is very cool, when you change on web or local the mobile picks up and changes also'). Where HUD isn't installed in the workspace (404), HUD looks stay on the phone.",
       "source": "D59, D55; Gerard 24 Oct"
     },
     {
@@ -625,15 +625,16 @@
       "id": "US-017d",
       "prdStory": "US-017",
       "phase": 1,
-      "title": "Play's looks in step with the web: the looks API, the phone's copy, the server as the truth, one save at a time",
+      "title": "Play's and HUD's looks in step with the web: the looks API, the phone's copy, the server as the truth, one save at a time",
       "description": "As a user, I want a look I change on the phone to repaint Play in the browser, and the other way round (D55, D59).",
       "acceptanceCriteria": [
-        "src/styles/routes.ts: STYLE_ROUTES with GET and PUT /api/themes/looks/{theme_id:path} (PLAY_THEME_ID 'automatos/play' sent as two path segments, never '%2F'); npm run check:routes passes",
+        "src/styles/routes.ts: STYLE_ROUTES with GET and PUT /api/themes/looks/{theme_id:path} (PLAY_THEME_ID 'automatos/play' and HUD_THEME_ID 'automatos/hud' sent as two path segments, never '%2F'); npm run check:routes passes",
         "src/styles/play/looks-api.ts + looks-schemas.ts: zod for the answer {themeId, looks: unknown[], active: unknown | null, defaultLook: string, dropped: number}; each look then through the vendored validateLook (lib/looks/engine.ts) — an invalid one is dropped and counted, never a crash; fetchPlayLooks(client), savePlayLooks(client, {looks, active}) — both fields on every PUT (the server's BODY_SHAPE); at most 100 saved (MAX_SAVED_LOOKS)",
         "src/styles/play/look-sync.ts (pure; behaviour reference play-look-state.ts and play-look-store.ts): state {saved, active, lookChanged, savedChanged, serverSeen, synced 'server' | 'local-only' | 'pending'}; actions loaded(local), served(server), edited(look), savedChanged(list), failed(error); the first meeting merges (the server's saved looks first, then each phone-only one the server lacks, a clashing id renamed by the editor's fresh-id rule; active = the server's, else the phone's); afterwards the server is the truth except for a part changed on the phone since the last read, which is sent next",
         "An outbox sends one PUT at a time in order; a newer save waiting replaces an older waiting one (it carries the whole set)",
         "A 404 'This theme isn't installed in this workspace.' (builtin Play leaving core, PRD-261 A-19) → synced 'local-only' and the copy 'Install Play in Studio to keep your looks in step with the web.'; 401, 403 and 5xx → kept on the phone, retried on the next foreground, the taxonomy's words shown on the look page",
         "src/styles/play/look-store.ts: the phone's copy {saved, active} in MMKV under PLAY_LOOKS_KEY 'styles.play.looks' for the first paint, written to the US-016e store",
+        "HUD uses the same engine (Gerard, 24 Oct (via session PLAY): 'auto flip themes on all is very cool, when you change on web or local the mobile picks up and changes also'): look-sync is parameterised by {themeId, the phone store (Play's PLAY_LOOKS_KEY store; HUD's US-018a store under HUD_LOOKS_KEY), validate (Play: the vendored validateLook over Play's schema; HUD: validateLook with HUD_LOOK_SCHEMA)}; the member's HUD look from GET /api/themes/looks/automatos/hud paints the HUD style on mount, foreground and when the picker or the Looks drawer opens; a drawer change is sent with the same outbox; a 404 (HUD not installed in this workspace) → synced 'local-only' with NO nag copy (HUD's looks simply stay on the phone); tests: a server HUD look painting the phone, a phone HUD edit sent, the HUD 404",
         "src/styles/sync/StyleSync.tsx: one component (LookSync now, ThemeSync joins in US-016i) that reads on mount and on every foreground (AppState) and flushes the outbox; mounted by A5's own screens in phase 1 (the Style and look screen and both look pages) and once in the signed-in shell by US-016j in phase 2; no polling (no setInterval, no refetchInterval)",
         "src/styles/play/__tests__/look-sync.test.ts: first-meeting merge, server truth, a phone change winning until sent, outbox order and superseding, both fields always sent, 404 local-only, invalid looks dropped",
         "npm run check:routes passes",
@@ -652,7 +653,7 @@
       ],
       "priority": 15,
       "passes": false,
-      "notes": "Server: orchestrator/api/themes_looks.py (gate members:read; per workspace and per user; a theme not installed → 404) and services/themes/looks.py. RE-VERIFY after foundation: how scripts/check-routes.ts normalises '{theme_id:path}' and how src/api/client.ts substitutes a path parameter — if it encodes the whole value, build a feature-local substitution that encodes each segment and write FOUNDATION GAP. The phone sees the look last saved on the server, not one still being edited in a browser tab (docs/theme-host/mobile.md)."
+      "notes": "Server: orchestrator/api/themes_looks.py (gate members:read; per workspace and per user; a theme not installed → 404) and services/themes/looks.py. RE-VERIFY after foundation: how scripts/check-routes.ts normalises '{theme_id:path}' and how src/api/client.ts substitutes a path parameter — if it encodes the whole value, build a feature-local substitution that encodes each segment and write FOUNDATION GAP. The phone sees the look last saved on the server, not one still being edited in a browser tab (docs/theme-host/mobile.md). 24 Oct: HUD joins the sync (Gerard via PLAY); the web theme automatos/hud ships HUD_LOOK_SCHEMA exactly."
     },
     {
       "id": "US-017e",
@@ -685,13 +686,13 @@
       "id": "US-018c",
       "prdStory": "US-018",
       "phase": 1,
-      "title": "HUD's Looks drawer: presets, accent, background, type, grid, glow, scanlines, Auto, motion — saved on the phone",
+      "title": "HUD's Looks drawer: presets, accent, background, type, grid, glow, scanlines, Auto, motion — saved on the phone and in step with the web where HUD is installed",
       "description": "As a user in HUD, I want my own accent and glow (US-018), with the drawer as drawn, kept on my phone (D59).",
       "acceptanceCriteria": [
         "src/styles/hud/drawer-model.ts (pure) over US-018a: the sections and their selected states, the glow cap from US-016c, 'MOTION OFF · REDUCE MOTION' when Reduce Motion forces it (the toggle cannot turn motion on then), the saved looks after the presets",
         "src/styles/hud/LooksDrawer.tsx, as 'Automatos Command HUD.dc.html' draws it, full height on the phone (the drawer colour from hudVars, no blur): 'LOOK' (display 22, 0.2em) and the status line (Geist Mono 11, 0.1em, text2); the looks row (cards 96 wide: a 58 high swatch in the look's ground with a 40 pt accent ring (2 pt + glow) and the name in Geist Mono 600 11 0.08em; selected = a 1.5 pt accent border); 'ACCENT · <NAME>' with 36 pt circles (2 pt ground border, a 2 pt text ring when selected); 'BACKGROUND' in two columns, 40 high, an 18 pt swatch + the name (Geist Mono 500 12); 'TYPE' three 44 high buttons each in its own display font at 15, 0.1em (RAJDHANI, CHAKRA, MONO); GRID 0-30 and GLOW 0-cap Sliders with the value at the right; SCAN, AUTO, MOTION toggles 44 high ('SCAN ON' / 'SCAN OFF'; on = accentFill, 1.5 pt accent border, accent ink); 'SAVE AS NEW LOOK' (accent fill, accentInk, 46 high, Geist Mono 600 12 0.14em) and 'RESET'; a long press on a saved look → RENAME / DELETE",
         "app/(app)/settings/look/hud.tsx hosts the drawer; HudCore's LOOK button opens the same drawer",
-        "Changes repaint the HUD style behind the drawer at once and are stored on the phone straight away (US-018a store); nothing is sent to the server",
+        "Changes repaint the HUD style behind the drawer at once and are stored on the phone straight away (US-018a store) and sent through US-017d's look sync when HUD is installed in the workspace (a 404 keeps them phone-only)",
         "src/styles/hud/__tests__/drawer-model.test.ts",
         "npm run typecheck passes",
         "npm run lint passes (0 errors)",
