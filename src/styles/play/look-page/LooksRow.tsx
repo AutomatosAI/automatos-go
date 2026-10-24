@@ -87,8 +87,8 @@ function LookCard({ item, paint, onPick, onHold }: CardProps) {
   );
 }
 
-/** A look saved since the last render scrolls the row to its end, where it lands. */
-function useScrollToNew(count: number, animated: boolean) {
+/** A look saved since the last render scrolls the row to its end, where it lands (HUD's too). */
+export function useScrollToNew(count: number, animated: boolean) {
   const scroller = useRef<ScrollView>(null);
   const seen = useRef(count);
   useEffect(() => {

@@ -214,6 +214,49 @@ export const HUD_LOOK_COPY = Object.freeze({
 });
 
 /**
+ * HUD's Looks drawer (US-018c, 'Automatos Command HUD.dc.html'): what it draws, in the drawing's
+ * capitals, and the option names its script gives; what VoiceOver hears, in sentence case. The
+ * sheet a long press opens, the refusals and the glow's words are Play's (PLAY_LOOK_COPY).
+ */
+export const HUD_DRAWER_COPY = Object.freeze({
+  title: 'LOOK',
+  titleLabel: 'Look',
+  close: 'Close',
+  accentTitle: (name: string) => `ACCENT · ${name.toUpperCase()}`,
+  background: 'BACKGROUND',
+  type: 'TYPE',
+  grid: 'GRID',
+  glow: 'GLOW',
+  accents: Object.freeze({
+    arc: 'Arc',
+    forge: 'Forge',
+    ghost: 'Ghost',
+    nova: 'Nova',
+    signal: 'Signal',
+    gold: 'Gold',
+  }),
+  grounds: Object.freeze({ void: 'Void', carbon: 'Carbon', navy: 'Navy', ember: 'Ember' }),
+  fonts: Object.freeze({ raj: 'Rajdhani', chakra: 'Chakra', mono: 'Mono' }),
+  kinds: Object.freeze({ accent: 'accent', ground: 'background', font: 'type' }),
+  /** A switch as the drawing writes it: 'SCAN ON', 'MOTION OFF'. */
+  switches: Object.freeze({ scan: 'SCAN', auto: 'AUTO', motion: 'MOTION' }),
+  switchText: (word: string, on: boolean) => `${word} ${on ? 'ON' : 'OFF'}`,
+  /** Under the switches while the phone's Reduce Motion holds HUD still. */
+  motionForced: 'MOTION OFF · REDUCE MOTION',
+  motionForcedLabel: 'Motion is off while Reduce Motion is on',
+  look: (name: string, selected: boolean) => (selected ? `${name}, selected` : name),
+  lookHint: 'Touch and hold to rename or delete',
+  gridWords: (grid: number, max: number) => `${grid} of ${max}`,
+  saveAsNew: 'SAVE AS NEW LOOK',
+  saveAsNewLabel: 'Save as new look',
+  reset: 'RESET',
+  resetLabel: 'Reset',
+  /** The toast after a delete: '… HUD is back to ARC.' when the look deleted was the one on. */
+  deleted: (name: string, backTo: string | null) =>
+    backTo === null ? `Deleted ${name}.` : `Deleted ${name}. HUD is back to ${backTo}.`,
+});
+
+/**
  * The words HUD's statuses say beyond the board's own (dress/status-glyphs.ts; the board's are the
  * web's STATUS_CONFIG labels): HUD shows each in capitals after its glyph, never colour alone.
  */
