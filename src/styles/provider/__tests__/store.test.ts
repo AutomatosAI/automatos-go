@@ -1,7 +1,8 @@
 // The style store (D54, D59): hydrated synchronously from the phone's storage (the style choice
-// under styles.choice, HUD's looks under styles.hud.looks) so the first frame paints the chosen
-// style; every setter saves through its source and holds what the next launch reads back; a
-// failing store is logged, never thrown; a flip into Play counts Auto's hello.
+// under styles.choice, HUD's looks under styles.hud.looks, the theme 'Same as Studio' followed and
+// its painting under styles.theme.*) so the first frame paints the chosen style; every setter
+// saves through its source and holds what the next launch reads back; a failing store is logged,
+// never thrown; a flip into Play counts Auto's hello. A new phone follows Studio (D-PHONE-CHOICE).
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -13,7 +14,8 @@ import { HUD_DEFAULT_LOOK, HUD_PRESET_LOOKS, type HudLook } from '../../hud/look
 import { HUD_LOOKS_KEY, serialiseHudLooks } from '../../hud/look-store';
 import { serialiseChoice } from '../../registry/choice';
 import { STYLE_CHOICE_KEY } from '../../registry/choice-store';
-import { builtinChoice, themeChoice } from '../../registry/style-id';
+import { FOLLOW_STUDIO, builtinChoice, paintedChoice, themeChoice } from '../../registry/style-id';
+import { THEME_FOLLOWED_KEY, THEME_PAINT_KEY } from '../../themes/cache';
 import { playTokens } from '../../tokens/play';
 import { resolveStyle, type ThemePaint } from '../resolve';
 import {
@@ -77,7 +79,7 @@ function painting(): ThemePaint {
 /** What the first frame paints from a store's state. */
 function firstFrame(state: StyleState) {
   return resolveStyle({
-    choice: state.choice,
+    choice: paintedChoice(state.choice, state.followed),
     studioScheme: 'system',
     systemScheme: 'light',
     playLook: state.playLook,
@@ -115,9 +117,13 @@ describe('hydration: the first frame paints the chosen style (D54)', () => {
     expect(firstFrame(store.getState()).layout).toBe('play');
   });
 
-  it('starts a new phone on Studio, ARC, Ember and no theme painting', () => {
+  it("starts a new phone on 'Same as Studio' (painting Studio), ARC, Ember and no theme painting", () => {
     const state = storeOver(memoryStorage()).getState();
-    expect(state.choice).toEqual(builtinChoice('studio'));
+    expect(state.choice).toEqual(FOLLOW_STUDIO);
+    expect(state.followed).toEqual(builtinChoice('studio'));
+    expect(firstFrame(state).layout).toBe('studio');
+    expect(state.themes).toEqual([]);
+    expect(state.themeFonts).toBeNull();
     expect(state.hudLooks).toEqual(INITIAL_HUD_LOOKS);
     expect(state.playLook).toBe(DEFAULT_LOOK);
     expect(state.themePaint).toBeNull();
@@ -205,17 +211,56 @@ describe('the setters', () => {
     expect(storeOver(storage).getState().hudLooks.active).toEqual(MINE);
   });
 
-  it("holds Play's look and the theme painting for this launch until their stores exist", () => {
+  it("holds Play's look for this launch until its store exists", () => {
+    const storage = memoryStorage();
+    const store = storeOver(storage);
+    expect(store.getState().setPlayLook(OBSIDIAN)).toBe(true);
+    expect(store.getState().playLook).toBe(OBSIDIAN);
+    expect(storeOver(storage).getState().playLook).toBe(DEFAULT_LOOK);
+  });
+
+  it('keeps the theme painting on the phone for the next launch (US-016i)', () => {
     const storage = memoryStorage();
     const store = storeOver(storage);
     const paint = painting();
-    expect(store.getState().setPlayLook(OBSIDIAN)).toBe(true);
     expect(store.getState().setThemePaint(paint)).toBe(true);
-    expect(store.getState().playLook).toBe(OBSIDIAN);
-    expect(store.getState().themePaint).toBe(paint);
-    expect(storeOver(storage).getState().playLook).toBe(DEFAULT_LOOK);
+    expect(store.getState().themePaint).toEqual(paint);
+    expect(storage.getItem(THEME_PAINT_KEY)).not.toBeNull();
+    expect(storeOver(storage).getState().themePaint).toEqual(paint);
     store.getState().setThemePaint(null);
     expect(store.getState().themePaint).toBeNull();
+    expect(storeOver(storage).getState().themePaint).toBeNull();
+  });
+
+  it("keeps what 'Same as Studio' painted, so the next launch opens on it", () => {
+    const storage = memoryStorage();
+    const store = storeOver(storage);
+    expect(store.getState().setFollowed(builtinChoice('play'), { hello: true })).toBe(true);
+    expect(store.getState().playEntries).toBe(1);
+    expect(storage.getItem(THEME_FOLLOWED_KEY)).not.toBeNull();
+    const next = storeOver(storage).getState();
+    expect(next.followed).toEqual(builtinChoice('play'));
+    expect(firstFrame(next).layout).toBe('play');
+  });
+
+  it('a style picked on the phone overrides the follow; Same as Studio picked again returns', () => {
+    const storage = memoryStorage();
+    const store = storeOver(storage);
+    store.getState().setFollowed(builtinChoice('hud'));
+    store.getState().setChoice(builtinChoice('play'));
+    expect(firstFrame(storeOver(storage).getState()).layout).toBe('play');
+    store.getState().setChoice(FOLLOW_STUDIO);
+    expect(storeOver(storage).getState().choice).toEqual(FOLLOW_STUDIO);
+    expect(firstFrame(storeOver(storage).getState()).layout).toBe('hud');
+  });
+
+  it('holds the offered themes and the loaded fonts for this launch only', () => {
+    const storage = memoryStorage();
+    const store = storeOver(storage);
+    const fonts = { installId: INSTALL_ID, families: { sans: `theme-${INSTALL_ID}-sans` } };
+    store.getState().setThemeFonts(fonts);
+    expect(store.getState().themeFonts).toBe(fonts);
+    expect(storeOver(storage).getState().themeFonts).toBeNull();
   });
 
   it('makes a new state on every change and leaves the old one as it was', () => {

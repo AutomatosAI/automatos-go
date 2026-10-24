@@ -5,7 +5,14 @@
 // 'app-open', once per flip (the store's playEntries).
 
 import type { ClientEvent } from '../../core/web/lib/mascot/types';
-import { layoutOf, sameChoice, type StyleChoice } from '../registry/style-id';
+import {
+  layoutOf,
+  paintedChoice,
+  sameChoice,
+  samePhoneChoice,
+  type PhoneChoice,
+  type StyleChoice,
+} from '../registry/style-id';
 
 /** The crossfade from the old style to the new one. */
 export const FLIP_CROSSFADE_MS = 180;
@@ -33,5 +40,40 @@ export function flipPlan(from: StyleChoice, to: StyleChoice, reduceMotion: boole
     choice: to,
     crossfadeMs: reduceMotion ? 0 : FLIP_CROSSFADE_MS,
     hello: layoutOf(to) === 'play' && layoutOf(from) !== 'play',
+  });
+}
+
+export type PhoneFlipPlan =
+  | { readonly changed: false }
+  | {
+      readonly changed: true;
+      readonly choice: PhoneChoice;
+      /** 0 when the painted style stays (picking 'Same as Studio' while it paints the same). */
+      readonly crossfadeMs: number;
+      readonly hello: boolean;
+    };
+
+/**
+ * A pick on the phone, 'Same as Studio' included (D-PHONE-CHOICE): any new choice is stored and
+ * tapped; the crossfade and Auto's hello follow the style painted before and after, so picking
+ * 'Same as Studio' while Studio already shows the same style changes nothing on screen.
+ */
+export function phoneFlipPlan(
+  from: PhoneChoice,
+  to: PhoneChoice,
+  followed: StyleChoice,
+  reduceMotion: boolean,
+): PhoneFlipPlan {
+  if (samePhoneChoice(from, to)) return UNCHANGED;
+  const painted = flipPlan(
+    paintedChoice(from, followed),
+    paintedChoice(to, followed),
+    reduceMotion,
+  );
+  return Object.freeze({
+    changed: true,
+    choice: to,
+    crossfadeMs: painted.changed ? painted.crossfadeMs : 0,
+    hello: painted.changed && painted.hello,
   });
 }

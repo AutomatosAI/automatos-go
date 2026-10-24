@@ -1,8 +1,8 @@
 // One style's card on the Style and look screen, painted in that style (StyleScope): the live
 // preview and the name, tagline and 'Selected' are ONE button ('Studio style', its selected
 // state); under it, still inside the frame, the style's look controls — Studio's Light / Dark /
-// System and installed theme rows, Play's 'Make it yours →', HUD's 'Looks →'. The chosen card's
-// frame is a 2 pt ring in its style's accent (cards.ts cardFrame).
+// System, 'Same as Studio' and the installed theme rows, Play's 'Make it yours →', HUD's 'Looks →'.
+// The chosen card's frame is a 2 pt ring in its style's accent (cards.ts cardFrame).
 
 import Check from 'lucide-react-native/icons/check';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -11,7 +11,7 @@ import { Button, ListRow, SegmentedControl, Text } from '../../ui';
 import { ICON_STROKE } from '../../ui/paint';
 import type { StyleScreenPath } from '../nav';
 import { StyleScope } from '../provider/StyleScope';
-import type { StyleChoice } from '../registry/style-id';
+import type { PhoneChoice } from '../registry/style-id';
 import { useStyle, useTokens } from '../theme';
 import type { ThemeChoice } from '../theme-choice';
 import { cardFrame, previewAnimates, type PickerCard } from './cards';
@@ -25,7 +25,7 @@ export type StyleCardProps = {
   readonly card: PickerCard;
   /** The screen is on top: the preview may move (with the style's own motion rule). */
   readonly focused: boolean;
-  readonly onSelect: (choice: StyleChoice) => void;
+  readonly onSelect: (choice: PhoneChoice) => void;
   readonly onScheme: (scheme: ThemeChoice) => void;
   readonly onOpen: (href: StyleScreenPath) => void;
 };
@@ -64,8 +64,8 @@ type ControlsProps = Pick<StyleCardProps, 'card' | 'onSelect' | 'onScheme' | 'on
 function CardControls({ card, onSelect, onScheme, onOpen }: ControlsProps) {
   const { spacing } = useTokens();
   const scheme = card.schemes.find((option) => option.selected);
-  const { lookLink } = card;
-  if (!scheme && card.themes.length === 0 && !lookLink) return null;
+  const { lookLink, follow } = card;
+  if (!scheme && !follow && card.themes.length === 0 && !lookLink) return null;
   return (
     <View style={{ paddingHorizontal: spacing.space7, paddingBottom: spacing.space7 }}>
       {scheme ? (
@@ -74,6 +74,16 @@ function CardControls({ card, onSelect, onScheme, onOpen }: ControlsProps) {
           value={scheme.value}
           onChange={onScheme}
           accessibilityLabel={card.schemeGroup}
+        />
+      ) : null}
+      {follow ? (
+        <ListRow
+          title={follow.title}
+          summary={follow.summary}
+          onPress={() => onSelect(follow.choice)}
+          accessibilityLabel={follow.accessibilityLabel}
+          accessibilityHint={follow.accessibilityHint}
+          trailing={follow.selectedWord ? <SelectedWord word={follow.selectedWord} /> : undefined}
         />
       ) : null}
       {card.themes.map((row) => (

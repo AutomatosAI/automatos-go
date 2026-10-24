@@ -12,7 +12,13 @@ import { captionFor } from '../../core/web/lib/mascot/media';
 import type { HostToolCall } from '../../core/web/lib/theme-sdk';
 import { lookScreen, type StyleScreenPath } from '../nav';
 import type { StyleMotion } from '../provider/resolve';
-import type { PickerSection, PickerState, PickerThemeRow, SchemeOption } from '../registry/picker';
+import type {
+  PickerFollowRow,
+  PickerSection,
+  PickerState,
+  PickerThemeRow,
+  SchemeOption,
+} from '../registry/picker';
 import type { BuiltInStyleId, StyleChoice } from '../registry/style-id';
 import { PICKER_COPY, PREVIEW_COPY } from '../strings';
 
@@ -27,6 +33,9 @@ export type LookLink = {
 
 /** An installed theme's row under Studio, with its word when it is the one painted. */
 export type PickerCardTheme = PickerThemeRow & { readonly selectedWord: string | null };
+
+/** 'Same as Studio' under Studio, with its word when it is the phone's choice. */
+export type PickerCardFollow = PickerFollowRow & { readonly selectedWord: string | null };
 
 export type PickerCard = {
   readonly id: BuiltInStyleId;
@@ -46,6 +55,8 @@ export type PickerCard = {
   readonly lookLink: LookLink | null;
   /** Studio only, when US-016i lists installed themes with a phone look. */
   readonly themes: readonly PickerCardTheme[];
+  /** Studio only: 'Same as Studio', the first row under it; null for Play and HUD. */
+  readonly follow: PickerCardFollow | null;
 };
 
 function lookLinkOf(section: PickerSection): LookLink | null {
@@ -67,6 +78,10 @@ function themeOf(row: PickerThemeRow): PickerCardTheme {
   return Object.freeze({ ...row, selectedWord: selectedWordOf(row.selected) });
 }
 
+function followOf(row: PickerFollowRow | null): PickerCardFollow | null {
+  return row ? Object.freeze({ ...row, selectedWord: selectedWordOf(row.selected) }) : null;
+}
+
 function card(section: PickerSection): PickerCard {
   return Object.freeze({
     id: section.id,
@@ -81,6 +96,7 @@ function card(section: PickerSection): PickerCard {
     schemeGroup: PICKER_COPY.schemeGroup,
     lookLink: lookLinkOf(section),
     themes: Object.freeze(section.themes.map(themeOf)),
+    follow: followOf(section.follow),
   });
 }
 

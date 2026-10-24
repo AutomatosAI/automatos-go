@@ -2,11 +2,13 @@
 // a live preview in its own style. A tap flips the whole app at once (useSetStyle: the haptic, the
 // crossfade, the choice kept on the phone); Studio's card sets Light / Dark / System (the
 // foundation's scheme setter); Play's and HUD's open their look pages. The screen's own frame is
-// painted by the app's style, so it repaints with the flip. Installed themes are listed under
-// Studio only when the server offers mobile themes; US-016i supplies the list. Nothing here
-// points at making an account (D-NO-SIGNUP) or mentions plans (D8).
+// painted by the app's style, so it repaints with the flip. Under Studio, 'Same as Studio' comes
+// first (D-PHONE-CHOICE), then the installed themes, listed only when the server offers mobile
+// themes (the last read's offered installs, US-016i); the screen asks for a read each time it
+// opens (useThemeRefresh). Nothing here points at making an account (D-NO-SIGNUP) or mentions
+// plans (D8).
 
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
@@ -19,20 +21,20 @@ import { IconButton, Screen, Text } from '../../ui';
 import type { StyleScreenPath } from '../nav';
 import { useStyleStore } from '../provider/context';
 import { useSetStyle } from '../provider/flip';
-import { pickerState, type PickerTheme } from '../registry/picker';
+import { pickerState } from '../registry/picker';
 import { PICKER_COPY } from '../strings';
 import { useTheme, useTokens } from '../theme';
+import { useThemeRefresh } from '../themes/ThemeSync';
 import { pickerCards } from './cards';
 import { StyleCard } from './StyleCard';
 import { useScreenFocused } from './use-screen-focused';
 
 const TITLE_LEVEL = 2;
 
-/** Until US-016i reads the workspace's installed themes with a phone look. */
-const NO_INSTALLED_THEMES: readonly PickerTheme[] = Object.freeze([]);
-
 function useCards() {
   const choice = useStyleStore((state) => state.choice);
+  const followed = useStyleStore((state) => state.followed);
+  const installedThemes = useStyleStore((state) => state.themes);
   const { choice: studioScheme } = useTheme();
   const { discovery } = useAppSession();
   const offersThemes = canMobileTheme(discovery);
@@ -42,15 +44,27 @@ function useCards() {
         pickerState({
           choice,
           studioScheme,
-          installedThemes: NO_INSTALLED_THEMES,
+          installedThemes,
           canMobileTheme: offersThemes,
+          followed,
         }),
       ),
-    [choice, studioScheme, offersThemes],
+    [choice, studioScheme, installedThemes, offersThemes, followed],
+  );
+}
+
+/** A read of the workspace's themes each time the screen opens (joins one already running). */
+function useReadOnOpen(): void {
+  const refresh = useThemeRefresh();
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh]),
   );
 }
 
 export function StylePicker() {
+  useReadOnOpen();
   const cards = useCards();
   const setStyle = useSetStyle();
   const { setChoice: setScheme } = useTheme();

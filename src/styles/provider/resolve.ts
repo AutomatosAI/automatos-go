@@ -8,7 +8,8 @@
 //   Studio  the scheme's tokens (System → the phone's appearance)
 //   Play    the look's ground decides the tone; the scheme does not apply (as on the web)
 //   HUD     always dark
-//   theme   the Studio layout with the theme's painting, or Studio's own while none is cached
+//   theme   the Studio layout with the theme's painting, or Studio's own while none is cached; its
+//           fonts once they are loaded (themes/fonts.ts), Studio's faces until then
 
 import type { Look } from '../../core/web/lib/looks/types';
 import { HUD_INTERFACE, type HudLook } from '../hud/look-schema';
@@ -25,21 +26,14 @@ import {
   paintedStudioTokens,
   playStyleTokens,
 } from '../tokens/style-tokens';
-import type { ColourScheme, Colours, Tokens } from '../tokens/types';
+import { paintScheme } from '../themes/paint';
+import { themedStyleType, themedTokens } from '../themes/type';
+import type { LoadedThemeFonts, ThemePaint } from '../themes/types';
+import type { ColourScheme, Tokens } from '../tokens/types';
 import { styleType, type StyleType } from '../typeface/scale';
 
-/**
- * An installed theme's phone painting (US-016i fills it from GET /api/themes/mobile/{install_id}):
- * Studio's colour names in each scheme (a scheme the theme leaves out holds the other's), the tone
- * it fixes (a 'fromLooks' theme) or null to follow Light / Dark / System, and whether it brings
- * Auto. Data only: no code, no layout (D-NO-CODE, D-THEMES).
- */
-export type ThemePaint = {
-  readonly installId: string;
-  readonly colours: Readonly<Record<ColourScheme, Colours>>;
-  readonly tone: ColourScheme | null;
-  readonly mascot: boolean;
-};
+/** An installed theme's phone painting: themes/types.ts (US-016i), data only (D-NO-CODE). */
+export type { ThemePaint } from '../themes/types';
 
 export type StyleInput = {
   readonly choice: StyleChoice;
@@ -51,6 +45,8 @@ export type StyleInput = {
   readonly hudLook: HudLook;
   /** The cached painting of the theme last read (US-016i); null or absent while none is. */
   readonly themePaint?: ThemePaint | null;
+  /** The theme fonts loaded for that painting (US-016i); null or absent: Studio's faces. */
+  readonly themeFonts?: LoadedThemeFonts | null;
   /** The phone's Reduce Motion (reduce-motion.ts). */
   readonly reduceMotion: boolean;
 };
@@ -152,13 +148,23 @@ function hud(look: HudLook): Painted {
   };
 }
 
+/** The loaded families for this install, or null while none are (Studio's faces). */
+function fontsFor(installId: string, fonts: LoadedThemeFonts | null | undefined) {
+  const families = fonts && fonts.installId === installId ? fonts.families : null;
+  return families && Object.keys(families).length > 0 ? families : null;
+}
+
 function theme(input: StyleInput, installId: string): Painted {
   const paint = paintFor(installId, input.themePaint);
-  const scheme = paint?.tone ?? resolveScheme(input.studioScheme, input.systemScheme);
-  if (!paint) return studio(scheme);
+  if (!paint) return studio(resolveScheme(input.studioScheme, input.systemScheme));
+  const scheme = paintScheme(paint, input.studioScheme, input.systemScheme);
+  const tokens = paintedStudioTokens(paint.colours[scheme], scheme);
+  const families = fontsFor(installId, input.themeFonts);
+  const base = studio(scheme);
   return {
-    ...studio(scheme),
-    tokens: paintedStudioTokens(paint.colours[scheme], scheme),
+    ...base,
+    tokens: families ? themedTokens(tokens, families) : tokens,
+    type: families ? themedStyleType(base.type, families) : base.type,
     mascot: paint.mascot ? 'theme' : 'none',
   };
 }

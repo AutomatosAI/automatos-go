@@ -2,7 +2,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { logger } from '../../../lib/logger';
 import { memoryStorage, type KeyValueStorage } from '../../../storage/encrypted-storage';
-import { CHOICE_VERSION, parseChoice, resolveChoice, serialiseChoice } from '../choice';
+import {
+  CHOICE_VERSION,
+  parseChoice,
+  parsePhoneChoice,
+  resolveChoice,
+  serialiseChoice,
+  serialisePhoneChoice,
+} from '../choice';
 import {
   STYLE_CHOICE_KEY,
   createStyleChoiceStore,
@@ -10,10 +17,11 @@ import {
   saveStyleChoice,
 } from '../choice-store';
 import { DEFAULT_CHOICE } from '../registry';
-import { builtinChoice, themeChoice } from '../style-id';
+import { FOLLOW_STUDIO, builtinChoice, paintedChoice, themeChoice } from '../style-id';
 
 const INSTALL_ID = '3f2b6c1e-9d4a-4b7e-8c21-5a6f0e9d1b42';
 const STUDIO = { kind: 'builtin', id: 'studio' };
+const FOLLOW = { kind: 'follow' };
 
 function failingStorage(): KeyValueStorage {
   const fail = () => {
@@ -113,7 +121,8 @@ describe('the choice on the phone (MMKV, never the server)', () => {
   it('saves under styles.choice and reads back', () => {
     const storage = memoryStorage();
     expect(STYLE_CHOICE_KEY).toBe('styles.choice');
-    expect(readStyleChoice(storage)).toEqual(STUDIO);
+    // nothing stored: 'Same as Studio' (D-PHONE-CHOICE, the default since 24 Oct)
+    expect(readStyleChoice(storage)).toEqual({ kind: 'follow' });
     expect(saveStyleChoice(storage, builtinChoice('play'))).toBe(true);
     expect(JSON.parse(storage.getItem(STYLE_CHOICE_KEY) ?? '')).toEqual({
       v: 1,
@@ -157,7 +166,7 @@ describe('the choice store', () => {
   it('saves a new choice and holds it in memory', () => {
     const storage = memoryStorage();
     const store = createStyleChoiceStore(() => storage);
-    expect(store.get()).toEqual(STUDIO);
+    expect(store.get()).toEqual(FOLLOW);
     expect(store.set(themeChoice(INSTALL_ID))).toBe(true);
     expect(store.get()).toEqual(themeChoice(INSTALL_ID));
     expect(createStyleChoiceStore(() => storage).get()).toEqual(themeChoice(INSTALL_ID));
@@ -194,5 +203,40 @@ describe('the choice store', () => {
     store.set(themeChoice('../../etc'));
     expect(store.get()).toEqual(STUDIO);
     expect(readStyleChoice(storage)).toEqual(STUDIO);
+  });
+});
+
+describe("'Same as Studio' (D-PHONE-CHOICE)", () => {
+  it('is what a phone with nothing stored has: the default', () => {
+    expect(parsePhoneChoice(null)).toBe(FOLLOW_STUDIO);
+    expect(parsePhoneChoice(undefined)).toBe(FOLLOW_STUDIO);
+    expect(createStyleChoiceStore(() => memoryStorage()).get()).toEqual(FOLLOW);
+  });
+
+  it('is stored as its own versioned value and read back once picked again', () => {
+    const storage = memoryStorage();
+    const store = createStyleChoiceStore(() => storage);
+    store.set(builtinChoice('hud'));
+    expect(createStyleChoiceStore(() => storage).get()).toEqual(builtinChoice('hud'));
+    expect(store.set(FOLLOW_STUDIO)).toBe(true);
+    expect(JSON.parse(storage.getItem(STYLE_CHOICE_KEY) ?? '')).toEqual({ v: 1, kind: 'follow' });
+    expect(createStyleChoiceStore(() => storage).get()).toEqual(FOLLOW);
+  });
+
+  it('round-trips every phone choice; other versions and garbage read as Studio', () => {
+    for (const choice of [FOLLOW_STUDIO, builtinChoice('play'), themeChoice(INSTALL_ID)]) {
+      expect(parsePhoneChoice(serialisePhoneChoice(choice))).toEqual(choice);
+    }
+    expect(parsePhoneChoice(JSON.stringify({ v: 2, kind: 'follow' }))).toEqual(STUDIO);
+    expect(parsePhoneChoice('{')).toEqual(STUDIO);
+    expect(parseChoice(serialisePhoneChoice(FOLLOW_STUDIO))).toEqual(STUDIO);
+  });
+
+  it('paints what Studio maps to while following, and the phone pick otherwise', () => {
+    expect(paintedChoice(FOLLOW_STUDIO, builtinChoice('play'))).toEqual(builtinChoice('play'));
+    expect(paintedChoice(FOLLOW_STUDIO, themeChoice(INSTALL_ID))).toEqual(themeChoice(INSTALL_ID));
+    expect(paintedChoice(builtinChoice('hud'), builtinChoice('play'))).toEqual(
+      builtinChoice('hud'),
+    );
   });
 });

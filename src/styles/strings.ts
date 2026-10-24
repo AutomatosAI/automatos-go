@@ -48,6 +48,22 @@ export const PICKER_COPY = Object.freeze({
   /** What a card does and where its look link goes, for VoiceOver. */
   styleHint: (name: string) => `Paints Automatos Go in ${name}`,
   lookHint: (name: string) => `Opens ${name}'s looks`,
+  /** The first row under Studio (D-PHONE-CHOICE): the phone follows the theme Studio uses. */
+  follow: Object.freeze({
+    title: 'Same as Studio',
+    /** What it paints now: 'Now Play', 'Now Harbour · 1.1.0'. */
+    summary: (painted: string) => `Now ${painted}`,
+    /** A followed theme the list does not have yet. */
+    theme: "Studio's theme",
+    label: (painted: string, selected: boolean) =>
+      selected ? `Same as Studio, now ${painted}, selected` : `Same as Studio, now ${painted}`,
+    hint: 'Automatos Go follows the theme you use in Studio',
+  }),
+});
+
+/** Installed themes on the phone (US-016i, D58): the one toast when a theme on screen is gone. */
+export const THEME_COPY = Object.freeze({
+  lost: "That theme isn't available any more, so Automatos Go is back on Studio.",
 });
 
 /**

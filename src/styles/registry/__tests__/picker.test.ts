@@ -8,7 +8,7 @@ import {
   type PickerState,
   type PickerTheme,
 } from '../picker';
-import { builtinChoice, themeChoice } from '../style-id';
+import { FOLLOW_STUDIO, builtinChoice, themeChoice } from '../style-id';
 
 const HARBOUR: PickerTheme = { installId: 'inst-harbour', name: 'Harbour', version: '1.1.0' };
 const MOSS: PickerTheme = { installId: 'inst-moss', name: 'Moss', version: '2.0.3' };
@@ -204,5 +204,60 @@ describe('pickerReducer on a deep-frozen state', () => {
     expect(Object.isFrozen(next)).toBe(true);
     expect(Object.isFrozen(next.sections)).toBe(true);
     expect(next.sections.every((s) => Object.isFrozen(s) && Object.isFrozen(s.themes))).toBe(true);
+  });
+});
+
+describe("'Same as Studio' under Studio (D-PHONE-CHOICE)", () => {
+  it('is the first row under Studio only, and the one selected while the phone follows', () => {
+    const state = pickerState(input({ choice: FOLLOW_STUDIO }));
+    const [studio, play, hud] = state.sections;
+    expect(studio.follow).toMatchObject({
+      choice: FOLLOW_STUDIO,
+      title: 'Same as Studio',
+      summary: 'Now Studio',
+      selected: true,
+      accessibilityLabel: 'Same as Studio, now Studio, selected',
+    });
+    expect(play.follow).toBeNull();
+    expect(hud.follow).toBeNull();
+    expect(selectedIds(state)).toEqual({ sections: [], themes: [] });
+  });
+
+  it('says what it paints now: a style, a listed theme, or a theme not listed yet', () => {
+    const summary = (overrides: Partial<PickerInput>) =>
+      pickerState(input({ choice: FOLLOW_STUDIO, ...overrides })).sections[0].follow?.summary;
+    expect(summary({ followed: builtinChoice('play') })).toBe('Now Play');
+    expect(summary({ followed: themeChoice('inst-moss') })).toBe('Now Moss · 2.0.3');
+    expect(summary({ followed: themeChoice('inst-new') })).toBe("Now Studio's theme");
+    expect(summary({ followed: themeChoice('inst-moss'), canMobileTheme: false })).toBe(
+      "Now Studio's theme",
+    );
+  });
+
+  it('is shown unselected when a style or theme was picked on the phone', () => {
+    const picked = pickerState(
+      input({ choice: builtinChoice('hud'), followed: builtinChoice('play') }),
+    );
+    expect(picked.sections[0].follow?.selected).toBe(false);
+    expect(picked.sections[0].follow?.accessibilityLabel).toBe('Same as Studio, now Play');
+    expect(selectedIds(picked)).toEqual({ sections: ['hud'], themes: [] });
+  });
+
+  it('is shown without the capability: following Play or HUD needs only /active', () => {
+    const [studio] = pickerState(input({ choice: FOLLOW_STUDIO, canMobileTheme: false })).sections;
+    expect(studio.follow).not.toBeNull();
+    expect(studio.themes).toEqual([]);
+  });
+
+  it('the reducer selects it and returns from it', () => {
+    const state = frozenState();
+    const following = pickerReducer(state, { type: 'select', choice: FOLLOW_STUDIO });
+    expect(following.choice).toEqual(FOLLOW_STUDIO);
+    expect(following.sections[0].follow?.selected).toBe(true);
+    expect(pickerReducer(following, { type: 'select', choice: { kind: 'follow' } })).toBe(
+      following,
+    );
+    const back = pickerReducer(following, { type: 'select', choice: builtinChoice('play') });
+    expect(selectedIds(back)).toEqual({ sections: ['play'], themes: [] });
   });
 });

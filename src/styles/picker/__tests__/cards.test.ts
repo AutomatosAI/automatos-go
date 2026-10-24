@@ -4,7 +4,7 @@ import { PRESETS } from '../../../core/web/lib/looks/presets';
 import { HUD_PRESET_LOOKS } from '../../hud/look-schema';
 import type { StyleMotion } from '../../provider/resolve';
 import { pickerState, type PickerInput } from '../../registry/picker';
-import { builtinChoice, themeChoice } from '../../registry/style-id';
+import { FOLLOW_STUDIO, builtinChoice, themeChoice } from '../../registry/style-id';
 import { MIN_TEXT_SIZE } from '../../type';
 import { hudVars } from '../../tokens/hud';
 import { playVars } from '../../tokens/play';
@@ -214,5 +214,30 @@ describe('the stand-ins', () => {
       expect(paint.dashed).toMatch(/,0\.4\)$/);
       expect(paint.disc).toMatch(/,0\.28\)$/);
     }
+  });
+});
+
+describe("the 'Same as Studio' row on Studio's card (US-016i)", () => {
+  it("carries the 'Selected' word only while the phone follows Studio", () => {
+    const [studio, play] = cardsFor({ choice: FOLLOW_STUDIO, followed: builtinChoice('hud') });
+    expect(studio.follow).toMatchObject({
+      title: 'Same as Studio',
+      summary: 'Now HUD',
+      selected: true,
+      selectedWord: 'Selected',
+      accessibilityHint: 'Automatos Go follows the theme you use in Studio',
+    });
+    expect(play.follow).toBeNull();
+    expect(cardsFor({ choice: builtinChoice('studio') })[0].follow?.selectedWord).toBeNull();
+  });
+
+  it('sits with the installed theme rows it comes before', () => {
+    const [studio] = cardsFor({
+      choice: themeChoice('inst-harbour'),
+      installedThemes: [HARBOUR],
+      canMobileTheme: true,
+    });
+    expect(studio.follow?.selected).toBe(false);
+    expect(studio.themes.map((row) => row.selectedWord)).toEqual(['Selected']);
   });
 });

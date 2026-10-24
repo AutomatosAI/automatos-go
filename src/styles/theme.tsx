@@ -11,6 +11,10 @@
 // every screen repaints the moment the style flips (provider/flip.ts, crossfaded by
 // provider/Crossfade.tsx). Light / Dark / System still drive Studio; Play paints its look's tone and
 // HUD is always dark. StyleScope (provider/StyleScope.tsx) paints a preview in another style.
+// US-016i: the phone's choice may be 'Same as Studio' (the default), which paints what the
+// workspace's active theme maps to (the store's followed, kept by ThemeSync); the cached theme
+// painting's fonts are loaded here from their copies on the phone (themes/fonts.ts), so a theme's
+// faces need no session at launch.
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -19,12 +23,13 @@ import { useStore } from 'zustand';
 
 import type { KeyValueStorage } from '../storage/encrypted-storage';
 import { appStorage } from '../storage/mmkv';
-import type { Layout } from './registry/style-id';
+import { paintedChoice, type Layout } from './registry/style-id';
 import { StyleContext, StyleRootContext, type StyleRoot } from './provider/context';
 import { CrossfadeRoot, useCrossfade } from './provider/Crossfade';
 import { useReduceMotion } from './provider/reduce-motion';
 import { resolveStyle, type ResolvedStyle, type StyleInput } from './provider/resolve';
 import { appStyleSources, createStyleStore, type StyleStoreApi } from './provider/store';
+import { useThemeFontLoader } from './themes/fonts';
 import {
   appearanceOverride,
   readThemeChoice,
@@ -51,11 +56,14 @@ type ThemeProviderProps = {
 
 /** The parts of the style store the app's style is resolved from, each its own subscription. */
 function useStyleParts(store: StyleStoreApi) {
-  const choice = useStore(store, (state) => state.choice);
+  const phoneChoice = useStore(store, (state) => state.choice);
+  const followed = useStore(store, (state) => state.followed);
   const playLook = useStore(store, (state) => state.playLook);
   const hudLook = useStore(store, (state) => state.hudLooks.active);
   const themePaint = useStore(store, (state) => state.themePaint);
-  return { choice, playLook, hudLook, themePaint };
+  const themeFonts = useStore(store, (state) => state.themeFonts);
+  const choice = useMemo(() => paintedChoice(phoneChoice, followed), [phoneChoice, followed]);
+  return { choice, playLook, hudLook, themePaint, themeFonts };
 }
 
 export function ThemeProvider({ children, storage }: ThemeProviderProps) {
@@ -63,9 +71,16 @@ export function ThemeProvider({ children, storage }: ThemeProviderProps) {
   const [choice, setChoiceState] = useState<ThemeChoice>(() => readThemeChoice(store));
   const system = useColorScheme();
   const styleStore = useMemo(() => createStyleStore(appStyleSources(() => store)), [store]);
-  const { choice: styleChoice, playLook, hudLook, themePaint } = useStyleParts(styleStore);
+  const {
+    choice: styleChoice,
+    playLook,
+    hudLook,
+    themePaint,
+    themeFonts,
+  } = useStyleParts(styleStore);
   const reduceMotion = useReduceMotion();
   const crossfade = useCrossfade();
+  useThemeFontLoader(styleStore);
 
   useEffect(() => {
     Appearance.setColorScheme(appearanceOverride(choice));
@@ -87,9 +102,10 @@ export function ThemeProvider({ children, storage }: ThemeProviderProps) {
       playLook,
       hudLook,
       themePaint,
+      themeFonts,
       reduceMotion,
     }),
-    [styleChoice, choice, system, playLook, hudLook, themePaint, reduceMotion],
+    [styleChoice, choice, system, playLook, hudLook, themePaint, themeFonts, reduceMotion],
   );
   const style = useMemo(() => resolveStyle(input), [input]);
   const root = useMemo<StyleRoot>(
