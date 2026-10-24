@@ -141,6 +141,11 @@ functions < 50 lines, components < 150; pure logic outside React with tests in
   Store Connect API key assigned, Apple down), the build still matches its fingerprint and
   every later JS merge updates a binary nobody has. Re-send that build before merging
   anything else: `eas submit -p ios --profile testflight --id <build id>` (Gerard; never Claude).
+- **The `preview` EAS environment holds only public `EXPO_PUBLIC_*` values.** `pr-check.yml`'s
+  fingerprint runs a PR branch's config plugins in it (fork PRs never trigger EAS), so a secret
+  added to `preview` would be readable by any branch: secrets go in an environment only `main`'s
+  build uses. Delivery does not wait for CI: merge only green PRs (required checks on `main`
+  make that automatic).
 - **`[eas skip]`, `[skip eas]` or `[no eas]` in a commit message skips EAS Workflows.** Never
   quote one in a PR title, body or squash message (merge with `gh pr merge --squash --subject …
   --body …`): it skips delivery for that merge.
