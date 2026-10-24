@@ -23,8 +23,8 @@ The plan is [PRD-001](docs/prd/PRD-001-AUTOMATOS-GO-V1.md). The server side
 Expo SDK 54 · React Native 0.81.5 · React 19.1 · TypeScript 5.9 (strict) ·
 expo-router 6 · `@clerk/expo` ~3.2.16 + expo-secure-store · TanStack Query ·
 zod at every boundary · vitest (pure TypeScript, node environment). Node 22
-(`.nvmrc`). The build and release setup is lifted from the Automatos Academy
-app's TestFlight tree.
+(`.nvmrc`). The build setup is lifted from the Automatos Academy app's
+TestFlight tree; releases run on EAS Workflows (see CI and release).
 
 ## Commands
 
@@ -82,39 +82,85 @@ may be published, and read the file before committing it.
 
 CI (`.github/workflows/ci.yml`) runs two jobs on every pull request and every
 push to `main`: **typecheck · lint · test** and **expo-doctor · iOS bundle**.
-`malware-scan.yml` runs on every push and pull request.
+`malware-scan.yml` runs on every push and pull request. GitHub Actions only
+checks; nothing there builds or ships.
 
-Releases: `.github/workflows/testflight.yml` runs after CI succeeds on `main`.
-It compares the tree's fingerprint with the last finished TestFlight build and
-either ships an over-the-air update (JavaScript-only change) or starts a native
-build and submits it. It waits while a TestFlight build is already in progress,
-so two quick merges never start two native builds.
+Releases run on [EAS Workflows](https://docs.expo.dev/eas/workflows/introduction/),
+on Expo's servers with the EAS project's own credentials (no GitHub secret, no
+`EXPO_TOKEN`). The app is linked to the EAS project in `app.json` (`owner`,
+`extra.eas.projectId`, `updates.url`: public identifiers, committed) and uses
+`runtimeVersion.policy: fingerprint`, a hash of everything native.
+
+- **Every push to `main`** (`.eas/workflows/testflight.yml`): EAS fingerprints the
+  tree and looks for a finished `testflight` build with the same iOS fingerprint.
+  Found: the merge is JavaScript only and ships as an over-the-air update on the
+  `testflight` channel; TestFlight installs of that build download it on launch
+  and run it from the next launch. Not found: the merge changed something native
+  (a native dependency, a config plugin, `app.json`), so EAS builds iOS with the
+  `testflight` profile, one of the month's iOS builds, and sends the build to
+  TestFlight with the commit message as "What to Test". If a build with the same
+  fingerprint has already started, the run waits for it and then ships an
+  update.
+- **Every pull request to `main`** (`.eas/workflows/pr-check.yml`): the same
+  fingerprint lookup, then a comment on the PR saying whether merging it ships
+  over the air or needs a native build. No build and no update.
+
+Delivery does not wait for GitHub CI: a merge ships at once. Until the checks
+below are required on `main` (human step 2), nothing stops a red pull request
+from merging and shipping, so merge green pull requests only.
+
+EAS runs two pushes side by side (it can cancel runs, not queue them):
+
+- Two merges close together, the first one native, can start two native
+  builds: the second run only waits for a build that has already started.
+  After a native merge, merge the next pull request once that run's
+  "Build iOS" job is running.
+- An update publishes only from `main`'s head. An older run stops just before
+  publishing (red, "main is at …") and the newer run ships both changes.
+
+A build counts as found once EAS has built it, whether or not it reached
+TestFlight. If the "Send the build to TestFlight" job fails, re-send that build
+with `eas submit -p ios --profile testflight --id <build id>` before merging
+anything else; otherwise later updates go to a build nobody has. If that job
+times out waiting for Apple's processing (30 minutes), the upload still worked
+and automatic distribution still delivers it; only "What to Test" is missing.
+
+A commit message containing `[eas skip]`, `[skip eas]` or `[no eas]` skips both
+workflows: keep them out of pull request titles, bodies and squash messages.
+
+The first build after the EAS-workflows change is a native build: `app.json`
+gained the EAS link, so the fingerprint moved. Builds 5–7 were made without
+`updates.url`, so they never receive over-the-air updates; install the newer
+build from TestFlight.
 
 ## Human steps
 
 These need a person with the accounts; nothing in this repository does them.
 
-1. **Link the EAS project.** Run `eas init` under the Expo account and commit
-   `owner`, `extra.eas.projectId` and `updates.url` to `app.json` in one PR.
-   Create the EAS environments' values: `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`
-   (a `pk_test_` key for preview, the `pk_live_` key for production),
-   `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_WEB_URL` and, later,
-   `EXPO_PUBLIC_SENTRY_DSN`. Until the project is linked, the TestFlight
-   workflow stops with "run eas init".
-2. **App Store Connect.** Create the app record "Automatos Go" (bundle id
-   `com.automatos.app`) under the team, add the team's App Store Connect users,
-   and put `ascAppId` (and `appleId` if wanted) into `eas.json` under `submit`.
-3. **First iOS builds.** Make the first development and TestFlight builds at a
-   terminal, because EAS creates the signing credentials interactively. Before
-   the first submit, check that every framework the binary references has its
-   usage string.
-4. **GitHub settings.** Add `EXPO_TOKEN` as a secret of the `testflight`
-   environment and restrict that environment to `main`. After the first CI run,
-   make `typecheck · lint · test`, `expo-doctor · iOS bundle` and `scan`
-   (malware-scan) required checks on `main`.
-5. **Push security.** Leave Expo's "enhanced push security" off on the EAS
+1. **EAS environment values.** In the EAS project's `preview` and `production`
+   environments: `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` (a `pk_test_` key for
+   preview, the `pk_live_` key for production), `EXPO_PUBLIC_API_URL`,
+   `EXPO_PUBLIC_WEB_URL` and, later, `EXPO_PUBLIC_SENTRY_DSN`. TestFlight builds
+   and updates read `preview`.
+2. **GitHub link.** The Expo GitHub app installed on `AutomatosAI/automatos-go`
+   and the repository connected in the EAS project's GitHub settings
+   (expo.dev → project → GitHub): `push` and `pull_request` workflows and the PR
+   comment need it. Make `typecheck · lint · test`, `expo-doctor · iOS bundle` and
+   `scan` (malware-scan) required checks on `main`: delivery does not wait for
+   CI, so these are the only gate (admins included, since `enforce_admins` is on).
+3. **App Store Connect.** The app record "Automatos Go" (bundle id
+   `com.automatos.app`, Apple ID `6825362378`, the `ascAppId` in `eas.json`)
+   with the team's App Store Connect users. An App Store Connect API key
+   assigned to the app on EAS (`eas credentials --platform ios` → App Store
+   Connect: Manage your API Key), so the workflow can upload without a prompt.
+   A TestFlight internal group with automatic distribution on: the workflow
+   uploads each build and sets "What to Test", and Apple hands it to those
+   groups. Signing credentials live on EAS (created at a terminal for the first
+   builds). Before an App Store submit, check that every framework the binary
+   references has its usage string.
+4. **Push security.** Leave Expo's "enhanced push security" off on the EAS
    project: push to self-hosted installs depends on it.
-6. **Clerk.** On the production instance: Native API on, the iOS and Android
+5. **Clerk.** On the production instance: Native API on, the iOS and Android
    apps registered (so Clerk serves the `webcredentials` association), passkeys
    enabled, the `mobile` JWT template, 30-day sessions.
 

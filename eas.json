@@ -36,7 +36,8 @@
   "submit": {
     "testflight": {
       "ios": {
-        "appleTeamId": "KGVA9933BG"
+        "appleTeamId": "KGVA9933BG",
+        "ascAppId": "6825362378"
       }
     },
     "production": {

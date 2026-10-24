@@ -16,6 +16,11 @@ export type PrivacyManifest = IOSConfig.PrivacyInfo.PrivacyInfo;
 
 export const privacy: PrivacyManifest = expo.ios.privacyManifests;
 
+// The committed EAS link (public identifiers: the project id ships inside every binary).
+export const EAS_OWNER = 'gerard161';
+export const EAS_PROJECT_ID = '7b4ae66f-9733-4d53-a221-182c1692d574';
+export const EAS_UPDATES_URL = `https://u.expo.dev/${EAS_PROJECT_ID}`;
+
 export const PROJECT_ROOT = path.resolve(__dirname, '../../..');
 export const requireFromRoot = createRequire(path.join(PROJECT_ROOT, 'package.json'));
 

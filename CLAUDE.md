@@ -39,7 +39,16 @@ in `src/lib/logger.ts`.
 
 CI (`.github/workflows/ci.yml`): jobs `typecheck · lint · test` and
 `expo-doctor · iOS bundle` (names are read by branch protection — do not
-rename). `malware-scan.yml` is never edited.
+rename). `malware-scan.yml` is never edited. GitHub Actions only checks.
+
+Release (EAS Workflows, on Expo's servers with the project's own credentials; no
+`EXPO_TOKEN`, no GitHub secret): `.eas/workflows/testflight.yml` on every push to
+`main` (OTA update or native build → TestFlight, see the fingerprint trap) and
+`.eas/workflows/pr-check.yml` on every PR to `main` (a comment: OTA or native build;
+never builds). Both are pinned by `src/config/__tests__/eas-release.test.ts`. Delivery
+does not wait for GitHub CI: a merge ships at once. Until `typecheck · lint · test`,
+`expo-doctor · iOS bundle` and `scan` are required checks on `main` (a repository setting,
+Gerard's), nothing stops a red PR from merging and shipping: merge green PRs only.
 
 ## Environment
 
@@ -72,7 +81,8 @@ src/ui/              primitives shared by all three layouts
 src/lib/             logger (the only console user), env (zod-parsed EXPO_PUBLIC_*)
 src/app-state/       the shell: the signed-in gate (gate.ts decides), the session (useAppSession, useApiClient), the cache roots
 src/navigation/      every app route (routes.ts) and web link → app route (web-links.ts); kits link only through them
-scripts/             release-env guard, testflight-decide, sync-core, check-routes
+scripts/             release-env guard, sync-core, check-routes
+.eas/workflows/      EAS Workflows: testflight.yml (push to main), pr-check.yml (PRs)
 plugins/             local config plugins: pinned background modes, Sentry upload guard (docs/native-modules.md)
 ```
 
@@ -111,17 +121,45 @@ functions < 50 lines, components < 150; pure logic outside React with tests in
   `~19.1.4`, while React Native 0.81.5's renderer requires react 19.1.0 exactly. The lockfile is generated with it under Node 22
   from a clean state, so it carries every platform's optional binaries (CI is linux-x64).
 - **Fingerprint = build quota.** `runtimeVersion.policy: fingerprint`: any native change
-  (a native dependency, a config plugin, `app.json`) changes the fingerprint and costs an iOS
-  build from the 15 a month shared with the academy app [D43]. Batch native changes per PR;
-  JavaScript-only merges ship over the air.
+  (a native dependency, a config plugin, `app.json`) changes the fingerprint. On a push to
+  `main`, `.eas/workflows/testflight.yml` looks for a finished `testflight` build with the
+  tree's iOS fingerprint. Found: the merge is JavaScript only and ships as an OTA update on
+  channel `testflight`, which TestFlight installs of a build with that fingerprint download on
+  launch and run from the next launch. Not found: a native iOS build (from the monthly quota
+  shared with the academy app [D43]) that goes to TestFlight automatically. `pr-check.yml`
+  says on each PR which of the two its merge will be. Batch native changes per PR. The first
+  build after the EAS-workflows PR is native (app.json gained the EAS link, so the fingerprint
+  moved); builds 5–7 have no `updates.url` baked in and can never receive an OTA update.
+- **Quick merges run side by side.** EAS concurrency can cancel runs but not queue them. A
+  run waits only for a same-fingerprint build that has already started, so two merges whose
+  lookups both come before the first build exists start two native builds: after a native
+  merge, merge the next PR once that run's "Build iOS" job is running. For updates, only
+  `main`'s head publishes, checked just before the export: an older run stops in
+  `publish_update`'s `before_update` hook (red, "main is at …") and the newer run ships both
+  changes.
+- **"Found" means an EAS build, not a TestFlight upload.** If `submit_testflight` fails (no App
+  Store Connect API key assigned, Apple down), the build still matches its fingerprint and
+  every later JS merge updates a binary nobody has. Re-send that build before merging
+  anything else: `eas submit -p ios --profile testflight --id <build id>` (Gerard; never Claude).
+- **The `preview` EAS environment holds only public `EXPO_PUBLIC_*` values.** `pr-check.yml`'s
+  fingerprint runs a PR branch's config plugins in it (fork PRs never trigger EAS), so a secret
+  added to `preview` would be readable by any branch: secrets go in an environment only `main`'s
+  build uses. Delivery does not wait for CI: merge only green PRs (required checks on `main`
+  make that automatic).
+- **`[eas skip]`, `[skip eas]` or `[no eas]` in a commit message skips EAS Workflows.** Never
+  quote one in a PR title, body or squash message (merge with `gh pr merge --squash --subject …
+  --body …`): it skips delivery for that merge.
 - **expo-doctor vs `@clerk/expo` 3.0.x.** Clerk 3.0.x declares a required peer on
   `expo-modules-core`, and expo-doctor fails either way (with it as a direct dependency:
   "should not be installed directly"; without: "Missing peer dependency"). Clerk >= 3.1.0
   drops the peer, so the app is on 3.2.16 with no direct `expo-modules-core` (it comes with
   `expo`) and expo-doctor passes with no `expo.doctor` exclusion (lead decision, 20 Oct).
   Never add `expo-modules-core` back as a direct dependency.
-- **No EAS link in the repo.** `app.json` has no `owner`, `extra.eas.projectId` or
-  `updates.url` until `eas init` (a human step); `testflight.yml` stops with "run eas init".
+- **The EAS link is committed.** `app.json` carries `owner` `gerard161`,
+  `extra.eas.projectId` and `updates.url` (`https://u.expo.dev/<projectId>`), and `eas.json`
+  `submit.testflight.ios` the `ascAppId`: public identifiers (the project id ships inside
+  every binary), not secrets (Gerard, 24 Oct). Changing any of them points the app at another
+  EAS project, and app.json changes move the fingerprint (a native build).
 - **No `.env.example`.** The workspace's secrets hook blocks Claude Code from writing
   `*.env.*` files, so the repo has none (lead decision, 20 Oct): every `EXPO_PUBLIC_*` name is
   listed under Environment above and in README.md. A new name goes in all three places
@@ -143,8 +181,8 @@ functions < 50 lines, components < 150; pure logic outside React with tests in
   Studio open the system browser.
 - No sign-up, social sign-in or Sign in with Apple. Nothing about plans, credits or prices.
   Nothing that deletes an account or a workspace.
-- No secrets: no Clerk key, token or EAS project id in any file. `EXPO_PUBLIC_*` values come
-  from the EAS environment.
+- No secrets: no Clerk key or token in any file. `EXPO_PUBLIC_*` values come from the EAS
+  environment. The EAS link and the Apple team and app ids are public identifiers, committed.
 - No committed `ios/` or `android/`; no `expo prebuild`.
 
 ## Design sources (read only)
