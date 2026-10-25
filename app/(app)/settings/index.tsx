@@ -2,10 +2,13 @@
 // the server's name, address and edition, the unencrypted home network line, and Sign out or Forget
 // this server, US-006h), then the workspace, role and app version, then Style and look (the style
 // picker, US-016j). Nothing deletes an account or a workspace (D63); nothing about plans (D8).
-// Remove this phone, the policies and the other Settings pages arrive with their stories.
+// After them, Notifications (src/push, US-014h) and, on a hosted phone with a push record,
+// Remove this phone (KP16; an own server's way out stays the server section's). The policies
+// and the other Settings pages arrive with their stories.
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
+import Bell from 'lucide-react-native/icons/bell';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 
 import { accountRows, type AccountRow } from '../../../src/app-state/account';
@@ -15,6 +18,9 @@ import { ServerSection } from '../../../src/connect/components/ServerSection';
 import { useGoBack } from '../../../src/navigation/use-go-back';
 import { STYLE_SCREENS } from '../../../src/styles/nav';
 import { PICKER_COPY } from '../../../src/styles/strings';
+import { RemovePhone } from '../../../src/push/bind/RemovePhone';
+import { pushScreens } from '../../../src/push/nav';
+import { PUSH_ACCOUNT_COPY } from '../../../src/push/strings';
 import { useTokens } from '../../../src/styles/theme';
 import { Card, Divider, IconButton, ListRow, Screen, Text } from '../../../src/ui';
 
@@ -67,6 +73,14 @@ export default function AccountSettings() {
             onPress={() => router.push(STYLE_SCREENS.settingsStyle)}
           />
         </Card>
+        <Card>
+          <ListRow
+            icon={Bell}
+            title={PUSH_ACCOUNT_COPY.notifications}
+            onPress={() => router.push(pushScreens.notifications)}
+          />
+        </Card>
+        <RemovePhone />
       </View>
     </Screen>
   );

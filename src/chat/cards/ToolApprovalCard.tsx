@@ -3,10 +3,12 @@
 // note (PRD-181 S5) and the exact call as key and value lines. Approve & run grants it and says what
 // the click ran, a failure included; Deny denies it. While open it says it waits for you, as its
 // tool line does, never failed. A role that cannot decide reads it with the D17 words; a click on a
-// card someone already decided says what it was decided as (grantRefusalText).
+// card someone already decided says what it was decided as (grantRefusalText). Approve & run asks
+// for Face ID first (gated.ts, A4); Deny never does (KP13).
 
 import { StyleSheet, View } from 'react-native';
 
+import { useStepUp } from '../../step-up/use-step-up';
 import { useTokens } from '../../styles/theme';
 import { Button, Text } from '../../ui';
 import { tint } from '../../ui/paint';
@@ -14,7 +16,8 @@ import { MARK_COLOURS } from '../lines';
 import { GRANT_COPY } from '../strings';
 import { grantRefusalText, type CardAccess } from './actions';
 import { ReadOnlyNote, RefusalText } from './CardNotes';
-import { denyCall, grantCall, type GrantLine } from './grants';
+import { grantToolGated } from './gated';
+import { denyCall, type GrantLine } from './grants';
 import type { SettleCard } from './model';
 import { MissionFrame } from './MissionFrame';
 import { OversightNote } from './OversightNote';
@@ -90,6 +93,7 @@ type FooterProps = {
 
 function ToolFooter({ card, access, request }: FooterProps) {
   const { spacing } = useTokens();
+  const { guard } = useStepUp();
   const status = <GrantStatusLine line={card.line} />;
   if (card.decided) return status;
   if (!access.canAct)
@@ -105,7 +109,7 @@ function ToolFooter({ card, access, request }: FooterProps) {
       <View style={[styles.actions, { gap: spacing.space3 }]}>
         <Button
           label={GRANT_COPY.approve}
-          onPress={() => request.run(grantCall(card.grantId))}
+          onPress={() => request.run(grantToolGated(guard, card.grantId))}
           size="sm"
           busy={request.busy}
         />
