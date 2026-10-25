@@ -4,13 +4,14 @@
 // colour names are Studio's, because the web already paints every Studio page under a look by
 // Studio's token names (PRD-260 D3, core look-kit studio-tokens.ts).
 
+import type { BuiltInStyleId } from '../registry/style-id';
 import type { TypeScale } from '../type';
 import type { STUDIO_LIGHT_SOURCE } from './studio-source';
 
 export type ColourScheme = 'light' | 'dark';
 
-/** The built-in styles (§4.6). A5 adds 'play' and 'hud'. */
-export type StyleId = 'studio';
+/** The built-in styles (§4.6): Studio, Play and HUD (A5, registry/style-id.ts). */
+export type StyleId = BuiltInStyleId;
 
 /** 'muted-foreground' → 'mutedForeground', 'chart-1' → 'chart1'. */
 type Camel<S extends string> = S extends `${infer Head}-${infer Tail}`

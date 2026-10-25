@@ -89,7 +89,7 @@ export function textFace(
 
 // ── Buttons ─────────────────────────────────────────────────────────────────────────────────
 
-export type ButtonVariant = 'primary' | 'outline' | 'ghost';
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost';
 export type ButtonSize = 'sm' | 'md';
 export type IconButtonSize = 'sm' | 'md' | 'lg';
 
@@ -106,9 +106,18 @@ const PRIMARY: Paint = {
   foreground: 'primaryForeground',
 };
 
-/** at-btn--default / --outline / --ghost and their :hover, as the pressed state. */
+/**
+ * at-btn--default / --secondary / --outline / --ghost and their :hover, as the pressed state.
+ * Secondary (A5) is the at-btn base's transparent border on --secondary; Play's own components
+ * draw their cream Send / Stop with it (src/styles/dress).
+ */
 export const BUTTON_PAINTS: Readonly<Record<ButtonVariant, PaintSet>> = Object.freeze({
   primary: { rest: PRIMARY, pressed: PRIMARY, pressedOpacity: 0.9 },
+  secondary: {
+    rest: { background: 'secondary', border: 'transparent', foreground: 'secondaryForeground' },
+    pressed: { background: 'muted', border: 'transparent', foreground: 'secondaryForeground' },
+    pressedOpacity: 1,
+  },
   outline: {
     rest: { background: 'card', border: 'border', foreground: 'foreground' },
     pressed: { background: 'ccHover', border: 'ccHoverBorder', foreground: 'foreground' },

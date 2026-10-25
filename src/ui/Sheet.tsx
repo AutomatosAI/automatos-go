@@ -2,7 +2,8 @@
 // that fades in while the sheet slides up 220 ms (react-native-reanimated); a tap on the backdrop,
 // Android's back and VoiceOver's escape gesture close it. Under Reduce Motion it does not slide, it
 // fades in place. 14 pt top radius, a grabber, the content scrolls and the keyboard pushes it up.
-// The sheet stays mounted while it animates out; the logic is in overlay.ts (pure, tested).
+// The sheet stays mounted while it animates out; the logic is in overlay.ts (pure, tested). A5: the
+// dress gives the top radius (14 Studio, 14 Play, 0 HUD) and the grabber's (HUD's square).
 
 import { useEffect, useState, type ReactNode } from 'react';
 import {
@@ -26,6 +27,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useDress } from '../styles/dress/use-dress';
 import { useTokens } from '../styles/theme';
 import {
   GRABBER,
@@ -48,7 +50,8 @@ export type SheetProps = {
 };
 
 export function Sheet({ visible, onClose, children }: SheetProps) {
-  const { colours, radii, spacing, scheme } = useTokens();
+  const { colours, spacing, scheme } = useTokens();
+  const { sheetRadius, grabberRadius } = useDress();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const { slide, durationMs } = sheetMotion(useReducedMotion());
@@ -116,8 +119,8 @@ export function Sheet({ visible, onClose, children }: SheetProps) {
               maxHeight: windowHeight * SHEET_MAX_HEIGHT_RATIO,
               backgroundColor: colours.background,
               borderColor: colours.border,
-              borderTopLeftRadius: radii.sheet,
-              borderTopRightRadius: radii.sheet,
+              borderTopLeftRadius: sheetRadius,
+              borderTopRightRadius: sheetRadius,
             },
             sheetStyle,
           ]}
@@ -128,7 +131,12 @@ export function Sheet({ visible, onClose, children }: SheetProps) {
               { paddingTop: spacing.space3, paddingBottom: spacing.space1 },
             ]}
           >
-            <View style={[styles.grabber, { backgroundColor: colours.muted }]} />
+            <View
+              style={[
+                styles.grabber,
+                { backgroundColor: colours.muted, borderRadius: grabberRadius },
+              ]}
+            />
           </View>
           <ScrollView
             keyboardShouldPersistTaps="handled"
@@ -152,5 +160,5 @@ const styles = StyleSheet.create({
   dock: { flex: 1, justifyContent: 'flex-end' },
   sheet: { borderTopWidth: 1, overflow: 'hidden' },
   grabberRow: { alignItems: 'center' },
-  grabber: { width: GRABBER.width, height: GRABBER.height, borderRadius: GRABBER.radius },
+  grabber: { width: GRABBER.width, height: GRABBER.height },
 });

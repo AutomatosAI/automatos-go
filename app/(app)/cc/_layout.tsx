@@ -5,7 +5,10 @@
 // social post are sheets over it (SHEET_ROUTE_OPTIONS). One opened from outside the tabs (chat, the
 // needs strip) is this stack's first screen, with no tab under it: no tab shows selected, and every
 // tab, Board too, goes to its screen. The words and figures are src/cc/shell's (pure, tested); the
-// live word reads the foundation's one stream.
+// live word reads the foundation's one stream. In Play the Shelf and a Deliverable draw their own
+// header, way back and bottom bar (Ember 04-05, KS10), so the top bar, head and tabs step aside
+// there (src/styles/homes/use-play-layout.ts). Under Play and HUD the tab's screen is clear, so the
+// style's ground (Play's glow, HUD's grid) runs under it (src/styles/dress/cc-dress.ts shellGround).
 import { Stack } from 'expo-router';
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -16,6 +19,9 @@ import { TabStrip } from '../../../src/cc/shell/TabStrip';
 import { TopBar } from '../../../src/cc/shell/TopBar';
 import { useShellFigures, useShellTab } from '../../../src/cc/shell/use-shell';
 import { SHEET_ROUTE_OPTIONS } from '../../../src/cc/use-sheet-route';
+import { shellGround } from '../../../src/styles/dress/cc-dress';
+import { useDress } from '../../../src/styles/dress/use-dress';
+import { useShellStepsAside } from '../../../src/styles/homes/use-play-layout';
 import { useTokens } from '../../../src/styles/theme';
 import { Screen } from '../../../src/ui';
 
@@ -24,22 +30,28 @@ const EDGES: readonly Edge[] = ['left', 'right', 'bottom'];
 
 export default function CommandCentreLayout() {
   const { colours } = useTokens();
+  const ground = shellGround(useDress(), colours.background);
   const tab = useShellTab();
   const { lede, counts } = useShellFigures();
+  const aside = useShellStepsAside();
   const screenOptions = useMemo(
     () => ({
       headerShown: false,
       // a tab replaces the screen under the shell: no slide between tabs
       animation: 'none' as const,
-      contentStyle: { backgroundColor: colours.background },
+      contentStyle: { backgroundColor: ground },
     }),
-    [colours.background],
+    [ground],
   );
   return (
     <Screen edges={EDGES}>
-      <TopBar />
-      <Head lede={lede} />
-      <TabStrip active={tab} counts={counts} />
+      {aside ? null : (
+        <>
+          <TopBar />
+          <Head lede={lede} />
+          <TabStrip active={tab} counts={counts} />
+        </>
+      )}
       <View style={styles.body}>
         <Stack screenOptions={screenOptions}>
           <Stack.Screen name="ticket/[taskId]" options={SHEET_ROUTE_OPTIONS} />

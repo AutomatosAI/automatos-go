@@ -31,9 +31,10 @@ import { useChatHistory, type ChatHistory } from './use-history';
 /** The header runs up under the status bar itself. */
 const SCREEN_EDGES: readonly Edge[] = ['left', 'right', 'bottom'];
 
-type FooterProps = { readonly footer: HistoryFooter; readonly onLoadMore: () => void };
+export type FooterProps = { readonly footer: HistoryFooter; readonly onLoadMore: () => void };
 
-function ListFooter({ footer, onLoadMore }: FooterProps) {
+/** Load more, its spinner or its failure under the rows (Play's Conversations draws it too). */
+export function ListFooter({ footer, onLoadMore }: FooterProps) {
   const { spacing } = useTokens();
   if (footer === 'end') return null;
   if (footer === 'loading') return <LoadingState label={HISTORY_COPY.loadingMore} />;

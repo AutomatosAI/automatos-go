@@ -21,8 +21,11 @@ function CardGap() {
   return <View style={{ height: spacing[GALLERY_LAYOUT.cardGap] }} />;
 }
 
-/** No card to show: the filter's empty copy once it has answered, else its failure or the wait. */
-function NoCards({ gallery }: { readonly gallery: Gallery }) {
+/**
+ * No card to show: the filter's empty copy once it has answered, else its failure or the wait.
+ * Play's Shelf draws it too.
+ */
+export function NoCards({ gallery }: { readonly gallery: Gallery }) {
   const { query, view } = gallery;
   if (view.empty) return <EmptyState title={view.empty.title} message={view.empty.message} />;
   return query.error ? (
@@ -32,7 +35,8 @@ function NoCards({ gallery }: { readonly gallery: Gallery }) {
   );
 }
 
-function LoadMoreButton({ loadMore }: { readonly loadMore: LoadMore }) {
+/** 'Load more' under the last card (Play's Shelf draws it too). */
+export function LoadMoreButton({ loadMore }: { readonly loadMore: LoadMore }) {
   const { spacing } = useTokens();
   return (
     <View

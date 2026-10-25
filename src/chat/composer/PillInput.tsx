@@ -2,13 +2,17 @@
 // 1 pt border, the field's olive focus ring; the words in the thread's 16/24 (D72), as they will
 // read once sent; it grows with the message up to six lines, then scrolls.
 // Multiline, and Return inserts a newline: it never submits (D-COMPOSER). Painted with the
-// foundation's fieldPaint, so it focuses and dims as every text field does.
+// foundation's fieldPaint, so it focuses and dims as every text field does. A5: its corners round
+// only where the style rounds things (HUD's TYPE sheet draws it square; src/styles/dress/cc-dress.ts)
+// and the keyboard takes Play's and HUD's tone (keyboardAppearanceFor in src/styles/ground/).
 // FOUNDATION GAP: src/ui/TextField has no pill shape (6 pt radius, multiline from 80, no style).
 
 import { useState } from 'react';
 import { StyleSheet, TextInput } from 'react-native';
 
-import { useTokens } from '../../styles/theme';
+import { roundCorner } from '../../styles/dress/cc-dress';
+import { keyboardAppearanceFor } from '../../styles/ground/ground';
+import { useStyle } from '../../styles/theme';
 import { fieldPaint, textFace } from '../../ui/variants';
 import { pillMetrics } from './composer-state';
 
@@ -22,7 +26,8 @@ export type PillInputProps = {
 };
 
 export function PillInput({ value, onChangeText, placeholder, label, editable }: PillInputProps) {
-  const tokens = useTokens();
+  const style = useStyle();
+  const { tokens } = style;
   const [focused, setFocused] = useState(false);
   const tone = fieldPaint(tokens.colours, { focused, disabled: !editable });
   const face = textFace(tokens.type, 'thread');
@@ -39,6 +44,7 @@ export function PillInput({ value, onChangeText, placeholder, label, editable }:
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       allowFontScaling
+      keyboardAppearance={keyboardAppearanceFor(style)}
       accessibilityLabel={label}
       accessibilityState={{ disabled: !editable }}
       placeholderTextColor={tone.placeholder}
@@ -56,7 +62,7 @@ export function PillInput({ value, onChangeText, placeholder, label, editable }:
           boxShadow: tone.boxShadow,
           minHeight: metrics.minHeight,
           maxHeight: metrics.maxHeight,
-          borderRadius: metrics.radius,
+          borderRadius: roundCorner(metrics.radius, tokens.radii),
           paddingVertical: metrics.paddingVertical,
           paddingHorizontal: metrics.paddingHorizontal,
         },

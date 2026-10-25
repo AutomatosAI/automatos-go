@@ -1,7 +1,10 @@
 // The text field (at-input): card ground, 1 pt border, 6 pt radius, 40 tall or a multiline area
 // from 80; the olive focus ring, an orange border with the error's words when invalid. It always
 // has a label: shown above the field, or only to VoiceOver when hidden (the composer's 'Message
-// Auto'). The error, else the helper, is the accessibility hint.
+// Auto'). The error, else the helper, is the accessibility hint. A5: the dress gives the field's
+// radius (the style's input: Play's 12, HUD's 0) and the label's face, case and tracking (Play's
+// and HUD's small label in capitals); the keyboard takes Play's and HUD's tone
+// (keyboardAppearanceFor), a caller's keyboardAppearance first.
 
 import { useState } from 'react';
 import {
@@ -13,9 +16,12 @@ import {
   type TextInputProps,
 } from 'react-native';
 
-import { useTokens } from '../styles/theme';
+import { useDress } from '../styles/dress/use-dress';
+import { keyboardAppearanceFor } from '../styles/ground/ground';
+import { useStyle } from '../styles/theme';
 import type { Tokens } from '../styles/tokens';
 import { Text } from './Text';
+import { fieldLabelStyle } from './dressed';
 import {
   FIELD_HEIGHT,
   FIELD_MULTILINE_MIN_HEIGHT,
@@ -25,9 +31,7 @@ import {
   type FieldPaint,
 } from './variants';
 
-const LABEL_LEVEL = 3;
 const NOTE_LEVEL = 5;
-const LABEL_WEIGHT = 500;
 
 type FocusEvent = NativeSyntheticEvent<TargetedEvent>;
 
@@ -44,7 +48,7 @@ export type TextFieldProps = Omit<
   readonly disabled?: boolean;
 };
 
-function inputStyle(tokens: Tokens, tone: FieldPaint, multiline: boolean) {
+function inputStyle(tokens: Tokens, tone: FieldPaint, multiline: boolean, radius: number) {
   const face = textFace(tokens.type, 'body1');
   return {
     fontFamily: face.fontFamily,
@@ -55,7 +59,7 @@ function inputStyle(tokens: Tokens, tone: FieldPaint, multiline: boolean) {
     backgroundColor: tone.backgroundColor,
     borderColor: tone.borderColor,
     opacity: tone.opacity,
-    borderRadius: tokens.radii.control,
+    borderRadius: radius,
     paddingHorizontal: tokens.spacing.space5,
     paddingVertical: tokens.spacing.space3,
     boxShadow: tone.boxShadow,
@@ -73,7 +77,9 @@ export function TextField({
   onBlur,
   ...input
 }: TextFieldProps) {
-  const tokens = useTokens();
+  const style = useStyle();
+  const dress = useDress();
+  const { tokens } = style;
   const [focused, setFocused] = useState(false);
   const tone = fieldPaint(tokens.colours, { focused, invalid: error !== undefined, disabled });
   const note = fieldNote(error, helper);
@@ -90,8 +96,7 @@ export function TextField({
       {hideLabel ? null : (
         // the field itself carries the label, so VoiceOver does not read it twice
         <Text
-          level={LABEL_LEVEL}
-          weight={LABEL_WEIGHT}
+          style={fieldLabelStyle(style, dress)}
           accessible={false}
           importantForAccessibility="no"
         >
@@ -105,6 +110,7 @@ export function TextField({
         onFocus={handleFocus}
         onBlur={handleBlur}
         allowFontScaling
+        keyboardAppearance={input.keyboardAppearance ?? keyboardAppearanceFor(style)}
         accessibilityLabel={label}
         accessibilityHint={note?.text}
         accessibilityState={{ disabled }}
@@ -112,7 +118,7 @@ export function TextField({
         selectionColor={tokens.colours.accent}
         style={[
           styles.input,
-          inputStyle(tokens, tone, multiline),
+          inputStyle(tokens, tone, multiline, dress.radii.input),
           multiline ? styles.multiline : styles.single,
         ]}
       />
