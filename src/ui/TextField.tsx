@@ -3,7 +3,8 @@
 // has a label: shown above the field, or only to VoiceOver when hidden (the composer's 'Message
 // Auto'). The error, else the helper, is the accessibility hint. A5: the dress gives the field's
 // radius (the style's input: Play's 12, HUD's 0) and the label's face, case and tracking (Play's
-// and HUD's small label in capitals).
+// and HUD's small label in capitals); the keyboard takes Play's and HUD's tone
+// (keyboardAppearanceFor), a caller's keyboardAppearance first.
 
 import { useState } from 'react';
 import {
@@ -16,6 +17,7 @@ import {
 } from 'react-native';
 
 import { useDress } from '../styles/dress/use-dress';
+import { keyboardAppearanceFor } from '../styles/ground/ground';
 import { useStyle } from '../styles/theme';
 import type { Tokens } from '../styles/tokens';
 import { Text } from './Text';
@@ -108,6 +110,7 @@ export function TextField({
         onFocus={handleFocus}
         onBlur={handleBlur}
         allowFontScaling
+        keyboardAppearance={input.keyboardAppearance ?? keyboardAppearanceFor(style)}
         accessibilityLabel={label}
         accessibilityHint={note?.text}
         accessibilityState={{ disabled }}

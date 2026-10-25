@@ -5,13 +5,16 @@
 // First open. Return inserts a newline: only the button sends (A2's D-COMPOSER). No AI label sits
 // beside it (D73: the caption opens the thread). A2's composerState (wired in US-016k) says when
 // the field takes no typing and the button does nothing, and gives a viewer's notice. A2's
-// attachments sit in the slots: their chips above the field, the [+] at its start (US-016k).
+// attachments sit in the slots: their chips above the field, the [+] at its start (US-016k). The
+// keyboard takes the look's tone (Daylight light, the rest dark), never Studio's Light / Dark /
+// System.
 
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Text } from '../../../ui';
 import { DISABLED_OPACITY } from '../../../ui/paint';
+import { keyboardAppearanceFor } from '../../ground/ground';
 import {
   COMPANION,
   composerView,
@@ -137,6 +140,7 @@ export function PlayComposer({
           submitBehavior="newline"
           returnKeyType="default"
           allowFontScaling
+          keyboardAppearance={keyboardAppearanceFor(style)}
           accessibilityLabel={view.placeholder}
           accessibilityState={{ disabled: !view.editable }}
           selectionColor={vars.accent}
