@@ -306,7 +306,9 @@ describe('the wiring', () => {
     const layout = read('app/(app)/_layout.tsx');
     expect(layout).toContain('<InsecureNetworkBanner origin={server.apiUrl} placement="top" />');
     expect(layout).toContain('if (shellNetworkLine(server) === null) return null;');
-    expect(layout).toContain('<AppGate consent={<ConsentSheet />} bar={NetworkBar}>');
+    expect(layout).toContain(
+      '<AppGate consent={<ConsentSheet />} bar={NetworkBar} edge={ShellEdgeScreen}>',
+    );
     expect(layout).not.toContain('<SafeAreaProvider');
     const gate = read('src/app-state/AppGate.tsx');
     expect(gate.indexOf('<Bar server={server} />')).toBeGreaterThan(-1);

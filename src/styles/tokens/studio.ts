@@ -26,7 +26,8 @@ import type {
 const WRAPPED = /^hsl\((\d[^/]*?)(?: \/ (\d*\.?\d+))?\)$/;
 const ALPHA_MAX = 255;
 
-function alphaHex(alpha: number): string {
+/** An alpha 0-1 as the two hex digits #RRGGBBAA ends with. */
+export function alphaHex(alpha: number): string {
   if (!(alpha >= 0 && alpha <= 1)) throw new RangeError(`${alpha} isn't an alpha from 0 to 1`);
   return Math.round(alpha * ALPHA_MAX)
     .toString(16)

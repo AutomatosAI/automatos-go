@@ -1,20 +1,18 @@
 // The filter pill (the board's status filters, Deliverables' Awaiting | Done): 28 tall, 12 pt radius,
 // Geist 500 12 pt, an optional status dot and mono count; solid ink when selected. VoiceOver hears
-// the label and the count ('Blocked, 3') and the selected state.
+// the label and the count ('Blocked, 3') and the selected state. A5: the dress gives its height,
+// radius, padding, label face, case and tracking and its paints (Play: Ember 04's round 40 pt chips,
+// cream when chosen; HUD: square, the accent fill and a 1.5 pt accent line when chosen).
 
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { useTokens } from '../styles/theme';
+import { useDress } from '../styles/dress/use-dress';
+import { useStyle } from '../styles/theme';
 import type { ColourName } from '../styles/tokens';
 import { Text } from './Text';
+import { controlLabel, dressedPillPaint } from './dressed';
 import { hitSlopFor, joinLabel } from './paint';
-import {
-  BUTTON_LABEL_WEIGHT,
-  DOT_SIZE,
-  PILL_COUNT_OPACITY,
-  PILL_HEIGHT,
-  pillPaint,
-} from './variants';
+import { DOT_SIZE, PILL_COUNT_OPACITY } from './variants';
 
 const PILL_LABEL_LEVEL = 5;
 
@@ -29,24 +27,31 @@ export type PillProps = {
 };
 
 export function Pill({ label, selected, onPress, count, dot, disabled = false }: PillProps) {
-  const { colours, radii, spacing } = useTokens();
+  const style = useStyle();
+  const dress = useDress();
+  const { colours, radii, spacing } = style.tokens;
+  const { pill } = dress;
+  const weight = selected ? pill.selectedWeight : pill.restWeight;
+  const labelFace = controlLabel(style, dress, PILL_LABEL_LEVEL, weight);
+  const ink = dressedPillPaint(dress, selected).color;
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      hitSlop={hitSlopFor(PILL_HEIGHT)}
+      hitSlop={hitSlopFor(pill.minHeight)}
       accessibilityRole="button"
       accessibilityLabel={joinLabel(label, count)}
       accessibilityState={{ selected, disabled }}
       style={({ pressed }) => {
-        const tone = pillPaint(colours, selected, { pressed, disabled });
+        const tone = dressedPillPaint(dress, selected, { pressed, disabled });
         return [
           styles.pill,
           {
-            minHeight: PILL_HEIGHT,
-            paddingHorizontal: spacing.space4,
+            minHeight: pill.minHeight,
+            paddingHorizontal: spacing[pill.paddingX],
             gap: spacing.space2,
-            borderRadius: radii.pill,
+            borderRadius: pill.radius,
+            borderWidth: tone.borderWidth,
             backgroundColor: tone.backgroundColor,
             borderColor: tone.borderColor,
             opacity: tone.opacity,
@@ -57,15 +62,9 @@ export function Pill({ label, selected, onPress, count, dot, disabled = false }:
       {dot ? (
         <View style={[styles.dot, { backgroundColor: colours[dot], borderRadius: radii.full }]} />
       ) : null}
-      <Text
-        level={PILL_LABEL_LEVEL}
-        weight={BUTTON_LABEL_WEIGHT}
-        style={{ color: pillPaint(colours, selected).color }}
-      >
-        {label}
-      </Text>
+      <Text style={[labelFace, { color: ink }]}>{label}</Text>
       {count === undefined ? null : (
-        <Text variant="mono" style={[styles.count, { color: pillPaint(colours, selected).color }]}>
+        <Text variant="mono" style={[styles.count, { color: ink }]}>
           {count}
         </Text>
       )}
@@ -74,7 +73,7 @@ export function Pill({ label, selected, onPress, count, dot, disabled = false }:
 }
 
 const styles = StyleSheet.create({
-  pill: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, alignSelf: 'flex-start' },
+  pill: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start' },
   dot: { width: DOT_SIZE, height: DOT_SIZE },
   count: { opacity: PILL_COUNT_OPACITY },
 });

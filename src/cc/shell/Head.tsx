@@ -1,9 +1,11 @@
 // The Command Centre's head (handoff §2): the dateline eyebrow in the phone's timezone, the title and
 // the lede, its figures in mono and the needs clause in the accent. The words are lede.ts's and
-// dateline.ts's; nothing shows for a source that has not answered.
+// dateline.ts's; nothing shows for a source that has not answered. A5 dresses the title per style
+// (src/styles/dress/cc-dress.ts): Play's display face, HUD's 'AUTOMATOS // COMMAND'.
 
 import { View } from 'react-native';
 
+import { useShellTitle } from '../../styles/dress/use-cc-dress';
 import { useTokens } from '../../styles/theme';
 import { Text } from '../../ui';
 import { SHELL_COPY } from '../strings';
@@ -25,6 +27,31 @@ function LedeRun({ part }: { readonly part: LedePart }) {
   );
 }
 
+/** The title in the style's face; HUD's mark run in its accent. */
+function Title() {
+  const { colours } = useTokens();
+  const title = useShellTitle(SHELL_COPY.title);
+  return (
+    <Text
+      variant="title"
+      level={HEAD.titleLevel}
+      accessibilityRole="header"
+      accessibilityLabel={title.accessibilityLabel}
+      style={title.face}
+    >
+      {title.runs.map((run) =>
+        run.accent ? (
+          <Text key={run.text} style={[title.face, { color: colours.primary }]}>
+            {run.text}
+          </Text>
+        ) : (
+          run.text
+        ),
+      )}
+    </Text>
+  );
+}
+
 export function Head({ lede }: { readonly lede: readonly LedePart[] }) {
   const { spacing } = useTokens();
   const eyebrow = useEyebrow();
@@ -38,9 +65,7 @@ export function Head({ lede }: { readonly lede: readonly LedePart[] }) {
       }}
     >
       <Text variant="eyebrow">{eyebrow}</Text>
-      <Text variant="title" level={HEAD.titleLevel} accessibilityRole="header">
-        {SHELL_COPY.title}
-      </Text>
+      <Title />
       {lede.length > 0 ? (
         <Text
           level={HEAD.ledeLevel}

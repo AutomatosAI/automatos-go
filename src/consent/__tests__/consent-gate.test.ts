@@ -256,7 +256,9 @@ describe('a role that sends nothing', () => {
 describe('the wiring (read from the source)', () => {
   it('the (app) layout hands the sheet to the gate for its consent step', () => {
     const layout = read('app/(app)/_layout.tsx');
-    expect(layout).toContain('<AppGate consent={<ConsentSheet />} bar={NetworkBar}>');
+    expect(layout).toContain(
+      '<AppGate consent={<ConsentSheet />} bar={NetworkBar} edge={ShellEdgeScreen}>',
+    );
     const gate = read('src/app-state/AppGate.tsx');
     expect(gate).toContain('shellStep(view, record)');
     expect(gate).toContain("step.kind === 'consent' ? consent : children");
