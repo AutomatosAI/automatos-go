@@ -1,21 +1,23 @@
 // Play's message box (Ember 01-02, 06 and the style sheet's 'message box · Send / Stop'): a
 // radius-12 field on the ground's surface with a 1 pt line of the ground's text at 0.14 and
-// 'Message Auto' (Geist 16, text-3); the button 44 high, radius 10 — 'Send' (the ground's text
-// with the ground as ink, Geist 600 14), 'Stop' with a 10 x 10 radius-2 square, the accent on
-// First open. Return inserts a newline: only the button sends (A2's D-COMPOSER). No AI label sits
-// beside it (D73: the caption opens the thread). A2's composerState (wired in US-016k) says when
-// the field takes no typing and the button does nothing, and gives a viewer's notice. A2's
-// attachments sit in the slots: their chips above the field, the [+] at its start (US-016k). The
-// keyboard takes the look's tone (Daylight light, the rest dark), never Studio's Light / Dark /
-// System.
+// 'Message Auto' (Geist 16, text-3); the button a 42 pt circle in Play's paint (the ground's text
+// with the ground as ink, the accent on First open) — Send its arrow up, Stop its 10 x 10 radius-2
+// square, each named to VoiceOver ('Send', 'Stop') — as Studio's composer draws it, so on a 375 pt
+// phone the field keeps its width beside the [+] and the voice button. Return inserts a newline:
+// only the button sends (A2's D-COMPOSER). No AI label sits beside it (D73: the caption opens the
+// thread). A2's composerState (wired in US-016k) says when the field takes no typing and the button
+// does nothing, and gives a viewer's notice. A2's attachments sit in the slots: their chips above
+// the field, the [+] at its start (US-016k). The keyboard takes the look's tone (Daylight light,
+// the rest dark), never Studio's Light / Dark / System.
 // Given `voice`, A6's voice button (US-019k) sits beside Send, in Play's dress; without it the box
 // is as above.
 
+import ArrowUp from 'lucide-react-native/icons/arrow-up';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Text } from '../../../ui';
-import { DISABLED_OPACITY } from '../../../ui/paint';
+import { DISABLED_OPACITY, ICON_STROKE, hitSlopFor } from '../../../ui/paint';
 import { VoiceButton, type VoiceButtonProps } from '../../../voice/entry/VoiceButton';
 import { keyboardAppearanceFor } from '../../ground/ground';
 import {
@@ -46,6 +48,7 @@ export type PlayComposerProps = {
 };
 
 const { composer, target } = COMPANION;
+const BUTTON_SLOP = hitSlopFor(composer.button, composer.button);
 
 function buttonOpacity(disabled: boolean, pressed: boolean): number {
   if (disabled) return DISABLED_OPACITY;
@@ -61,11 +64,11 @@ type ButtonProps = {
 
 function ComposerButton({ view, paint, onSend, onStop }: ButtonProps) {
   const { fill, ink } = composerButtonPaint(view, paint);
-  const { style } = paint;
   return (
     <Pressable
       onPress={view.square ? onStop : onSend}
       disabled={view.disabled}
+      hitSlop={BUTTON_SLOP}
       accessibilityRole="button"
       accessibilityLabel={view.label}
       accessibilityHint={view.hint}
@@ -73,9 +76,9 @@ function ComposerButton({ view, paint, onSend, onStop }: ButtonProps) {
       style={({ pressed }) => [
         styles.button,
         {
-          gap: style.tokens.spacing.space3,
-          paddingHorizontal: view.square ? composer.stopPaddingX : composer.buttonPaddingX,
-          borderRadius: style.radii.control,
+          width: composer.button,
+          height: composer.button,
+          borderRadius: paint.style.radii.full,
           backgroundColor: fill,
           opacity: buttonOpacity(view.disabled, pressed),
         },
@@ -90,8 +93,9 @@ function ComposerButton({ view, paint, onSend, onStop }: ButtonProps) {
             backgroundColor: ink,
           }}
         />
-      ) : null}
-      <Text style={[style.type.button, { color: ink }]}>{view.label}</Text>
+      ) : (
+        <ArrowUp size={composer.icon} color={ink} strokeWidth={ICON_STROKE} />
+      )}
     </Pressable>
   );
 }
@@ -170,10 +174,5 @@ export function PlayComposer({
 const styles = StyleSheet.create({
   field: { flexDirection: 'row', alignItems: 'flex-end', borderWidth: 1 },
   input: { flex: 1, minWidth: 0, minHeight: target, textAlignVertical: 'top' },
-  button: {
-    minHeight: target,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  button: { alignItems: 'center', justifyContent: 'center' },
 });
