@@ -13,6 +13,8 @@ import {
   TOAST_DURATION_MS,
   TOAST_LOOKS,
   backdropColour,
+  sheetBottomPadding,
+  sheetMaxHeight,
   sheetMotion,
   sheetOffset,
   sheetOpacity,
@@ -31,6 +33,26 @@ describe('the sheet', () => {
     expect(SHEET_EASING).toEqual([0.25, 0.1, 0.25, 1]);
     expect(SHEET_MAX_HEIGHT_RATIO).toBe(0.84);
     expect(sheetMotion(false)).toEqual({ slide: true, durationMs: 220 });
+  });
+
+  it('is at most 84 % of the window while the keyboard is down', () => {
+    expect(sheetMaxHeight(667, 0, 20)).toBeCloseTo(667 * 0.84, 9);
+    expect(sheetMaxHeight(844, 0, 47)).toBeCloseTo(844 * 0.84, 9);
+  });
+
+  it('keeps its top on screen with the keyboard up: window less keyboard less safe top', () => {
+    // 375 x 667 with the 260 pt keyboard: 387 pt between the status bar and the keyboard
+    expect(sheetMaxHeight(667, 260, 20)).toBe(387);
+    expect(sheetMaxHeight(844, 336, 47)).toBe(461);
+    // a short sheet's cap stays its 84 %
+    expect(sheetMaxHeight(1000, 50, 20)).toBeCloseTo(840, 9);
+    expect(sheetMaxHeight(300, 400, 20)).toBe(0);
+  });
+
+  it('leaves the home indicator’s inset under its content only while the keyboard is down', () => {
+    expect(sheetBottomPadding(16, 34, 0)).toBe(50);
+    expect(sheetBottomPadding(16, 34, 291)).toBe(16);
+    expect(sheetBottomPadding(16, 0, 0)).toBe(16);
   });
 
   it('does not slide under Reduce Motion', () => {

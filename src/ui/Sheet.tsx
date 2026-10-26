@@ -1,7 +1,9 @@
 // The bottom sheet (the ticket, Deliverable, event and Report this sheets): a Modal over a backdrop
 // that fades in while the sheet slides up 220 ms (react-native-reanimated); a tap on the backdrop,
 // Android's back and VoiceOver's escape gesture close it. Under Reduce Motion it does not slide, it
-// fades in place. 14 pt top radius, a grabber, the content scrolls and the keyboard pushes it up.
+// fades in place. 14 pt top radius, a grabber, the content scrolls and the keyboard pushes it up;
+// with the keyboard up a tall sheet is no taller than the room above it (sheetMaxHeight), so its
+// top stays on screen, and the home indicator's inset is no longer a gap over the keyboard.
 // The sheet stays mounted while it animates out; the logic is in overlay.ts (pure, tested). A5: the
 // dress gives the top radius (14 Studio, 14 Play, 0 HUD) and the grabber's (HUD's square).
 
@@ -32,13 +34,15 @@ import { useTokens } from '../styles/theme';
 import {
   GRABBER,
   SHEET_EASING,
-  SHEET_MAX_HEIGHT_RATIO,
   backdropColour,
+  sheetBottomPadding,
+  sheetMaxHeight,
   sheetMotion,
   sheetOffset,
   sheetOpacity,
 } from './overlay';
 import { UI_COPY } from './strings';
+import { useKeyboardHeight } from './use-keyboard-height';
 
 const EASING = Easing.bezier(...SHEET_EASING);
 const KEYBOARD_BEHAVIOUR = Platform.OS === 'ios' ? 'padding' : undefined;
@@ -54,6 +58,7 @@ export function Sheet({ visible, onClose, children }: SheetProps) {
   const { sheetRadius, grabberRadius } = useDress();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
+  const keyboard = useKeyboardHeight();
   const { slide, durationMs } = sheetMotion(useReducedMotion());
   const [mounted, setMounted] = useState(visible);
   if (visible && !mounted) setMounted(true);
@@ -116,7 +121,7 @@ export function Sheet({ visible, onClose, children }: SheetProps) {
           style={[
             styles.sheet,
             {
-              maxHeight: windowHeight * SHEET_MAX_HEIGHT_RATIO,
+              maxHeight: sheetMaxHeight(windowHeight, keyboard, insets.top),
               backgroundColor: colours.background,
               borderColor: colours.border,
               borderTopLeftRadius: sheetRadius,
@@ -144,7 +149,7 @@ export function Sheet({ visible, onClose, children }: SheetProps) {
               gap: spacing.space5,
               paddingTop: spacing.space3,
               paddingHorizontal: spacing.space9,
-              paddingBottom: spacing.space7 + insets.bottom,
+              paddingBottom: sheetBottomPadding(spacing.space7, insets.bottom, keyboard),
             }}
           >
             {children}
