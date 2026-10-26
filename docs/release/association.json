@@ -1,0 +1,19 @@
+{
+  "about": "The universal-link and App Link association of Automatos Go, as data (R18). automatos-ai serves the server's side on ui.automatos.app: /.well-known/apple-app-site-association (iOS) and /.well-known/assetlinks.json (Android), both signed out, 200 application/json, no redirect. The app's side is app.json: ios.associatedDomains and the android.intentFilters filter with autoVerify true. src/release/__tests__/association.test.ts holds app.json to this file, so a change on either side that is not made here too fails CI. webcredentials is Clerk's host, which serves its own association once the app is registered in Clerk's dashboard (docs/native-modules.md 'Passkeys setup'). The Android signing certificate's SHA-256 is an owner step: docs/release/universal-links.md (OT-R9) says how to read it and where it goes; until then it reads 'OWNER — OT-R9' and assetlinks.json lists nothing.",
+  "reviewed": "2026-10-26",
+  "source": "automatos-ai origin/main 10c59c259 (PRD-266 W3 US-018c, merged as #1263, 39b5b703b): frontend/lib/universal-links.ts IOS_APP_ID, ANDROID_PACKAGE and APP_LINK_PATHS, served by frontend/app/.well-known/apple-app-site-association/route.ts and frontend/app/.well-known/assetlinks.json/route.ts; both paths public in frontend/middleware.ts. Same values as the W3 kit's K14.",
+  "ios": {
+    "appID": "KGVA9933BG.com.automatos.app",
+    "domain": "ui.automatos.app",
+    "components": ["/go/*", "/command-center", "/command-center/*", "/chat", "/chat/*"]
+  },
+  "android": {
+    "package": "com.automatos.app",
+    "domain": "ui.automatos.app",
+    "pathPrefixes": ["/go", "/command-center", "/chat"],
+    "sha256CertFingerprints": "OWNER — OT-R9"
+  },
+  "webcredentials": {
+    "domain": "clerk.automatos.app"
+  }
+}
