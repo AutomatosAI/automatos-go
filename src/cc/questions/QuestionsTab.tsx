@@ -2,7 +2,9 @@
 // server lists them, each a QuestionCard. It reads the one questions query (the foundation's stream
 // refreshes it on board_changed and on resume; a pull refetches it). A role that may not answer reads
 // the cards with the reason over them; a 403 on the list (owners and admins only until PRD-266 W1)
-// is the forbidden copy, not an error page. Any other failure is the foundation's ErrorState.
+// is the forbidden copy, not an error page. Any other failure is the foundation's ErrorState. The
+// list makes room for the keyboard and scrolls the own-words field above it; a tap on Answer with
+// the keyboard up answers (it does not just close the keyboard).
 
 import Lock from 'lucide-react-native/icons/lock';
 import { FlatList, RefreshControl, View, type ListRenderItem } from 'react-native';
@@ -61,6 +63,7 @@ export function QuestionsTab() {
       renderItem={renderCard}
       accessibilityLabel={QUESTIONS_COPY.listLabel}
       keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets
       ListHeaderComponent={
         readOnly && cards.length > 0 ? (
           <Text
