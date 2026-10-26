@@ -36,7 +36,8 @@ export const PROGRESS_LINES_KEPT = 6;
 /**
  * The codes a failed turn carries (consumers/chatbot/turn_errors.py; chat.py session_agent_terminal).
  * PRD-265 W1 renamed trial_exhausted to credits_exhausted; a server from before it still sends the
- * old code, so both stay.
+ * old code, so both stay. turn_stopped is the note a turn the person stopped leaves (turn_notes.py,
+ * STOPPED): a stop, never a failure.
  */
 export const TURN_ERROR_CODES = [
   'rate_limited',
@@ -48,10 +49,14 @@ export const TURN_ERROR_CODES = [
   'activation_failed',
   'provider_failed',
   'turn_failed',
+  'turn_stopped',
   'session_agent_terminal',
 ] as const;
 
 export type TurnErrorCode = (typeof TURN_ERROR_CODES)[number];
+
+/** The code of the note a stopped turn leaves (turn_errors.py CODE_TURN_STOPPED). */
+export const STOPPED_TURN_CODE: TurnErrorCode = 'turn_stopped';
 
 /** An e: line with no code, or one this version does not know, is a turn that failed. */
 export const DEFAULT_TURN_ERROR_CODE: TurnErrorCode = 'turn_failed';

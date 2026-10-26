@@ -116,6 +116,8 @@ export const TURN_ERROR_COPY: Readonly<Record<TurnErrorCode, FailureCopy>> = Obj
   activation_failed: { text: "Auto couldn't start the agent for this reply.", canRetry: true },
   provider_failed: { text: "The AI provider couldn't finish this reply.", canRetry: true },
   turn_failed: { text: "Auto couldn't answer that.", canRetry: true },
+  /** The note a stopped turn leaves: the live Stop's words, quiet, with nothing to ask again. */
+  turn_stopped: { text: CHAT_COPY.stopped, canRetry: false },
   session_agent_terminal: {
     text: 'This agent works in its terminal session, not in chat. Talk to it in Studio.',
     canRetry: false,

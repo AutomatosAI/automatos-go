@@ -14,6 +14,7 @@
 
 import { ApiError } from '../api/errors';
 import {
+  STOPPED_TURN_CODE,
   TURN_ERROR_CODES,
   turnErrorCode,
   type TurnErrorCode,
@@ -162,6 +163,11 @@ function savedFailureCopy(message: StoredMessage): FailureCopy {
   return failureCopy({ kind: 'turn', code: turnErrorCode(message.source?.code ?? null) });
 }
 
+/** A turn the person stopped (turn_stopped) reads as a live Stop does: muted, never a failure. */
+function failureKind(code: string | null): 'failed' | 'stopped' {
+  return code === STOPPED_TURN_CODE ? 'stopped' : 'failed';
+}
+
 function filesOf(message: StoredMessage): string[] {
   const named = [
     ...message.parts.flatMap((part) => (part.type === 'file' ? [part.filename] : [])),
@@ -205,8 +211,9 @@ function storedRow(
   const base = { key: message.id, messageId: message.id, toolLines: [], receipts: null, cards };
   if (savedTurnError(message) !== null) {
     const copy = savedFailureCopy(message);
-    const failed = notice(`${message.id}-failed`, 'failed', copy.text, newest && copy.canRetry);
-    return autoRow({ ...base, answer: '', notices: [failed], tickets: [] });
+    const kind = failureKind(message.source?.code ?? null);
+    const note = notice(`${message.id}-${kind}`, kind, copy.text, newest && copy.canRetry);
+    return autoRow({ ...base, answer: '', notices: [note], tickets: [] });
   }
   return autoRow({
     ...base,
@@ -290,7 +297,7 @@ export function turnNotice(state: ThreadState): Notice | null {
   if (state.status !== 'failed') return null;
   const copy = failureCopy(state.failure);
   const retry = copy.canRetry && canSend(state) && retryInput(state) !== null;
-  return notice(TURN_NOTICE_KEY, 'failed', copy.text, retry);
+  return notice(TURN_NOTICE_KEY, failureKind(state.failure.code), copy.text, retry);
 }
 
 function looseRow(cards: readonly CardRow[]): ChatRow {

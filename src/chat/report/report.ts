@@ -3,7 +3,7 @@
 // server lists report_content and the role may report) and its ReportSheet sends the report
 // (src/api/reports.ts), so this kit holds no second gate and no second report call. Only a message
 // the server saved offers it: never the user's own, never the reply still being written (it has no
-// id yet), never a saved failure (it shows this kit's words, not Auto's).
+// id yet), never a saved failure or stop (it shows this kit's words, not Auto's).
 
 import type { AccessibilityActionEvent, AccessibilityActionInfo } from 'react-native';
 
@@ -30,8 +30,8 @@ export function reportTarget(row: ChatRow, allowed: boolean): ReportTarget | nul
   const id = row.messageId?.trim();
   // an id the server's target_id would refuse is never offered
   if (!id || id.length > REPORT_TARGET_ID_MAX_CHARS) return null;
-  // a saved failure's only notice is 'failed'; a saved answer has none
-  if (row.notices.some((notice) => notice.kind === 'failed')) return null;
+  // a saved failure or stop is a note in this kit's words ('failed' or 'stopped'); an answer has none
+  if (row.notices.length > 0) return null;
   return { target_type: 'message', target_id: id };
 }
 

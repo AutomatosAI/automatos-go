@@ -107,4 +107,10 @@ describe('the newest turn over A2’s thread', () => {
     const stopped = hudTurn(apply(SEND, { type: 'stopped', at: AT }));
     expect(stopped).toMatchObject({ auto: CHAT_COPY.stopped, streaming: false });
   });
+
+  it('a saved turn_stopped note says the live Stop’s words, never a failure', () => {
+    const savedStop = hudTurn(opened([saved('m1', 'user', 'Go'), failure('m2', 'turn_stopped')]));
+    expect(savedStop.auto).toBe(CHAT_COPY.stopped);
+    expect(savedStop.auto).not.toBe(TURN_ERROR_COPY.turn_failed.text);
+  });
 });
