@@ -3,6 +3,8 @@
 // returns, and every word still comes from the one reducer through voiceView (KV8).
 //   The transcript is the view-model's: the user's words, Auto's, and the AI notice as its own line
 //   above Auto's words, once per voice session (KV7); the AI label is A5's Transcript's first row.
+//   Once the voice's reply is saved, the turn names it for Report this, as A2's thread offers it on
+//   that message (voiceReportId, P001R-AF-1); before that, and while it streams, it names none.
 //   HOLD TO TALK's words break after the first ('HOLD\nTO TALK', as A5 draws them in the circle);
 //   it is lit while the mic is held. Under a screen reader one activation talks and the next sends.
 //   The waveform stands at the recognizer's levels while the mic is open, newest last, the most
@@ -12,11 +14,13 @@
 //   The line under the chip: the view-model's message, with its button (Open Settings, Download)
 //   or, for 'See it in the chat', the button alone.
 
+import type { ThreadState } from '../../chat/controller/thread';
 import type { MascotName } from '../../core/web/lib/mascot/types';
+import { reportableId } from '../../styles/homes/hud-turn';
 import type { ChipView, HudTalk, HudTurn } from '../../styles/hud/core/model';
 import { WAVEFORM_BARS } from '../config';
 import type { VoicePhase, VoiceState } from '../machine/voice-state';
-import type { QuickAskReply } from '../quick-ask/reply-text';
+import { savedReplyId, type QuickAskReply } from '../quick-ask/reply-text';
 import { DOWNLOAD_ACTION, PERMISSION_COPY, VOICE_SCREEN_COPY } from '../strings';
 import type { VoiceDress } from './dress';
 import type { MessageAction, MessageKind, VoiceMessageView, VoiceView } from './voice-view-model';
@@ -35,8 +39,20 @@ export function phaseMascot(state: VoiceState): MascotName {
   return MASCOT_FOR[state.phase];
 }
 
-/** The newest voice turn as A5's transcript draws it, with the answering agent for the AI label. */
-export function voiceTurn(view: VoiceView, reply: QuickAskReply | null): HudTurn {
+/** The voice's saved reply, where A2's thread offers Report this on it; null otherwise. */
+export function voiceReportId(state: ThreadState, reply: QuickAskReply | null): string | null {
+  return reportableId(state, savedReplyId(state, reply));
+}
+
+/**
+ * The newest voice turn as A5's transcript draws it, with the answering agent for the AI label and
+ * `reportId` (voiceReportId) naming Auto's saved reply while his words are on screen.
+ */
+export function voiceTurn(
+  view: VoiceView,
+  reply: QuickAskReply | null,
+  reportId: string | null = null,
+): HudTurn {
   const { you, auto, autoStreaming, notice } = view.transcript;
   const words = [notice, auto].filter((part): part is string => part !== null).join('\n');
   const named = reply?.agentName;
@@ -44,6 +60,7 @@ export function voiceTurn(view: VoiceView, reply: QuickAskReply | null): HudTurn
     you,
     auto: words === '' ? null : words,
     streaming: autoStreaming,
+    autoMessageId: auto === null || autoStreaming ? null : reportId,
     agent: named === undefined ? null : Object.freeze({ name: named }),
   });
 }

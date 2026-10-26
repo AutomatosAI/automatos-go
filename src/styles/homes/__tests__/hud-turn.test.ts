@@ -5,9 +5,15 @@ import { opened } from '../../../chat/__tests__/view-model-fixtures';
 import { createThread, threadReducer, type ThreadAction } from '../../../chat/controller/thread';
 import type { StoredMessage } from '../../../chat/schemas';
 import { CHAT_COPY, TURN_ERROR_COPY } from '../../../chat/strings';
-import { EMPTY_TURN, transcriptHint, transcriptRows } from '../../hud/core/model';
-import { hudTurn, plainText } from '../hud-turn';
-import { SEND, frame } from './fixtures';
+import { REPORT_TARGET_ID_MAX_CHARS } from '../../../api/reports';
+import {
+  EMPTY_TURN,
+  transcriptHint,
+  transcriptReport,
+  transcriptRows,
+} from '../../hud/core/model';
+import { hudTurn, plainText, reportableId } from '../hud-turn';
+import { FINISHED, SEND, frame } from './fixtures';
 
 const LATER = '2026-10-21T08:30:12.000Z';
 
@@ -106,5 +112,55 @@ describe('the newest turn over A2’s thread', () => {
     expect(savedFailure.auto).not.toMatch(/plan/);
     const stopped = hudTurn(apply(SEND, { type: 'stopped', at: AT }));
     expect(stopped).toMatchObject({ auto: CHAT_COPY.stopped, streaming: false });
+  });
+});
+
+describe('Report this on the saved reply (D15, P001R-AF-1)', () => {
+  const asked = saved('m1', 'user', 'What laptop?');
+
+  it("names the saved reply it shows, which the transcript's AUTO line reports", () => {
+    const turn = hudTurn(opened([asked, saved('m2', 'assistant', 'Aim for **16 GB**.')]));
+    expect(turn).toMatchObject({ auto: 'Aim for 16 GB.', autoMessageId: 'm2' });
+    const [you, auto] = transcriptRows(turn);
+    expect(transcriptReport(auto, true)).toEqual({ target_type: 'message', target_id: 'm2' });
+    expect(transcriptReport(you, true)).toBeNull();
+    expect(transcriptReport(auto, false)).toBeNull();
+  });
+
+  it('names nothing while Auto writes, nor for a turn that ended but is not saved yet', () => {
+    const streaming = hudTurn(apply(SEND, frame({ kind: 'text', text: 'Three picks' })));
+    expect(streaming).toMatchObject({ streaming: true, autoMessageId: null });
+    expect(transcriptRows(streaming).map((row) => transcriptReport(row, true))).toEqual([
+      null,
+      null,
+    ]);
+    const ended = apply(SEND, frame({ kind: 'text', text: 'Three picks.' }), FINISHED);
+    expect(ended.live).not.toBeNull();
+    expect(hudTurn(ended)).toMatchObject({ auto: 'Three picks.', autoMessageId: null });
+  });
+
+  it('names nothing for a failure, saved or live, or a stop', () => {
+    const savedFailure = hudTurn(opened([asked, failure('m2', 'turn_failed')]));
+    expect(savedFailure).toMatchObject({ autoMessageId: null });
+    expect(savedFailure.auto).toBe(TURN_ERROR_COPY.turn_failed.text);
+    const stopped = hudTurn(apply(SEND, { type: 'stopped', at: AT }));
+    expect(stopped).toMatchObject({ auto: CHAT_COPY.stopped, autoMessageId: null });
+  });
+
+  it("refuses an id the server's target_id would refuse, as A2's thread does", () => {
+    const longest = 'r'.repeat(REPORT_TARGET_ID_MAX_CHARS);
+    const tooLong = `${longest}9`;
+    expect(hudTurn(opened([asked, saved(longest, 'assistant', 'Yes.')])).autoMessageId).toBe(
+      longest,
+    );
+    expect(hudTurn(opened([asked, saved(tooLong, 'assistant', 'Yes.')])).autoMessageId).toBeNull();
+  });
+
+  it("reportableId: an Auto message A2's thread shows, never the user's or one not there", () => {
+    const state = opened([asked, saved('m2', 'assistant', 'Yes.')]);
+    expect(reportableId(state, 'm2')).toBe('m2');
+    expect(reportableId(state, 'm1')).toBeNull();
+    expect(reportableId(state, 'm9')).toBeNull();
+    expect(reportableId(state, null)).toBeNull();
   });
 });

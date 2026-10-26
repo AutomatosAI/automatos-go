@@ -22,6 +22,7 @@ import {
   statusRow,
   transcriptAlign,
   transcriptHint,
+  transcriptReport,
   transcriptRows,
   turnElapsedMs,
   type HudTurn,
@@ -67,6 +68,7 @@ describe('the transcript', () => {
         text: 'On it. Five sources, then a shortlist in about thirty seconds',
         label: 'Auto, still answering: On it. Five sources, then a shortlist in about thirty seconds',
         cursor: true,
+        messageId: null,
       },
     ]);
   });
@@ -74,6 +76,21 @@ describe('the transcript', () => {
   it('drops the cursor once the reply is done, and names a picked agent', () => {
     const [, auto] = transcriptRows({ ...turn, streaming: false, agent: { name: 'Researcher' } });
     expect(auto).toMatchObject({ cursor: false, label: `Researcher: ${turn.auto}` });
+  });
+
+  it("names Auto's saved reply once he is done: Report this on AUTO's line alone (P001R-AF-1)", () => {
+    const done: HudTurn = { ...turn, streaming: false, autoMessageId: 'm2' };
+    const [you, auto] = transcriptRows(done);
+    expect(auto).toMatchObject({ who: 'auto', messageId: 'm2' });
+    expect(transcriptReport(auto, true)).toEqual({ target_type: 'message', target_id: 'm2' });
+    expect(transcriptReport(you, true)).toBeNull();
+    expect(transcriptReport(auto, false)).toBeNull();
+    const streaming = transcriptRows({ ...done, streaming: true })[1];
+    expect(streaming).toMatchObject({ messageId: null });
+    expect(transcriptReport(streaming, true)).toBeNull();
+    expect(transcriptRows({ ...done, autoMessageId: undefined })[1]).toMatchObject({
+      messageId: null,
+    });
   });
 
   it('shows the cursor alone while the reply has not started', () => {

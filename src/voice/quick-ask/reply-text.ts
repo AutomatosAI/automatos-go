@@ -13,6 +13,8 @@
 //   call waiting on the owner ('Waiting for you'): the vendored toolLineLabel, without the detail or
 //   the summary (the state chip shows them in capitals). hasCards and hasReceipts say the chat holds
 //   more than the voice says ('See it in the chat').
+//   since: where the turn starts in the thread's messages, so its saved reply can be named once the
+//   thread retires the turn (savedReplyId: Report this on the voice's reply, P001R-AF-1).
 
 import { raisedCards } from '../../chat/cards/model';
 import type { LiveTurn, ThreadDraft, ThreadState } from '../../chat/controller/thread';
@@ -53,6 +55,8 @@ export type QuickAskReply = {
   readonly hasReceipts: boolean;
   /** The answering agent's name when the turn named one (agent-info). */
   readonly agentName?: string;
+  /** Where the turn starts in the thread's messages: its saved reply is Auto's first from there. */
+  readonly since: number;
 };
 
 /** A2's thread is reading the turn, or the turn runs on the server while it is not. */
@@ -134,7 +138,8 @@ function liveStatus(state: ThreadState) {
   };
 }
 
-function fromLive(state: ThreadState, turn: TurnState): QuickAskReply {
+function fromLive(state: ThreadState, live: LiveTurn): QuickAskReply {
+  const { turn } = live;
   const status = liveStatus(state);
   const caption = toolCaption(turn, status.streaming);
   return Object.freeze({
@@ -144,6 +149,7 @@ function fromLive(state: ThreadState, turn: TurnState): QuickAskReply {
     hasCards: raisedCards(turn).length > 0 || turn.taskCards.length > 0,
     hasReceipts: (turn.receipts?.length ?? 0) > 0,
     ...agentOf(turn),
+    since: live.since,
   });
 }
 
@@ -168,6 +174,7 @@ function fromSaved(state: ThreadState, turn: QuickAskTurn): QuickAskReply | null
     hasCards: cards,
     hasReceipts: (receiptsOf(message)?.length ?? 0) > 0,
     ...agentOf(turn.last),
+    since: turn.since,
   });
 }
 
@@ -175,7 +182,18 @@ function fromSaved(state: ThreadState, turn: QuickAskTurn): QuickAskReply | null
 export function quickAskReply(state: ThreadState, tracking: TurnTracking): QuickAskReply | null {
   if (tracking.kind === 'awaiting') return null;
   const { turn } = tracking;
-  if (state.live !== null && state.live.draft === turn.draft)
-    return fromLive(state, state.live.turn);
+  if (state.live !== null && state.live.draft === turn.draft) return fromLive(state, state.live);
   return fromSaved(state, turn);
+}
+
+/**
+ * The id of the saved reply to quick-ask's turn once the thread retired it: Auto's first message
+ * from where the turn started (savedReply's rule). null for no reply, a turn that did not finish
+ * (failed or stopped), a turn still live, or before the reply is in.
+ */
+export function savedReplyId(state: ThreadState, reply: QuickAskReply | null): string | null {
+  if (reply === null || !reply.finished) return null;
+  if (state.live !== null && state.live.since === reply.since) return null;
+  const saved = state.messages.slice(reply.since).find((message) => message.role === 'assistant');
+  return saved?.id ?? null;
 }

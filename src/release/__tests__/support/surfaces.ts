@@ -148,6 +148,20 @@ export const REPORT_MOUNTS: readonly ReportMount[] = [
     reason: "Play's thread (US-016k): the same, on Play's Auto messages",
   },
   {
+    file: HUD_HOME,
+    target: 'message',
+    opener: MESSAGE_REPORT,
+    reason:
+      "HUD's home (P001R-AF-1): a long-press or the accessible action on Auto's saved reply in the core's Transcript (HudTurn's autoMessageId)",
+  },
+  {
+    file: VOICE_SCREEN,
+    target: 'message',
+    opener: MESSAGE_REPORT,
+    reason:
+      "The voice screen in every style (P001R-AF-1): the same, on the voice's saved reply in the core's Transcript",
+  },
+  {
     file: 'src/cc/deliverables/DeliverableDetail.tsx',
     target: 'deliverable',
     opener: DELIVERABLE_PAGE,
@@ -167,14 +181,11 @@ export type AutoMessages =
   | Readonly<{ kind: 'none'; reason: string }>
   | Readonly<{ kind: 'pending'; story: string; reason: string }>;
 
-const HUD_REPORT_PENDING =
-  "HUD's Transcript shows Auto's newest reply as plain text with no Report this, and HudTurn carries no message id (src/styles/hud/core/model.ts)";
-
 export const AUTO_MESSAGES: Readonly<Record<string, AutoMessages>> = {
   [CHAT_SCREEN]: { kind: 'report' },
   [PLAY_HOME]: { kind: 'report' },
-  [HUD_HOME]: { kind: 'pending', story: 'P001R-AF-1', reason: HUD_REPORT_PENDING },
-  [VOICE_SCREEN]: { kind: 'pending', story: 'P001R-AF-1', reason: HUD_REPORT_PENDING },
+  [HUD_HOME]: { kind: 'report' },
+  [VOICE_SCREEN]: { kind: 'report' },
   [FIRST_OPEN]: {
     kind: 'none',
     reason: "First open is the hello before any message (HUD's core with EMPTY_TURN)",

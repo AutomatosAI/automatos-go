@@ -5,7 +5,8 @@
 //   above it once per session, KV7) from a press until a typed send makes the thread's turn the
 //   newest again; a press that heard nothing (a tap, a refusal) leaves the thread's turn on screen.
 //   Once the voice's turn is sent it is the thread's newest exchange, so the status row's clock and
-//   the answering agent come from the thread's turn.
+//   the answering agent come from the thread's turn. Report this names the voice's own saved reply
+//   (replyId, by where its turn started), never the thread's newest, which a typed send may be.
 //   The chip and the status word: the voice's while it works (the mic held, Auto thinking or
 //   speaking) or while the voice's turn has a line to say; Auto's state's (A5's) otherwise.
 //   The line under the chip: the view-model's, but for the two that have no place here: a viewer's
@@ -41,6 +42,8 @@ export type HudHomeVoiceInput = {
   /** A turn streams on the thread (A2's canStop): a typed one STOP stops as well. */
   readonly threadStreams: boolean;
   readonly hold: HoldHandlers;
+  /** The voice's saved reply where Report this is offered on it (voiceReportId); null before. */
+  readonly replyId: string | null;
 };
 
 export type HudHomeVoice = {
@@ -78,7 +81,7 @@ function hasTurn(turn: HudTurn): boolean {
 export function homeTurn(input: HudHomeVoiceInput): HudTurn {
   const { view, state, reply, threadTurn, shows } = input;
   if (shows !== 'voice') return threadTurn;
-  const spoken = voiceTurn(view, reply);
+  const spoken = voiceTurn(view, reply, input.replyId);
   if (!hasTurn(spoken)) return threadTurn;
   if (!state.replyStreaming && !state.replyFinished) return spoken;
   return Object.freeze({
@@ -86,6 +89,8 @@ export function homeTurn(input: HudHomeVoiceInput): HudTurn {
     you: spoken.you ?? threadTurn.you,
     auto: spoken.auto,
     streaming: spoken.streaming,
+    // the id goes with the words: the voice's reply, never the thread's turn's
+    autoMessageId: spoken.autoMessageId,
     agent: spoken.agent ?? threadTurn.agent,
   });
 }

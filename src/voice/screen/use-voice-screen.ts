@@ -10,6 +10,7 @@
 //   (use-voice-parts.ts, shared with HUD's home).
 //   Permissions are read at mount for MIC OFF, never asked (KV5: only a press asks); a press's own
 //   verdict, always the newer, wins.
+//   Report this on the voice's reply: its saved message (voiceReportId), read per thread change.
 
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -34,6 +35,7 @@ import {
   phaseMascot,
   voiceCoreProps,
   voiceLine,
+  voiceReportId,
   voiceTurn,
   type VoiceCoreProps,
   type VoiceLine,
@@ -139,11 +141,15 @@ export function useVoiceScreen(chatId: string | null): VoiceScreenModel {
     failure: thread.state.failure,
   });
   const dress = useMemo(() => voiceDress(style), [style]);
+  const replyId = useMemo(
+    () => voiceReportId(thread.state, quick.reply),
+    [thread.state, quick.reply],
+  );
   return {
     thread,
     role: workspace.role,
     view,
-    turn: voiceTurn(view, quick.reply),
+    turn: voiceTurn(view, quick.reply, replyId),
     mascot: view.mascot,
     core: voiceCoreProps({ view, phase: voice.phase, dress, hold }),
     line: voiceLine(view.message),

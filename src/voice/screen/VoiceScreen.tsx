@@ -7,15 +7,18 @@
 // Reduce Motion (the style's motion) stills the rings, the waveform and the cursor; the chip, MIC
 // LIVE and the transcript say what they showed. TYPE opens A2's Composer in the foundation's Sheet.
 // Until A2's home thread is chosen (KC4) the screen waits, and opens no thread.
+// Report this (D15, P001R-AF-1): a long-press or the accessible action on Auto's saved reply in the
+// transcript opens the foundation's one ReportSheet (A2's useMessageReport), beside TYPE's Sheet.
 
 import { StatusBar } from 'expo-status-bar';
 
 import { Composer } from '../../chat/composer/Composer';
 import { canStop } from '../../chat/controller/thread';
+import { useMessageReport } from '../../chat/report/use-message-report';
 import { statusBarStyle } from '../../styles/ground/ground';
 import { HudCore } from '../../styles/hud/core/HudCore';
 import { useStyle } from '../../styles/theme';
-import { ErrorState, LoadingState, Screen, Sheet } from '../../ui';
+import { ErrorState, LoadingState, ReportSheet, Screen, Sheet } from '../../ui';
 import { useVoiceChat } from '../quick-ask/use-voice-chat';
 import { useVoiceScreen, type VoiceScreenModel } from './use-voice-screen';
 import { VoiceLine } from './VoiceLine';
@@ -56,6 +59,7 @@ function TypeSheet({ model }: { readonly model: VoiceScreenModel }) {
 function VoiceThread({ chatId }: { readonly chatId: string | null }) {
   const model = useVoiceScreen(chatId);
   const { tone } = useStyle();
+  const { report, sheet } = useMessageReport();
   const { thread, view, on } = model;
   if (thread.loadError) return <Waiting error={thread.loadError} onRetry={thread.retry} />;
   return (
@@ -72,8 +76,10 @@ function VoiceThread({ chatId }: { readonly chatId: string | null }) {
         onMenu={on.close}
         levels={model.levels}
         voice={{ ...model.core, line: <VoiceLine line={model.line} onAction={on.lineAction} /> }}
+        report={report}
       />
       <TypeSheet model={model} />
+      <ReportSheet {...sheet} />
     </>
   );
 }

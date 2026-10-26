@@ -325,10 +325,11 @@ You choose a reason and can add a note. On hosted Studio, the report goes to the
 a notification in Automatos, and to Automatos AI's moderation inbox. … On your own server, the
 report goes only to that server's operator." Section 07's "Content reports" row points there.
 
-**Answer:** Partly. Report this is on Auto's messages in Studio and Play and on every Deliverable in
-every style. It is not yet on Auto's reply in HUD's transcript or on the voice screen. P001R-AF-1 in
-this wave adds it there. The phone sends each report to the server it is connected to. Where a
-report goes from there is that server's: the edition rule above is PRD-266's, not the app's.
+**Answer:** Yes. Report this is on every saved Auto message the app shows: in Studio's and Play's
+thread, in HUD's transcript, and on the voice screen in every style (P001R-AF-1). It is also on every
+Deliverable in every style. A reply still being written has no Report this until the server saves
+it. The phone sends each report to the server it is connected to. Where a report goes from there is
+that server's: the edition rule above is PRD-266's, not the app's.
 
 **What the code does:**
 
@@ -343,9 +344,17 @@ report goes from there is that server's: the edition rule above is PRD-266's, no
     (`src/cc/deliverables/DeliverableDetail.tsx`), Play in the bottom row
     (`src/styles/homes/PlayDeliverable.tsx`). Both use `useDeliverablePage`, which builds the target
     in `src/cc/deliverables/detail.ts`.
-  - **Not yet in HUD:** HUD's home and the voice screen show Auto's newest reply as plain text in
-    the transcript, with no Report this (P001R-AF-1). In Studio and Play the same message has it in
-    the thread.
+  - **HUD's home and the voice screen:** a long-press, or the VoiceOver action "Report this", on
+    Auto's line in the core's transcript (`src/styles/hud/core/Transcript.tsx`), once that reply is
+    saved. The line names its message through `autoMessageId` (`src/styles/hud/core/model.ts`).
+    On HUD's home that is the thread's saved reply (`src/styles/homes/hud-turn.ts`). On the voice
+    screen, and for a reply heard on HUD's home, it is the voice's own saved reply, found by where
+    its turn started (`savedReplyId` in `src/voice/quick-ask/reply-text.ts`), so a typed turn
+    after it never takes its place. Both go through A2's `reportTarget`, the same rule as the
+    thread. Nothing is offered on the person's own words, on a reply still streaming, or on a
+    failure. It opens the same sheet through `useMessageReport` in
+    `src/styles/homes/HudHome.tsx` and `src/voice/screen/VoiceScreen.tsx`, mounted beside TYPE's
+    sheet, never inside it.
 - **Who sees it:** owners, admins and editors (`src/auth/role.ts`), and only when the server's
   discovery document lists `report_content` (`src/api/capabilities.ts`). Viewers never see it.
 - **What it sends:** `POST /api/v1/reports` with `target_type` (`message` or `deliverable`),
@@ -366,29 +375,52 @@ report goes from there is that server's: the edition rule above is PRD-266's, no
 **Evidence:**
 
 - `src/release/__tests__/surfaces.test.ts` (US-021k), part (b):
-  - The files that mount the foundation's ReportSheet are exactly the four above. Each one opens it
+  - The files that mount the foundation's ReportSheet are exactly the six above (Studio's thread,
+    Play's home, HUD's home, the voice screen and the two Deliverable pages). Each one opens it
     through its target's hook.
   - Studio's and Play's threads offer it on Auto's rows (`row.type` `auto`, `target_type`
     `message`), and the Deliverable route opens it in every style (`target_type` `deliverable`).
-  - Every surface that can show Auto's messages says what Report this is there. HUD's home and the
-    voice screen are marked pending P001R-AF-1, so the test fails until they are marked as
-    reporting once that story mounts the sheet.
+  - Every surface that can show Auto's messages says what Report this is there. Studio's thread,
+    Play's home, HUD's home and the voice screen report. First open shows no message.
   - Only `src/api/reports.ts` uses the reports route, `src/api/routes.ts` is the only file that
     names it, and only the sheet calls `reportContent`.
 - `src/chat/__tests__/report.test.ts` (A2 US-009c), `src/ui/__tests__/report.test.ts` (FND-3) and
   `src/cc/__tests__/deliverable-detail.test.ts` (A3 US-013b): the gate, the draft, the payload and
   the toasts.
+- P001R-AF-1, HUD's transcript and the voice screen:
+  - `src/styles/homes/__tests__/hud-turn.test.ts`: a saved reply's id. None while Auto writes, for
+    a turn that ended but is not saved, for a failure or a stop, or for a 65-character id.
+  - `src/styles/hud/core/__tests__/model.test.ts`: Report this is on Auto's line only, and only
+    once he is done.
+  - `src/voice/__tests__/voice-report.test.ts`: the voice's reply over real thread states. None
+    until the thread saves it, the voice's own after a typed turn, none for a failure, a stop or an
+    id over 64.
+  - `src/voice/__tests__/hud-home-voice.test.ts`: HUD's home names the voice's reply, never the
+    thread's newest.
 
 **Policy wording:**
 
-- Section 12, first sentence: "Auto's messages and every deliverable in the app have **Report
-  this**." Once P001R-AF-1 is merged, HUD's screen and the voice screen have it too.
+- Section 12, first sentence: the draft's "Every Auto message and every deliverable in the app has
+  **Report this**." stands. It is true of every saved Auto message in Studio, Play, HUD and on the
+  voice screen (P001R-AF-1). A reply gets it once the server saves it.
 - Keep the hosted and own-server bullets as they are. The app sends a report only to the server it
   is connected to.
 
 **Owner check:** the device check after PRD-266 W3 is deployed (OT-C7 in the chat wave). On hosted
 Studio, report an Auto message and a Deliverable: the owner's notification and the moderation inbox
 receive each. On the VPS, the operator receives them and nothing reaches Automatos.
+
+**Owner check, HUD and the voice screen (OT-R16, P001R-AF-1):**
+
+1. In HUD style, on the home, ask Auto something and wait for the reply to finish.
+2. Long-press Auto's line in the transcript. The sheet opens, titled "Report this message". Pick a
+   reason and send. The toast says "Thanks. Your report was sent."
+3. With VoiceOver on, focus Auto's line and swipe up or down to the action "Report this". The same
+   sheet opens.
+4. Long-press your own words, and Auto's line while the reply is still streaming: nothing opens,
+   and VoiceOver lists no "Report this" action on either.
+5. Switch to Studio and open the voice screen. Hold to talk, ask something, let the reply finish
+   and be spoken, then repeat steps 2 to 4 on its transcript.
 
 ## The consent sheet and a refusal
 
