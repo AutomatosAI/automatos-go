@@ -38,6 +38,7 @@ function fakeMmkv(): MmkvLike & { readonly items: Map<string, string> } {
       items.set(key, value);
     },
     remove: (key) => items.delete(key),
+    getAllKeys: () => [...items.keys()],
   };
 }
 
@@ -106,6 +107,16 @@ describe('openEncryptedStorage', () => {
     expect(opened.storage.getItem('theme')).toBeNull();
   });
 
+  it("lists the file's keys, so leaving a session can empty it item by item", () => {
+    const { deps: d } = deps();
+    const opened = openEncryptedStorage(d);
+    opened.storage.setItem('theme', 'dark');
+    opened.storage.setItem('automatos.query-cache', '{}');
+    expect(opened.storage.keys()).toEqual(['theme', 'automatos.query-cache']);
+    opened.storage.removeItem('theme');
+    expect(opened.storage.keys()).toEqual(['automatos.query-cache']);
+  });
+
   it('keeps the launch in memory when the keychain cannot be read, and writes no new key', () => {
     const setItem = vi.fn();
     const secureStore: SecureKeyStore = {
@@ -150,7 +161,9 @@ describe('memoryStorage', () => {
     const storage = memoryStorage();
     expect(storage.getItem('k')).toBeNull();
     storage.setItem('k', 'v');
+    expect(storage.keys()).toEqual(['k']);
     storage.removeItem('k');
     expect(storage.getItem('k')).toBeNull();
+    expect(storage.keys()).toEqual([]);
   });
 });

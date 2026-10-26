@@ -6,7 +6,16 @@
 // cannot sign anyone in — exactly what App Review rejects as incomplete.
 //
 // production: missing must-haves FAIL the build. preview and testflight: they warn only, so a
-// device-pass build can still be made against test keys.
+// device-pass build can still be made against test keys. A Sentry DSN that is set but not in
+// Sentry's EU region (D44) is one of them: the app refuses it (src/observability/options.ts
+// isEuDsn, the same grammar as below), so a store build would ship with crash reports silently off.
+
+const SENTRY_DSN = 'EXPO_PUBLIC_SENTRY_DSN';
+/** Sentry's EU ingest hosts are o<org>.ingest.de.sentry.io (src/observability/options.ts). */
+const EU_INGEST_HOST_SUFFIX = '.ingest.de.sentry.io';
+// @sentry/core's DSN grammar (utils/dsn.js DSN_REGEX), as options.ts reads it: the host it checks
+// is the host the SDK sends to.
+const DSN_PATTERN = /^(?:(\w+):)\/\/(?:(\w+)(?::(\w+)?)?@)([\w.-]+)(?::(\d+))?\/(.+)/;
 
 const REQUIRED = [
   {
@@ -19,9 +28,7 @@ const REQUIRED = [
   { name: 'EXPO_PUBLIC_WEB_URL', why: 'links into hosted Studio' },
 ];
 
-const RECOMMENDED = [
-  { name: 'EXPO_PUBLIC_SENTRY_DSN', why: 'error reporting (Sentry EU) stays off without it' },
-];
+const RECOMMENDED = [{ name: SENTRY_DSN, why: 'error reporting (Sentry EU) stays off without it' }];
 
 const STRICT_PROFILES = new Set(['production']);
 const CHECKED_PROFILES = new Set(['production', 'preview', 'testflight']);
@@ -39,6 +46,23 @@ function requiredProblems(env, item, strict) {
     : [];
 }
 
+/** True only for an https DSN whose host is a subdomain of Sentry's EU ingest host. */
+function isEuDsn(dsn) {
+  const match = DSN_PATTERN.exec(dsn);
+  if (!match) return false;
+  const [, protocol, , , host = ''] = match;
+  return protocol === 'https' && host.toLowerCase().endsWith(EU_INGEST_HOST_SUFFIX);
+}
+
+function sentryRegionProblems(env) {
+  const dsn = (env[SENTRY_DSN] ?? '').trim();
+  if (!dsn || isEuDsn(dsn)) return [];
+  return [
+    `${SENTRY_DSN} is not a Sentry EU DSN (its host must end ${EU_INGEST_HOST_SUFFIX}, D44): ` +
+      'the app sends no crash report with it.',
+  ];
+}
+
 /**
  * Pure check over an env map — returns `{ errors, warnings }` as message lists.
  * `errors` is only ever non-empty for a strict (store-bound) profile.
@@ -46,7 +70,10 @@ function requiredProblems(env, item, strict) {
 function checkReleaseEnv(env, profile) {
   if (!CHECKED_PROFILES.has(profile)) return { errors: [], warnings: [] };
   const strict = STRICT_PROFILES.has(profile);
-  const problems = REQUIRED.flatMap((item) => requiredProblems(env, item, strict));
+  const problems = [
+    ...REQUIRED.flatMap((item) => requiredProblems(env, item, strict)),
+    ...sentryRegionProblems(env),
+  ];
   const unset = RECOMMENDED.filter((item) => !isSet(env, item.name)).map(
     (item) => `${item.name} is not set — ${item.why}.`,
   );
@@ -78,6 +105,6 @@ function main() {
   process.exit(1);
 }
 
-module.exports = { checkReleaseEnv };
+module.exports = { checkReleaseEnv, isEuDsn };
 
 if (require.main === module) main();

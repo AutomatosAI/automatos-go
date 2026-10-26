@@ -11,6 +11,8 @@ import { StyleSheet, View } from 'react-native';
 import { useAuthSession } from '../../auth/AuthRoot';
 import { env } from '../../lib/env';
 import { routes } from '../../navigation/routes';
+import { LegalLine } from '../../release/components/LegalLine';
+import { PRIVACY_POLICY_URL, TERMS_URL } from '../../release/legal-links';
 import { hostedSignInConfigured } from '../../session/auth-branch';
 import { useTokens } from '../../styles/theme';
 import { Button, LoadingState, Screen, Text } from '../../ui';
@@ -71,6 +73,7 @@ export function WelcomeScreen() {
             fullWidth
           />
         </View>
+        <LegalLine privacyUrl={PRIVACY_POLICY_URL} termsUrl={TERMS_URL} />
       </View>
     </Screen>
   );

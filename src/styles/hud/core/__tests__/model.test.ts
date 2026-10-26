@@ -4,6 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 
+import { REPORT_TARGET_ID_MAX_CHARS } from '../../../../api/reports';
 import { MENU_HINT } from '../../../../chat/home/menu';
 import { captionFor } from '../../../../core/frozen/lib/mascot/media';
 import { MASCOT_STATES } from '../../../../core/frozen/lib/mascot/types';
@@ -25,6 +26,7 @@ import {
   statusRow,
   transcriptAtEnd,
   transcriptHint,
+  transcriptReport,
   transcriptRows,
   turnElapsedMs,
   type HudTurn,
@@ -68,8 +70,10 @@ describe('the transcript', () => {
       {
         who: 'auto',
         text: 'On it. Five sources, then a shortlist in about thirty seconds',
-        label: 'Auto, still answering: On it. Five sources, then a shortlist in about thirty seconds',
+        label:
+          'Auto, still answering: On it. Five sources, then a shortlist in about thirty seconds',
         cursor: true,
+        messageId: null,
       },
     ]);
   });
@@ -77,6 +81,33 @@ describe('the transcript', () => {
   it('drops the cursor once the reply is done, and names a picked agent', () => {
     const [, auto] = transcriptRows({ ...turn, streaming: false, agent: { name: 'Researcher' } });
     expect(auto).toMatchObject({ cursor: false, label: `Researcher: ${turn.auto}` });
+  });
+
+  it("names Auto's saved reply once he is done: Report this on AUTO's line alone (P001R-AF-1)", () => {
+    const done: HudTurn = { ...turn, streaming: false, autoMessageId: 'm2' };
+    const [you, auto] = transcriptRows(done);
+    expect(auto).toMatchObject({ who: 'auto', messageId: 'm2' });
+    expect(transcriptReport(auto, true)).toEqual({ target_type: 'message', target_id: 'm2' });
+    expect(transcriptReport(you, true)).toBeNull();
+    expect(transcriptReport(auto, false)).toBeNull();
+    const streaming = transcriptRows({ ...done, streaming: true })[1];
+    expect(streaming).toMatchObject({ messageId: null });
+    expect(transcriptReport(streaming, true)).toBeNull();
+    expect(transcriptRows({ ...done, autoMessageId: undefined })[1]).toMatchObject({
+      messageId: null,
+    });
+  });
+
+  it("never offers an id the server's target_id would refuse (as the thread's reportTarget)", () => {
+    const longest = 'm'.repeat(REPORT_TARGET_ID_MAX_CHARS);
+    const rowFor = (id: string) =>
+      transcriptRows({ ...turn, streaming: false, autoMessageId: id })[1];
+    expect(transcriptReport(rowFor(longest), true)).toEqual({
+      target_type: 'message',
+      target_id: longest,
+    });
+    expect(transcriptReport(rowFor(`${longest}m`), true)).toBeNull();
+    expect(transcriptReport(rowFor('   '), true)).toBeNull();
   });
 
   it('shows the cursor alone while the reply has not started', () => {
@@ -126,7 +157,7 @@ describe("First open's hint (US-017f)", () => {
 });
 
 describe('the top bar', () => {
-  it("says MIC LIVE whenever the mic is open, else MIC OFF", () => {
+  it('says MIC LIVE whenever the mic is open, else MIC OFF', () => {
     expect(micView(true)).toEqual({ text: '● MIC LIVE', live: true, label: 'Microphone on' });
     expect(micView(false)).toEqual({ text: '○ MIC OFF', live: false, label: 'Microphone off' });
   });
@@ -148,7 +179,12 @@ describe('the top bar', () => {
   });
 
   it("reads '<AGENT> · <STATE>' and the clock", () => {
-    const turn: HudTurn = { ...EMPTY_TURN, agent: { name: 'Researcher' }, startedAt: 0, endedAt: 134_000 };
+    const turn: HudTurn = {
+      ...EMPTY_TURN,
+      agent: { name: 'Researcher' },
+      startedAt: 0,
+      endedAt: 134_000,
+    };
     expect(statusRow(turn, 'searching', 0)).toEqual({
       text: 'RESEARCHER · SEARCHING',
       clock: '02:14',

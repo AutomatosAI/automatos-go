@@ -6,9 +6,13 @@
 // fits; past that it scrolls, showing the newest lines: new words scroll it down while the person
 // reads its end (transcriptAtEnd), and it stays put once they scroll up to read the start. A new
 // turn opens at its end again.
+// Given A2's ThreadReport, Auto's saved reply offers Report this (D15) as A2's AutoMessage does: a
+// long-press on the line and the 'Report this' accessible action. Never on YOU's line, never while
+// he streams, never past the gate (a viewer, a server without report_content).
 
-import { useCallback, useEffect, useRef, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import {
+  Pressable,
   ScrollView,
   StyleSheet,
   View,
@@ -17,12 +21,14 @@ import {
 } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 
+import { reportAccessibility, type ThreadReport } from '../../../chat/report/report';
 import { Text } from '../../../ui';
 import { AiLabel } from '../../ai-label';
 import {
   HUD_CORE,
   transcriptAtEnd,
   transcriptHint,
+  transcriptReport,
   transcriptRows,
   type HudTurn,
   type TranscriptRow,
@@ -55,20 +61,55 @@ function Cursor({ core }: { readonly core: VoiceCore }) {
   );
 }
 
-function Row({ row, core }: { readonly row: TranscriptRow; readonly core: VoiceCore }) {
+type ReportPressProps = {
+  readonly onReport: (() => void) | undefined;
+  readonly children: ReactNode;
+};
+
+/** The long-press (A2's ReportPress); not accessible itself, so the line stays one element. */
+function ReportPress({ onReport, children }: ReportPressProps) {
+  if (!onReport) return children;
+  return (
+    <Pressable accessible={false} onLongPress={onReport}>
+      {children}
+    </Pressable>
+  );
+}
+
+/** Opens Report this on the row, where it is offered (transcriptReport); none otherwise. */
+function reportOpener(row: TranscriptRow, report: ThreadReport | undefined) {
+  const target = report ? transcriptReport(row, report.allowed) : null;
+  return report && target ? () => report.open(target) : undefined;
+}
+
+type RowProps = {
+  readonly row: TranscriptRow;
+  readonly core: VoiceCore;
+  readonly onReport: (() => void) | undefined;
+};
+
+function Row({ row, core, onReport }: RowProps) {
   const { paint, style } = core;
   const spec = row.who === 'you' ? transcript.you : transcript.auto;
   const face = style.type.body(spec.size, 400, { leading: spec.leading });
   const colour = row.who === 'you' ? paint.text2 : paint.text;
   return (
-    <View accessible accessibilityRole="text" accessibilityLabel={row.label} style={styles.row}>
-      {row.text ? (
-        <Text selectable style={[face, styles.words, { color: colour }]}>
-          {row.text}
-        </Text>
-      ) : null}
-      {row.who === 'auto' && row.cursor ? <Cursor core={core} /> : null}
-    </View>
+    <ReportPress onReport={onReport}>
+      <View
+        accessible
+        accessibilityRole="text"
+        accessibilityLabel={row.label}
+        style={styles.row}
+        {...reportAccessibility(onReport)}
+      >
+        {row.text ? (
+          <Text selectable style={[face, styles.words, { color: colour }]}>
+            {row.text}
+          </Text>
+        ) : null}
+        {row.who === 'auto' && row.cursor ? <Cursor core={core} /> : null}
+      </View>
+    </ReportPress>
   );
 }
 
@@ -103,9 +144,13 @@ function useFollowEnd(scroll: RefObject<ScrollView | null>, turnKey: string | nu
   return { onScroll, toEnd };
 }
 
-export type TranscriptProps = { readonly turn: HudTurn };
+export type TranscriptProps = {
+  readonly turn: HudTurn;
+  /** Report this on Auto's saved reply (A2's useMessageReport); absent, nothing is offered. */
+  readonly report?: ThreadReport;
+};
 
-export function Transcript({ turn }: TranscriptProps) {
+export function Transcript({ turn, report }: TranscriptProps) {
   const core = useVoiceCore();
   const scroll = useRef<ScrollView>(null);
   const follow = useFollowEnd(scroll, turn.you);
@@ -125,7 +170,7 @@ export function Transcript({ turn }: TranscriptProps) {
       <AiLabel agent={turn.agent} />
       <Hint turn={turn} core={core} />
       {transcriptRows(turn).map((row) => (
-        <Row key={row.who} row={row} core={core} />
+        <Row key={row.who} row={row} core={core} onReport={reportOpener(row, report)} />
       ))}
     </ScrollView>
   );

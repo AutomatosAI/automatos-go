@@ -55,6 +55,26 @@ without it), Claude starts the run after each green merge, from a clean checkout
 (Gerard, 24 Oct: "let's do it ourselves"). Once linked, stop: the push trigger would
 run it a second time.
 
+## Release (A7)
+
+- `docs/release/` is the store record: the App Store and Play answers, the review notes, the
+  listing, the privacy facts the policy and Terms are edited from, the WebSummit checklist, and
+  `README.md`, which maps every store requirement (R01–R23) to its proof and every owner step
+  (OT-R1…) to its document. A change that alters what the app collects, asks for or says updates
+  the matching file there in the same PR.
+- The audits in `src/release/__tests__/` and `scripts/__tests__/release-*.test.ts` are store
+  requirements, read from the whole product tree. Never weaken, skip or delete one to make a change
+  pass: fix the change, or add an entry to that audit's ALLOWED list with the file, the exact text
+  and the reason.
+- Before the first submit of every native build, download its IPA and run
+  `node scripts/release/scan-ipa.mjs <ipa>` (`docs/release/ipa-scan.md`): it must say PASS
+  (ITMS-90683).
+- Crash reporting's Sentry options are fixed policy (`src/observability/options.ts`, KR7): EU DSN
+  only, the user's switch (on by default), `sendDefaultPii` false, never `setUser` or `Sentry.wrap`,
+  no tracing, sessions, screenshots, view hierarchy or replays, scrubbed events and breadcrumbs.
+  The store labels say Crash Data not linked and no Performance Data or Product Interaction because
+  of them; changing one means changing the labels first.
+
 ## Environment
 
 Build-time `EXPO_PUBLIC_*` values from the EAS environment of the build profile

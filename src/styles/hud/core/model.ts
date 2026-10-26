@@ -7,8 +7,10 @@
 // HudTurn; A6's voice screen (US-019j) gives HOLD TO TALK its hold and the status row its word. The chip, the status words and the transcript say everything the rings and the waveform
 // show (the README's text twins). On a short screen the core gives up its size so the transcript
 // keeps three lines and the buttons stay on screen; the transcript scrolls, following its end while
-// it is read there.
+// it is read there. Auto's saved reply names its message, so the transcript can offer Report this
+// on it (D15, P001R-AF-1).
 
+import { REPORT_TARGET_ID_MAX_CHARS, type ReportTarget } from '../../../api/reports';
 import { MENU_HINT } from '../../../chat/home/menu';
 import { HOME_COPY } from '../../../chat/strings';
 import { captionFor } from '../../../core/frozen/lib/mascot/media';
@@ -103,6 +105,11 @@ export type HudTurn = {
   readonly auto: string | null;
   /** The reply is still coming: the cursor blinks, STOP is on, the clock runs. */
   readonly streaming: boolean;
+  /**
+   * The saved Auto message the reply is, where A2's thread offers Report this on it; null (or
+   * absent) while it streams, for a failure, and for words no saved message holds.
+   */
+  readonly autoMessageId?: string | null;
   /** Who answers: Auto when absent; an agent picked for the conversation by name. */
   readonly agent?: AiLabelAgent;
   /** When the turn began and ended, in ms since the epoch: the status row's mm:ss. */
@@ -138,6 +145,8 @@ export type TranscriptRow =
       readonly label: string;
       /** The 9 x 18 block cursor after the words, blinking while loops run. */
       readonly cursor: boolean;
+      /** The saved message Report this names; null while he streams or for words not saved. */
+      readonly messageId: string | null;
     };
 
 const clean = (words: string | null | undefined) => words?.trim() ?? '';
@@ -151,9 +160,19 @@ export function transcriptRows(turn: HudTurn): readonly TranscriptRow[] {
   if (you) rows.push({ who: 'you', text: said.quote(you), label: said.youLabel(you) });
   if (auto || turn.streaming) {
     const label = turn.streaming ? said.streamingLabel(name, auto) : said.autoLabel(name, auto);
-    rows.push({ who: 'auto', text: auto, label, cursor: turn.streaming });
+    const messageId = turn.streaming ? null : (turn.autoMessageId ?? null);
+    rows.push({ who: 'auto', text: auto, label, cursor: turn.streaming, messageId });
   }
   return Object.freeze(rows);
+}
+
+/** What Report this on a row reports: Auto's saved reply, never YOU's line or streaming words. */
+export function transcriptReport(row: TranscriptRow, allowed: boolean): ReportTarget | null {
+  if (!allowed || row.who !== 'auto') return null;
+  const id = row.messageId?.trim();
+  // an id the server's target_id would refuse is never offered (as src/chat/report/report.ts)
+  if (!id || id.length > REPORT_TARGET_ID_MAX_CHARS) return null;
+  return { target_type: 'message', target_id: id };
 }
 
 /**

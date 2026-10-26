@@ -50,7 +50,7 @@ function clerkBinding(token: string | null = 'mobile.session.jwt') {
   const binding = bindProvider((expiry) =>
     createClerkProvider(
       { getToken, signOut: async () => undefined },
-      { expiry, secureKeys: { wipe: async () => undefined } },
+      { expiry, secureKeys: { keys: async () => [], remove: async () => undefined } },
     ),
   );
   return { ...binding, getToken };

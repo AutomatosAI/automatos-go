@@ -74,7 +74,7 @@ export const STALE_CHECK_TIMEOUT_MS = 4000;
 export const FOREGROUND_VERIFY_TIMEOUT_MS = 2000;
 
 /** The push record's keychain item (KP18), named in the app's key registry (src/lib/secure-keys.ts). */
-export const PUSH_RECORD_ITEM = 'automatos.push-record.v1';
+export { PUSH_RECORD_ITEM } from '../storage/secure-registry';
 
 /** W1's column limits (core/models/mobile_devices.py, api/mobile_devices.py). */
 export const PUSH_KEY_MAX_LENGTH = 128;

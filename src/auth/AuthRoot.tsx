@@ -5,8 +5,10 @@
 // is asked of Clerk's Frontend API (lead 20 Oct). The built-in hosted server gets ClerkProvider with
 // the build's publishable key (EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY only, never the discovery
 // document's), the keychain token cache (token-cache.ts) and the native passkeys @clerk/expo-passkeys
-// provides. A build that cannot sign in to its hosted server shows its honest not-configured state
-// on the hosted sign-in only (KC2); Welcome and Connect still work. The shell reads the session
+// provides, with Clerk's SDK telemetry off (telemetry={false}: on a development key Clerk would
+// send SDK usage events to clerk-telemetry.com, R11). A build that cannot sign in to its hosted
+// server shows its honest not-configured state on the hosted sign-in only (KC2); Welcome and
+// Connect still work. The shell reads the session
 // through useAuthSession(). A new server or a new pairing remounts the tree under it, so nothing
 // mounted for one server stays for the next. Logic lives in the .ts files beside it, tested.
 
@@ -102,6 +104,7 @@ function HostedSession({ children }: { readonly children: ReactNode }) {
       publishableKey={env.clerkPublishableKey}
       tokenCache={tokenCache}
       __experimental_passkeys={passkeys}
+      telemetry={false}
     >
       <ClerkSession>{children}</ClerkSession>
     </ClerkProvider>

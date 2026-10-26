@@ -202,7 +202,10 @@ describe("the provider's onExpired (no connect file edited)", () => {
         getToken: async () => Promise.reject(Object.assign(new Error('expired'), { status: 401 })),
         signOut: async () => undefined,
       },
-      { expiry: createExpirySignal(), secureKeys: { wipe: async () => undefined } },
+      {
+        expiry: createExpirySignal(),
+        secureKeys: { keys: async () => [], remove: async () => undefined },
+      },
     );
     const done = heard(provider, {
       source: 'hosted',

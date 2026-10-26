@@ -66,7 +66,7 @@ export const DEVICE_TOKEN_MAX_LENGTH = 512;
 /** The install id (KC9): random bytes as base64url, inside the server's ^[A-Za-z0-9_-]{8,128}$. */
 export const INSTALL_ID_BYTES = 16;
 /** Its expo-secure-store item, outside the app's key registry so no wipe removes it (KC9). */
-export const INSTALL_ID_ITEM = 'automatos.install-id.v1';
+export { INSTALL_ID_ITEM } from '../storage/secure-registry';
 
 /** The server's column limits for a device (core/models/mobile_devices.py). */
 export const DEVICE_NAME_MAX_LENGTH = 120;
@@ -76,7 +76,7 @@ export const APP_VERSION_MAX_LENGTH = 32;
  * The paired record's expo-secure-store item (KC9), written through the app's key registry
  * (src/lib/secure-keys.ts) so sign-out and the reinstall wipe find it.
  */
-export const PAIRED_RECORD_ITEM = 'automatos.paired-server.v1';
+export { PAIRED_RECORD_ITEM } from '../storage/secure-registry';
 
 /**
  * The reinstall wipe's marker (install-marker.ts): its own small MMKV file, deleted with the app.

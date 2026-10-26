@@ -12,6 +12,7 @@ import { z } from 'zod';
 
 import { ApiError, APP_ERROR_CODES, isApiError } from '../../api/errors';
 import type { SecureKeyRegistry } from '../../lib/secure-keys';
+import { clearUserKeys } from '../../storage/secure-registry';
 import { MOBILE_TOKEN_TEMPLATE } from '../config';
 import type { ExpirySignal } from './expiry';
 import type { AuthProvider } from './types';
@@ -29,8 +30,11 @@ export type ClerkSessionPort = {
 
 export type ClerkProviderDeps = {
   readonly expiry: ExpirySignal;
-  /** Sign-out deletes every keychain item the app holds (src/lib/secure-keys.ts). */
-  readonly secureKeys: Pick<SecureKeyRegistry, 'wipe'>;
+  /**
+   * Sign-out deletes every keychain item that is the person's (src/storage/secure-registry.ts
+   * clearUserKeys), never the encrypted store's key or the install id.
+   */
+  readonly secureKeys: Pick<SecureKeyRegistry, 'keys' | 'remove'>;
 };
 
 /** A ClerkAPIResponseError carries the FAPI status; a ClerkRuntimeError (offline) has none. */
@@ -71,14 +75,14 @@ export function createClerkProvider(
         throw tokenFailure(error, expiry);
       }
     },
-    /** Clerk first (it still needs its client item); the keychain is wiped only once it is done. */
+    /** Clerk first (it still needs its client item); the person's items go only once it is done. */
     signOut: async () => {
       try {
         await clerk.signOut();
       } catch (error) {
         throw clerkFailure(error);
       }
-      await secureKeys.wipe();
+      await clearUserKeys(secureKeys);
     },
     onExpired: expiry.subscribe,
   });

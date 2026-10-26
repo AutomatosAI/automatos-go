@@ -14,6 +14,9 @@
 //   HOLD TO TALK is A6's quick-ask in place (US-019k, useHudHomeVoice over this thread): MIC LIVE,
 // the waveform, the voice's turn in the transcript from a press until a typed send, the voice's chip
 // and line while it works, and STOP stopping the speech too (and A2's turn, typed or spoken).
+//   Report this (D15, P001R-AF-1): a long-press or the accessible action on Auto's saved reply in the
+// transcript opens the foundation's one ReportSheet (A2's useMessageReport), mounted once beside
+// TYPE's Sheet, never inside it.
 
 import { useCallback, useMemo, useState } from 'react';
 
@@ -23,8 +26,9 @@ import { DiscussionBar } from '../../chat/discussion/DiscussionBar';
 import { HomeMenu } from '../../chat/home/HomeMenu';
 import { menuHere } from '../../chat/home/menu';
 import { useHomeMenu } from '../../chat/home/use-home-menu';
+import { useMessageReport } from '../../chat/report/use-message-report';
 import type { ChatFile } from '../../chat/request';
-import { Sheet } from '../../ui';
+import { ReportSheet, Sheet } from '../../ui';
 import { useHudHomeVoice } from '../../voice/home/use-hud-home-voice';
 import { VoiceLine } from '../../voice/screen/VoiceLine';
 import { HudCore } from '../hud/core/HudCore';
@@ -46,6 +50,7 @@ export function HudHome({ chatId, ticketId = null }: HudHomeProps) {
   const menu = useHomeMenu(menuHere(state, ticketId));
   const turn = useMemo(() => hudTurn(state), [state]);
   const voice = useHudHomeVoice(home, turn);
+  const { report, sheet } = useMessageReport();
   const { sendMessage } = home;
   const { typed } = voice;
   const close = useCallback(() => setTyping(false), []);
@@ -72,6 +77,7 @@ export function HudHome({ chatId, ticketId = null }: HudHomeProps) {
           ...voice.core,
           line: <VoiceLine line={voice.line} onAction={voice.lineAction} />,
         }}
+        report={report}
       />
       <Sheet visible={typing} onClose={close}>
         <DiscussionBar state={home.discussion} messages={state.messages} />
@@ -85,6 +91,7 @@ export function HudHome({ chatId, ticketId = null }: HudHomeProps) {
         />
       </Sheet>
       <HomeMenu menu={menu} needsYou={total} />
+      <ReportSheet {...sheet} />
     </>
   );
 }

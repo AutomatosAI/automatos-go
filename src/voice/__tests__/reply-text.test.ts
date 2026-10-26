@@ -92,6 +92,7 @@ describe('quickAskReply while the turn is live', () => {
       stopped: false,
       hasCards: false,
       hasReceipts: false,
+      since: EARLIER.length,
     });
   });
 
@@ -228,6 +229,7 @@ describe('quickAskReply once the thread retires the live turn', () => {
       stopped: false,
       hasCards: false,
       hasReceipts: true,
+      since: EARLIER.length,
     });
   });
 

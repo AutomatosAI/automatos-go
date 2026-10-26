@@ -15,6 +15,7 @@ function reply(changes: Partial<QuickAskReply> = {}): QuickAskReply {
     stopped: false,
     hasCards: false,
     hasReceipts: false,
+    since: 0,
     ...changes,
   };
 }

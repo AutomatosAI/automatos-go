@@ -16,6 +16,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { QueryRoot } from '../src/app-state/query-root';
 import { AuthRoot } from '../src/auth/AuthRoot';
+import { initCrashReporting } from '../src/observability';
 import { InstallGate } from '../src/session/InstallGate';
 import { GateEdge } from '../src/styles/edges/GateEdge';
 import { EdgeScreenSlot } from '../src/styles/edges/ShellEdgeScreen';
@@ -23,6 +24,8 @@ import { StyleSyncSlot } from '../src/styles/sync/ShellStyleSync';
 import { StyleSync } from '../src/styles/sync/StyleSync';
 import { ThemeProvider } from '../src/styles/theme';
 import { ToastProvider } from '../src/ui';
+
+initCrashReporting();
 
 export default function RootLayout() {
   return (

@@ -73,6 +73,7 @@ function input({ state = AT.idle, viewInput = {}, reply = null, ...rest }: Case 
     shows: 'voice',
     threadStreams: false,
     hold: hold(),
+    replyId: null,
     ...rest,
   } satisfies HudHomeVoiceInput;
 }
@@ -89,6 +90,7 @@ describe('homeTurn', () => {
       you: 'what is',
       auto: null,
       streaming: false,
+      autoMessageId: null,
       agent: null,
     });
   });
@@ -104,6 +106,7 @@ describe('homeTurn', () => {
       you: 'what is on today?',
       auto: `${noticeText(null)}\nYou have two meetings.`,
       streaming: true,
+      autoMessageId: null,
       agent: { name: 'Researcher' },
       startedAt: NOW,
       endedAt: null,
@@ -127,12 +130,25 @@ describe('homeTurn', () => {
     expect(homeTurn(input({ state: FINISHED, threadTurn: saved }))).toEqual({
       ...saved,
       auto: `${noticeText(null)}\nYou have two meetings.`,
+      autoMessageId: null,
       agent: { name: 'Researcher' },
     });
   });
 
   it("a typed send hands the transcript back to the thread's turn", () => {
     expect(homeTurn(input({ state: FINISHED, shows: 'thread', threadTurn: SENT }))).toBe(SENT);
+  });
+
+  it("Report this names the voice's own saved reply, never the thread turn's (P001R-AF-1)", () => {
+    const thread: HudTurn = { ...SENT, streaming: false, endedAt: T1, autoMessageId: 'm-9' };
+    const shown = (changes: Case) =>
+      homeTurn(input({ state: FINISHED, threadTurn: thread, ...changes }));
+    expect(shown({ replyId: 'm-3' }).autoMessageId).toBe('m-3');
+    expect(shown({ replyId: null }).autoMessageId).toBeNull();
+    expect(shown({ state: AT.speaking, replyId: 'm-3' }).autoMessageId).toBeNull();
+    expect(shown({ shows: 'thread', replyId: 'm-3' }).autoMessageId).toBe('m-9');
+    const home = hudHomeVoice(input({ state: FINISHED, threadTurn: thread, replyId: 'm-3' }));
+    expect(home.turn.autoMessageId).toBe('m-3');
   });
 });
 
