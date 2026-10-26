@@ -254,7 +254,7 @@ describe('(b) leaving: one clearUserData', () => {
     expect(leftovers(phone)).toEqual(SIGNED_OUT);
   });
 
-  it("a store entry that will not delete costs the store its key: what is left can't be read", async () => {
+  it('a store entry that will not delete costs the store its key, and still fails the sign-out', async () => {
     const phone = await usedPhone();
     const storage = () => ({
       keys: phone.storage.keys,
@@ -264,7 +264,7 @@ describe('(b) leaving: one clearUserData', () => {
       },
     });
     const { serverSwitch } = await switchOver(phone, hostedProvider(phone), null, { storage });
-    await serverSwitch.signOut();
+    await expect(serverSwitch.signOut()).rejects.toThrow('could not delete 1 encrypted store');
     expect(native.order).toEqual(['push', 'clerk (item there: true)', 'files']);
     expect(leftovers(phone).keychain).toEqual(
       KEPT_KEYCHAIN.filter((key) => key !== STORAGE_KEY_ITEM),

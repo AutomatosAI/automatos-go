@@ -168,9 +168,12 @@ deletes it.
   Sometimes step 6 cannot empty the store: an entry will not delete, or the keychain was locked
   when the app started, so this launch kept its store in memory and never opened the file. Then
   the store's key is deleted too. Without the key, nothing left in the file can be read, and the
-  next launch starts a new file. Only if that key will not delete either does the sign-out fail.
-  A keychain item that cannot be deleted also fails the sign-out, after every other step has
-  run. It stays in the index, so the next try deletes it.
+  next launch starts a new file.
+  - An entry that would not delete still fails the sign-out, because the running app could read
+    it until it is closed.
+  - A store kept in memory was emptied, so it fails the sign-out only if its key will not delete.
+  - A keychain item that cannot be deleted also fails the sign-out, after every other step has
+    run. It stays in the index, so the next try deletes it.
 - **Two small files of their own:** the install marker (one word, `checked`) and the crash-report
   switch (on or off). Sign-out keeps both; uninstalling deletes them.
 - **The first launch after a reinstall** (`src/connect/install-marker.ts`). The marker is in a file
@@ -211,9 +214,9 @@ deletes it.
   - **Forget this server:** the same, and the paired record goes too.
   - **Clerk offline:** a refused sign-out deletes nothing but the cache.
   - **A session the server ended:** the same clearing, without push's leave.
-  - **A store that was not emptied** (an entry that will not delete, or a launch whose store fell
-    back to memory): the store's key is deleted too. The sign-out fails only if that key will not
-    delete either.
+  - **A store that was not emptied:** the store's key is deleted too. An entry that will not
+    delete still fails the sign-out. A store that fell back to memory fails it only if the key
+    will not delete.
 - `src/connect/__tests__/switch.test.ts` (the order), `install-marker.test.ts`,
   `src/session/__tests__/install-gate.test.ts`, `src/auth/__tests__/clerk-provider.test.ts`,
   `src/lib/__tests__/secure-keys.test.ts` and `src/storage/__tests__/encrypted-storage.test.ts`.

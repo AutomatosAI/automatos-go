@@ -12,8 +12,8 @@
 // person's (src/storage/secure-registry.ts clearUserKeys: Clerk's, the paired record, the push
 // record). The install id, the encrypted store's key and the install marker (a file of its own)
 // stay; the store's key goes too when the store was not emptied (an entry that would not delete,
-// or a launch whose store fell back to memory and never opened the file): without it the next
-// launch cannot read what is left and starts a new file.
+// which still fails the leaving, or a launch whose store fell back to memory and never opened the
+// file): without it the next launch cannot read what is left and starts a new file.
 //
 // The provider is signed out before anything of the person's is deleted: Clerk still needs its
 // client item, and a provider that cannot sign out (Clerk offline) stops the leaving with the
@@ -123,8 +123,9 @@ function clearStore(storage: ClearUserDataDeps['storage']): Error | null {
 }
 
 /**
- * A store not emptied loses its key (crypto-shred): what is left can no longer be read. Answers
- * the failure only when the store was not emptied and its key would not delete either.
+ * A store not emptied loses its key (crypto-shred), so no later launch can read what is left. An
+ * entry that would not delete is still readable by this launch's open store, so its failure is
+ * answered anyway; a store kept in memory was emptied, and fails only if the key stays.
  */
 async function shredUnlessEmptied(
   deps: ClearUserDataDeps,
@@ -133,10 +134,10 @@ async function shredUnlessEmptied(
   if (left === null && deps.storagePersistent()) return null;
   try {
     await deps.keys.remove(STORAGE_KEY_ITEM);
-    return null;
   } catch (error) {
     return left ?? new Error('could not delete the encrypted store key', { cause: error });
   }
+  return left;
 }
 
 /**
