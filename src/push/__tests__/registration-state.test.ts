@@ -81,6 +81,7 @@ describe('pushStatus and nextStep: every status, from frozen facts', () => {
     ],
     ['admin revoked', { lastConflict: 'device_revoked' }, { kind: 'revoked_by_admin' }, 'none'],
     ['token elsewhere', { lastConflict: 'push_token_in_use' }, { kind: 'token_elsewhere' }, 'none'],
+    ['device limit', { lastConflict: 'device_limit_reached' }, { kind: 'device_limit' }, 'none'],
     [
       'install mismatch',
       { lastConflict: 'install_id_mismatch' },

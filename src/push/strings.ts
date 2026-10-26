@@ -2,6 +2,8 @@
 // D-DATA-CLAIMS, D-NO-SIGNUP, D-NO-BILLING): no line names a status code, an internal id or a plan,
 // says the work is resuming, or claims where data stays. Each story adds its own group here.
 
+import { MAX_DEVICES_PER_PERSON } from './config';
+
 /** What a push's link says when the record it names has moved on (KP9): one plain line each. */
 export const PUSH_LINK_COPY = Object.freeze({
   questionGone: 'That question was already answered or closed.',
@@ -105,6 +107,8 @@ export const PUSH_PHONE_COPY = Object.freeze({
   revokedByAdmin:
     'A workspace owner or admin removed this phone in Studio. Ask them to add it back.',
   tokenElsewhere: 'Another account on this phone receives its notifications.',
+  /** 409 device_limit_reached: the kit's words, never the server's; Try again sends once more. */
+  deviceLimit: `This phone can't register for notifications: you already have ${MAX_DEVICES_PER_PERSON} devices registered in this workspace. Remove one in Studio → Settings → Phones & devices, then try again.`,
   keyMissingOwn: "This phone can't check its notifications. Pair it again to turn them on.",
   keyMissingHosted:
     "This phone can't check its notifications yet. Automatos Go tries again within a day.",

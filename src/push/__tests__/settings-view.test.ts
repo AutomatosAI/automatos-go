@@ -85,6 +85,11 @@ describe('This phone: every status in one sentence, at most one button (US-014c)
       null,
     ],
     [
+      { kind: 'device_limit' },
+      "This phone can't register for notifications: you already have 10 devices registered in this workspace. Remove one in Studio → Settings → Phones & devices, then try again.",
+      'try_again',
+    ],
+    [
       { kind: 'not_configured' },
       "Notifications aren't set up in this build of Automatos Go yet.",
       null,

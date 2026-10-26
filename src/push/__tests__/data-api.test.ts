@@ -189,6 +189,20 @@ describe('the push calls, through the one client', () => {
     expect(deviceConflictOf(error)).toBe('push_token_missing');
   });
 
+  it('reads #1317’s device_limit_reached 409 (a code and the server’s message) as its code', async () => {
+    const body = {
+      detail: {
+        code: 'device_limit_reached',
+        message:
+          'You already have 10 devices registered in this workspace. Remove one in Settings, under Phones & devices, then try again.',
+      },
+    };
+    const { client } = harness(() => jsonReply(409, body));
+    const error = await api.registerDevice(client, INPUT).catch((caught: unknown) => caught);
+    expect(error).toMatchObject({ kind: 'conflict', status: 409, code: 'device_limit_reached' });
+    expect(deviceConflictOf(error)).toBe('device_limit_reached');
+  });
+
   it.each([
     [
       'a concurrent change (words, no code)',
