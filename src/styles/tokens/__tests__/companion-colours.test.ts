@@ -24,6 +24,8 @@ describe('the Companion colours', () => {
       accentLine: 'rgba(255,106,31,0.4)',
       spinnerTrack: 'rgba(255,106,31,0.3)',
       reportGradient: ['rgba(255,106,31,0.16)', 'rgba(255,106,31,0.03)'],
+      shelfGradient: ['rgba(255,106,31,0.28)', 'rgba(255,106,31,0.04)'],
+      tileLine: 'rgba(244,238,232,0.1)',
     });
     expect(colours.failedFill).toMatch(/^rgba\(\d+,\d+,\d+,0\.1\)$/);
     expect(colours.failedLine).toMatch(/^rgba\(\d+,\d+,\d+,0\.45\)$/);

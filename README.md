@@ -4,19 +4,26 @@ Automatos Go is the Automatos mobile app (iOS first). Studio is where you set
 things up; Automatos Go is where you talk to Auto when you are away from the
 desk: ask, answer the questions your agents raise, glance at the Command Centre
 board, and look at what was made. It is a native app, not a web view, and a
-lite companion: the workspace, agents, playbooks and themes are set up in
+lite companion: the workspace, agents, Playbooks and themes are set up in
 Studio.
 
-It ships with three styles you can flip between: **Studio** (cream paper or
-Studio Dark), **Play** (Ember, with Auto the mascot) and **HUD** (voice first,
-square panels, glow and grid). Hosted Studio users sign in with Clerk;
-self-hosted users pair their phone with their install by scanning a QR code in
-Studio.
+Three styles: **Studio** (cream paper or Studio Dark) is on `main`; **Play**
+(Ember, with Auto the mascot) and **HUD** (voice first, square panels, glow and
+grid) are being built on `feat/a5-styles`. Hosted Studio users sign in with
+their Automatos account (Clerk). Self-hosted users pair their phone with a
+one-time code from Studio → Settings → Phones & devices, which also shows it as a
+QR image (automatos-ai PRD-266 W2, merged 24 Oct).
 
 The plan is [PRD-001](docs/prd/PRD-001-AUTOMATOS-GO-V1.md). The server side
 (pairing, discovery, push, store duties) is automatos-ai
 [PRD-266](https://github.com/AutomatosAI/automatos-ai/pull/1257)
 (`docs/PRDS/PRD-266-AUTOMATOS-GO-BACKEND.md`).
+
+## Documentation
+
+The technical docs are in [docs/](docs/README.md): how the app is built, how a phone connects to
+a hosted or self-hosted server, styles and themes, notifications, voice, and how releases ship.
+Each page says what is on `main` and what is still on a branch.
 
 ## Stack
 

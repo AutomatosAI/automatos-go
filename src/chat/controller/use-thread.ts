@@ -6,6 +6,8 @@
 // The after-turn refetch's answer settles the turn (thread.ts settled), a failed refetch included.
 // A read that broke mid-turn asks GET /api/chat/{id} again whether the turn runs on (D-STOP).
 // Both families stay in memory (D-CACHE, query-keys.ts); nothing here writes to the phone.
+// `onFrame` hears each frame of the thread's own read as it reaches the reducer (A5's homes feed
+// Auto's mascot from them); it changes nothing the thread does.
 
 import { skipToken, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useReducer, useRef, type Dispatch } from 'react';
@@ -16,6 +18,7 @@ import { isForeground } from '../../api/live-connection';
 import { useLiveEvent } from '../../api/live';
 import { queryKeys } from '../../api/query-keys';
 import { useApiClient } from '../../app-state/session';
+import type { Frame } from '../../core/ai-sdk-stream';
 import { logger } from '../../lib/logger';
 import { fetchMessages } from '../api';
 import type { CardOutcome } from '../cards/model';
@@ -202,6 +205,21 @@ function useTurnRunner(client: ApiClient, dispatch: Dispatch<ThreadAction>): Tur
   return runner;
 }
 
+/** The reducer's dispatch, telling `onFrame` (the newest one) of each frame first; stable. */
+function useFrameTap(
+  dispatch: Dispatch<ThreadAction>,
+  onFrame: ((frame: Frame) => void) | undefined,
+): Dispatch<ThreadAction> {
+  const listener = useLatest(onFrame);
+  return useCallback(
+    (action: ThreadAction) => {
+      if (action.type === 'frame') listener.current?.(action.frame);
+      dispatch(action);
+    },
+    [listener, dispatch],
+  );
+}
+
 /** Another chat in the route opens it; the draft's own new id arriving in the route does not. */
 function useOpenedChat(
   cachedId: string | null,
@@ -216,13 +234,16 @@ function useOpenedChat(
   }, [cachedId, latest, open]);
 }
 
-/** The conversation `cachedId` names (checked before reuse), or a draft for null. */
-export function useThread(cachedId: string | null): ThreadView {
+/**
+ * The conversation `cachedId` names (checked before reuse), or a draft for null; `onFrame` hears
+ * each frame of this thread's read.
+ */
+export function useThread(cachedId: string | null, onFrame?: (frame: Frame) => void): ThreadView {
   const client = useApiClient();
   const queryClient = useQueryClient();
   const [state, dispatch] = useReducer(threadReducer, cachedId, createThread);
   const latest = useLatest(state);
-  const runner = useTurnRunner(client, dispatch);
+  const runner = useTurnRunner(client, useFrameTap(dispatch, onFrame));
   const { loadError, retry } = useThreadQueries(client, state, dispatch);
   const refresh = useCallback(() => {
     const chatId = latest.current.chatId;

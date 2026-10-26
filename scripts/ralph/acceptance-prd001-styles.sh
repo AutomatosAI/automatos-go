@@ -54,9 +54,9 @@ MASCOT_STATES="hello idle listening thinking working searching reading celebrate
 # KS1: the only paths this wave may add or change, per phase.
 P1_ALLOWED='^(src/styles/|src/ui/|assets/mascot/|assets/styles-fonts/|app/\(app\)/settings/style\.tsx$|app/\(app\)/settings/look/|app/\+not-found\.tsx$|scripts/ralph/(prd-001-styles\.json|PROMPT_build_prd001-styles\.md|PROMPT_review_prd001-styles\.md|acceptance-prd001-styles\.sh)$)'
 # Phase 2 adds the shell files the A1 connect kit edits in parallel (US-016j) and A2's / A3's files.
-P2_EXTRA='^(app/\(app\)/_layout\.tsx$|app/_layout\.tsx$|app/\(app\)/settings/index\.tsx$|src/chat/|src/cc/|app/\(app\)/index\.tsx$|app/\(app\)/chat/|app/\(app\)/chats\.tsx$|app/\(app\)/cc/)'
+P2_EXTRA='^(src/connect/__tests__/edges\.test\.ts$|src/consent/__tests__/consent-gate\.test\.ts$|src/app-state/AppGate\.tsx$|src/app-state/__tests__/app-gate-edge-slot\.test\.tsx?$|app/\(app\)/_layout\.tsx$|app/_layout\.tsx$|app/\(app\)/settings/index\.tsx$|src/chat/|src/cc/|app/\(app\)/index\.tsx$|app/\(app\)/chat/|app/\(app\)/chats\.tsx$|app/\(app\)/cc/)'
 # KS2: edits of these need a 'SEAM EDIT: <path>' line in the kit's DONE notes.
-SEAMS='^(app/\(app\)/settings/index\.tsx|app/\(app\)/_layout\.tsx|app/_layout\.tsx|app/\+not-found\.tsx|app/\(app\)/index\.tsx|app/\(app\)/chats\.tsx)$|^(src/chat/|src/cc/|app/\(app\)/chat/|app/\(app\)/cc/)'
+SEAMS='^(src/app-state/AppGate\.tsx|app/\(app\)/settings/index\.tsx|app/\(app\)/_layout\.tsx|app/_layout\.tsx|app/\+not-found\.tsx|app/\(app\)/index\.tsx|app/\(app\)/chats\.tsx)$|^(src/chat/|src/cc/|app/\(app\)/chat/|app/\(app\)/cc/)'
 
 added_code() { git diff "$BASE"..HEAD -- src app ':!*__tests__*' ':!*.test.ts' ':!*.test.tsx' | grep '^+' | grep -v '^+++'; }
 added_code_outside_tokens() { git diff "$BASE"..HEAD -- src app ':!src/styles/tokens' ':!*__tests__*' ':!*.test.ts' ':!*.test.tsx' | grep '^+' | grep -v '^+++'; }
@@ -139,7 +139,7 @@ check "US-016i installed themes: routes, the capability gate, the file allowlist
 
 if [ "$PHASE" = 2 ]; then
   echo ""; echo "=== Stories, phase 2 (A2 and A3 in the branch)"
-  check "US-016j the shell: the Settings row, StyleSync once, the edge screens on the gate's errors" "grep -q 'settingsStyle' 'app/(app)/settings/index.tsx' && grep -q 'StyleSync' 'app/(app)/_layout.tsx' && grep -q 'EdgeScreen' 'app/(app)/_layout.tsx' && git diff --quiet $BASE..HEAD -- src/app-state"
+  check "US-016j the shell: the Settings row, StyleSync once, the edge screens on the gate's errors" "grep -q 'settingsStyle' 'app/(app)/settings/index.tsx' && grep -q 'StyleSync' 'app/(app)/_layout.tsx' && grep -q 'EdgeScreen' 'app/(app)/_layout.tsx' && git diff --quiet $BASE..HEAD -- src/app-state ':!src/app-state/AppGate.tsx' ':!src/app-state/__tests__/app-gate-edge-slot.test.ts' ':!src/app-state/__tests__/app-gate-edge-slot.test.tsx'"
   check "US-016k the home is a layout switch; Play and HUD homes over A2's thread" "all_exist src/styles/homes/PlayHome.tsx src/styles/homes/HudHome.tsx && grep -qE 'PlayHome|StyleHome|HudHome' 'app/(app)/index.tsx' && grep -rqE 'chat/(controller|view-model|composer)' src/styles/homes"
   check "US-017g Play conversations and shelf" "all_exist src/styles/homes/PlayShelf.tsx && grep -qE 'PlayConversations' 'app/(app)/chats.tsx' && grep -qE 'PlayShelf' 'app/(app)/cc/deliverables.tsx'"
   check "US-016l the Command Centre dress test" "all_exist src/styles/__tests__/cc-dress.test.ts"

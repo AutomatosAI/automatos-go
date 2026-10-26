@@ -1,6 +1,7 @@
 // The Command Centre's top bar (handoff §2, §Frame): back to Auto (iOS: chevron and the word 'Auto';
 // Android: the arrow alone) and the live word, on the --secondary chrome with a hairline under it.
-// It paints the status bar's inset itself, so the chrome runs to the top edge.
+// It paints the status bar's inset itself, so the chrome runs to the top edge. A5: back wears the
+// dress's ghost paint and control label (Studio unchanged; HUD's 'AUTO' in Geist Mono capitals).
 
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,10 +10,12 @@ import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 
 import { routes } from '../../navigation/routes';
 import { useGoBack } from '../../navigation/use-go-back';
+import { useDress } from '../../styles/dress/use-dress';
+import { useShellDress } from '../../styles/dress/use-cc-dress';
 import { useTokens } from '../../styles/theme';
 import { Text } from '../../ui';
+import { dressedButtonPaint } from '../../ui/dressed';
 import { hitSlopFor } from '../../ui/paint';
-import { buttonPaint } from '../../ui/variants';
 import { SHELL_COPY } from '../strings';
 import { TOP_BAR } from './chrome';
 import { LiveWord } from './LiveWord';
@@ -23,6 +26,8 @@ const BackIcon = IS_IOS ? ChevronLeft : ArrowLeft;
 function BackToAuto() {
   const goBack = useGoBack(routes.home);
   const { colours, radii, spacing } = useTokens();
+  const dress = useDress();
+  const { back } = useShellDress();
   return (
     <Pressable
       onPress={goBack}
@@ -36,7 +41,7 @@ function BackToAuto() {
           paddingHorizontal: spacing[TOP_BAR.backPaddingX],
           gap: TOP_BAR.backGap,
           borderRadius: radii.control,
-          backgroundColor: buttonPaint(colours, 'ghost', { pressed }).backgroundColor,
+          backgroundColor: dressedButtonPaint(dress, 'ghost', { pressed }).backgroundColor,
         },
       ]}
     >
@@ -46,7 +51,7 @@ function BackToAuto() {
         color={colours.foreground}
       />
       {IS_IOS ? (
-        <Text level={TOP_BAR.backLevel} weight={TOP_BAR.backWeight}>
+        <Text level={TOP_BAR.backLevel} weight={TOP_BAR.backWeight} style={back}>
           {SHELL_COPY.back}
         </Text>
       ) : null}

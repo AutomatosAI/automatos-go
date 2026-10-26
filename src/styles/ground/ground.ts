@@ -1,7 +1,8 @@
 // What a screen stands on (D54), pure: the Screen primitive paints the dress's ground behind its
 // content — Studio's plain background (an installed theme's too), Play's page glow, HUD's glow,
 // grid and scanlines — and sets the status bar to the style's tone, so the clock reads on Play's
-// Paper as on HUD's black. ScreenGround.tsx draws the plan.
+// Paper as on HUD's black. ScreenGround.tsx draws the plan. The text inputs take the keyboard's
+// appearance from the same tone under Play and HUD (keyboardAppearanceFor).
 
 import type { MascotName } from '../../core/web/lib/mascot/types';
 import type { GroundKind } from '../dress/dress';
@@ -23,6 +24,18 @@ export type StatusBarStyle = 'light' | 'dark';
 
 export function statusBarStyle(tone: ColourScheme): StatusBarStyle {
   return tone === 'dark' ? 'light' : 'dark';
+}
+
+/** TextInput's keyboardAppearance; 'default' follows the window (Studio's Light/Dark/System). */
+export type KeyboardAppearance = 'default' | 'light' | 'dark';
+
+/**
+ * The keyboard under this style: Play's look and HUD paint their own tone, so the keyboard takes
+ * it; Studio and an installed theme keep 'default', the window's appearance theme.tsx sets from
+ * Studio's choice.
+ */
+export function keyboardAppearanceFor(style: ResolvedStyle): KeyboardAppearance {
+  return style.layout === 'studio' ? 'default' : style.tone;
 }
 
 export type GroundInput = {

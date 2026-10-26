@@ -5,13 +5,14 @@
 //
 // VoiceOver: a card is one button named '<Style> style' whose selected state rides in
 // accessibilityState, so it is said once; on screen the chosen card carries a 2 pt ring in its
-// style's accent AND the word 'Selected' (never colour alone, D-A11Y).
+// style's accent AND the word 'Selected' (never colour alone, D-A11Y). The accent is the style's
+// own (selectedPaint): under Play and HUD the Studio-keyed 'accent' is the look's error colour.
 
 import { toolLineLabel } from '../../core/web/components/play/chat/labels';
 import { captionFor } from '../../core/web/lib/mascot/media';
 import type { HostToolCall } from '../../core/web/lib/theme-sdk';
 import { lookScreen, type StyleScreenPath } from '../nav';
-import type { StyleMotion } from '../provider/resolve';
+import type { ResolvedStyle, StyleMotion } from '../provider/resolve';
 import type {
   PickerFollowRow,
   PickerSection,
@@ -108,20 +109,45 @@ export function pickerCards(state: PickerState): readonly PickerCard[] {
 /** The frame's ring: 2 pt in the style's accent when chosen, else its 1 pt border. */
 export const CARD_RING = Object.freeze({ selected: 2, idle: 1 });
 
+/** What a style's chosen card is painted with. */
+export type SelectedPaint = {
+  /** The 2 pt ring: the style's accent. */
+  readonly ring: string;
+  /** The check and 'Selected': that accent as text that reads on the card. */
+  readonly word: string;
+};
+
+type SelectedSource = Pick<ResolvedStyle, 'layout' | 'tokens' | 'play' | 'hud'>;
+
+/**
+ * The Studio-keyed 'accent' is the look's consequence (error) colour under Play and HUD (the
+ * vendored studio-tokens.ts), so the chosen card reads its style's own: Play's look accent with its
+ * accentText, HUD's accent (AA on its ground already), Studio's accent (there the two are one).
+ */
+export function selectedPaint(style: SelectedSource): SelectedPaint {
+  const { play, hud } = style;
+  if (style.layout === 'play' && play) return { ring: play.accent, word: play.accentText };
+  if (style.layout === 'hud' && hud) return { ring: hud.accent, word: hud.accent };
+  const { accent } = style.tokens.colours;
+  return { ring: accent, word: accent };
+}
+
 export type CardFrame = {
   readonly borderWidth: number;
   /** Makes up the thinner border, so choosing a card never moves anything. */
   readonly margin: number;
-  /** The token the ring is painted in: the card's style's accent, or its border. */
-  readonly colour: 'accent' | 'border';
+  /** The ring's colour: the card's style's accent, or its border. */
+  readonly colour: string;
 };
 
-export function cardFrame(selected: boolean): CardFrame {
-  if (selected) return { borderWidth: CARD_RING.selected, margin: 0, colour: 'accent' };
+export function cardFrame(selected: boolean, style: SelectedSource): CardFrame {
+  if (selected) {
+    return { borderWidth: CARD_RING.selected, margin: 0, colour: selectedPaint(style).ring };
+  }
   return {
     borderWidth: CARD_RING.idle,
     margin: CARD_RING.selected - CARD_RING.idle,
-    colour: 'border',
+    colour: style.tokens.colours.border,
   };
 }
 

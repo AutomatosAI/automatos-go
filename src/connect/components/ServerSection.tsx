@@ -9,6 +9,7 @@ import { View } from 'react-native';
 import type { Server } from '../../api/server';
 import { SHELL_COPY } from '../../app-state/strings';
 import { useSignOut } from '../../app-state/use-sign-out';
+import { usePushSignOut } from '../../push/bind/use-push-sign-out';
 import { useTokens } from '../../styles/theme';
 import { Button, Card, Divider, Text } from '../../ui';
 import { ownServer } from '../current-server';
@@ -38,7 +39,8 @@ function Row({ label, value }: { readonly label: string; readonly value: string 
 }
 
 function SignOutButton() {
-  const { signOut, busy } = useSignOut();
+  const pushSignOut = usePushSignOut(useSignOut());
+  const { signOut, busy } = pushSignOut;
   return <Button label={SHELL_COPY.signOut} variant="outline" onPress={signOut} busy={busy} />;
 }
 

@@ -2,7 +2,8 @@
 // preview and the name, tagline and 'Selected' are ONE button ('Studio style', its selected
 // state); under it, still inside the frame, the style's look controls — Studio's Light / Dark /
 // System, 'Same as Studio' and the installed theme rows, Play's 'Make it yours →', HUD's 'Looks →'.
-// The chosen card's frame is a 2 pt ring in its style's accent (cards.ts cardFrame).
+// The chosen card's frame is a 2 pt ring in its style's accent, its check and 'Selected' that
+// accent as text (cards.ts cardFrame, selectedPaint).
 
 import Check from 'lucide-react-native/icons/check';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -14,7 +15,7 @@ import { StyleScope } from '../provider/StyleScope';
 import type { PhoneChoice } from '../registry/style-id';
 import { useStyle, useTokens } from '../theme';
 import type { ThemeChoice } from '../theme-choice';
-import { cardFrame, previewAnimates, type PickerCard } from './cards';
+import { cardFrame, previewAnimates, selectedPaint, type PickerCard } from './cards';
 import { StylePreview } from './previews/StylePreview';
 
 const NAME_LEVEL = 4;
@@ -31,11 +32,12 @@ export type StyleCardProps = {
 };
 
 function SelectedWord({ word }: { readonly word: string }) {
-  const { colours, spacing } = useTokens();
+  const style = useStyle();
+  const ink = selectedPaint(style).word;
   return (
-    <View style={[styles.row, { gap: spacing.space1 }]}>
-      <Check size={CHECK_SIZE} color={colours.accent} strokeWidth={ICON_STROKE} />
-      <Text variant="mono" tone="accent">
+    <View style={[styles.row, { gap: style.tokens.spacing.space1 }]}>
+      <Check size={CHECK_SIZE} color={ink} strokeWidth={ICON_STROKE} />
+      <Text variant="mono" style={{ color: ink }}>
         {word}
       </Text>
     </View>
@@ -112,9 +114,9 @@ function CardControls({ card, onSelect, onScheme, onOpen }: ControlsProps) {
 
 function CardBody(props: StyleCardProps) {
   const { card, focused, onSelect } = props;
-  const { tokens, motion } = useStyle();
-  const { colours, radii } = tokens;
-  const frame = cardFrame(card.selected);
+  const style = useStyle();
+  const { colours, radii } = style.tokens;
+  const frame = cardFrame(card.selected, style);
   return (
     <View
       style={[
@@ -122,7 +124,7 @@ function CardBody(props: StyleCardProps) {
         {
           borderRadius: radii.panel,
           borderWidth: frame.borderWidth,
-          borderColor: colours[frame.colour],
+          borderColor: frame.colour,
           margin: frame.margin,
           backgroundColor: colours.card,
         },
@@ -135,7 +137,7 @@ function CardBody(props: StyleCardProps) {
         accessibilityHint={card.accessibilityHint}
         accessibilityState={{ selected: card.selected }}
       >
-        <StylePreview id={card.id} animate={previewAnimates(focused, motion)} />
+        <StylePreview id={card.id} animate={previewAnimates(focused, style.motion)} />
         <CardFooter card={card} />
       </Pressable>
       <CardControls {...props} />

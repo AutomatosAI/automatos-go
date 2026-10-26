@@ -4,12 +4,15 @@
 // done on the ground's chip, radius 8, '✓ …' in text2; failed on the error at 0.1 with its line at
 // 0.45 and '✕' in the error; waiting '…' 'Waiting for you'; skipped or stopped faded. Geist Mono
 // 12 throughout. ReceiptsLine is "What Auto did": the label, then one line per receipt in Geist
-// Mono 12/1.7 text2, a done write in the text colour with its 'Done' in the accent text.
+// Mono 12/1.7 text2, a done write in the text colour with its 'Done' in the accent text. It takes
+// the receipts themselves, or rows already made (A2's view-model, US-016k): a row with a link is a
+// link, its spoken label A2's.
 
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { Receipt } from '../../../core/web/types/chat';
 import { Text } from '../../../ui';
+import { hitSlopFor } from '../../../ui/paint';
 import { PLAY_CHAT_COPY } from '../../strings';
 import { Spin } from './Loop';
 import { COMPANION, receiptRows, type ReceiptRow, type ToolChipView } from './model';
@@ -86,19 +89,54 @@ function ReceiptLine({ row, paint }: { readonly row: ReceiptRow; readonly paint:
   );
 }
 
-export type ReceiptsLineProps = { readonly receipts: readonly Receipt[] };
+type LinkedLineProps = {
+  readonly row: ReceiptRow;
+  readonly paint: CompanionPaint;
+  readonly onRow: (key: string) => void;
+};
 
-export function ReceiptsLine({ receipts: list }: ReceiptsLineProps) {
+/** A receipt that opens something: the line as a link, 44 pt to touch. */
+function LinkedLine({ row, paint, onRow }: LinkedLineProps) {
+  const height = receipts.size * receipts.leading;
+  return (
+    <Pressable
+      onPress={() => onRow(row.key)}
+      hitSlop={hitSlopFor(height)}
+      accessibilityRole="link"
+      accessibilityLabel={row.label ?? row.text}
+      style={({ pressed }) => ({ opacity: pressed ? COMPANION.pressedOpacity : 1 })}
+    >
+      <ReceiptLine row={row} paint={paint} />
+    </Pressable>
+  );
+}
+
+export type ReceiptsLineProps = {
+  /** The turn's receipts; or `rows`, already made. */
+  readonly receipts?: readonly Receipt[];
+  readonly rows?: readonly ReceiptRow[];
+  /** A linked row was tapped (by its key). */
+  readonly onRow?: (key: string) => void;
+};
+
+export function ReceiptsLine({ receipts: list = [], rows, onRow }: ReceiptsLineProps) {
   const paint = useCompanionPaint();
-  if (!paint || list.length === 0) return null;
+  const lines = rows ?? receiptRows(list);
+  if (!paint || lines.length === 0) return null;
   return (
     <View>
       <Text accessibilityRole="header" style={[paint.style.type.label, { color: paint.text3 }]}>
         {PLAY_CHAT_COPY.receipts.title}
       </Text>
-      {receiptRows(list).map((row) => (
-        <ReceiptLine key={row.key} row={row} paint={paint} />
-      ))}
+      {lines.map((row) =>
+        row.linked && onRow ? (
+          <LinkedLine key={row.key} row={row} paint={paint} onRow={onRow} />
+        ) : (
+          <View key={row.key} accessible accessibilityLabel={row.label}>
+            <ReceiptLine row={row} paint={paint} />
+          </View>
+        ),
+      )}
     </View>
   );
 }

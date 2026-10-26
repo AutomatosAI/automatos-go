@@ -8,12 +8,14 @@
 // the sheet slides away, then the route goes, back (or the fallback when it was opened first, from a
 // link), replaced by another Command Centre screen (Questions, a Deliverable), or back and only then
 // the pushed screen (Ask Auto about's chat), so back from the chat lands on the screen the sheet was
-// opened over. The sheet also shows only while its route is focused.
+// opened over. The sheet also shows only while its route is focused, and only then is it the open
+// sheet (open-sheet.ts) that a notification's tap leaves through, with the same push.
 
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useGoBack } from '../navigation/use-go-back';
+import { openSheets } from './open-sheet';
 import {
   firstExit,
   leaveAfterSlide,
@@ -42,6 +44,11 @@ function useFocused(): boolean {
   return focused;
 }
 
+/** While the route is focused, the open sheet: a screen opened from outside leaves through it. */
+function useOpenWhileFocused(leaveFor: (href: string) => void): void {
+  useFocusEffect(useCallback(() => openSheets.attach({ leaveFor }), [leaveFor]));
+}
+
 export function useSheetRoute(fallback: string): SheetRoute {
   const router = useRouter();
   const goBack = useGoBack(fallback);
@@ -61,5 +68,6 @@ export function useSheetRoute(fallback: string): SheetRoute {
     () => sheetExits((next) => setExit((current) => firstExit(current, next))),
     [],
   );
+  useOpenWhileFocused(exits.push);
   return useMemo(() => ({ ...exits, visible: focused && exit === null }), [exits, focused, exit]);
 }

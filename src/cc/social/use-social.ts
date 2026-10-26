@@ -2,7 +2,9 @@
 // decision through api.ts, and hand media loads the bearer (the client's authHeaders, for native
 // loads outside its fetch). The decisions are approval.ts's and the view view.ts's. After a decision,
 // right or refused, the post and the week's calendar (which lists social posts) read the server again;
-// after a 409 the post has already been reloaded, so it is not fetched twice.
+// after a 409 the post has already been reloaded, so it is not fetched twice. Approve asks for Face
+// ID first (gated.ts, A4): a refused check sends and reads nothing, and the sheet stays as it was.
+// Request changes never asks (KP13).
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
@@ -11,12 +13,15 @@ import type { AuthHeaders } from '../../api/auth-headers';
 import { queryKeys } from '../../api/query-keys';
 import { useApiClient, useAppSession } from '../../app-state/session';
 import { logger } from '../../lib/logger';
+import type { GuardResult } from '../../step-up/guard';
+import { useStepUp } from '../../step-up/use-step-up';
 import { useToast } from '../../ui';
 import { SCHEDULE_RANGE } from '../calendar/api';
 import { useMinuteClock, usePhoneTimeZone } from '../shell/use-shell';
 import { SOCIAL_COPY } from '../strings';
 import { approvedMessage, refusalMessage, socialActions, type SocialVerdictMode } from './approval';
-import { approveShown, requestChanges, socialPostQuery, type ApproveOutcome } from './api';
+import { requestChanges, socialPostQuery, type ApproveOutcome } from './api';
+import { approvePostGated } from './gated';
 import type { SocialPost } from './schemas';
 import { socialPostView } from './view';
 
@@ -55,11 +60,14 @@ type Decided = {
 /** The two calls: a success closes the sheet with a toast; a refusal or a reload says why. */
 function useDecisionCalls({ post, reload, onDecided, setRefusal }: Decided) {
   const client = useApiClient();
+  const { guard } = useStepUp();
   const toast = useToast();
   const refresh = useRefresh(post);
   const approve = useMutation({
-    mutationFn: (shown: SocialPost) => approveShown(client, shown, reload),
-    onSuccess: (outcome: ApproveOutcome) => {
+    mutationFn: (shown: SocialPost) => approvePostGated(guard, client, shown, reload),
+    onSuccess: (sent: GuardResult<ApproveOutcome>) => {
+      if (!sent.ran) return;
+      const outcome = sent.value;
       if (outcome.kind === 'reloaded') {
         setRefusal(outcome.words);
       } else {
@@ -68,7 +76,8 @@ function useDecisionCalls({ post, reload, onDecided, setRefusal }: Decided) {
       }
     },
     onError: (error: unknown) => setRefusal(refusalMessage(error)),
-    onSettled: (outcome?: ApproveOutcome) => refresh(outcome?.kind !== 'reloaded'),
+    onSettled: (sent?: GuardResult<ApproveOutcome>) =>
+      sent?.ran === false ? undefined : refresh(sent?.value.kind !== 'reloaded'),
   });
   const askChanges = useMutation({
     mutationFn: (words: string) => requestChanges(client, post.id, words),

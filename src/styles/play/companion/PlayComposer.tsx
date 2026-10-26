@@ -4,14 +4,20 @@
 // with the ground as ink, Geist 600 14), 'Stop' with a 10 x 10 radius-2 square, the accent on
 // First open. Return inserts a newline: only the button sends (A2's D-COMPOSER). No AI label sits
 // beside it (D73: the caption opens the thread). A2's composerState (wired in US-016k) says when
-// the field takes no typing and the button does nothing, and gives a viewer's notice. Given `voice`,
-// A6's voice button (US-019k) sits beside Send, in Play's dress; without it the box is as above.
+// the field takes no typing and the button does nothing, and gives a viewer's notice. A2's
+// attachments sit in the slots: their chips above the field, the [+] at its start (US-016k). The
+// keyboard takes the look's tone (Daylight light, the rest dark), never Studio's Light / Dark /
+// System.
+// Given `voice`, A6's voice button (US-019k) sits beside Send, in Play's dress; without it the box
+// is as above.
 
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Text } from '../../../ui';
 import { DISABLED_OPACITY } from '../../../ui/paint';
 import { VoiceButton, type VoiceButtonProps } from '../../../voice/entry/VoiceButton';
+import { keyboardAppearanceFor } from '../../ground/ground';
 import {
   COMPANION,
   composerView,
@@ -33,6 +39,10 @@ export type PlayComposerProps = {
   readonly firstOpen?: boolean;
   /** The conversation's voice button (A6): the role and the chat's id; none by default. */
   readonly voice?: VoiceButtonProps;
+  /** Above the field: the attached files' chips. */
+  readonly above?: ReactNode;
+  /** At the field's start: the [+] that attaches files. */
+  readonly leading?: ReactNode;
 };
 
 const { composer, target } = COMPANION;
@@ -94,6 +104,8 @@ export function PlayComposer({
   composerState,
   firstOpen = false,
   voice,
+  above,
+  leading,
 }: PlayComposerProps) {
   const paint = useCompanionPaint();
   if (!paint) return null;
@@ -109,6 +121,7 @@ export function PlayComposer({
           {notice.text}
         </Text>
       ) : null}
+      {above}
       <View
         style={[
           styles.field,
@@ -122,6 +135,7 @@ export function PlayComposer({
           },
         ]}
       >
+        {leading}
         <TextInput
           value={value}
           onChangeText={onChangeText}
@@ -132,6 +146,7 @@ export function PlayComposer({
           submitBehavior="newline"
           returnKeyType="default"
           allowFontScaling
+          keyboardAppearance={keyboardAppearanceFor(style)}
           accessibilityLabel={view.placeholder}
           accessibilityState={{ disabled: !view.editable }}
           selectionColor={vars.accent}

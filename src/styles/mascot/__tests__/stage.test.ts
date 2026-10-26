@@ -191,6 +191,27 @@ describe('stills', () => {
     const stage = mascotStage(stageInput({ clipFailed: true }), 'idle');
     expect(stage).toMatchObject({ media: { kind: 'still' }, stills: true });
   });
+
+  it("a tinted clip that failed: the shell's still, and stills from then on", () => {
+    const gold = style(builtinChoice('play'), { playLook: GOLD });
+    const stage = mascotStage(stageInput({ style: gold, clipFailed: true }), 'thinking');
+    expect(stage?.media).toEqual({
+      kind: 'tinted-still',
+      still: stillOf('thinking'),
+      matrix: cssFilterToColorMatrix(SHELLS.gold.filter),
+    });
+    expect(stage?.stills).toBe(true);
+  });
+
+  it('sleeping after a failed clip: the dimmed still', () => {
+    const stage = mascotStage(stageInput({ clipFailed: true }), 'sleeping');
+    expect(stage?.media).toEqual({
+      kind: 'tinted-still',
+      still: stillOf('sleeping'),
+      matrix: cssFilterToColorMatrix(SLEEP_DIM),
+    });
+    expect(stage?.stills).toBe(true);
+  });
 });
 
 describe("an installed theme's Auto", () => {
@@ -247,7 +268,7 @@ describe('mascotFilter', () => {
     expect(mascotFilter(gold, 'sleeping')).toBe(`${SHELLS.gold.filter} ${SLEEP_DIM}`);
   });
 
-  it("HUD has no shell; it dims for sleep as Mascot.dc.html does", () => {
+  it('HUD has no shell; it dims for sleep as Mascot.dc.html does', () => {
     const hud = style(builtinChoice('hud'));
     expect(mascotFilter(hud, 'idle')).toBe('none');
     expect(mascotFilter(hud, 'sleeping')).toBe(SLEEP_DIM);

@@ -12,11 +12,13 @@
 // Report this on Auto's messages opens the foundation's one ReportSheet (useMessageReport, US-009c).
 // Beside the send sits A6's voice button (US-019k): the voice screen on this conversation, by its id
 // once it has one; not there for a viewer.
+// `empty` takes the thread's place while it is a draft with nothing in it (A5's First open on home).
 
 import { useCallback, useMemo, type ReactNode } from 'react';
 
 import { useAppSession } from '../../app-state/session';
 import { roleCan } from '../../auth/role';
+import { isBlankDraft } from '../../styles/homes/layout';
 import { ErrorState, LoadingState, ReportSheet } from '../../ui';
 import { VoiceButton } from '../../voice/entry/VoiceButton';
 import { useAttachments } from '../attachments/use-attachments';
@@ -44,9 +46,13 @@ export type ChatScreenProps = {
   readonly onBack?: () => void;
   /** The ticket a new conversation discusses (routes.chatWithTicket's row id); none by default. */
   readonly ticketId?: string | null;
+  /** In the thread's place while it is a draft with nothing in it (home's First open); none by default. */
+  readonly empty?: ReactNode;
 };
 
-function Thread({ thread }: { readonly thread: ThreadView }) {
+type ThreadProps = { readonly thread: ThreadView; readonly empty?: ReactNode };
+
+function Thread({ thread, empty }: ThreadProps) {
   const { state, send, settleCard, loadError, retry } = thread;
   const follow = useFollowLink();
   const { report, sheet } = useMessageReport();
@@ -57,6 +63,7 @@ function Thread({ thread }: { readonly thread: ThreadView }) {
   }, [state, send]);
   if (loadError) return <ErrorState error={loadError} onRetry={retry} />;
   if (state.status === 'loading') return <LoadingState />;
+  if (empty && isBlankDraft(state)) return <>{empty}</>;
   return (
     <>
       <MessageList
@@ -71,7 +78,7 @@ function Thread({ thread }: { readonly thread: ThreadView }) {
   );
 }
 
-export function ChatScreen({ chatId, above, onBack, ticketId = null }: ChatScreenProps) {
+export function ChatScreen({ chatId, above, onBack, ticketId = null, empty }: ChatScreenProps) {
   const opened = useThread(chatId);
   const discussion = useDiscussion(ticketId);
   const files = useAttachments();
@@ -111,7 +118,7 @@ export function ChatScreen({ chatId, above, onBack, ticketId = null }: ChatScree
         />
       }
     >
-      <Thread thread={thread} />
+      <Thread thread={thread} empty={ticketId === null ? empty : undefined} />
     </ChatFrame>
   );
 }

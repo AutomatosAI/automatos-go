@@ -1,16 +1,20 @@
 // The ground a Screen stands on per style, and the Screen primitive's order, read from its source
 // (vitest runs no React Native renderer): the ground under the content, the scanlines over it, the
-// status bar in the style's tone.
+// status bar in the style's tone; the keyboard in Play's and HUD's tone, the window's under Studio.
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { EMBER, PRESETS } from '../../../core/web/lib/looks/presets';
 import { dressOf } from '../../dress/dress';
 import { HUD, HUD_STYLES, PLAY, PLAY_STYLES, STUDIO_STYLES } from '../../dress/__tests__/fixtures';
-import type { ResolvedStyle } from '../../provider/resolve';
-import { groundPlan, statusBarStyle } from '../ground';
+import { HUD_DEFAULT_LOOK } from '../../hud/look-schema';
+import { resolveStyle, type ResolvedStyle } from '../../provider/resolve';
+import { builtinChoice, type StyleChoice } from '../../registry/style-id';
+import type { SystemScheme, ThemeChoice } from '../../theme-choice';
+import { groundPlan, keyboardAppearanceFor, statusBarStyle } from '../ground';
 
 function planFor(style: ResolvedStyle, kind: Parameters<typeof groundPlan>[0]['kind'] = 'page') {
   return groundPlan({ style, ground: dressOf(style).ground, kind, state: 'idle' });
@@ -59,6 +63,77 @@ describe('statusBarStyle', () => {
     for (const style of HUD_STYLES) expect(statusBarStyle(style.tone)).toBe('light');
     const daylight = PLAY_STYLES.find((style) => style.playLook?.id === 'daylight');
     expect(daylight && statusBarStyle(daylight.tone)).toBe('dark');
+  });
+});
+
+describe('keyboardAppearanceFor', () => {
+  const resolve = (
+    choice: StyleChoice,
+    studioScheme: ThemeChoice,
+    systemScheme: SystemScheme,
+    playLook = EMBER,
+  ) =>
+    resolveStyle({
+      choice,
+      studioScheme,
+      systemScheme,
+      playLook,
+      hudLook: HUD_DEFAULT_LOOK,
+      themePaint: null,
+      reduceMotion: false,
+    });
+  const SCHEMES: readonly (readonly [ThemeChoice, SystemScheme])[] = [
+    ['light', 'dark'],
+    ['dark', 'light'],
+    ['system', 'light'],
+    ['system', 'dark'],
+    ['system', null],
+  ];
+
+  it("leaves Studio and an installed theme on 'default': the window's Light / Dark / System", () => {
+    for (const [studio, system] of SCHEMES) {
+      expect(keyboardAppearanceFor(resolve(builtinChoice('studio'), studio, system))).toBe(
+        'default',
+      );
+    }
+    for (const style of STUDIO_STYLES) expect(keyboardAppearanceFor(style)).toBe('default');
+  });
+
+  it('gives every Play preset its tone: Daylight light, the rest dark, whatever Studio says', () => {
+    for (const look of PRESETS) {
+      const expected = look.id === 'daylight' ? 'light' : 'dark';
+      for (const [studio, system] of SCHEMES) {
+        const style = resolve(builtinChoice('play'), studio, system, look);
+        expect(keyboardAppearanceFor(style)).toBe(expected);
+      }
+    }
+    for (const style of PLAY_STYLES) expect(keyboardAppearanceFor(style)).toBe(style.tone);
+  });
+
+  it('keeps HUD dark at every look and every Studio scheme', () => {
+    for (const style of HUD_STYLES) expect(keyboardAppearanceFor(style)).toBe('dark');
+    for (const [studio, system] of SCHEMES) {
+      expect(keyboardAppearanceFor(resolve(builtinChoice('hud'), studio, system))).toBe('dark');
+    }
+  });
+});
+
+describe("the app's text inputs", () => {
+  const read = (file: string) => readFileSync(path.resolve(__dirname, '../../..', file), 'utf8');
+
+  it('set the keyboard from the painted style: TextField, PillInput and PlayComposer', () => {
+    expect(read('ui/TextField.tsx')).toContain(
+      'keyboardAppearance={input.keyboardAppearance ?? keyboardAppearanceFor(style)}',
+    );
+    for (const file of ['chat/composer/PillInput.tsx', 'styles/play/companion/PlayComposer.tsx']) {
+      expect(read(file)).toContain('keyboardAppearance={keyboardAppearanceFor(style)}');
+    }
+  });
+
+  it("leave the window's appearance on Studio's choice (theme.tsx)", () => {
+    expect(read('styles/theme.tsx')).toContain(
+      'Appearance.setColorScheme(appearanceOverride(choice));',
+    );
   });
 });
 

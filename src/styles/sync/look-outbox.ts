@@ -3,13 +3,15 @@
 // and a PUT replaces the whole set), so an older one landing last would put back what a newer one
 // replaced. Saves run in the order they were queued, each once the ones before it have their
 // answers; a save still waiting when a newer one is queued under the same key (a theme and a
-// session) is dropped, because the newer one carries the whole set. Pure (no React, no timers).
+// session) is dropped, because the newer one carries the whole set. Each queued save's promise
+// settles (never rejects) when its turn is over: answered, failed or dropped, so a caller can tell
+// whether a save is still outstanding. Pure (no React, no timers).
 
 import { logger } from '../../lib/logger';
 
 export type LookOutbox = {
   /** Queues `send` under `key`; it runs once the saves before it have their answers. */
-  readonly queue: (key: string, send: () => Promise<unknown>) => void;
+  readonly queue: (key: string, send: () => Promise<unknown>) => Promise<void>;
 };
 
 export function createLookOutbox(): LookOutbox {
@@ -34,6 +36,7 @@ export function createLookOutbox(): LookOutbox {
         .finally(() => {
           unanswered -= 1;
         });
+      return tail.then(() => undefined);
     },
   });
 }

@@ -16,6 +16,7 @@ import type { Persister } from '@tanstack/react-query-persist-client';
 
 import { clearQueryCache } from '../api/query-client';
 import type { AuthProvider } from '../auth/providers/types';
+import { clearPushBeforeLeaving } from '../push/bind/before-leaving';
 import type { WorkspaceIdRegistry } from '../session/workspace-ids';
 import { ownServer, type CurrentServerStore } from './current-server';
 import type { DeviceStore, PairedRecord } from './device-store';
@@ -48,6 +49,9 @@ export type ServerSwitch = {
 
 /** The four clearings, in the order the contract names; the provider's failure stops them. */
 async function clearSession(deps: ServerSwitchDeps, leftOrigin: string | null): Promise<void> {
+  // push first (US-014i): the session's leave runs teardownLocal, after the hosted row's DELETE,
+  // which still needs the session's token and workspace id
+  await clearPushBeforeLeaving();
   await clearQueryCache(deps.queryClient, deps.persister);
   deps.workspaceIds.clear();
   await deps.provider.signOut();

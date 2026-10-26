@@ -13,7 +13,18 @@
 // person who can send and has not agreed to the bootstrap's providers (US-007c, KC11): the home
 // thread, older chats and every Command Centre surface wait for the yes, and a list that changes
 // on a later bootstrap takes the screens away until it is agreed to.
+// Beside the screens, after the bootstrap and the consent step, the StyleSync the root layout hands
+// in (src/styles/sync/ShellStyleSync) keeps the phone's looks and the workspace's theme in step with
+// the server from launch, once for the app (US-016j). The gate's error and Not running are the
+// style's edge screens: ShellEdgeScreen draws the GateEdge the root layout hands in, with the
+// gate's Retry and way out (src/styles/edges/ShellEdgeScreen.tsx, US-016j).
+// Push (US-014h) is mounted once beside the screens, under the ready session: PushRoot with the
+// session usePushSession builds from the current server, its install id, the sign-in provider and
+// discovery (src/push/bind/session.ts). It is imported lazily, behind its own Suspense boundary,
+// so this layout imports no native module (shell-bar.test.ts renders it over mocked natives) and
+// the screens never wait for it.
 import { Stack } from 'expo-router';
+import { lazy, Suspense } from 'react';
 
 import type { Server } from '../../src/api/server';
 import { AppGate } from '../../src/app-state/AppGate';
@@ -21,6 +32,8 @@ import { InsecureNetworkBanner } from '../../src/connect/components/InsecureNetw
 import { shellNetworkLine } from '../../src/connect/edges';
 import { ConsentSheet } from '../../src/consent/ConsentSheet';
 import { useSessionRefresh } from '../../src/session/use-session-refresh';
+import { ShellEdgeScreen } from '../../src/styles/edges/ShellEdgeScreen';
+import { ShellStyleSync } from '../../src/styles/sync/ShellStyleSync';
 
 /** The gate's bar: the line for an own server while it is http, never the hosted server's. */
 function NetworkBar({ server }: { readonly server: Server }) {
@@ -28,11 +41,27 @@ function NetworkBar({ server }: { readonly server: Server }) {
   return <InsecureNetworkBanner origin={server.apiUrl} placement="top" />;
 }
 
+/** Push for the ready session, mounted once (it reads useAppSession, so only under the gate). */
+const SessionPush = lazy(async () => {
+  const [{ PushRoot }, { usePushSession }] = await Promise.all([
+    import('../../src/push/PushRoot'),
+    import('../../src/push/bind/session'),
+  ]);
+  function SessionPushRoot() {
+    return <PushRoot session={usePushSession()} />;
+  }
+  return { default: SessionPushRoot };
+});
+
 export default function SignedInLayout() {
   useSessionRefresh();
   return (
-    <AppGate consent={<ConsentSheet />} bar={NetworkBar}>
+    <AppGate consent={<ConsentSheet />} bar={NetworkBar} edge={ShellEdgeScreen}>
+      <ShellStyleSync />
       <Stack screenOptions={{ headerShown: false }} />
+      <Suspense fallback={null}>
+        <SessionPush />
+      </Suspense>
     </AppGate>
   );
 }

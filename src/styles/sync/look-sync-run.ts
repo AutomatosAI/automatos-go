@@ -8,8 +8,11 @@
 // and no answer: kept, sent after the next read. No timers and no polling. The target's session is
 // the copy's owner (server, workspace, user): a copy another owner left is put back to the theme's
 // defaults when a new one attaches or reads, before anything is read, merged or sent. One read at
-// a time per session: a second call joins it, and an answer for an older session, or one read
-// while a save was sent, is dropped (the next foreground reads again). Pure TypeScript (no React).
+// a time per session: a second call joins it. A read's answer (or failure) is dropped, changing
+// nothing on the phone, when it is for an older session or when a save of the theme was queued, in
+// flight or answered at any point between the read's start and its answer: the server may have
+// served the read before that save landed. The next mount, foreground or look page reads again.
+// Pure TypeScript (no React).
 
 import type { ApiClient } from '../../api/client';
 import { logger } from '../../lib/logger';
@@ -53,8 +56,9 @@ type Runtime<L extends LookDoc> = {
   readonly theme: LookTheme<L>;
   readonly outbox: LookOutbox;
   edits: number;
-  /** Saves queued so far: a read that saw one queued meanwhile is dropped. */
+  /** Saves queued so far, and those whose turn is over (answered, failed or dropped). */
   sends: number;
+  answered: number;
   /** True while the runner writes the store, so its own write is not taken for a phone change. */
   applying: boolean;
   targets: readonly LookSyncTarget[];
@@ -110,7 +114,7 @@ function queueSend<L extends LookDoc>(rt: Runtime<L>, target: LookSyncTarget): v
   const body = lookBody(state);
   const { themeId } = rt.theme.rules;
   rt.sends += 1;
-  rt.outbox.queue(`${themeId}|${target.session}`, async () => {
+  const turn = rt.outbox.queue(`${themeId}|${target.session}`, async () => {
     if (stale(rt, target)) return;
     await saveLooks(target.client, themeId, body).then(
       () => {
@@ -122,18 +126,34 @@ function queueSend<L extends LookDoc>(rt: Runtime<L>, target: LookSyncTarget): v
       },
     );
   });
+  // counted after the answer's dispatch, so equal counts mean every save's outcome is written
+  void turn.then(() => {
+    rt.answered += 1;
+  });
+}
+
+type SaveCount = { readonly sends: number; readonly answered: number };
+
+function saveCount<L extends LookDoc>(rt: Runtime<L>): SaveCount {
+  return { sends: rt.sends, answered: rt.answered };
+}
+
+/** No save was outstanding at `before`, and none was queued or answered since. */
+function noSaveSince<L extends LookDoc>(rt: Runtime<L>, before: SaveCount): boolean {
+  const idleThen = before.sends === before.answered;
+  return idleThen && rt.sends === before.sends && rt.answered === before.answered;
 }
 
 async function readAndApply<L extends LookDoc>(rt: Runtime<L>, target: LookSyncTarget) {
-  const sendsBefore = rt.sends;
+  const before = saveCount(rt);
   const { rules } = rt.theme;
   try {
     const server = await fetchLooks(target.client, rules);
-    if (stale(rt, target) || rt.sends !== sendsBefore) return;
+    if (stale(rt, target) || !noSaveSince(rt, before)) return;
     const next = dispatch(rt, { type: 'served', server });
     if (next.lookChanged || next.savedChanged) queueSend(rt, target);
   } catch (error) {
-    if (stale(rt, target)) return;
+    if (stale(rt, target) || !noSaveSince(rt, before)) return;
     logger.warn(`[styles] the ${rules.themeId} looks could not be read; the phone keeps its own`, error);
     dispatch(rt, { type: 'failed', error });
   }
@@ -192,6 +212,7 @@ function createRunner<L extends LookDoc>(
     outbox,
     edits: 0,
     sends: 0,
+    answered: 0,
     applying: false,
     targets: [],
     running: null,

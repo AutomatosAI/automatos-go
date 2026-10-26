@@ -64,6 +64,11 @@ export const COMPANION = Object.freeze({
   caret: Object.freeze({ width: 2, height: 20, blinkMs: 530 }),
   /** A new message rises 12 pt and fades in over 180 ms (Ember README 'Motion'). */
   rise: Object.freeze({ distance: 12, durationMs: 180 }),
+  /**
+   * A Deliverable landing in the chat drops 16 pt from 0.96, overshoots to 1.04 at 70 % and settles,
+   * over 420 ms (Ember README 'Motion'; the web's turn.module.css 'land').
+   */
+  drop: Object.freeze({ distance: 16, from: 0.96, overshoot: 1.04, peakAt: 70, durationMs: 420 }),
   composer: Object.freeze({
     fieldPadLeft: 18,
     fieldPad: 6,
@@ -144,6 +149,10 @@ export type ReceiptRow = {
   readonly badgeTone: BadgeTone | null;
   /** A done write: Ember draws its line in the text colour, not text2. */
   readonly emphasis: boolean;
+  /** What VoiceOver reads (A2's words for the status and the line); the line itself when absent. */
+  readonly label?: string;
+  /** The receipt opens something (A2's link): the line is a link. */
+  readonly linked?: boolean;
 };
 
 const RECEIPT_MARKS: Readonly<Record<Receipt['status'], string>> = Object.freeze({
@@ -246,7 +255,11 @@ export function shelfView(count: number): ShelfView {
   return { text: fresh ? said.shelfFresh(n) : said.shelf, fresh, label: said.shelfLabel(n) };
 }
 
-export type NeedsLineView = { readonly text: string; readonly link: string; readonly label: string };
+export type NeedsLineView = {
+  readonly text: string;
+  readonly link: string;
+  readonly label: string;
+};
 
 /** The slim line under the header while the server's needs-you total is above zero (FR-4). */
 export function needsLine(total: number): NeedsLineView | null {

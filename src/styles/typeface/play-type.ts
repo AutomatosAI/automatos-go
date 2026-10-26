@@ -105,12 +105,19 @@ function label(): TypeStyle {
   );
 }
 
+/**
+ * A display slot at another size (a printed sheet's title on the Shelf): the slot's leading, the
+ * look's display face through the same under-19 rule, never below 11 (textStyle's floor).
+ */
+export function playDisplayAt(font: TypeStyleKey, name: PlaySlot, size: number): TypeStyle {
+  const { face, tracking } = displayFace(font, size);
+  return textStyle({ face, size, leading: PLAY_SLOTS[name].leading, tracking });
+}
+
 function display(font: TypeStyleKey, name: DisplaySlot): TypeStyle {
   if (name === 'panel') return label();
   const resolved = name === 'brand' || name === 'number' ? SLOT_ALIASES[name] : name;
-  const size = playSlotSize(font, resolved);
-  const { face, tracking } = displayFace(font, size);
-  return textStyle({ face, size, leading: PLAY_SLOTS[resolved].leading, tracking });
+  return playDisplayAt(font, resolved, playSlotSize(font, resolved));
 }
 
 function title(font: TypeStyleKey, role: TitleRole): TypeStyle {

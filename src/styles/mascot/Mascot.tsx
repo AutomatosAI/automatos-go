@@ -3,8 +3,9 @@
 // the resolved style — whether he shows at all, Play's shell, the ring's palette, the platform,
 // Reduce Motion and HUD's motion, an installed theme's files — through stage.ts, and draws the ring
 // (MascotRing), then the figure: an untinted clip through expo-video (MascotClip), anything else
-// through Skia (MascotSkia). VoiceOver reads one image, 'Auto, <what he is doing>' (the vendored
-// caption, the animation's text twin); where the style shows no mascot he renders nothing.
+// through Skia (MascotSkia); a clip that will not play on either path turns him to stills
+// (clipFailed). VoiceOver reads one image, 'Auto, <what he is doing>' (the vendored caption, the
+// animation's text twin); where the style shows no mascot he renders nothing.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, View } from 'react-native';
@@ -45,7 +46,13 @@ function Figure({ media, box, run, onBoundary, onClipError }: FigureProps) {
       {media.kind === 'clip' ? (
         <MascotClip clip={media.clip} run={run} onBoundary={onBoundary} onError={onClipError} />
       ) : (
-        <MascotSkia media={skiaMedia(media)} side={box.width} run={run} onBoundary={onBoundary} />
+        <MascotSkia
+          media={skiaMedia(media)}
+          side={box.width}
+          run={run}
+          onBoundary={onBoundary}
+          onError={onClipError}
+        />
       )}
     </View>
   );

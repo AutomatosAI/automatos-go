@@ -2,14 +2,15 @@
 // web paints the phone, a HUD change on the phone is sent, HUD not installed keeps its looks on the
 // phone with no words; Play's first meeting merges and sends once, a change made before it is only
 // marked, a change made offline is sent after the next read (also after a relaunch), one PUT at a
-// time, and an answer for another workspace is dropped.
+// time, and an answer for another workspace is dropped; a read that overlaps a save (queued, in
+// flight or answered while it ran) changes nothing, and a read with no save outstanding is applied.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createApiClient } from '../../../api/client';
 import { SERVER, fakeTransport, jsonReply } from '../../../api/__tests__/fake-transport';
-import type { TransportRequest } from '../../../api/transport-types';
-import { AURORA, DEFAULT_LOOK, OBSIDIAN } from '../../../core/web/lib/looks/presets';
+import type { StreamingResponse, TransportRequest } from '../../../api/transport-types';
+import { AURORA, DEFAULT_LOOK, EMBER, OBSIDIAN } from '../../../core/web/lib/looks/presets';
 import type { Look } from '../../../core/web/lib/looks/types';
 import { logger } from '../../../lib/logger';
 import { memoryStorage, type KeyValueStorage } from '../../../storage/encrypted-storage';
@@ -61,6 +62,47 @@ function fakeServer(installed: Partial<Record<string, Kept>>, delayMs = 0) {
     setOffline: (value: boolean) => {
       offline = value;
     },
+  };
+}
+
+type Held = {
+  readonly request: TransportRequest;
+  readonly resolve: (reply: StreamingResponse) => void;
+};
+
+/** A Play server that answers each GET and PUT only when the test says, in the order it says. */
+function handServer() {
+  let held: readonly Held[] = [];
+  const transport = fakeTransport(
+    (request) =>
+      new Promise((resolve) => {
+        held = [...held, { request, resolve }];
+      }),
+  );
+  const client = createApiClient({
+    server: SERVER,
+    getToken: async () => 'tok',
+    getWorkspaceId: () => 'ws-1',
+    transport,
+  });
+  /** Answers the oldest waiting request of `method` with what `reply` makes of it. */
+  const respond = async (method: string, reply: (request: TransportRequest) => StreamingResponse) => {
+    const entry = held.find((waiting) => waiting.request.method === method);
+    if (!entry) throw new Error(`no ${method} is waiting`);
+    held = held.filter((waiting) => waiting !== entry);
+    entry.resolve(reply(entry.request));
+    await settle();
+  };
+  const served = (kept: Kept) =>
+    jsonReply(200, { themeId: PLAY_THEME_ID, ...kept, defaultLook: null, dropped: 0 });
+  return {
+    client,
+    /** A GET answered with `kept`, a PUT with its own body. */
+    answer: (method: 'GET' | 'PUT', kept?: Kept) =>
+      respond(method, (request) => served(kept ?? (JSON.parse(String(request.body)) as Kept))),
+    fail: (method: 'GET' | 'PUT') => respond(method, () => jsonReply(503, { detail: 'Down.' })),
+    waiting: () => held.map((entry) => entry.request.method),
+    puts: () => transport.calls.filter((call) => call.method === 'PUT'),
   };
 }
 
@@ -246,5 +288,101 @@ describe('Play in step with the web', () => {
     expect(slow.calls).toHaveLength(1);
     // ws-2 answered first; ws-1's later answer is for a workspace the phone has left
     expect(store.getState().playLook).toEqual(OBSIDIAN);
+  });
+});
+
+describe('a read that overlaps a save', () => {
+  const BEFORE_PUT: Kept = { looks: [], active: DEFAULT_LOOK };
+
+  /** Play met, then a knob changed (PUT in flight) and the look page opened (GET started). */
+  async function readWhileSaving() {
+    const server = handServer();
+    const store = storeOn();
+    const { play } = lookSyncRunners(store);
+    const at = target(server.client);
+    play.attach(at);
+    const met = play.refresh(at);
+    await settle();
+    await server.answer('GET', BEFORE_PUT);
+    await met;
+    store.getState().setPlayLook(OBSIDIAN);
+    await settle();
+    const read = play.refresh(at);
+    await settle();
+    expect(server.waiting()).toEqual(['PUT', 'GET']);
+    return { server, store, play, at, read };
+  }
+
+  it("never puts the phone back on the server's copy served before the save landed", async () => {
+    const { server, store, read } = await readWhileSaving();
+    await server.answer('PUT');
+    expect(store.getState().lookSync.play).toMatchObject({ lookChanged: false, synced: 'server' });
+    await server.answer('GET', BEFORE_PUT);
+    await read;
+    expect(store.getState().playLook).toEqual(OBSIDIAN);
+    expect(store.getState().lookSync.play).toMatchObject({ lookChanged: false, synced: 'server' });
+    expect(server.puts()).toHaveLength(1);
+    expect(server.waiting()).toEqual([]);
+  });
+
+  it("keeps the phone's look when the read answers first; the save lands, nothing is sent again", async () => {
+    const { server, store, read } = await readWhileSaving();
+    await server.answer('GET', BEFORE_PUT);
+    await read;
+    expect(store.getState().playLook).toEqual(OBSIDIAN);
+    await server.answer('PUT');
+    expect(store.getState().playLook).toEqual(OBSIDIAN);
+    expect(store.getState().lookSync.play).toMatchObject({ lookChanged: false, synced: 'server' });
+    expect(server.puts()).toHaveLength(1);
+    expect(server.waiting()).toEqual([]);
+  });
+
+  it('sends it again after the next read when the save did not land (the server lacks it)', async () => {
+    const { server, store, play, at, read } = await readWhileSaving();
+    await server.answer('GET', BEFORE_PUT);
+    await read;
+    await server.fail('PUT');
+    expect(store.getState().lookSync.play).toMatchObject({ lookChanged: true, synced: 'pending' });
+    const next = play.refresh(at);
+    await settle();
+    await server.answer('GET', BEFORE_PUT);
+    await next;
+    expect(store.getState().playLook).toEqual(OBSIDIAN);
+    await server.answer('PUT');
+    expect(server.puts()).toHaveLength(2);
+    expect(store.getState().lookSync.play).toMatchObject({ lookChanged: false, synced: 'server' });
+  });
+
+  it('applies a read with no save outstanding, and reads again after a dropped one', async () => {
+    const { server, store, play, at, read } = await readWhileSaving();
+    await server.answer('PUT');
+    await server.answer('GET', BEFORE_PUT);
+    await read;
+    const next = play.refresh(at); // the next foreground, with the web's newer look
+    await settle();
+    await server.answer('GET', { looks: [], active: AURORA });
+    await next;
+    expect(store.getState().playLook).toEqual(AURORA);
+    expect(store.getState().lookSync.play).toMatchObject({ lookChanged: false, synced: 'server' });
+    expect(server.puts()).toHaveLength(1);
+  });
+
+  it('applies a read once a save the outbox replaced has had its turn', async () => {
+    const { server, store, play, at, read } = await readWhileSaving();
+    store.getState().setPlayLook({ ...OBSIDIAN, glow: 2 }); // waits behind the PUT in flight
+    store.getState().setPlayLook(AURORA); // replaces it: the waiting one is never sent
+    await server.answer('PUT');
+    await server.answer('GET', BEFORE_PUT);
+    await read;
+    await server.answer('PUT');
+    expect(server.puts().map((put) => (JSON.parse(String(put.body)) as Kept).active)).toEqual([
+      OBSIDIAN,
+      AURORA,
+    ]);
+    const next = play.refresh(at);
+    await settle();
+    await server.answer('GET', { looks: [], active: EMBER });
+    await next;
+    expect(store.getState().playLook).toEqual(EMBER);
   });
 });

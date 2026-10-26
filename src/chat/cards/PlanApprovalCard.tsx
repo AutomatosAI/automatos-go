@@ -3,18 +3,20 @@
 // and the numbered tasks with the agent each runs on. Approve & run sends the empty body; Reject
 // first asks why, and sends nothing until there is a reason. Decided, it says how; a plan someone
 // already decided elsewhere says so when the server refuses (planRefusalText). A role that
-// cannot decide reads it with the D17 words. No cost or ceiling is shown (D8); plan edits and the
-// Face ID step (A4) are not here.
+// cannot decide reads it with the D17 words. No cost or ceiling is shown (D8); plan edits are not
+// here. Approve & run asks for Face ID first (gated.ts, A4); Reject never does (KP13).
 
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { useStepUp } from '../../step-up/use-step-up';
 import { useTokens } from '../../styles/theme';
 import { Button, Text, TextField } from '../../ui';
 import { CARD_COPY } from '../strings';
 import { REJECT_REASON_MAX_CHARS, planRefusalText, rejectBody, type CardAccess } from './actions';
-import { approveMission, rejectMission } from './api';
+import { rejectMission } from './api';
 import { ReadOnlyNote, RefusalText } from './CardNotes';
+import { approvePlanGated } from './gated';
 import type { SettleCard } from './model';
 import { MissionFrame } from './MissionFrame';
 import { OversightNote } from './OversightNote';
@@ -150,11 +152,8 @@ export type PlanApprovalCardProps = {
 export function PlanApprovalCard({ card, onSettled }: PlanApprovalCardProps) {
   const access = useCardAccess('approve');
   const request = useCardRequest(card.key, onSettled, planRefusalText);
-  const approve = () =>
-    request.run(async (client) => {
-      await approveMission(client, card.missionId);
-      return { state: 'approved' };
-    });
+  const { guard } = useStepUp();
+  const approve = () => request.run(approvePlanGated(guard, card.missionId));
   const reject = (reason: string) => {
     const body = rejectBody(reason);
     if (!body) return;

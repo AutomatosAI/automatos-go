@@ -4,13 +4,14 @@
 // the light ring under him) and HUD's card draws the core's outer ring, its dashed ring and the
 // pulse disc from the core() specs. Both are replaced by the real components, which take the same
 // size and the preview's animate flag. Pure: sizes and colours only; the colours come from the
-// style's own variables and the vendored ring rule, never from a literal.
+// style's own variables, the vendored ring rule and the previews' derived colours
+// (tokens/preview-colours.ts, D-TOKENS), never from a literal.
 
-import { rgba } from '../../core/web/lib/look-kit/css';
 import { ringColour } from '../../core/web/lib/mascot/ring';
 import type { Look } from '../../core/web/lib/looks/types';
 import type { HudVars } from '../tokens/hud';
 import type { PlayVars } from '../tokens/play';
+import { autoRingGlow, coreRingColours, glowFade } from '../tokens/preview-colours';
 
 /** Mascot.dc.html's proportions for a mascot of size s. */
 const AUTO = Object.freeze({
@@ -25,8 +26,6 @@ const AUTO = Object.freeze({
   visorWidth: 0.56,
   visorHeight: 0.22,
   eye: 0.12,
-  /** The ring's glow: its colour at 0.35. */
-  glowAlpha: 0.35,
 });
 
 export type AutoStandIn = {
@@ -75,7 +74,7 @@ export function autoStandInPaint(look: Look, vars: PlayVars): AutoStandInPaint {
   const ring = ringColour('idle', look);
   return Object.freeze({
     ring,
-    ringGlow: rgba(ring, AUTO.glowAlpha),
+    ringGlow: autoRingGlow(ring),
     body: vars.accentFill,
     bodyEdge: vars.accentLine,
     visor: vars.groundBg,
@@ -85,16 +84,13 @@ export function autoStandInPaint(look: Look, vars: PlayVars): AutoStandInPaint {
 
 /** The page glow behind Play's preview: the look's capped glow, fading to its accent at 0. */
 export function playGlowStops(vars: PlayVars): readonly [string, string] {
-  return Object.freeze([rgba(vars.accent, 0), vars.glow] as const);
+  return Object.freeze([glowFade(vars.accent), vars.glow] as const);
 }
 
 /** core()'s rings for a core of size s: the outer 1 pt ring, the dashed ring and the pulse disc. */
 const CORE = Object.freeze({
-  outerAlpha: 0.22,
   dashedInset: 0.22,
-  dashedAlpha: 0.4,
   discInset: 0.3,
-  discAlpha: 0.28,
   stroke: 1,
 });
 
@@ -127,9 +123,5 @@ export type RingStandInPaint = {
 
 /** The rings in the look's accent (D-ONE-VOICE: the colour is the resolved style's). */
 export function ringStandInPaint(vars: HudVars): RingStandInPaint {
-  return Object.freeze({
-    outer: rgba(vars.accent, CORE.outerAlpha),
-    dashed: rgba(vars.accent, CORE.dashedAlpha),
-    disc: rgba(vars.accent, CORE.discAlpha),
-  });
+  return coreRingColours(vars.accent);
 }
