@@ -1,6 +1,7 @@
 // A question card's controls (handoff §2 'Questions'): the option buttons that answer at once, the
 // own-words toggle, the field with Answer, and Dismiss, which first says what dismissing does
-// (Keep the question, or Dismiss). What shows and what is enabled is controls.ts's.
+// (Keep the question, or Dismiss). What shows and what is enabled is controls.ts's. Wrapped rows of
+// options sit 14 apart, so their slops never overlap.
 
 import Check from 'lucide-react-native/icons/check';
 import X from 'lucide-react-native/icons/x';
@@ -22,7 +23,15 @@ function Options({ controls, card }: PanelProps) {
   const { spacing } = useTokens();
   if (controls.options.length === 0) return null;
   return (
-    <View style={[styles.wrap, { gap: spacing[QUESTION_CONTROLS.optionGap] }]}>
+    <View
+      style={[
+        styles.wrap,
+        {
+          columnGap: spacing[QUESTION_CONTROLS.optionGap],
+          rowGap: spacing[QUESTION_CONTROLS.optionRowGap],
+        },
+      ]}
+    >
       {controls.options.map((option) => (
         <Button
           key={option.option}

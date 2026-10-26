@@ -1,6 +1,9 @@
 // The paint and touch helpers every primitive shares, pure: a token key to its colour, a token at
 // an alpha (the web's var(--x) with an alpha, which React Native has no syntax for), the 44 pt
-// touch target as hitSlop, and accessibility labels joined from their parts.
+// touch target as hitSlop, and accessibility labels joined from their parts. A touch never lands
+// outside the parent's box, hitSlop or not (React Native's own note), and a ScrollView clips: where
+// a control's slop would cross its parent's edge, touchRoom makes the room, and where controls
+// stack a few points apart, stackedSlop keeps two slops from overlapping.
 
 import type { ColourName, Colours } from '../styles/tokens';
 
@@ -44,6 +47,36 @@ export function hitSlopFor(height: number, width: number = MIN_TOUCH): HitSlop {
   const vertical = Math.max(0, Math.ceil((MIN_TOUCH - height) / 2));
   const horizontal = Math.max(0, Math.ceil((MIN_TOUCH - width) / 2));
   return { top: vertical, bottom: vertical, left: horizontal, right: horizontal };
+}
+
+export type TouchRoom = { readonly paddingVertical: number; readonly marginVertical: number };
+
+/**
+ * Room for a row of controls this tall to take the 44 pt touch inside a parent that would cut
+ * their slop off: padding that makes the row 44 tall (its slop now inside it) and the same margin
+ * taken back, so the row still takes its drawn height and nothing moves.
+ */
+export function touchRoom(height: number): TouchRoom {
+  const { top } = hitSlopFor(height);
+  return { paddingVertical: top, marginVertical: 0 - top };
+}
+
+/** Whether the control above and the one below are controls too. */
+export type StackedNeighbours = { readonly above: boolean; readonly below: boolean };
+
+/**
+ * The slop for one of a column of small controls `gap` apart: toward 44 pt, but only half the gap
+ * toward a neighbour that is a control too, so a touch between two never reaches the wrong one.
+ */
+export function stackedSlop(height: number, gap: number, neighbours: StackedNeighbours): HitSlop {
+  const { top } = hitSlopFor(height);
+  const shared = Math.min(top, Math.max(0, Math.floor(gap / 2)));
+  return {
+    top: neighbours.above ? shared : top,
+    bottom: neighbours.below ? shared : top,
+    left: 0,
+    right: 0,
+  };
 }
 
 /** Parts of an accessibility label, empty ones dropped: 'Blocked, 3'. */

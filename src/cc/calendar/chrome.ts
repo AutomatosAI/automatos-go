@@ -6,6 +6,7 @@
 // opacity and always carries the word 'Paused' (§4.6).
 
 import type { ColourName, Colours, RadiusName, SpaceName } from '../../styles/tokens';
+import { MIN_TOUCH } from '../../ui/paint';
 import type { TextLevel, TextTone } from '../../ui/variants';
 import type { KindWord } from './day-model';
 
@@ -82,7 +83,10 @@ export function stripCellPaint(
   };
 }
 
-/** The always-on band: dashed --border-2, 8 pt radius, 9 × 12 in, a line per heartbeat. */
+/**
+ * The always-on band: dashed --border-2, 8 pt radius, 9 × 12 in, a line per heartbeat. Each line
+ * opens its item, so it is at least 44 tall (the '24/7' mark stands as tall, beside the first).
+ */
 export const ALWAYS_ON_BAND = Object.freeze({
   border: 'border2' as ColourName,
   borderWidth: 1,
@@ -92,6 +96,7 @@ export const ALWAYS_ON_BAND = Object.freeze({
   paddingX: 'space5' as SpaceName,
   gap: 'space4' as SpaceName,
   lineGap: 'space3' as SpaceName,
+  lineMinHeight: MIN_TOUCH,
   markTone: 'muted' as TextTone,
   titleLevel: 4 as TextLevel,
   everyTone: 'muted' as TextTone,

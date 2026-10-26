@@ -2,7 +2,10 @@
 // server lists them, each a QuestionCard. It reads the one questions query (the foundation's stream
 // refreshes it on board_changed and on resume; a pull refetches it). A role that may not answer reads
 // the cards with the reason over them; a 403 on the list (owners and admins only until PRD-266 W1)
-// is the forbidden copy, not an error page. Any other failure is the foundation's ErrorState.
+// is the forbidden copy, not an error page. Any other failure is the foundation's ErrorState. The
+// list makes room for the keyboard and scrolls the own-words field above it; a tap on Answer with
+// the keyboard up answers (it does not just close the keyboard). The shell's head opens the list
+// (TabHead), so it scrolls away with the cards.
 
 import Lock from 'lucide-react-native/icons/lock';
 import { FlatList, RefreshControl, View, type ListRenderItem } from 'react-native';
@@ -10,6 +13,7 @@ import { FlatList, RefreshControl, View, type ListRenderItem } from 'react-nativ
 import { userMessage } from '../../api/errors';
 import { useTokens } from '../../styles/theme';
 import { EmptyState, ErrorState, LoadingState, Text } from '../../ui';
+import { TabFrame, TabHead } from '../shell/TabHead';
 import { QUESTIONS_COPY } from '../strings';
 import { isForbidden } from './answer';
 import { QUESTIONS_LAYOUT } from './chrome';
@@ -53,7 +57,13 @@ export function QuestionsTab() {
     </View>
   );
 
-  if (!cards) return <NotLoaded tab={tab} />;
+  if (!cards) {
+    return (
+      <TabFrame>
+        <NotLoaded tab={tab} />
+      </TabFrame>
+    );
+  }
   return (
     <FlatList
       data={cards}
@@ -61,16 +71,20 @@ export function QuestionsTab() {
       renderItem={renderCard}
       accessibilityLabel={QUESTIONS_COPY.listLabel}
       keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets
       ListHeaderComponent={
-        readOnly && cards.length > 0 ? (
-          <Text
-            level={QUESTIONS_LAYOUT.noteLevel}
-            tone={QUESTIONS_LAYOUT.noteTone}
-            style={{ paddingHorizontal: inset }}
-          >
-            {readOnly}
-          </Text>
-        ) : null
+        <>
+          <TabHead />
+          {readOnly && cards.length > 0 ? (
+            <Text
+              level={QUESTIONS_LAYOUT.noteLevel}
+              tone={QUESTIONS_LAYOUT.noteTone}
+              style={{ paddingHorizontal: inset }}
+            >
+              {readOnly}
+            </Text>
+          ) : null}
+        </>
       }
       ListHeaderComponentStyle={
         readOnly ? { marginBottom: spacing[QUESTIONS_LAYOUT.noteGap] } : null

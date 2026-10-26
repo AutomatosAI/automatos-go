@@ -3,26 +3,33 @@
 // closing note. Drawn as a quiet block under the answer, never a box of its own: it sits inside
 // Auto's box (AutoMessage, D72; the handoff's card is overruled, as TurnNotice's was). A line
 // whose call touched a page opens it through the mapped link. Each line is one element to screen
-// readers, read as its status word and its words (§4.6), never as the mark.
+// readers, read as its status word and its words (§4.6), never as the mark. A link's slop reaches
+// toward 44 pt, but only half the gap toward a link beside it (stackedSlop), so a tap between two
+// links never opens the wrong page.
 
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { WebLinkTarget } from '../../navigation/web-links';
 import { useTokens } from '../../styles/theme';
 import { Text } from '../../ui';
+import { stackedSlop, type HitSlop } from '../../ui/paint';
+import { textRole } from '../../ui/variants';
 import { CHAT_COPY } from '../strings';
 import { MARK_COLOURS, type ReceiptRow, type ReceiptsView } from '../view-model';
 
 const LINE_LEVEL = 4;
 const NOTE_LEVEL = 6;
 const MARK_WIDTH = 12;
+const LINE_ROLE = textRole('body', LINE_LEVEL);
 
 type LineProps = {
   readonly row: ReceiptRow;
   readonly onLink: (target: WebLinkTarget) => void;
+  /** A link's slop: toward 44 pt, half the gap toward a link beside it. */
+  readonly slop: HitSlop;
 };
 
-function ReceiptLine({ row, onLink }: LineProps) {
+function ReceiptLine({ row, onLink, slop }: LineProps) {
   const { colours, spacing } = useTokens();
   const { link } = row;
   const words = (
@@ -50,6 +57,7 @@ function ReceiptLine({ row, onLink }: LineProps) {
   return (
     <Pressable
       onPress={() => onLink(link)}
+      hitSlop={slop}
       accessibilityRole="link"
       accessibilityLabel={row.accessibilityLabel}
     >
@@ -64,14 +72,21 @@ export type ReceiptsCardProps = {
 };
 
 export function ReceiptsCard({ receipts, onLink }: ReceiptsCardProps) {
-  const { spacing } = useTokens();
+  const { spacing, type } = useTokens();
+  const gap = spacing.space2;
+  const { lines } = receipts;
+  const slopAt = (index: number) =>
+    stackedSlop(type[LINE_ROLE].lineHeight, gap, {
+      above: Boolean(lines[index - 1]?.link),
+      below: Boolean(lines[index + 1]?.link),
+    });
   return (
-    <View style={{ gap: spacing.space2 }}>
+    <View style={{ gap }}>
       <Text variant="mono" tone="muted" accessibilityRole="header">
         {CHAT_COPY.receiptsTitle}
       </Text>
-      {receipts.lines.map((row) => (
-        <ReceiptLine key={row.key} row={row} onLink={onLink} />
+      {lines.map((row, index) => (
+        <ReceiptLine key={row.key} row={row} onLink={onLink} slop={slopAt(index)} />
       ))}
       {receipts.note ? (
         <Text level={NOTE_LEVEL} tone="muted">

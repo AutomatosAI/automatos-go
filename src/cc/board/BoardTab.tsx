@@ -3,6 +3,7 @@
 // Board's one query (the shell's figures share the cache entry); the foundation's stream refreshes
 // it live (board_changed invalidates it centrally) and on resume, and a pull refetches it. A load
 // that fails with nothing to show is the foundation's ErrorState; each filter has its own empty copy.
+// The shell's head opens the list (TabHead), so it scrolls away with the cards.
 
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
@@ -11,6 +12,7 @@ import { FlatList, RefreshControl, View, type ListRenderItem } from 'react-nativ
 import { useApiClient } from '../../app-state/session';
 import { useTokens } from '../../styles/theme';
 import { EmptyState, ErrorState, LoadingState } from '../../ui';
+import { TabFrame, TabHead } from '../shell/TabHead';
 import { BOARD_COPY } from '../strings';
 import { usePullRefresh } from '../use-pull-refresh';
 import { boardQuery } from './api';
@@ -48,10 +50,14 @@ export function BoardTab() {
   );
 
   if (!view) {
-    return query.error ? (
-      <ErrorState error={query.error} onRetry={() => void query.refetch()} />
-    ) : (
-      <LoadingState label={BOARD_COPY.loading} />
+    return (
+      <TabFrame>
+        {query.error ? (
+          <ErrorState error={query.error} onRetry={() => void query.refetch()} />
+        ) : (
+          <LoadingState label={BOARD_COPY.loading} />
+        )}
+      </TabFrame>
     );
   }
   return (
@@ -60,7 +66,12 @@ export function BoardTab() {
       keyExtractor={keyOf}
       renderItem={renderCard}
       accessibilityLabel={BOARD_COPY.listLabel}
-      ListHeaderComponent={<FilterPills pills={view.pills} onChoose={choose} />}
+      ListHeaderComponent={
+        <>
+          <TabHead />
+          <FilterPills pills={view.pills} onChoose={choose} />
+        </>
+      }
       ListHeaderComponentStyle={{ marginBottom: spacing[BOARD_LAYOUT.gap] }}
       ItemSeparatorComponent={CardGap}
       ListEmptyComponent={

@@ -1,7 +1,8 @@
 // The Command Centre's head (handoff §2): the dateline eyebrow in the phone's timezone, the title and
 // the lede, its figures in mono and the needs clause in the accent. The words are lede.ts's and
 // dateline.ts's; nothing shows for a source that has not answered. A5 dresses the title per style
-// (src/styles/dress/cc-dress.ts): Play's display face, HUD's 'AUTOMATOS // COMMAND'.
+// (src/styles/dress/cc-dress.ts): Play's display face, HUD's 'AUTOMATOS // COMMAND'. Each tab draws
+// it at the top of its own list (TabHead.tsx), so it scrolls away under the sticky tabs.
 
 import { View } from 'react-native';
 

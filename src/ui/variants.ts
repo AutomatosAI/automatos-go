@@ -16,7 +16,7 @@ import {
   type TypeScale,
   type TypeStyle,
 } from '../styles/type';
-import { DISABLED_OPACITY, joinLabel, paint, tint, type ColourKey } from './paint';
+import { DISABLED_OPACITY, MIN_TOUCH, joinLabel, paint, tint, type ColourKey } from './paint';
 import { UI_COPY } from './strings';
 
 // ── Text ────────────────────────────────────────────────────────────────────────────────────
@@ -226,6 +226,8 @@ export function segmentPaint(
 export const SEGMENT_TRACK_INSET = 3;
 export const SEGMENT_GAP = 2;
 export const SEGMENT_PADDING_Y = 5;
+/** A segment's least height: with the track's inset as its slop, the 44 pt touch in every style. */
+export const SEGMENT_MIN_HEIGHT = MIN_TOUCH - 2 * SEGMENT_TRACK_INSET;
 
 export type Tone = 'accent' | 'success' | 'warning' | 'info' | 'muted';
 
