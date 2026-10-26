@@ -135,9 +135,9 @@ describe('the sliders', () => {
 });
 
 describe('the help line', () => {
-  it("names the iPhone's Spoken Content voices in the phone's language", () => {
+  it("names the iPhone's voices under iOS 26's Read & Speak and the older Spoken Content", () => {
     expect(helpLine('ios', 'en-GB')).toBe(
-      'For a more natural voice, download a Premium voice: iPhone Settings → Accessibility → Spoken Content → Voices → English.',
+      'For a more natural voice, download a Premium voice: iPhone Settings → Accessibility → Read & Speak (Spoken Content before iOS 26) → Voices → English.',
     );
     expect(helpLine('ios', 'fr-FR')).toMatch(/Voices → French\.$/);
   });
