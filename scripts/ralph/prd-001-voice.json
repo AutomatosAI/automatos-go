@@ -705,6 +705,72 @@
       "priority": 16,
       "passes": false,
       "notes": "HudButtons' optional labels and handlers from US-019j carry MUTE and END: no further edit of A5's files should be needed (if one is, it is an additive SEAM EDIT recorded as such). The device run against hosted Studio (Business) and the VPS install is OT-V9 / OT-V10."
+    },
+    {
+      "id": "P001V-RVW-1",
+      "prdStory": "review",
+      "phase": 1,
+      "title": "iOS: a release, tap or STOP sent while recognition is still starting leaves the mic open (KV5)",
+      "description": "Review finding (HIGH; KV5, D-SCREEN-ON). On iOS, expo-speech-recognition 3.1.3 starts recognition inside a Swift Task that awaits several steps before capture begins (node_modules/expo-speech-recognition/ios/ExpoSpeechRecognitionModule.swift:174-260: getLocale, the recognizer's creation on the first hold, hasPermissionToRecord, then ExpoSpeechRecognizer.start → startRecognizer, which sends 'start' and 'audiostart': ExpoSpeechRecognizer.swift:200-256), while stop() and abort() run in Tasks of their own (ExpoSpeechRecognitionModule.swift:360-379): with no recognizer yet they send 'end' at once, and with one whose task has not started they reset and send 'end' (ExpoSpeechRecognizer.swift:154-176). A stop or abort that lands in that window is answered with an 'end', and the capture then starts anyway. The app does not recover: src/voice/quick-ask/recognizer-core.ts:130-133 drops any 'end' while the session is 'starting' as the previous session's, and nothing re-sends the stop or abort when that session's 'start'/'audiostart' then arrives (recognizer-core.ts:234-251). (1) A tap released after listen() called recognizer.start (src/voice/quick-ask/quick-ask-hold.ts:63-74 and 143-146) ends the hold and gives the audio back, so the capture that then opens (MIC LIVE on) cannot be closed by STOP, by leaving the screen or by the background: abortListening aborts only while a hold exists or the recognizer owns the audio (src/voice/quick-ask/quick-ask-store.ts:145-149, called from quick-ask-engine.ts:66-79 and quick-ask-interrupt.ts:25-28), and both are already cleared. Only the next press ends it. (2) A release at HOLD_MIN_MS or later inside the window cancels the HOLD_MAX_MS timer (quick-ask-hold.ts:139) and sends stop(). Its 'end' is dropped, the capture opens with no timer, and the hold stays set, so every later press returns at quick-ask-hold.ts:122 until STOP. (3) A STOP or a background inside the window ends the hold the same way as (1). Android is not affected (start and stop are posted in order to one main-thread Handler: android/.../ExpoSpeechService.kt:116-205), but the fix must hold there too. The window is narrowest after the first hold; the first hold after launch (recognizer creation) and a quick tap are the likely triggers. The device re-check (a quick tap and a quick STOP on the first hold after launch) is the owner's, with OT-V4.",
+      "acceptanceCriteria": [
+        "Cause: recognizer-core.ts drops an 'end' while the session is 'starting' and never re-sends a stop() or abort() asked for in that state; abortListening (quick-ask-store.ts:145-149) does not abort a capture the reducer knows is open once the hold and the audio owner are cleared; after a release, nothing bounds a stop whose 'end' never comes (the HOLD_MAX_MS timer is cancelled at quick-ask-hold.ts:139)",
+        "Change (recognizer-core.ts): the session remembers a stop() or abort() asked for while it is 'starting' (abort wins over stop), and when that session's first 'start' or 'audiostart' arrives it sends that call to the port again, once. An aborted session's words still say nothing; a stopped session still says its final once, at its real end. Nothing in this path calls port.start, and the on-device options are unchanged (KV4)",
+        "Change (quick-ask-store.ts and its callers in quick-ask-engine.ts and quick-ask-interrupt.ts): abortListening also aborts while the reducer's micOpen is true (the capture truth, KV5), so STOP, unmount, 'covered' and 'background' always close a capture the app has seen open, with or without a hold",
+        "Change (quick-ask-hold.ts, config.ts): after a release's recognizer.stop(), a bounded settle timer (a named constant in config.ts, e.g. RELEASE_SETTLE_MS) aborts the recognizer and ends the hold if the hold is still set when it fires (nothing sent; the reducer's nothing_heard). The timer is cancelled when the hold ends normally, and HOLD TO TALK is never left dead after a release",
+        "Tests (src/voice/__tests__/recognizer-session.test.ts over recognizer-port.ts): stop() and, separately, abort() while 'starting', each followed by an 'end' (dropped) then 'start' + 'audiostart' → the port's stop or abort is called again exactly once; the aborted session says no final; the stopped one says its final once at the real end; a stale 'end' before a fresh session's first event with no stop asked is still dropped",
+        "Tests (src/voice/__tests__/quick-ask-engine.test.ts and quick-ask-interrupt.test.ts over quick-ask-harness.ts): (a) a tap released after recognizer.start and before any native event, then 'end', 'start', 'audiostart' → recognizer.abort is called again, MIC LIVE is off after 'audioend', nothing is sent; (b) with micOpen true and no hold, STOP, unmount, 'covered' and 'background' each call recognizer.abort; (c) a release at HOLD_MIN_MS or later whose 'end' never comes → after the settle constant the recognizer is aborted, the hold ends, nothing is sent, and the next press listens; each test fails with the change reverted",
+        "Phase-1 gate: bash scripts/ralph/acceptance-prd001-voice.sh --no-ci passes",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": [
+        "src/voice/quick-ask/recognizer-core.ts",
+        "src/voice/quick-ask/quick-ask-hold.ts",
+        "src/voice/quick-ask/quick-ask-store.ts",
+        "src/voice/quick-ask/quick-ask-engine.ts",
+        "src/voice/quick-ask/quick-ask-interrupt.ts",
+        "src/voice/config.ts",
+        "src/voice/__tests__/recognizer-session.test.ts",
+        "src/voice/__tests__/recognizer-port.ts",
+        "src/voice/__tests__/quick-ask-engine.test.ts",
+        "src/voice/__tests__/quick-ask-interrupt.test.ts",
+        "src/voice/__tests__/quick-ask-harness.ts"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P001V-RVW-2",
+      "prdStory": "review",
+      "phase": 1,
+      "title": "A HUD conversation pushed over the voice screen takes the recognizer and the speaker for good: the voice screen goes deaf (KV5, KV8)",
+      "description": "Review finding (MEDIUM; KV5 'MIC LIVE follows audiostart/audioend', KV8). The recognizer and the speaker each keep one listener, and a new listen replaces the old one (src/voice/quick-ask/recognizer-core.ts:253-271 removes the previous subscriptions; src/voice/speech/speaker-core.ts:183-188). The voice screen attaches its engine once, at mount (src/voice/quick-ask/use-quick-ask.ts:124, scope 'mounted'); HUD's homes attach on every focus (use-quick-ask.ts:125-134, scope 'focused'; src/voice/home/use-hud-home-voice.ts:83). In the HUD dress, a conversation pushed over the voice screen is a HUD home (src/styles/homes/StyleHome.tsx:58 renders HudHome for app/(app)/chat/[id].tsx): 'See it in the chat' (src/voice/screen/use-voice-screen.ts:108, routes.chat) or COMMAND · N → a ticket's discussion does it. That home's focus attach replaces the voice screen's listeners, and its blur or unmount removes its own, so after the pop the recognizer and the speaker have no listener and the voice screen never attaches again. A HOLD TO TALK press then opens the mic with no MIC LIVE (mic_open never reaches the reducer); the release's final goes nowhere, so the hold never ends and HOLD TO TALK stays dead until STOP; a reply that was being spoken never reports speak_done (the phase stays 'speaking', keep-awake stays held). Reachable whenever the voice screen is in the HUD dress (switched through LOOK while it is open, or opened by its /voice link in HUD).",
+      "acceptanceCriteria": [
+        "Cause: one listener per module, replaced by the newest listen and cleared by its own remover, while the voice screen attaches only at mount and HUD's homes attach on every focus",
+        "Change: a quick-ask engine that loses the recognizer or speaker listener to another engine is told and ends cleanly, through the interruption policy's 'covered' (its hold aborted with nothing sent, its speech silenced, its AI-notice session ended). When the engine that took them detaches, the voice screen hears the recognizer and the speaker again without a remount. For example: listeners as a stack in createRecognizer.listen and createSpeaker.listen (removing the top one restores the one it replaced, with an evicted callback the engine maps to 'covered'), or scope 'mounted' attaching again on focus. Record the choice in the DONE mark. A /cc or look page over the voice screen still keeps its speech going (US-019j)",
+        "Tests (src/voice/__tests__/recognizer-core.test.ts, speaker-core.test.ts): A listens, B listens (A is told once that it lost the listener), B removes → events reach A again; A removing while B is on top leaves B listening; removing twice is harmless",
+        "Tests (quick-ask-interrupt.test.ts or a new src/voice/__tests__/listener-handover.test.ts, two engines over spy ports and A2's thread reducer): when a second engine attaches while the first is mid-hold or mid-reply, the first's hold is aborted, nothing is sent, its speech is silenced, its phase is idle and keepAwakeFor is false; after the second detaches, a press on the first opens the mic with MIC LIVE from 'audiostart' and the release sends through its thread; each test fails with the change reverted",
+        "Phase-1 gate: bash scripts/ralph/acceptance-prd001-voice.sh --no-ci passes",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "npm run check:bundle passes"
+      ],
+      "files": [
+        "src/voice/quick-ask/recognizer-core.ts",
+        "src/voice/speech/speaker-core.ts",
+        "src/voice/quick-ask/use-quick-ask.ts",
+        "src/voice/quick-ask/quick-ask-engine.ts",
+        "src/voice/__tests__/recognizer-core.test.ts",
+        "src/voice/__tests__/speaker-core.test.ts",
+        "src/voice/__tests__/quick-ask-interrupt.test.ts"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": ""
     }
   ],
   "ownerTest": [
