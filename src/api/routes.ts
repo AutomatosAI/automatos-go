@@ -17,15 +17,11 @@ export const routes = Object.freeze({
   /** The workspace the caller resolved to: id, role, plan, exposure (read on every launch, D-ONE-CLIENT). */
   workspaceCurrent: { method: 'GET', path: '/api/workspaces/current' },
   /** The discovery document (PRD-266 §4.1): edition, auth modes, capabilities. */
-  discovery: {
-    method: 'GET',
-    path: '/.well-known/automatos.json',
-    pendingUpstream: 'PRD-266 US-001',
-  },
+  discovery: { method: 'GET', path: '/.well-known/automatos.json' },
   /** The live board/chat event stream (text/event-stream), one connection while the app is open. */
   tasksStream: { method: 'GET', path: '/api/v1/tasks/stream' },
   /** The needs-you counts behind the Command Centre badge. */
   needsYou: { method: 'GET', path: '/api/activity/needs-you' },
   /** Report a message or a Deliverable (PRD-266 §4.8). */
-  reports: { method: 'POST', path: '/api/v1/reports', pendingUpstream: 'PRD-266 US-016' },
+  reports: { method: 'POST', path: '/api/v1/reports' },
 } as const satisfies Record<string, Route>);

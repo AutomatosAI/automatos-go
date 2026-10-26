@@ -15,11 +15,7 @@ export const STYLE_ROUTES = Object.freeze({
     /** What this member sees in Studio: {choice, source, theme, revoked?} (defaults.py). */
     active: { method: 'GET', path: '/api/themes/active' },
     /** An install as data for the phone (services/themes/mobile.py): tokens, fonts, mascot. */
-    mobile: {
-      method: 'GET',
-      path: '/api/themes/mobile/{install_id}',
-      pendingUpstream: 'PRD-261 M-04 (#1258, merged after the pin 630fc1c85)',
-    },
+    mobile: { method: 'GET', path: '/api/themes/mobile/{install_id}' },
     /** A font or mascot file the mobile answer names; the one prefix a theme file URL may have. */
     file: { method: 'GET', path: '/api/themes/files/{digest}/{path:path}' },
   }),

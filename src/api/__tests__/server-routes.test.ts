@@ -47,14 +47,10 @@ describe('routes', () => {
   it('holds the foundation routes as {method, path}', () => {
     expect(routes).toEqual({
       workspaceCurrent: { method: 'GET', path: '/api/workspaces/current' },
-      discovery: {
-        method: 'GET',
-        path: '/.well-known/automatos.json',
-        pendingUpstream: 'PRD-266 US-001',
-      },
+      discovery: { method: 'GET', path: '/.well-known/automatos.json' },
       tasksStream: { method: 'GET', path: '/api/v1/tasks/stream' },
       needsYou: { method: 'GET', path: '/api/activity/needs-you' },
-      reports: { method: 'POST', path: '/api/v1/reports', pendingUpstream: 'PRD-266 US-016' },
+      reports: { method: 'POST', path: '/api/v1/reports' },
     });
   });
 });

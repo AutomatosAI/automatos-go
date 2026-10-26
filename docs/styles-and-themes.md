@@ -209,7 +209,7 @@ and a per-process guard lets only one instance read (`A5:src/styles/sync/reader-
 |---|---|
 | `GET /api/themes/installed` | The workspace's installs: name, version, revocation |
 | `GET /api/themes/active` | What this member sees in Studio: `{choice, source, theme, revoked?}` |
-| `GET /api/themes/mobile/{install_id}` | One install as phone data. Marked `pendingUpstream` until the core re-pin (it merged after `630fc1c85`) |
+| `GET /api/themes/mobile/{install_id}` | One install as phone data (on the server since the re-pin to `8c9361687`) |
 | `GET /api/themes/files/{digest}/{path}` | A font or mascot file the answer above names |
 | `GET /api/themes/looks/{theme_id}` | This member's looks for Play or HUD |
 | `PUT /api/themes/looks/{theme_id}` | Replaces them: `{looks, active}` |
