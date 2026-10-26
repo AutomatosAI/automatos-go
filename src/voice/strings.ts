@@ -214,8 +214,9 @@ export const VOICE_SETTINGS_COPY = Object.freeze({
   reset: 'Reset to default',
   resetHint: 'Automatic voice at normal speed and pitch',
   help: {
+    /** iOS 26 renamed Spoken Content to Read & Speak; the app runs from iOS 17, so both are named. */
     ios: (language: string) =>
-      `For a more natural voice, download a Premium voice: iPhone Settings → Accessibility → Spoken Content → Voices → ${language}.`,
+      `For a more natural voice, download a Premium voice: iPhone Settings → Accessibility → Read & Speak (Spoken Content before iOS 26) → Voices → ${language}.`,
     android: (language: string) =>
       `For a more natural voice, install Google's voice data: in your phone's Settings, search for Text-to-speech output, open the settings for Speech Services by Google, then Install voice data → ${language}.`,
   },
