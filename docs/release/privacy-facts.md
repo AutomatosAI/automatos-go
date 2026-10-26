@@ -1,9 +1,11 @@
 # Privacy facts from the code
 
 This file lists the `[CHECK]`s in the privacy-policy draft
-(`reports/mobile-review-2026-10-20/drafts/privacy-policy-automatos-go.md`) that Automatos Go's own
-code answers. Each answer describes the app as it ships, with the evidence: file paths and the
-tests that keep it true in CI. Gerard uses it to edit the policy before publishing (OT-R3).
+(`reports/mobile-review-2026-10-20/drafts/privacy-policy-automatos-go.md`) and the Terms draft
+(`…/drafts/terms-automatos-go.md`) that Automatos Go's own code answers. Each answer describes the
+app as it ships, with the evidence: file paths and the tests that keep it true in CI. Gerard uses
+it to edit the policy and the Terms before publishing (OT-R3). The last section lists the
+`[CHECK]`s the code cannot answer, with who answers each.
 
 Each entry gives:
 
@@ -14,8 +16,22 @@ Each entry gives:
 - **Policy wording:** a sentence the policy can use. It says what the code does and nothing broader [D70].
 - **Owner check:** what a person still confirms on a phone, in a dashboard or with the server.
 
-Wave A7 adds entries story by story. US-021q completes the file: every `[CHECK]` the code answers,
-and the ones only Gerard or the server can answer, each with who answers it.
+Every answer was read on the merged app (A0–A6 merged; checked 26 Oct). The entries:
+
+1. Photo location (EXIF GPS)
+2. On the phone: after sign-out and after uninstall
+3. Auto is an AI
+4. Report this
+5. The consent sheet and a refusal
+6. Crash reports
+7. Analytics and tracking
+8. Photos only, never video
+9. Notifications: when the app asks, and what a notification can do
+10. Quick-ask: speech recognition and the reply's voice
+11. The local network prompt and plain HTTP
+12. Clerk on a phone paired with its own server
+13. What the Terms draft says about the app
+14. The `[CHECK]`s the code cannot answer
 
 ## Photo location (EXIF GPS)
 
@@ -499,3 +515,487 @@ choices are "Agree and continue", or Sign out (hosted Studio) / Forget this serv
 the workspace's providers and nothing else opens before "Agree and continue"; Sign out from the
 sheet leaves the phone signed out. On a Business workspace with Auto Live on, Retell AI is in the
 list (after W3 is deployed).
+
+## Crash reports
+
+**Draft:**
+
+- Section 07, the "Crash reports" row: "[CHECK: the retention on the Sentry plan; whether reports
+  carry a user ID (recommended: no); "Prevent storing of IP addresses" on in Sentry]".
+- Section 11, "What the app itself still sends": "crash reports to Sentry (section 07) [CHECK:
+  decide whether crash reports stay on, ask first, or switch off when the app is connected to your
+  own server …]".
+- Appendix A.1: Usage Data · Product Interaction "[CHECK]"; Diagnostics · Crash Data, linked "No
+  [CHECK: no user ID set on Sentry events and IP storage off; otherwise Yes]"; Diagnostics ·
+  Performance Data "[CHECK: Yes if Sentry performance tracing is on]".
+- Appendix A.2: App info and performance · Crash logs "Required [CHECK: Optional if the app gets a
+  crash-report switch]".
+
+**Answer:** Reports carry no user, and the app attaches no IP address. Breadcrumbs record no taps,
+screens, typing or console lines. There is no performance data. A switch turns reports off, so
+Play's Crash logs is Optional. Reports work the same on hosted Studio and on an own server. The
+retention and Sentry's own IP setting are in Sentry (OT-R1).
+
+**What the code does:**
+
+- **Where they go.** `buildSentryOptions` (`src/observability/options.ts`) starts Sentry only with a
+  DSN from `EXPO_PUBLIC_SENTRY_DSN` whose host ends `.ingest.de.sentry.io` (Sentry's EU region), and
+  only while the switch is on. Any other DSN, or none, sends nothing. The build hook
+  `scripts/check-release-env.js` fails a production build whose DSN is not in the EU.
+- **No user, and no IP address from the app.** `sendDefaultPii` is false. The app never calls
+  `Sentry.setUser`, and `scrubEvent` (`src/observability/scrub.ts`) deletes `event.user` (id, email,
+  username and IP address) from every event. Whether Sentry stores the address the request came from
+  is a project setting, "Prevent storing of IP addresses" (OT-R1).
+- **What is removed.** `scrubEvent` and `scrubBreadcrumb` remove chat text, question text,
+  notification payloads and keys, call and chat ids and tokens. `redactText` (`redact.ts`) replaces
+  tokens, keys, email addresses, URLs with a host (a self-hosted server's address included), UUIDs
+  and long quoted text in every message. A request breadcrumb keeps only its method, its path
+  template and its status (`paths.ts`).
+- **Breadcrumbs.** Console, touch, click, input and navigation breadcrumbs are dropped
+  (`breadcrumbs.ts`, `DROPPED_CATEGORIES`). There is no `Sentry.wrap` (its touch boundary records
+  taps) and no navigation integration (screen names). On iOS, `enableAutoBreadcrumbTracking` and
+  `enableNetworkBreadcrumbs` are off, so a native crash carries no screen titles or request URLs. At
+  most 30 breadcrumbs are kept.
+- **No performance data.** `tracesSampleRate` is 0. Auto-performance, app-start, frame, stall and
+  user-interaction tracing are off, there is no profiler, and no request carries a trace header.
+- **Nothing else.** No session tracking (a session records every launch), no screenshots, no view
+  hierarchy, no replays, no capture of failed requests and no logs.
+- **The switch.** Settings → Privacy & legal → "Send crash reports", on by default
+  (`src/observability/crash-setting.ts`). Turning it off closes Sentry at once (`Sentry.close()`),
+  and nothing more is sent. Turning it on starts Sentry again. The choice is one word in a small file
+  of its own, deleted with the app. While the switch is on, "Send a test error report" sends one
+  sample report with planted fake fields (`TEST_REPORT_PROBES`), so the owner can see them removed in
+  Sentry.
+- **On an own server.** Crash reporting does not depend on the server. A paired phone sends crash
+  reports to the same Sentry project, under the same switch, scrubbed the same way, and the server's
+  address is redacted. The app neither asks first nor switches off on an own server: that is
+  Gerard's call (last section).
+- **Native crashes.** A crash written by the iOS or Android Sentry SDK never passes `beforeSend`. It
+  carries the app's own breadcrumbs, scrubbed when they were added, and Sentry's random installation
+  id, which is not tied to the account.
+
+**Evidence:**
+
+- `src/observability/__tests__/options.test.ts` (every option above), `scrub.test.ts` on the planted
+  `__fixtures__/sample-event.json`, `redact.test.ts` and `paths.test.ts` (US-021b).
+- `crash-reporting.test.ts` and `crash-setting.test.ts` (US-021c): init once; nothing without an EU
+  DSN or with the switch off; close when it goes off; `setUser` and `wrap` never called; the test
+  report. `wiring.test.ts`: `src/observability/index.ts` is the only product file that loads
+  `@sentry/react-native`.
+- `src/release/__tests__/privacy-section.test.ts` (US-021d): the switch's rows and words.
+- `src/release/__tests__/privacy-labels.test.ts` (US-021e): Crash Data collected and not linked;
+  Performance Data and Product Interaction not collected.
+
+**Policy wording:**
+
+- Section 07, the Crash reports row's last cell, in place of its `[CHECK]`: "Reports carry no user
+  ID, and the app sends no IP address with them. Sentry keeps them for {the plan's retention}. You
+  can turn them off in Settings → Privacy & legal → Send crash reports." Keep the IP sentence only
+  once OT-R1 has turned on "Prevent storing of IP addresses".
+- The same row, its third cell: "… and the app's last steps before the error" becomes "… and the
+  app's last steps before the error, such as a request's route and result (never your words, the
+  screens you opened or what you tapped)".
+- Section 11: "crash reports to Sentry (section 07), unless you turned them off in Settings". Drop
+  the `[CHECK]`, or change the app first.
+- Appendix A.1: Product Interaction No; Crash Data Yes, not linked; Performance Data No
+  (`app-store-privacy.md`). Appendix A.2: Crash logs Optional (`play-data-safety.md`).
+
+**Owner check:** OT-R1: the Sentry project, its IP setting and retention, a test report and the
+first native crash, each seen scrubbed. The WebSummit checklist (OT-R14) repeats the test report.
+
+## Analytics and tracking
+
+**Draft:** Section 06, "It has no ads, no third-party advertising trackers and no analytics
+trackers. [CHECK: no analytics SDK in the build; PRD-001 §4.2 lists none.]", and section 07, "The
+app does not track you across other companies' apps or websites."
+
+**Answer:** True. No analytics, advertising, attribution or tracking SDK is installed, tracking is
+off, and since this story no SDK in the app sends usage telemetry. This story found one that did:
+Clerk's own SDK telemetry, sent to clerk-telemetry.com when the build's publishable key is a
+development key. It is now off (an audit fix).
+
+**What the code does:**
+
+- **Installed packages.** None of Firebase, Segment, Amplitude, Mixpanel, PostHog, Datadog,
+  Bugsnag, Instabug, New Relic, AppsFlyer, Adjust, Branch, the Facebook SDKs, App Tracking
+  Transparency, Google Mobile Ads, AdMob or Application Insights is declared or installed, nested
+  packages included. `@sentry/react-native` is the only crash or error SDK, and it records no usage
+  ("Crash reports").
+- **No tracking.** app.json has no `NSUserTrackingUsageDescription`. Its privacy manifest says
+  `NSPrivacyTracking` false and lists no tracking domains. The app never asks for the advertising
+  identifier.
+- **Clerk's telemetry (AUDIT FIX in this story).** With a development key (`pk_test_`), clerk-js
+  builds a telemetry collector (`@clerk/shared`'s `TelemetryCollector` is on only for a development
+  instance). It posts which Clerk hooks and components ran, the SDK version and the publishable key
+  to clerk-telemetry.com. The WebSummit build may use a development key (`testflight.md`, "The
+  Clerk key for the WebSummit build"). `src/auth/AuthRoot.tsx` now passes `telemetry={false}` to the
+  hosted `ClerkProvider`, and clerk-js builds no collector (its `load()` builds one only when
+  `options.telemetry` is not false). A production key never sent it.
+- **Clerk's native iOS SDK** (ClerkKit) is linked by `@clerk/expo` but never set up. Its view
+  factory comes from Clerk's config plugin, which the app does not use (CLAUDE.md, Traps), so
+  `ClerkExpo.configure` refuses and the native SDK makes no request.
+- **The hosts the app talks to** are listed in the App Privacy Report check of
+  `websummit-checklist.md`.
+
+**Evidence:**
+
+- `src/release/__tests__/dependency-audit.test.ts` (US-021a): the denylist over `package.json` and
+  every `package-lock.json` entry; Sentry the only crash SDK; app.json declares no tracking.
+- `src/release/__tests__/sdk-telemetry.test.ts` (US-021q): every `ClerkProvider` in the product
+  tree passes `telemetry={false}`, read from the syntax tree. On the base it failed with
+  `src/auth/AuthRoot.tsx:101 no telemetry={false}`.
+- `src/release/__tests__/privacy-manifest.test.ts` (US-021f): `NSPrivacyTracking` false.
+
+**Policy wording:** section 06, keep "It has no ads, no third-party advertising trackers and no
+analytics trackers." and drop the `[CHECK]`.
+
+**Owner check:** the App Privacy Report check in `websummit-checklist.md` (OT-R14): no analytics
+host and no clerk-telemetry.com.
+
+## Photos only, never video
+
+**Draft:** Appendix A.1, "User Content · Photos or Videos: Yes (photos only; the attachment
+allow-list has no video types)", and A.2, "Photos and videos · Photos".
+
+**Answer:** True. The camera and the photo library offer still photos only. Files can pick any
+file, a video included, and the app uploads it, but the server refuses a video before storing
+anything, so no video is kept.
+
+**What the code does:**
+
+- **Camera and library** (`src/chat/attachments/picked.ts`): both are asked for
+  `mediaTypes: ['images']`, and any video a picker still returns (`video`, `pairedVideo`) is dropped
+  before upload.
+- **Files** (`expo-document-picker`) is asked for any type (`*/*`). The app decides only whether a
+  file is an image to redraw ("Photo location"). It keeps no list of allowed types of its own.
+- **The server's list.** `POST /api/attachments` reads the type from the file's bytes and checks it
+  against `ALLOWED_MIME_TYPES` (automatos-ai `orchestrator/modules/attachments/validation.py` at
+  `10c59c259`: images, documents, text and code, and no `video/` type) before it writes to storage
+  (`store.py`). A video is refused with "File type not allowed", and the app's toast says "Auto
+  can't take this kind of file."
+
+**Evidence:** `src/chat/__tests__/picked.test.ts` (A2 US-009b: images only, a returned video
+dropped); `src/release/__tests__/privacy-labels.test.ts` (US-021e: both pickers ask for images
+only, and the labels say photos and no video).
+
+**Policy wording:** Appendix A.1: "Photos or Videos: Yes (photos only: the camera and the photo
+library offer photos, and the service accepts no video files)". Section 07 can stay as it is.
+
+**Owner check:** none beyond OT-R6. On a phone, attaching a video from Files shows "Auto can't take
+this kind of file."
+
+## Notifications: when the app asks, and what a notification can do
+
+**Draft:** Section 10, "The app asks for each permission the first time you use the feature that
+needs it, and works without it." and, under Notifications, "The app asks after you have first used
+it, never at launch. … A question carries its text and up to three answer options, so you can
+answer from the notification on an unlocked phone. … Approving work always opens the app first".
+The Terms draft's section 09 says the same.
+
+**Answer (re-verified on the push wave, A4):** True on iPhone and on Android 13 or later. The
+system's question appears only after a tap on the app's own "Turn on" or on Settings →
+Notifications → "Turn on notifications", and the app offers its "Turn on" only once something waits
+for you, or from your second session. Android 12 or earlier has no question: notifications are
+allowed unless they are off in the phone's settings. Two corrections: a question's answer options
+are not buttons on the notification ("Reply…" takes a typed answer), and every action opens the
+app.
+
+**What the code does:**
+
+- **One place asks.** `askPermission` (`src/push/registration/permission.ts`) is the only call of
+  the system request; `src/push/platform/expo.ts` binds it. It runs only from a person's tap: the
+  in-context sheet's "Turn on" (`src/push/prompt/PushPrompt.tsx`) or Settings → Notifications
+  (`src/push/settings/phone-link.ts`). Never at launch or when a screen mounts.
+- **When the sheet is offered** (`offerPrompt`, `src/push/prompt/policy.ts`): only while the
+  phone's status is "ask" (the server sends pushes through Expo, the build can register, and the
+  system has not been asked), and only once the needs-you count is above zero or from the second
+  signed-in session (`PROMPT_MIN_SESSIONS` 2). "Not now" holds it back for 7 days. After 2 declines
+  only Settings offers it. A phone the person removed is never asked by the sheet.
+- **Registration** (`src/push/registration/register.ts`): the phone sends its push token to the
+  server only where the server pushes through Expo, the build has its EAS project id and the
+  permission is granted.
+- **Android.** The channels are created when a session starts (`src/push/platform/setup.ts`). The
+  app targets API 36 (React Native 0.81's `targetSdk`), so on Android 13 or later a new channel
+  shows no question, and the question comes only from `askPermission`. Android 12 or earlier has no
+  notification permission to ask for: the system reports it granted (unless notifications are off
+  for the app), and the phone registers when the session starts.
+- **What a notification offers** (`src/push/platform/categories.ts`): a question offers "Reply…" (a
+  typed answer, on an unlocked phone only) and "Open". Everything else offers "Open". There is no
+  Approve button and no option button: a question's own options are answered in the app. Every
+  action opens the app.
+
+**Evidence:** `src/push/__tests__/registration-state.test.ts` ("the wave asks for the permission in
+one place (KP11)": only `registration/permission.ts` and `platform/expo.ts` name the request),
+`root.test.ts` (the `offerPrompt` table), `registration.test.ts` ("a phone never asked sends
+nothing and asks nothing"), `settings-wiring.test.ts` (no screen calls the request) and
+`platform.test.ts` (the categories and their actions).
+
+**Policy wording:**
+
+- Section 10, Notifications, first line: "The app asks only when you tap Turn on. It offers this
+  once something needs your answer, or from your second visit, never at launch. On Android 12 or
+  earlier your phone does not ask: you can turn notifications off in its settings."
+- The question line: "A question can show its text on your lock screen. Reply… lets you type an
+  answer on an unlocked phone, and the app opens. Its answer options are in the app."
+- Keep "Approving work always opens the app first".
+
+**Owner check:** the WebSummit checklist (OT-R14): on a fresh install, no question at launch; the
+"Turn on" sheet once something waits; an answer sent with "Reply…".
+
+## Quick-ask: speech recognition and the reply's voice
+
+**Draft:** Section 07, the "Quick-ask voice" row: "Speech is recognised **on your phone**; the audio
+is not sent to us or to anyone else. Only the text is sent, as a chat message. Replies are read
+aloud by your phone's own voice … [CHECK: on Android, that recognition is on-device only and
+quick-ask stops rather than falling back to a network recogniser; and that the Android
+text-to-speech engine does not use a network voice]".
+
+**Answer (re-verified on the voice wave, A6):**
+
+- **Android recognition:** true. Recognition runs only on the phone's own recognizer, and
+  quick-ask refuses rather than falling back.
+- **iPhone recognition:** true, with one open edge, recorded by the voice wave. The app checks
+  that the phone's recognizer works on the device before it starts. That check reads the phone's
+  default language, while quick-ask listens in the phone's first preferred language. Where the two
+  differ, and the first preferred language has no on-device recognizer, iOS may send the speech to
+  Apple's servers.
+- **The reply's voice:** on iPhone, a voice on the phone. On Android, the app picks a voice on the
+  phone when the engine names one. When it finds none, the phone's text-to-speech engine speaks
+  with its default voice, and the app cannot see whether that voice uses the network.
+
+**What the code does:**
+
+- **Recognition** (`recognitionPolicy` in `src/voice/quick-ask/recognition-policy.ts`, started by
+  `recognizer-core.ts`). Every start passes `requiresOnDeviceRecognition: true` (`onDeviceOptions`,
+  the one way to build the start options). It names no recognition service package, and it asks for
+  no recording or audio file.
+  - **iOS:** hold to talk starts only when the recognizer supports on-device recognition and is
+    available. expo-speech-recognition sets `requiresOnDeviceRecognition` only on a recognizer that
+    supports it (`ios/ExpoSpeechRecognizer.swift`, `if recognizer.supportsOnDeviceRecognition`), and
+    otherwise uses Apple's servers. So the app checks first. The module's check,
+    `supportsOnDeviceRecognition()`, builds `SFSpeechRecognizer()` for the default language
+    (`ExpoSpeechRecognitionModule.swift`), while `start()` listens in `lang`, the phone's first
+    preferred locale (`src/voice/quick-ask/locale.ts`). That is the edge above: closing it needs a
+    native check per language (a lead decision in the voice wave's US-019b notes; device check
+    OT-V1 with a second preferred language).
+  - **Android:** only on Android 13 (API 33) or later, with on-device recognition supported and
+    the phone's language installed for it. A language that is supported but not installed offers
+    a download (`androidTriggerOfflineModelDownload`). The phone then fetches the language model;
+    nothing the person says is sent. Anything else refuses with its reason ("Hold to talk needs
+    speech recognition that runs on this phone, and it isn't available for {language}. You can type
+    to Auto instead."). There is no network fallback.
+- **What leaves the phone:** the recognised text, sent as a chat message through the app's API
+  client. The audio is never saved or sent.
+- **The reply's voice** (`pickVoice` in `src/voice/speech/voice-pick.ts`, spoken through
+  expo-speech in `speaker.ts`):
+  - **iOS:** Apple's own voices only (`com.apple.voice.*`, `com.apple.ttsbundle.*`). Every one is
+    on the phone.
+  - **Android:** expo-speech has no network flag, so the voice's name decides. Only a name with
+    "local" and without "network" is picked (Google's engine names each voice `…-local` or
+    `…-network`). If no voice for the language has such a name (another engine, or none installed),
+    the app passes no voice. The engine then speaks with its default voice for the language, as set
+    in the phone's settings.
+
+**Evidence:** `src/voice/__tests__/recognition-policy.test.ts` (iOS and Android policies, every
+start option on the phone, no service package), `recognizer-core.test.ts` (start runs only for a
+"ready" policy), `recognizer-binding.test.ts`, `voice-pick.test.ts` (Apple's voices only; on
+Android "local" names only, never "network"; none → the engine's default) and
+`speaker-core.test.ts`.
+
+**Policy wording:**
+
+- "Speech is recognised on your phone. If your phone cannot recognise your language on the device,
+  quick-ask says so and does not start. The audio is not saved or sent. Only the text is sent, as a
+  chat message."
+- "On iPhone, replies are read aloud by a voice on your phone. On Android, the app uses a voice
+  installed on your phone when your text-to-speech engine offers one; otherwise your engine's
+  default voice reads them, as set in your phone's settings."
+- Before publishing the first sentence for iPhone, Gerard decides on the edge above (last section):
+  publish it as it is, or add "on iPhone, in your phone's main language".
+
+**Owner check:** the voice wave's airplane-mode checks (OT-V1, OT-V2), including OT-V1 with a
+second preferred language; quick-ask in the WebSummit checklist (OT-R14).
+
+## The local network prompt and plain HTTP
+
+**Draft:**
+
+- Section 10: "**Local network** (iPhone): only when you connect to a server on your home or office
+  network."
+- Section 11: "**Plain HTTP on a home network:** the app shows a lasting note that the connection
+  is not encrypted. [CHECK: whether plain-HTTP pairing ships; it changes the Google Data safety
+  "encrypted in transit" answer, Appendix A.]"
+- Appendix A.2: "Is all user data encrypted in transit? Yes, only if the app refuses plain HTTP.
+  … [CHECK: decide before the first Play submission.]"
+
+**Answer:** Both are true. iOS asks about the local network the first time the app connects to an
+address on the local network, which happens only when the person pairs with, or uses, their own
+server on a private address. Hosted Studio and a server on the internet, such as the VPS, never
+cause it. Plain-HTTP pairing ships, for private addresses only, with a lasting note. So Play's
+"encrypted in transit" answer is Gerard's (`play-data-safety.md`).
+
+**What the code does:**
+
+- **The prompt.** `NSLocalNetworkUsageDescription` is "Automatos Go connects to your own Automatos
+  server when it runs on your home or office network." iOS shows it on the first connection to a
+  local address. The app does no Bonjour or mDNS discovery: app.json lists no `NSBonjourServices`,
+  and no product file browses the network. If the person taps Don't Allow, iOS blocks the
+  connection and the app shows "Can't reach {server}" ("It isn't answering. It may be stopped, or
+  this phone can't reach it from here."). Allowing it later is in iOS Settings → Privacy &
+  Security → Local Network.
+- **Plain HTTP** (`src/connect/address.ts`, `src/connect/config.ts`): `http://` is accepted only for
+  a private IPv4 address (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16) or a `.local` name. Any other
+  `http://` address is refused: "This address needs https://. Only an address on your home
+  network, like 192.168.1.20 or nas.local, can use http://." A paired `http://` server shows the
+  "Unencrypted home network" banner (`src/connect/components/InsecureNetworkBanner.tsx`): "This
+  address uses http://, so what this phone and the server send is not encrypted. Anyone on the same
+  network could read it. Pair only on a network you trust." iOS allows it through
+  `NSAllowsLocalNetworking` only, with no arbitrary loads.
+
+**Evidence:** `src/release/__tests__/permissions.test.ts` (US-021g: the evaluated Info.plist's
+usage strings, `NSAllowsLocalNetworking` and no arbitrary loads); the connect wave's
+`src/connect/__tests__/address.test.ts` and `ip.test.ts` (A1, D-HTTPS and KC6: which addresses may
+use `http://`).
+
+**Policy wording:**
+
+- Section 10: keep the Local network line as it is.
+- Section 11: keep the plain-HTTP bullet and drop its `[CHECK]`: plain-HTTP pairing ships.
+- Appendix A.2: the answer is Gerard's (`play-data-safety.md`, "encrypted in transit").
+
+**Owner check:** pairing on a home network is not in the WebSummit run (the VPS has a public HTTPS
+address). If a home-network server is paired, check the prompt appears once, on the first
+connection, and the banner shows.
+
+## Clerk on a phone paired with its own server
+
+**Draft:** Section 11, "The app does not use our sign-in service (Clerk) in this mode. [CHECK: the
+app mounts Clerk only for hosted sign-in, so a paired phone never contacts clerk.automatos.app.]"
+
+**Answer (re-verified on the merged base):** True while the phone is paired. ClerkProvider never
+mounts in own-server mode, so no Clerk code runs and nothing is asked of Clerk. The `[CHECK]`'s
+reason is not quite right, though. The app mounts Clerk whenever no server is paired, not only on
+the hosted sign-in screen. A fresh install therefore loads Clerk on its first screen, Welcome,
+before the person pairs, and again after they forget the server.
+
+**What the code does:**
+
+- **The choice** (`authBranch`, `src/session/auth-branch.ts`; rendered by `src/auth/AuthRoot.tsx`
+  inside `app/_layout.tsx`'s gates): until the keychain has said whether a server is paired, nothing
+  mounts. A paired record gives `DeviceSession`, which has no `ClerkProvider`, so no Clerk hook runs.
+  No paired record gives `HostedSession`, the `ClerkProvider`, in a build with a Clerk key and an API
+  URL.
+- **Before pairing.** Welcome and Connect render under `HostedSession`, because "connected nowhere"
+  is the built-in hosted server (KC4). On mount, clerk-js loads its environment and client from
+  Clerk's Frontend API: two requests that carry the phone's IP address and device type but no
+  account. The connect wave recorded this as a lead flag (US-006d notes), with an option: mount
+  Clerk only once hosted sign-in is chosen, or once Clerk's own item is in the keychain.
+- **When the person pairs.** Pairing while signed in to hosted Studio signs out of Clerk first
+  (`src/connect/switch.ts`). The tree remounts as `DeviceSession`. The signed-out Clerk object stays
+  in memory until the app is closed. In clerk-js's native build, loading is one fetch of the
+  environment and the client, with no polling and no heartbeat (the heartbeat runs only in a
+  standard browser). So nothing more is sent to Clerk in that launch, and every later launch of the
+  paired phone never starts Clerk.
+- **Clerk's native iOS SDK** stays unconfigured ("Analytics and tracking").
+
+**Evidence:** `src/auth/__tests__/auth-root.test.ts` (US-006d: AuthRoot rendered for an own
+server mounts the device session with no `ClerkProvider` and no `useAuth` call, even in a build
+with a Clerk key; the hosted case counts one of each); `src/session/__tests__/auth-branch.test.ts`
+(nothing until the keychain answers; own → device; none → hosted).
+
+**Policy wording:** Section 11, in place of the sentence and its `[CHECK]`: "While the app is paired
+with your own server, it does not contact our sign-in service (Clerk). Before you pair, the app's
+first screen loads Clerk so that you can sign in to hosted Studio; Clerk then receives your phone's
+IP address and device type, but no account details." If Gerard takes the connect wave's option, the
+second sentence goes.
+
+**Owner check:** the App Privacy Report check in `websummit-checklist.md` (OT-R14): on a phone
+installed fresh and paired with the VPS, Clerk's host may appear once, from Welcome, and never
+after pairing.
+
+## What the Terms draft says about the app
+
+The Terms draft's section 09 ("Automatos Go, the mobile app") makes claims about the app. The code
+answers these:
+
+| Terms draft (section 09) | On the merged app | Evidence |
+|---|---|---|
+| "Free, and nothing to buy … It offers no purchases, subscriptions, credits or keys." | True. No plan, credit or price anywhere in the app (D8). | `src/release/__tests__/store-copy.test.ts` (BILLING) |
+| "You cannot create an account in the app." | True. The app only signs in, with no pointer to making an account (D64). | `store-copy.test.ts` (SIGNUP) |
+| "A notification about an agent's question can show the question and its answer options." | The text, yes. The options are answered in the app: the notification's buttons are "Reply…" (a typed answer) and "Open". | `src/push/__tests__/platform.test.ts`; "Notifications" above |
+| "Answering from a notification needs an unlocked phone. Approving work opens the app first." | True. "Reply…" requires an unlocked phone, and every action opens the app. | as above |
+| "Workspace owners and admins can switch question text off for their workspace." | The server's setting. The app shows what the server sends. | automatos-ai (PRD-266) |
+| "Auto tells you it is an AI at the start of every voice conversation and reminds you during long ones." | **Not as shipped.** Quick-ask says "Hi, this is Auto, your AI assistant." once, before its first spoken reply of a session, and never reminds (D73). Auto Live is not in this build. | `src/voice/__tests__/ai-notice.test.ts`; "Auto is an AI" above |
+| "The app can update itself for fixes within the version you installed. Some features depend on what the connected server supports." | True. expo-updates fetches updates for the installed build's fingerprint only, and features follow the server's discovery document. | `src/release/__tests__/release-config.test.ts` (fingerprint runtime, channels); `src/api/capabilities.ts` |
+
+**Terms wording:** section 09, Voice: "Auto tells you it is an AI when a voice conversation starts."
+Drop "and reminds you during long ones" until a build reminds. The rest of section 09 stands as
+drafted.
+
+## The `[CHECK]`s the code cannot answer
+
+The `[CHECK]`s answered above are not repeated here. These need a person, a dashboard or the
+server. "Gerard" means a decision or a dashboard Gerard holds; "counsel" means legal advice;
+"automatos-ai" means the server's code or its production settings.
+
+**Privacy policy draft:**
+
+| Where | The `[CHECK]` | Who answers |
+|---|---|---|
+| Header | Point Studio's own privacy page at the published policy, or update it in the same drop | Gerard (automatos-ai-landing) |
+| Header | Publish sections 06–14 when a build goes beyond internal TestFlight, or on 30 Oct with the app "in testing" | Gerard |
+| Header | The publish date: a fixed date, never computed | Gerard (OT-R3) |
+| §06 | The controller's legal entity name and address, once D2 names the contracting party | Gerard, counsel |
+| §06 | The controller and processor split for workspace content | Counsel |
+| §06 note | Whether the page says the App Store seller is Gerard Kavanagh, for Automatos AI | Gerard |
+| §07 note | Keep the table and style it, or turn the rows into paragraphs | Gerard (company site) |
+| §07 | How long a removed phone's record is kept (PRD-266 keeps it as `revoked`, with no deletion date) | automatos-ai |
+| §07 | Whether deleting a chat also removes what Auto learned from it | automatos-ai (memory) |
+| §07, §12 | Production `AUDIT_RETENTION_DAYS` (code default 365, never below 180) | Gerard (Railway settings) |
+| §07 | The region of `S3_DOCUMENTS_BUCKET`, and the 7-day lifecycle rule on the production bucket | Gerard (AWS) |
+| §07 | That Auto Live's audio travels over LiveKit for Retell | Retell |
+| §07 | Retell's audio retention off (D53), and the transcript retention set per agent | Gerard (Retell dashboard) |
+| §07 | How long Expo keeps push receipts and payloads, and update requests | Gerard, from Expo's terms |
+| §07 | The Sentry plan's retention, and "Prevent storing of IP addresses" on (the user ID half is answered above) | Gerard (Sentry, OT-R1) |
+| §08 | The legal bases | Counsel |
+| §08 | Data-processing agreements with Clerk, Expo (D20), Retell, Sentry and Anthropic | Gerard |
+| §08 | Clerk's and Anthropic's regions (United States) | Gerard |
+| §08 | The region of Railway's API and Postgres services | Gerard (Railway) |
+| §08 | Retell still offers no EU region at publish (D53) | Gerard, Retell |
+| §08 | LiveKit and its region, and Retell's speech-recognition and voice sub-processors | Retell |
+| §08 | Where `MODERATION_WEBHOOK_URL` delivers (PRD-266 open question 2); list it if it is Slack or similar | Gerard (automatos-ai settings) |
+| §08 | The transfer mechanism for each provider | Counsel |
+| §09 | Whether the whole-app consent gate stays (it is what ships), or Gerard chooses the lighter one | Gerard (a change to the app if lighter) |
+| §09 | Which hosted features use OpenRouter on the platform's own account, and only what is live | automatos-ai, Gerard |
+| §09 | The providers' own training terms; for OpenRouter, that providers that train on prompts are excluded | Gerard, counsel |
+| §11 | Whether crash reports stay on, ask first or switch off on an own server (they stay on, under the person's switch) | Gerard (a change to the app if not) |
+| §11 | Whether to keep loading Clerk on Welcome before a phone pairs ("Clerk on a phone paired with its own server") | Gerard (the connect wave's option, if not) |
+| §07 | Whether to publish the iPhone on-device recognition sentence before the per-language check exists ("Quick-ask") | Gerard |
+| §12 | How long the moderation inbox keeps reports, and who answers it within what time | Gerard (PRD-266 open question 2) |
+| §13 | Studio's Settings → Phones & devices shipped (PRD-266 US-019): it is on automatos-ai `main` at `10c59c259` (`frontend/components/settings/SettingsPanel.tsx`); check it on production | Gerard (production) |
+| §13 | Only owners delete a workspace (D63), but the erase route also accepts admins: say which is true, or fix the route | automatos-ai, Gerard |
+| §13 | Who runs a login deletion (Clerk's Backend API, then the `users` row and memberships by hand) | Gerard |
+| §13 | Clerk's "Allow users to delete their accounts" stays off | Gerard (Clerk dashboard) |
+| §13 | privacy@automatos.app is monitored | Gerard |
+| §13 | Studio can transfer a workspace's ownership; if not, what support does instead | automatos-ai |
+| §14 | One minimum age, 16 (D12), against the live Terms' different age | Gerard (OT-R13) |
+| A.1 | Other User Content rather than Emails or Text Messages (`app-store-privacy.md` uses Other User Content) | Gerard |
+| A.1 | Whether Clerk's IP-derived city on hosted sessions counts as location (photos are answered above) | Gerard |
+| A.2 | "Encrypted in transit", now that plain-HTTP pairing ships | Gerard (`play-data-safety.md`) |
+| A.2 | The deletion duty and its public web link (the report's conflict 1) | Gerard, counsel |
+| A.2 | The account-creation wording when the form is filled in (the app has no pointer to sign-up) | Gerard (OT-R15) |
+| A.2 | Audio marked ephemeral only once Retell's audio retention is confirmed off | Gerard (Retell) |
+| A.3 | The merged manifest of the first Android build | Gerard (OT-R5) |
+
+**Terms draft:**
+
+| Where | The `[CHECK]` | Who answers |
+|---|---|---|
+| Header | Make https://automatos.app/terms the one Terms the app links to (it is: `legal-links.ts`), and point Studio's own terms page at it or bring it in line | Gerard (automatos-ai-landing) |
+| Header | The effective date | Gerard (OT-R3) |
+| §02 | 16, as D12 says, against the live Terms' different age | Gerard (OT-R13) |
+| §06 | What Automatos can do on a report: platform admins pause, delete or restore a whole workspace, and no tool removes one message or Deliverable | automatos-ai, Gerard |
+| §06 | Who answers the moderation inbox, and whether "two working days" covers reports | Gerard |
+| §09 | Apple's standard EULA with the clause as a courtesy, or these Terms as a custom EULA | Gerard, counsel |
+| §09 | Keep or cut "Use voice only where the people who can be heard know …" | Gerard |
+| §10–14 | The Fees section rewritten when billing opens (PRD-265), with no in-app purchase language | Gerard |
