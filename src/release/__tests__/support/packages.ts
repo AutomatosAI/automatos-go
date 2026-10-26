@@ -2,6 +2,9 @@
 // and every installed package, nested ones included, by the name npm installs it under and the name
 // it really is (an alias such as "x": "npm:firebase@…" is still firebase). Test-only.
 
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+
 import { z } from 'zod';
 
 import { deniedBy, type DenylistEntry } from './denylist';
@@ -117,4 +120,13 @@ export function dependencyClosure(lock: Lock, root: string): Set<string> {
   };
   visit(root);
   return reached;
+}
+
+/** The lock's packages: the ones on disk, and the required ones that are not (a partial install). */
+export function lockInstall(lock: Lock, root: string): { onDisk: string[]; missing: string[] } {
+  const keys = Object.keys(lock.packages).filter((key) => key.includes(NODE_MODULES));
+  const onDisk = keys.filter((key) => existsSync(path.join(root, key)));
+  const present = new Set(onDisk);
+  const missing = keys.filter((key) => !present.has(key) && lock.packages[key]?.optional !== true);
+  return { onDisk, missing };
 }

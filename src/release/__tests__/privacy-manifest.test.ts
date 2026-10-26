@@ -7,14 +7,14 @@
 // WebRTC, Clerk's pods) are not in node_modules, so this test cannot read them: Apple's processing
 // of the next native build is their check (OT-R4).
 
-import { existsSync, readdirSync } from 'node:fs';
+import { readdirSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
 import { expo, privacy } from '../../config/__tests__/app-json';
-import { readLock, type Lock } from './support/packages';
+import { lockInstall, readLock } from './support/packages';
 import { parsePlist, type PlistValue } from './support/plist';
 import {
   APP_FUNCTIONALITY,
@@ -58,15 +58,6 @@ function manifestsIn(root: string, relDir: string): string[] {
     if (entry.isDirectory()) return entry.name === NODE_MODULES ? [] : manifestsIn(root, child);
     return entry.isFile() && entry.name === MANIFEST_FILE ? [child] : [];
   });
-}
-
-/** The lock's packages: the ones on disk, and the required ones that are not (a partial install). */
-function lockInstall(lock: Lock, root: string) {
-  const keys = Object.keys(lock.packages).filter((key) => key.includes(`${NODE_MODULES}/`));
-  const onDisk = keys.filter((key) => existsSync(path.join(root, key)));
-  const present = new Set(onDisk);
-  const missing = keys.filter((key) => !present.has(key) && lock.packages[key]?.optional !== true);
-  return { onDisk, missing };
 }
 
 function readManifest(file: string): DependencyManifest {

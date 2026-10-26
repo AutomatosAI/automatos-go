@@ -1,0 +1,138 @@
+{
+  "about": "The Android permissions of Automatos Go, as data (R08, KR12). allowed is exactly the uses-permission set the evaluated Android manifest keeps (npx expo config --type introspect on the merged base 24a8fa6, 26 Oct 2026): app.json android.permissions plus what each wired config plugin adds, each with why the app needs it and the module that asks for it. denied is what the build must never keep: the ones app.json android.blockedPermissions removes (tools:node=\"remove\", which also strips them from a library's manifest at merge time) and the ones no module declares. src/release/__tests__/permissions.test.ts holds the evaluated manifest and every installed library's AndroidManifest.xml to this file, so a plugin or library that adds a permission fails CI. Gradle dependencies (LiveKit's audioswitch and WebRTC, Firebase messaging, ML Kit barcode scanning, clerk-android, sentry-android) bring manifests that are not in node_modules: only the built APK shows their merged result (OT-R5). docs/native-modules.md 'Android permissions' is the foundation's record of the same list.",
+  "reviewed": "2026-10-26",
+  "allowed": [
+    {
+      "name": "android.permission.INTERNET",
+      "why": "The Automatos API, Clerk sign-in, Auto Live (LiveKit) and crash reports (Sentry).",
+      "module": "Expo template; also expo-file-system, expo-video, @sentry/react-native, @livekit/react-native"
+    },
+    {
+      "name": "android.permission.ACCESS_NETWORK_STATE",
+      "why": "Connectivity checks before a request, a call or an over-the-air update.",
+      "module": "expo-updates, @sentry/react-native, @livekit/react-native, @config-plugins/react-native-webrtc"
+    },
+    {
+      "name": "android.permission.CAMERA",
+      "why": "Scanning the QR code that pairs the app with your own server, and taking a photo to send to Auto. Asked when Camera is first used, never at launch.",
+      "module": "expo-camera, expo-image-picker; also @livekit/react-native, @config-plugins/react-native-webrtc"
+    },
+    {
+      "name": "android.permission.RECORD_AUDIO",
+      "why": "Quick-ask speech to text and Auto Live calls. The microphone is open only while you hold to talk or are in a call, never in the background (D33).",
+      "module": "expo-speech-recognition, @livekit/react-native; also expo-camera, expo-image-picker, @config-plugins/react-native-webrtc"
+    },
+    {
+      "name": "android.permission.MODIFY_AUDIO_SETTINGS",
+      "why": "Routing Auto Live audio to the speaker or a headset.",
+      "module": "@livekit/react-native, @config-plugins/react-native-webrtc"
+    },
+    {
+      "name": "android.permission.BLUETOOTH",
+      "why": "Auto Live through a Bluetooth headset (LiveKit's audioswitch). A normal permission: no prompt.",
+      "module": "@livekit/react-native, @config-plugins/react-native-webrtc"
+    },
+    {
+      "name": "android.permission.BLUETOOTH_ADMIN",
+      "why": "Auto Live through a Bluetooth headset (LiveKit's audioswitch). A normal permission: no prompt.",
+      "module": "@livekit/react-native"
+    },
+    {
+      "name": "android.permission.POST_NOTIFICATIONS",
+      "why": "Push notifications: questions, reviews and Auto's messages. Android 13 and later ask, after the app has first been used, never at launch.",
+      "module": "expo-notifications"
+    },
+    {
+      "name": "android.permission.RECEIVE_BOOT_COMPLETED",
+      "why": "expo-notifications' boot receiver re-arms scheduled notifications after the phone restarts.",
+      "module": "expo-notifications"
+    },
+    {
+      "name": "android.permission.WAKE_LOCK",
+      "why": "Keeps an Auto Live call running while the screen is on and the app is open.",
+      "module": "@livekit/react-native, @config-plugins/react-native-webrtc"
+    },
+    {
+      "name": "android.permission.USE_BIOMETRIC",
+      "why": "The optional fingerprint or face check before you approve or answer (a setting).",
+      "module": "expo-local-authentication"
+    },
+    {
+      "name": "android.permission.USE_FINGERPRINT",
+      "why": "The same check on Android versions before the biometric API.",
+      "module": "expo-local-authentication"
+    },
+    {
+      "name": "android.permission.VIBRATE",
+      "why": "A light tap when a message is sent and when the style changes.",
+      "module": "Expo template, expo-haptics"
+    },
+    {
+      "name": "android.permission.WRITE_EXTERNAL_STORAGE",
+      "why": "expo-image-picker's launchCameraAsync asks for it with the camera below Android 10 (ImagePickerModule.kt ensureCameraPermissionsAreGranted), and the minimum is Android 7 (API 24). Android 10 and later never ask; the photo is written to the app's own cache, not to shared storage.",
+      "module": "expo-image-picker; also the Expo template, expo-file-system"
+    }
+  ],
+  "denied": [
+    {
+      "name": "android.permission.READ_MEDIA_IMAGES",
+      "why": "Google Play allows it only for apps whose core purpose needs broad photo access. Photos are chosen in the system photo picker (expo-image-picker's PickVisualMedia, never the legacy picker), which needs no permission. Blocked in app.json."
+    },
+    {
+      "name": "android.permission.READ_MEDIA_VIDEO",
+      "why": "As READ_MEDIA_IMAGES; the app attaches no video. Blocked in app.json."
+    },
+    {
+      "name": "android.permission.READ_MEDIA_AUDIO",
+      "why": "The app reads no audio files from the phone. Blocked in app.json."
+    },
+    {
+      "name": "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+      "why": "Android 14's partial photo access: the system photo picker needs no media permission at all. No module declares it; not blocked in app.json, so the APK check (OT-R5) confirms no Gradle dependency adds it."
+    },
+    {
+      "name": "android.permission.READ_EXTERNAL_STORAGE",
+      "why": "expo-image-picker and expo-file-system declare it, but the system photo picker and the system document picker hand over only what was chosen. Blocked in app.json."
+    },
+    {
+      "name": "android.permission.ACCESS_FINE_LOCATION",
+      "why": "The app uses no location. Blocked in app.json, because Gradle dependencies bring manifests this repository cannot inspect."
+    },
+    {
+      "name": "android.permission.ACCESS_COARSE_LOCATION",
+      "why": "As ACCESS_FINE_LOCATION. Blocked in app.json."
+    },
+    {
+      "name": "android.permission.ACCESS_BACKGROUND_LOCATION",
+      "why": "As ACCESS_FINE_LOCATION. Blocked in app.json."
+    },
+    {
+      "name": "android.permission.READ_CONTACTS",
+      "why": "The app reads no contacts. Blocked in app.json."
+    },
+    {
+      "name": "android.permission.WRITE_CONTACTS",
+      "why": "The app writes no contacts. Blocked in app.json."
+    },
+    {
+      "name": "android.permission.SYSTEM_ALERT_WINDOW",
+      "why": "The app draws over no other app. The Expo template and the WebRTC config plugin add it; blocked in app.json."
+    },
+    {
+      "name": "android.permission.FOREGROUND_SERVICE",
+      "why": "No background microphone or call (D33): Auto Live runs with the screen on and the app open. LiveKit's library manifest declares it; blocked in app.json, so no foreground service can start."
+    },
+    {
+      "name": "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+      "why": "No background microphone (D33). No module declares it; not blocked in app.json, so the APK check (OT-R5) confirms no Gradle dependency adds it."
+    },
+    {
+      "name": "android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION",
+      "why": "The app never shares the screen. @livekit/react-native-webrtc's library manifest declares a MediaProjectionService with foregroundServiceType mediaProjection but not this permission; with FOREGROUND_SERVICE blocked the service can never run in the foreground. Not blocked in app.json: the APK check (OT-R5) confirms it is absent. If a future Play Console asks for a foreground-service declaration because of that service, the answer is that the app never starts it."
+    },
+    {
+      "name": "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+      "why": "No background audio (D33). expo-video's config plugin adds it only with supportsBackgroundPlayback, which app.json sets false."
+    }
+  ]
+}
