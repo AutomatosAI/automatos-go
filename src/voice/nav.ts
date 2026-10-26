@@ -1,9 +1,10 @@
-// The voice screen's app path (KV17, US-019j): app/(app)/voice.tsx at '/voice', with the conversation
-// in its query ('/voice?chat=<id>') when a chat opened it, else A2's home thread (KC4). It lives here,
-// not in src/navigation/routes.ts, which the foundation owns and the connect kit edits; the idiom is
-// that file's and A5's src/styles/nav.ts: expo-router's typed routes stay off, so a route is a plain
-// string. Every other destination is the foundation's routes or A5's look pages. Pure: no React, no
-// expo-router, so vitest loads it.
+// The voice wave's app paths (KV17, US-019j): the voice screen, app/(app)/voice.tsx at '/voice',
+// with the conversation in its query ('/voice?chat=<id>') when a chat opened it, else A2's home
+// thread (KC4); and Settings → Voice, app/(app)/settings/voice.tsx at '/settings/voice'. They live
+// here, not in src/navigation/routes.ts, which the foundation owns and the connect kit edits; the
+// idiom is that file's and A5's src/styles/nav.ts: expo-router's typed routes stay off, so a route
+// is a plain string. Every other destination is the foundation's routes or A5's look pages. Pure:
+// no React, no expo-router, so vitest loads it.
 
 import { isUsableId, type RouteParams } from '../navigation/routes';
 import { STYLE_SCREENS, lookScreen, type StyleScreenPath } from '../styles/nav';
@@ -13,6 +14,8 @@ import type { Layout } from '../styles/registry/style-id';
 export const VOICE_SCREENS = Object.freeze({
   /** The voice screen, A5's HUD core in every style (D60): app/(app)/voice.tsx. */
   voice: '/voice',
+  /** Settings → Voice, Auto's voice, speed and pitch: app/(app)/settings/voice.tsx. */
+  settings: '/settings/voice',
 } as const);
 
 /** The query parameter the voice screen reads its conversation from. */

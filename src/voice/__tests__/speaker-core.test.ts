@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { logger } from '../../lib/logger';
-import { SPEECH_RATE } from '../config';
+import { SPEECH_PITCH, SPEECH_RATE } from '../config';
 import {
   createSpeaker,
   fitToEngine,
@@ -36,9 +36,26 @@ describe('speaker.speak', () => {
       language: 'en-GB',
       voice: 'com.apple.voice.enhanced.en-GB.Daniel',
       rate: SPEECH_RATE,
+      pitch: SPEECH_PITCH,
       useApplicationAudioSession: false,
     });
     expect(at(1)).not.toHaveProperty('voice');
+  });
+
+  it('speaks at the rate and pitch Settings → Voice saved, in the voice it was given', () => {
+    const { speaker, at } = speaking();
+    speaker.speak('Hello.', {
+      language: 'en-GB',
+      voice: 'com.apple.voice.premium.en-GB.Malcolm',
+      rate: 1.15,
+      pitch: 0.9,
+    });
+    expect(at(0)).toMatchObject({
+      language: 'en-GB',
+      voice: 'com.apple.voice.premium.en-GB.Malcolm',
+      rate: 1.15,
+      pitch: 0.9,
+    });
   });
 
   it('says nothing for a blank sentence', () => {
@@ -278,6 +295,57 @@ describe('speaker.voices and voiceFor', () => {
     const { speaker } = speaking({ getVoices: async () => ({ voices: VOICES }) });
     expect(await speaker.voices()).toEqual([]);
     expect(await speaker.voiceFor('en-GB')).toBeUndefined();
+  });
+
+  it('takes the saved voice while the phone offers it for the locale, else the best', async () => {
+    const { speaker } = speaking({ getVoices: async () => VOICES }, 'android');
+    expect(await speaker.voiceFor('en-GB', 'en-gb-x-gbb-local')).toBe('en-gb-x-gbb-local');
+    expect(await speaker.voiceFor('en-GB', 'en-gb-x-gone-local')).toBe('en-gb-x-gbb-local');
+    expect(await speaker.voiceFor('en-GB', 'en-gb-x-gbb-network')).toBe('en-gb-x-gbb-local');
+    expect(await speaker.voiceFor('en-GB', null)).toBe('en-gb-x-gbb-local');
+  });
+
+  it("choicesFor reads the phone's list afresh, and voiceFor answers from that read", async () => {
+    const later = {
+      identifier: 'en-gb-x-gbc-local',
+      name: 'en-gb-x-gbc-local',
+      quality: 'Enhanced',
+      language: 'en-GB',
+    };
+    const getVoices = vi
+      .fn<() => Promise<unknown>>()
+      .mockResolvedValueOnce(VOICES)
+      .mockResolvedValue([...VOICES, later]);
+    const { speaker } = speaking({ getVoices }, 'android');
+    expect(await speaker.voiceFor('en-GB', later.identifier)).toBe('en-gb-x-gbb-local');
+    expect(await speaker.choicesFor('en-GB')).toEqual([
+      { kind: 'automatic' },
+      {
+        kind: 'voice',
+        identifier: later.identifier,
+        name: later.name,
+        tier: 'enhanced',
+        language: 'en-GB',
+        inRegion: true,
+      },
+      {
+        kind: 'voice',
+        identifier: 'en-gb-x-gbb-local',
+        name: 'en-gb-x-gbb-local',
+        tier: 'standard',
+        language: 'en-GB',
+        inRegion: true,
+      },
+    ]);
+    expect(await speaker.voiceFor('en-GB', later.identifier)).toBe(later.identifier);
+    expect(getVoices).toHaveBeenCalledTimes(2);
+  });
+
+  it('offers Automatic alone when the list fails to load, and logs it', async () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
+    const { speaker } = speaking({ getVoices: async () => Promise.reject(new Error('no engine')) });
+    expect(await speaker.choicesFor('en-GB')).toEqual([{ kind: 'automatic' }]);
+    expect(warn).toHaveBeenCalledWith('[voice] the voices did not load', expect.any(Error));
   });
 
   it('tries a failed read again next time', async () => {

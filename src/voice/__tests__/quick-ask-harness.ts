@@ -45,6 +45,8 @@ export type HarnessOptions = {
   readonly core?: Pick<Recognizer, 'start' | 'stop' | 'abort'>;
   /** speaker-core behind the spies (twoScreens): speak and stop reach it too. */
   readonly voiceOut?: Pick<Speaker, 'speak' | 'stop'>;
+  /** What the hook hands the engine to speak with; the phone's language alone when omitted. */
+  readonly speech?: SpeakOptions;
 };
 
 const STARTED: StartOutcome = Object.freeze({ kind: 'started' });
@@ -115,7 +117,7 @@ export function harness(options: HarnessOptions = {}) {
       thread: threadPort(),
       roleCanChat: options.roleCanChat ?? true,
       discovery: SPOKEN,
-      speech: { language: 'en-GB' },
+      speech: options.speech ?? { language: 'en-GB' },
     }),
     now: () => clock.now,
     later: (go, ms) => {

@@ -47,6 +47,19 @@ describe('speaker (the binding)', () => {
     });
   });
 
+  it('hands expo-speech the saved voice, rate and pitch', () => {
+    speaker.speak('Hello.', {
+      language: 'en-US',
+      voice: 'en-us-x-iol-local',
+      rate: 0.85,
+      pitch: 1.2,
+    });
+    expect(native.speech.speak).toHaveBeenCalledWith(
+      'Hello.',
+      expect.objectContaining({ voice: 'en-us-x-iol-local', rate: 0.85, pitch: 1.2 }),
+    );
+  });
+
   it('stops through expo-speech', () => {
     speaker.stop();
     expect(native.speech.stop).toHaveBeenCalledTimes(1);
