@@ -148,12 +148,14 @@ describe('(a) the first launch after a reinstall', () => {
 
 type Phone = Awaited<ReturnType<typeof usedPhone>>;
 
+type StoreOptions = Partial<Pick<ServerSwitchDeps, 'storage' | 'storagePersistent'>>;
+
 /** The app's switch over the phone; the provider is the session being left. */
 async function switchOver(
   phone: Phone,
   provider: ServerSwitchDeps['provider'],
   paired: PairedRecord | null,
-  storage: ServerSwitchDeps['storage'] = () => phone.storage,
+  { storage = () => phone.storage, storagePersistent = () => true }: StoreOptions = {},
 ) {
   const servers = createCurrentServerStore();
   await servers.load({ load: async () => paired });
@@ -168,6 +170,7 @@ async function switchOver(
     consent: { resetMemory: () => undefined, forgetServer: consent.forgetServer },
     keys: phone.registry,
     storage,
+    storagePersistent,
     files: () => void native.order.push('files'),
     deviceStore,
     servers,
@@ -251,20 +254,45 @@ describe('(b) leaving: one clearUserData', () => {
     expect(leftovers(phone)).toEqual(SIGNED_OUT);
   });
 
-  it('a store entry that will not delete fails the sign-out, after the keychain is cleared', async () => {
+  it("a store entry that will not delete costs the store its key: what is left can't be read", async () => {
     const phone = await usedPhone();
-    const failing = () => ({
+    const storage = () => ({
       keys: phone.storage.keys,
       removeItem: (key: string) => {
         if (key === HANDLED_KEYS_ITEM) throw new Error('mmkv');
         phone.storage.removeItem(key);
       },
     });
-    const { serverSwitch } = await switchOver(phone, hostedProvider(phone), null, failing);
-    await expect(serverSwitch.signOut()).rejects.toThrow('could not delete 1 encrypted store');
+    const { serverSwitch } = await switchOver(phone, hostedProvider(phone), null, { storage });
+    await serverSwitch.signOut();
     expect(native.order).toEqual(['push', 'clerk (item there: true)', 'files']);
-    expect(leftovers(phone).keychain).toEqual(KEPT_KEYCHAIN);
+    expect(leftovers(phone).keychain).toEqual(
+      KEPT_KEYCHAIN.filter((key) => key !== STORAGE_KEY_ITEM),
+    );
     expect(leftovers(phone).store).toEqual([HANDLED_KEYS_ITEM, ...PHONE_ENTRIES].sort());
+  });
+
+  it('a launch whose store fell back to memory deletes the key of the file it never opened', async () => {
+    const phone = await usedPhone();
+    const storagePersistent = () => false;
+    const { serverSwitch } = await switchOver(phone, hostedProvider(phone), null, {
+      storagePersistent,
+    });
+    await serverSwitch.signOut();
+    expect(phone.secure.items.has(STORAGE_KEY_ITEM)).toBe(false);
+    expect(phone.secure.items.get(INSTALL_ID_ITEM)).toBe(INSTALL_ID);
+  });
+
+  it('fails the sign-out when the store was not emptied and its key would not delete', async () => {
+    const phone = await usedPhone();
+    phone.secure.failOn('delete', STORAGE_KEY_ITEM);
+    const { serverSwitch } = await switchOver(phone, hostedProvider(phone), null, {
+      storagePersistent: () => false,
+    });
+    await expect(serverSwitch.signOut()).rejects.toThrow(
+      'could not delete the encrypted store key',
+    );
+    expect(leftovers(phone).keychain).toEqual(KEPT_KEYCHAIN);
   });
 
   it('every way out runs it: Sign out, Forget this server, Remove this phone and an ended session', () => {

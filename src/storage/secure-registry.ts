@@ -50,7 +50,7 @@ export const SECURE_KEYS: readonly SecureKeyEntry[] = Object.freeze([
     userBound: false,
     survivesReinstall: false,
     reason:
-      "The phone's own key for the encrypted store, not the person's: sign-out deletes the person's entries from the store instead. The store's file goes with the app, so a reinstall deletes the key too.",
+      "The phone's own key for the encrypted store, not the person's: sign-out deletes the person's entries from the store instead, and the key too when the store was not emptied. The store's file goes with the app, so a reinstall deletes the key too.",
   },
   {
     key: CLERK_CLIENT_ITEM,

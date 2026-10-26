@@ -16,7 +16,7 @@ import { clearViewerFiles } from '../cc/deliverables/open-file';
 import { consentMemory } from '../consent/app-store';
 import { secureKeys } from '../lib/secure-store';
 import { workspaceIds } from '../session/workspace-ids';
-import { appStorage } from '../storage/mmkv';
+import { appStorage, isStoragePersistent } from '../storage/mmkv';
 import { useToast } from '../ui';
 import { currentServers } from './current-server';
 import { deviceStore } from './device-store';
@@ -45,6 +45,7 @@ export function useServerSwitch(): ServerSwitch {
       consent: CONSENT,
       keys: secureKeys,
       storage: appStorage,
+      storagePersistent: isStoragePersistent,
       files: clearViewerFiles,
       deviceStore,
       servers: currentServers,

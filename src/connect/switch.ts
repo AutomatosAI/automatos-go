@@ -11,7 +11,9 @@
 // in the app's cache (the Deliverable viewer's copies), then every keychain item that is the
 // person's (src/storage/secure-registry.ts clearUserKeys: Clerk's, the paired record, the push
 // record). The install id, the encrypted store's key and the install marker (a file of its own)
-// stay.
+// stay; the store's key goes too when the store was not emptied (an entry that would not delete,
+// or a launch whose store fell back to memory and never opened the file): without it the next
+// launch cannot read what is left and starts a new file.
 //
 // The provider is signed out before anything of the person's is deleted: Clerk still needs its
 // client item, and a provider that cannot sign out (Clerk offline) stops the leaving with the
@@ -31,7 +33,7 @@ import type { SecureKeyRegistry } from '../lib/secure-keys';
 import { clearPushBeforeLeaving } from '../push/bind/before-leaving';
 import type { WorkspaceIdRegistry } from '../session/workspace-ids';
 import type { ListableStorage } from '../storage/encrypted-storage';
-import { clearUserKeys } from '../storage/secure-registry';
+import { clearUserKeys, STORAGE_KEY_ITEM } from '../storage/secure-registry';
 import { STYLE_CHOICE_KEY } from '../styles/registry/choice-store';
 import { THEME_CHOICE_STORAGE_KEY } from '../styles/theme-choice';
 import { ownServer, type CurrentServerStore } from './current-server';
@@ -67,6 +69,8 @@ export type ClearUserDataDeps = {
   readonly keys: Pick<SecureKeyRegistry, 'keys' | 'remove'>;
   /** The app's encrypted store, opened on first use (src/storage/mmkv.ts appStorage). */
   readonly storage: () => Pick<ListableStorage, 'keys' | 'removeItem'>;
+  /** false when this launch's store fell back to memory: the file was never opened or cleared. */
+  readonly storagePersistent: () => boolean;
   /** Deletes the person's files in the app's cache (src/cc/deliverables/open-file.ts). */
   readonly files: () => void;
 };
@@ -119,8 +123,26 @@ function clearStore(storage: ClearUserDataDeps['storage']): Error | null {
 }
 
 /**
+ * A store not emptied loses its key (crypto-shred): what is left can no longer be read. Answers
+ * the failure only when the store was not emptied and its key would not delete either.
+ */
+async function shredUnlessEmptied(
+  deps: ClearUserDataDeps,
+  left: Error | null,
+): Promise<Error | null> {
+  if (left === null && deps.storagePersistent()) return null;
+  try {
+    await deps.keys.remove(STORAGE_KEY_ITEM);
+    return null;
+  } catch (error) {
+    return left ?? new Error('could not delete the encrypted store key', { cause: error });
+  }
+}
+
+/**
  * The one clearing every way of leaving runs (KR9), in the header's order; the provider's failure
- * stops it, and a store entry or keychain item that could not be deleted rejects at the end.
+ * stops it, and a store left readable or a keychain item that could not be deleted rejects at
+ * the end.
  */
 export async function clearUserData(
   deps: ClearUserDataDeps,
@@ -135,7 +157,7 @@ export async function clearUserData(
   await deps.provider.signOut();
   deps.consent.resetMemory();
   if (leftOrigin !== null) await deps.consent.forgetServer(leftOrigin);
-  const storeLeft = clearStore(deps.storage);
+  const storeLeft = await shredUnlessEmptied(deps, clearStore(deps.storage));
   deps.files();
   await clearUserKeys(deps.keys);
   if (storeLeft) throw storeLeft;

@@ -132,7 +132,7 @@ deletes it.
   | Item | What it holds | Sign-out | Reinstall |
   |---|---|---|---|
   | `automatos.secure-keys.v1` | the names of the items below that are written through the key registry | emptied | deleted |
-  | `automatos.storage.mmkv-key.v1` | the AES-256 key of the encrypted store | kept | deleted |
+  | `automatos.storage.mmkv-key.v1` | the AES-256 key of the encrypted store | kept, unless the store could not be emptied | deleted |
   | `__clerk_client_jwt` (and any other key Clerk asks for) | the hosted sign-in | deleted | deleted |
   | `automatos.paired-server.v1` | your own server's address, this phone's device id and its token | deleted | deleted |
   | `automatos.push-record.v1` | the push row's device id and the key that checks a notification is genuine | deleted | deleted |
@@ -163,9 +163,14 @@ deletes it.
   8. Every keychain item that is the person's goes.
 
   If Clerk cannot be reached, sign-out stops and says so. The person stays signed in, and only
-  the cache has been cleared. A store entry or keychain item that cannot be deleted fails the
-  sign-out too, after every other step has run. A keychain item that failed stays in the index,
-  so the next try deletes it.
+  the cache has been cleared.
+
+  Sometimes step 6 cannot empty the store: an entry will not delete, or the keychain was locked
+  when the app started, so this launch kept its store in memory and never opened the file. Then
+  the store's key is deleted too. Without the key, nothing left in the file can be read, and the
+  next launch starts a new file. Only if that key will not delete either does the sign-out fail.
+  A keychain item that cannot be deleted also fails the sign-out, after every other step has
+  run. It stays in the index, so the next try deletes it.
 - **Two small files of their own:** the install marker (one word, `checked`) and the crash-report
   switch (on or off). Sign-out keeps both; uninstalling deletes them.
 - **The first launch after a reinstall** (`src/connect/install-marker.ts`). The marker is in a file
@@ -206,8 +211,9 @@ deletes it.
   - **Forget this server:** the same, and the paired record goes too.
   - **Clerk offline:** a refused sign-out deletes nothing but the cache.
   - **A session the server ended:** the same clearing, without push's leave.
-  - **A store entry that will not delete:** the sign-out fails, but only after the keychain has
-    been cleared.
+  - **A store that was not emptied** (an entry that will not delete, or a launch whose store fell
+    back to memory): the store's key is deleted too. The sign-out fails only if that key will not
+    delete either.
 - `src/connect/__tests__/switch.test.ts` (the order), `install-marker.test.ts`,
   `src/session/__tests__/install-gate.test.ts`, `src/auth/__tests__/clerk-provider.test.ts`,
   `src/lib/__tests__/secure-keys.test.ts` and `src/storage/__tests__/encrypted-storage.test.ts`.

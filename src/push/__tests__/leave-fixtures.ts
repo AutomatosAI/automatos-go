@@ -110,6 +110,7 @@ export async function serverSwitchOver(
     consent: { resetMemory: () => undefined, forgetServer: async () => undefined },
     keys: { keys: async () => [], remove: async () => undefined },
     storage: memoryStorage,
+    storagePersistent: () => true,
     files: () => undefined,
     deviceStore: {
       save: async () => void order.push('save'),

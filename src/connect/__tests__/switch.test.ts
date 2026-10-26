@@ -96,6 +96,7 @@ async function setup({ kind = 'clerk', paired = null as PairedRecord | null } = 
       log.push('store');
       return storage;
     },
+    storagePersistent: () => true,
     files: () => log.push('files'),
     keys: {
       keys: async () => {
