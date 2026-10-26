@@ -8,13 +8,15 @@
 //   release → a tap aborts ('Hold the button while you talk'); otherwise recognizer.stop(), and the
 //   recognizer's final (said once, at its end) decides through onRelease: a stop phrase is STOP with
 //   nothing sent, nothing sayable is nothing heard, words go to A2's thread (quick-ask-reply.ts).
-//   HOLD_MAX_MS releases by itself. MIC LIVE is the recognizer's audiostart/audioend, never this.
+//   HOLD_MAX_MS releases by itself. A release's stop that no final or end answers within
+//   RELEASE_SETTLE_MS aborts, and the hold ends as nothing heard (HOLD TO TALK never stays dead).
+//   MIC LIVE is the recognizer's audiostart/audioend, never this.
 //   A call, Siri or a lost microphone mid-hold goes to the interruption policy (US-019h,
 //   quick-ask-interrupt.ts): abort, the words kept on screen un-sent, the reason's message.
 
 import { logger } from '../../lib/logger';
 import { claim, release } from '../audio/audio-owner';
-import { HOLD_MAX_MS } from '../config';
+import { HOLD_MAX_MS, RELEASE_SETTLE_MS } from '../config';
 import { interruptionOf } from '../interruptions/interruption-policy';
 import {
   isStartPlan,
@@ -132,15 +134,32 @@ export async function press(engine: Engine): Promise<void> {
   }
 }
 
+/** The release's stop had no answer in time: the recognizer aborts, nothing is sent. */
+function settle(engine: Engine, id: number): void {
+  if (get(engine).hold?.id !== id) return;
+  engine.deps.recognizer.abort();
+  releaseRecognizer(engine);
+  dispatch(engine, { type: 'nothing_heard' });
+}
+
+/** The release's stop: the final ends the hold, or RELEASE_SETTLE_MS does (endHold cancels it). */
+function stopListening(engine: Engine, released: Hold): void {
+  engine.deps.recognizer.stop();
+  if (get(engine).hold?.id !== released.id) return;
+  const cancelTimer = engine.deps.later(() => settle(engine, released.id), RELEASE_SETTLE_MS);
+  set(engine, { hold: { ...released, cancelTimer } });
+}
+
 export function releaseHold(engine: Engine): void {
   const hold = get(engine).hold;
   if (hold === null || hold.releasedAt !== null) return;
   const now = engine.deps.now();
   hold.cancelTimer?.();
-  set(engine, { hold: { ...hold, releasedAt: now, cancelTimer: null } });
+  const released: Hold = { ...hold, releasedAt: now, cancelTimer: null };
+  set(engine, { hold: released });
   // The checks still run: listen() sees the release.
   if (!hold.listening) return;
-  if (!isTap(now - hold.pressedAt)) return engine.deps.recognizer.stop();
+  if (!isTap(now - hold.pressedAt)) return stopListening(engine, released);
   engine.deps.recognizer.abort();
   releaseRecognizer(engine);
   dispatch(engine, { type: 'hold_too_short' });

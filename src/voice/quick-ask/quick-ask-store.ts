@@ -135,16 +135,21 @@ export function dispatch(engine: Engine, event: VoiceEvent): void {
   show(engine, { voice, level });
 }
 
-/** The hold is over: its HOLD_MAX_MS timer cancelled. */
+/** The hold is over: its HOLD_MAX_MS or RELEASE_SETTLE_MS timer cancelled. */
 export function endHold(engine: Engine): void {
   get(engine).hold?.cancelTimer?.();
   set(engine, { hold: null });
 }
 
-/** The recognizer stops if it may be running (a hold under way, or its audio not yet given back). */
+/**
+ * The recognizer stops if it may be running: a hold under way, its audio not yet given back, or a
+ * capture the reducer saw open (micOpen, the capture truth: KV5), with or without a hold. Callers
+ * run this before their reducer event closes micOpen.
+ */
 export function abortListening(engine: Engine): void {
-  const { hold, owner } = get(engine);
-  if (hold !== null || owner === 'recognizer') engine.deps.recognizer.abort();
+  const { hold, owner, snapshot } = get(engine);
+  const capturing = hold !== null || owner === 'recognizer' || snapshot.voice.micOpen;
+  if (capturing) engine.deps.recognizer.abort();
   endHold(engine);
 }
 

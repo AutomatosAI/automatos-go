@@ -8,6 +8,13 @@ export const HOLD_MIN_MS = 300;
 export const HOLD_MAX_MS = 60_000;
 
 /**
+ * After a release, the recognizer has this long to say its final; then it is aborted and the hold
+ * ends with nothing sent, so HOLD TO TALK is never left dead (P001V-RVW-1). On-device recognition
+ * finishes well inside it once the audio ends.
+ */
+export const RELEASE_SETTLE_MS = 5_000;
+
+/**
  * The server's in-call reminder interval (orchestrator config VOICE_AI_REMINDER_MINUTES, 10 min;
  * modules/voice/ai_notice.py), named for reference only: quick-ask speaks the AI notice once per
  * voice session and never repeats it (KV7, D73).

@@ -178,3 +178,101 @@ describe('STOP and failures', () => {
     expect(heard.slice(-2)).toEqual([final('second'), ENDED]);
   });
 });
+
+// iOS runs start, stop and abort in Tasks of their own (ExpoSpeechRecognitionModule.swift:174-260,
+// 360-379): a stop or abort that lands before the capture begins is answered with an end, and the
+// capture then starts anyway (P001V-RVW-1). Android posts them in order to one Handler.
+describe('a stop or abort while the session is still starting', () => {
+  it('abort answered early (iOS, the first hold): sent again once at the first event, says nothing', () => {
+    const { emit, recognizer, heard, port } = listening();
+    recognizer.start(READY);
+    recognizer.abort();
+    emit('error', { error: 'aborted', message: 'Speech recognition aborted.' });
+    emit('end');
+    emit('start');
+    emit('audiostart', { uri: null });
+    expect(port.abort).toHaveBeenCalledTimes(2);
+    emit('result', result('delete everything', true));
+    emit('error', { error: 'aborted', message: 'Speech recognition aborted.' });
+    emit('audioend', { uri: null });
+    emit('end');
+    expect(port.abort).toHaveBeenCalledTimes(2);
+    expect(heard).toEqual([STARTED, MIC_OPEN, MIC_CLOSED, ENDED]);
+  });
+
+  it('stop answered early: sent again once, and the final is said once, at the real end', () => {
+    const { emit, recognizer, heard, port } = listening();
+    recognizer.start(READY);
+    recognizer.stop();
+    emit('end');
+    emit('start');
+    emit('audiostart', { uri: null });
+    expect(port.stop).toHaveBeenCalledTimes(2);
+    emit('result', result('hello', true));
+    // The module's second end() skips audioend: the end closes MIC LIVE itself.
+    emit('end');
+    expect(port.stop).toHaveBeenCalledTimes(2);
+    expect(heard).toEqual([STARTED, MIC_OPEN, partial('hello'), MIC_CLOSED, final('hello'), ENDED]);
+  });
+
+  it('abort answered early with its audioend (a later hold): MIC LIVE still goes out at the end', () => {
+    const { emit, recognizer, heard, port } = listening();
+    recognizer.start(READY);
+    recognizer.abort();
+    emit('audioend', { uri: null });
+    emit('end');
+    emit('start');
+    emit('audiostart', { uri: null });
+    emit('end');
+    expect(port.abort).toHaveBeenCalledTimes(2);
+    expect(heard).toEqual([MIC_CLOSED, STARTED, MIC_OPEN, MIC_CLOSED, ENDED]);
+  });
+
+  it('abort wins over stop: STOP after the release sends the abort again, not the stop', () => {
+    const { emit, recognizer, port } = listening();
+    recognizer.start(READY);
+    recognizer.stop();
+    recognizer.abort();
+    emit('end');
+    emit('start');
+    expect(port.abort).toHaveBeenCalledTimes(2);
+    expect(port.stop).toHaveBeenCalledTimes(1);
+  });
+
+  it('a call that reached the capture (no early end) is not sent again', () => {
+    const { emit, recognizer, heard, port } = listening();
+    recognizer.start(READY);
+    recognizer.stop();
+    emit('start');
+    emit('audiostart', { uri: null });
+    emit('result', result('hello', true));
+    emit('audioend', { uri: null });
+    emit('end');
+    expect(port.stop).toHaveBeenCalledTimes(1);
+    expect(heard.slice(-2)).toEqual([final('hello'), ENDED]);
+  });
+
+  it("Android's order (audiostart, then the abort's audioend and end): no second abort", () => {
+    const { emit, recognizer, heard, port } = listening();
+    recognizer.start(READY);
+    recognizer.abort();
+    emit('audiostart', { uri: null });
+    emit('audioend', { uri: null });
+    emit('end');
+    expect(port.abort).toHaveBeenCalledTimes(1);
+    expect(heard).toEqual([MIC_OPEN, MIC_CLOSED, ENDED]);
+  });
+
+  it("a stale end before a fresh session's first event, with no stop asked, is still dropped", () => {
+    const { emit, recognizer, heard, port } = held();
+    recognizer.abort();
+    recognizer.start(READY);
+    emit('end');
+    emit('start');
+    emit('result', result('hello', true));
+    emit('end');
+    expect(port.abort).toHaveBeenCalledTimes(1);
+    expect(port.stop).not.toHaveBeenCalled();
+    expect(heard.slice(-2)).toEqual([final('hello'), ENDED]);
+  });
+});

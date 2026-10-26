@@ -7,10 +7,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { logger } from '../../lib/logger';
-import { HOLD_MAX_MS } from '../config';
+import { HOLD_MAX_MS, HOLD_MIN_MS, RELEASE_SETTLE_MS } from '../config';
 import type { PermissionVerdict } from '../permissions/permission-flow';
 import { AI_VOICE_GREETING } from '../strings';
-import { ask, EARLIER, GRANTED, harness, READY } from './quick-ask-harness';
+import { ask, EARLIER, GRANTED, harness, overModule, READY } from './quick-ask-harness';
 import { frames, saved, wire } from './thread-states';
 
 afterEach(() => {
@@ -191,6 +191,40 @@ describe('a hold that sends nothing', () => {
     const h = harness();
     await ask(h, ASKED);
     expect(h.later()).toEqual([]);
+  });
+
+  it('a release whose end never comes: RELEASE_SETTLE_MS aborts, nothing sent, the next press listens', async () => {
+    const h = harness();
+    await h.quickAsk.press();
+    h.hear({ type: 'mic_open' });
+    h.clock.now += HOLD_MIN_MS;
+    h.quickAsk.release();
+    const [settle] = h.later();
+    expect(settle?.ms).toBe(RELEASE_SETTLE_MS);
+    h.hear({ type: 'mic_closed' });
+    settle?.run();
+    expect(h.recognizer.abort).toHaveBeenCalledTimes(1);
+    expect(h.voice()).toMatchObject({ phase: 'idle', message: 'nothingHeard' });
+    h.hear({ type: 'final', text: ASKED });
+    expect(h.sends).toEqual([]);
+    await h.quickAsk.press();
+    expect(h.recognizer.start).toHaveBeenCalledTimes(2);
+  });
+
+  it('a tap released before the module says anything (iOS): the abort goes again, MIC LIVE goes out', async () => {
+    const h = overModule();
+    await h.quickAsk.press();
+    h.clock.now += 100;
+    h.quickAsk.release();
+    h.module.emit('end');
+    h.module.emit('start');
+    h.module.emit('audiostart', { uri: null });
+    expect(h.module.port.abort).toHaveBeenCalledTimes(2);
+    expect(h.voice().micOpen).toBe(true);
+    h.module.emit('audioend', { uri: null });
+    h.module.emit('end');
+    expect(h.voice()).toMatchObject({ phase: 'idle', micOpen: false });
+    expect(h.sends).toEqual([]);
   });
 
   it('a recognizer that will not start is a recognizer error', async () => {

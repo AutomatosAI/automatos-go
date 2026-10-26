@@ -1,7 +1,8 @@
 // A quick-ask engine over spy ports for the engine's tests (US-019g): the recognizer, the speaker and
 // the permission gate are spies, the thread is A2's own threadReducer behind a ThreadPort (send and
 // Stop dispatch what use-thread.ts's runner dispatches), and every call is logged in order so a test
-// can check barge-in's sequence. The clock and the HOLD_MAX_MS timer are the test's.
+// can check barge-in's sequence. The clock and the HOLD_MAX_MS timer are the test's. overModule()
+// drives recognizer-core over a spy module port instead, so a test plays the module's own events.
 
 import { vi } from 'vitest';
 
@@ -10,8 +11,10 @@ import type { ThreadAction, ThreadState } from '../../chat/controller/thread';
 import type { PermissionVerdict } from '../permissions/permission-flow';
 import { createQuickAsk, type ThreadPort } from '../quick-ask/quick-ask-engine';
 import { onDeviceOptions, type RecognitionPolicy } from '../quick-ask/recognition-policy';
+import { createRecognizer, type Recognizer, type StartOutcome } from '../quick-ask/recognizer-core';
 import type { RecognizerVoiceEvent } from '../quick-ask/recognizer-events';
 import type { QuickAskMessage } from '../quick-ask/spoken-mode';
+import { spyPort } from './recognizer-port';
 import { NOW } from './voice-fixtures';
 import { AT, draft, opened, run, saved, sent } from './thread-states';
 
@@ -34,19 +37,30 @@ export type HarnessOptions = {
   /** The permission gate's answer, when the test settles it itself (a release during the checks). */
   readonly permissionAnswer?: () => Promise<PermissionVerdict>;
   readonly thread?: ThreadState;
+  /** recognizer-core behind the spies (overModule): start, stop and abort reach it too. */
+  readonly core?: Pick<Recognizer, 'start' | 'stop' | 'abort'>;
 };
+
+const STARTED: StartOutcome = Object.freeze({ kind: 'started' });
 
 type Timer = { readonly run: () => void; readonly ms: number; cancelled: boolean };
 
 function spies(log: string[], options: HarnessOptions) {
   const policy = vi.fn(async () => options.policy ?? READY);
+  const { core } = options;
   const recognizer = {
-    start: vi.fn((_policy: RecognitionPolicy) => {
+    start: vi.fn((chosen: RecognitionPolicy): StartOutcome => {
       log.push('recognizer.start');
-      return { kind: 'started' } as const;
+      return core?.start(chosen) ?? STARTED;
     }),
-    stop: vi.fn(() => void log.push('recognizer.stop')),
-    abort: vi.fn(() => void log.push('recognizer.abort')),
+    stop: vi.fn(() => {
+      log.push('recognizer.stop');
+      core?.stop();
+    }),
+    abort: vi.fn(() => {
+      log.push('recognizer.abort');
+      core?.abort();
+    }),
     downloadModel: vi.fn(async (_locale: string) => 'downloaded' as const),
     policy,
   };
@@ -112,14 +126,36 @@ export function harness(options: HarnessOptions = {}) {
     thread = sent(thread, draft(text));
     quickAsk.onThread(thread);
   };
-  const hear = (event: RecognizerVoiceEvent): void => quickAsk.onRecognizer({ kind: 'voice', event });
+  const hear = (event: RecognizerVoiceEvent): void =>
+    quickAsk.onRecognizer({ kind: 'voice', event });
   const voice = () => quickAsk.snapshot().voice;
   const thread$ = () => thread;
   const later = () => timers.filter((timer) => !timer.cancelled);
-  return { ...ports, quickAsk, log, sends, clock, feed, typed, hear, voice, thread: thread$, later };
+  return {
+    ...ports,
+    quickAsk,
+    log,
+    sends,
+    clock,
+    feed,
+    typed,
+    hear,
+    voice,
+    thread: thread$,
+    later,
+  };
 }
 
 export type Harness = ReturnType<typeof harness>;
+
+/** The engine over recognizer-core and a spy module port, listening as use-quick-ask.ts does. */
+export function overModule(options: HarnessOptions = {}) {
+  const module = spyPort();
+  const core = createRecognizer(module.port);
+  const h = harness({ ...options, core });
+  core.listen(h.quickAsk.onRecognizer);
+  return { ...h, module };
+}
 
 /** A whole hold: press, the mic opens, the words, the release after `heldMs`, the final. */
 export async function ask(h: Harness, words: string, heldMs = 1_200): Promise<void> {

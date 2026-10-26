@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { PermissionVerdict } from '../permissions/permission-flow';
 import { AI_VOICE_GREETING } from '../strings';
-import { ask, EARLIER, GRANTED, harness, type Harness } from './quick-ask-harness';
+import { ask, EARLIER, GRANTED, harness, overModule, type Harness } from './quick-ask-harness';
 import { frames, wire } from './thread-states';
 
 const ASKED = "What's on today?";
@@ -207,5 +207,49 @@ describe('the recognizer loses the audio mid-hold', () => {
     h.hear({ type: 'interrupted', reason: 'audio-session' });
     expect(h.voice()).toBe(before);
     expect(h.recognizer.abort).not.toHaveBeenCalled();
+  });
+});
+
+// iOS can open the capture after the hold is over (a tap or STOP that landed while recognition was
+// still starting, P001V-RVW-1): MIC LIVE is the capture truth, so leaving closes it all the same.
+describe('a capture open with no hold', () => {
+  /** A tap's abort ended the hold, then the capture opened anyway. */
+  async function capturingWithoutHold(): Promise<Harness> {
+    const h = harness();
+    await h.quickAsk.press();
+    h.clock.now += 100;
+    h.quickAsk.release();
+    h.hear({ type: 'mic_open' });
+    expect(h.voice().micOpen).toBe(true);
+    return h;
+  }
+
+  it.each([
+    ['STOP', (h: Harness) => h.quickAsk.stop()],
+    ['leaving the screen (unmount)', (h: Harness) => h.quickAsk.unmount()],
+    ["'covered'", (h: Harness) => h.quickAsk.interrupt({ type: 'covered' })],
+    ["'background'", (h: Harness) => h.quickAsk.interrupt(app('background'))],
+  ])('%s aborts the recognizer', async (_name, leave) => {
+    const h = await capturingWithoutHold();
+    expect(h.recognizer.abort).toHaveBeenCalledTimes(1);
+    leave(h);
+    expect(h.recognizer.abort).toHaveBeenCalledTimes(2);
+    expect(h.sends).toEqual([]);
+  });
+
+  it('a release that landed while starting (iOS): the stop goes again and the words are sent once', async () => {
+    const h = overModule();
+    await h.quickAsk.press();
+    h.clock.now += 1_200;
+    h.quickAsk.release();
+    h.module.emit('end');
+    h.module.emit('start');
+    h.module.emit('audiostart', { uri: null });
+    expect(h.module.port.stop).toHaveBeenCalledTimes(2);
+    h.module.emit('result', { isFinal: true, results: [{ transcript: ASKED }] });
+    h.module.emit('end');
+    expect(h.sends).toEqual([{ text: ASKED, spokenMode: true }]);
+    expect(h.voice()).toMatchObject({ phase: 'thinking', micOpen: false });
+    expect(h.later()).toEqual([]);
   });
 });
