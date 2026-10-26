@@ -33,7 +33,7 @@ A row reads "pending US-021x" until the story that proves it is built.
 | R02 | No user id on crash events; IP storage off in Sentry | privacy draft §07 and A.1 [CHECK] | `scrub.test.ts` (no user), `options.test.ts` (sendDefaultPii false) (US-021b); OWNER OT-R1 |
 | R03 | A switch to turn crash reports off, so Play may list crash logs as optional | privacy draft A.2 [CHECK] | pending US-021c, US-021d |
 | R04 | The privacy policy and Terms are linked in the app at stable URLs | Apple 5.1.1(i); PRD §4.7; US-021 AC1 | pending US-021d; OWNER OT-R3 |
-| R05 | App Store privacy labels and Play data safety match what the app does | App Store Connect App Privacy; Play Data safety; privacy draft A.1/A.2 | pending US-021e; OWNER OT-R2, OT-R15 |
+| R05 | App Store privacy labels and Play data safety match what the app does | App Store Connect App Privacy; Play Data safety; privacy draft A.1/A.2 | Test: [src/release/\_\_tests\_\_/privacy-labels.test.ts](../../src/release/__tests__/privacy-labels.test.ts) on [privacy-labels.json](privacy-labels.json) (US-021e); OWNER OT-R2 ([app-store-privacy.md](app-store-privacy.md)), OT-R15 ([play-data-safety.md](play-data-safety.md)) |
 | R06 | A privacy manifest (PrivacyInfo.xcprivacy via app.json) matching the labels, with every required-reason API | Apple privacy manifests; Expo SDK 54 guide; critic-store-policy | pending US-021f; OWNER OT-R4 |
 | R07 | A usage string for every framework the binary references | ITMS-90683 (academy, 19 Oct); PRD §4.1 | pending US-021g, US-021h; OWNER OT-R4 |
 | R08 | Android uses the system photo picker and requests no READ_MEDIA_* permission | Google Play photo and video permissions policy; privacy draft A.3 | pending US-021g; OWNER OT-R5 |
