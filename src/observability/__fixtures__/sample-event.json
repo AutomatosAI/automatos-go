@@ -1,0 +1,414 @@
+{
+  "event_id": "4f1c2b9e8d7a4c3b9e2f1a0b8c7d6e5f",
+  "timestamp": 1761471243.512,
+  "level": "error",
+  "platform": "javascript",
+  "logger": "javascript",
+  "release": "com.automatos.app@1.0.0+12",
+  "dist": "12",
+  "environment": "testflight",
+  "server_name": "PLANTED-DEVICE-NAME Gerard iPhone",
+  "transaction": "/chat/0b7e3c1a-5d2f-4e8a-9c6b-7a1d2e3f4a5b",
+  "message": "Network request failed for https://automatos.planted-host.example:8443/api/chat with Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6InBsYW50ZWQifQ.eyJzdWIiOiJ1c2VyX1BMQU5URUQifQ.c2lnbmF0dXJlLXBsYW50ZWQ",
+  "logentry": {
+    "message": "push registration failed for ExponentPushToken[PLANTEDxR7kLm2Qp9Vt4Wz] as planted.person@example.org",
+    "params": ["PLANTED-PARAM amd_PLANTEDdeviceTOKEN0123456789abcdefghijklmn"]
+  },
+  "fingerprint": ["{{ default }}", "PLANTED-FINGERPRINT"],
+  "modules": {
+    "planted-module": "1.0.0"
+  },
+  "user": {
+    "id": "user_PLANTED2xY9",
+    "email": "planted.person@example.org",
+    "username": "planted-username",
+    "ip_address": "203.0.113.77"
+  },
+  "sdk": {
+    "name": "sentry.javascript.react-native",
+    "version": "7.2.0",
+    "integrations": [
+      "InboundFilters",
+      "FunctionToString",
+      "Breadcrumbs",
+      "DeviceContext",
+      "PLANTED integration with words"
+    ],
+    "packages": [
+      {
+        "name": "npm:@sentry/react-native",
+        "version": "7.2.0",
+        "note": "PLANTED-PACKAGE-NOTE"
+      }
+    ],
+    "settings": {
+      "infer_ip": "PLANTED-SDK-SETTING"
+    }
+  },
+  "debug_meta": {
+    "images": [
+      {
+        "type": "sourcemap",
+        "code_file": "app:///main.jsbundle",
+        "debug_id": "e3a1f0c2-9b8d-4e7f-a6c5-d4b3a2918070"
+      },
+      {
+        "type": "sourcemap",
+        "code_file": "http://192.168.1.20:8081/index.bundle?platform=ios",
+        "debug_id": "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e",
+        "note": "PLANTED-IMAGE-NOTE"
+      }
+    ]
+  },
+  "exception": {
+    "values": [
+      {
+        "type": "SyntaxError",
+        "value": "JSON Parse error: Unexpected character in \"PLANTED-QUESTION-4K8 should Auto approve the Meridian invoice before Friday close\"",
+        "mechanism": {
+          "type": "chained",
+          "source": "cause",
+          "handled": true,
+          "exception_id": 1,
+          "parent_id": 0,
+          "data": {
+            "note": "PLANTED-MECHANISM-DATA"
+          }
+        },
+        "stacktrace": {
+          "frames": [
+            {
+              "function": "parseFrame",
+              "filename": "http://192.168.1.20:8081/index.bundle?platform=ios&dev=true",
+              "abs_path": "http://192.168.1.20:8081/index.bundle?platform=ios&dev=true",
+              "lineno": 1,
+              "colno": 481920,
+              "in_app": true,
+              "vars": {
+                "frame": "PLANTED-QUESTION-4K8 should Auto approve"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "TypeError",
+        "value": "Cannot read property 'parts' of undefined while rendering \"PLANTED-CHAT-7Q1 move the Dublin offsite to Thursday and keep it from the board\" for planted.person@example.org",
+        "mechanism": {
+          "type": "onerror",
+          "handled": false,
+          "exception_id": 0
+        },
+        "stacktrace": {
+          "frames": [
+            {
+              "function": "renderWithHooks",
+              "filename": "app:///main.jsbundle",
+              "abs_path": "app:///main.jsbundle",
+              "lineno": 1,
+              "colno": 210334,
+              "in_app": false
+            },
+            {
+              "function": "ChatScreen",
+              "filename": "app:///main.jsbundle",
+              "abs_path": "app:///main.jsbundle",
+              "lineno": 1,
+              "colno": 482113,
+              "in_app": true,
+              "context_line": "const draft = 'PLANTED-CHAT-7Q1 move the Dublin offsite';",
+              "pre_context": ["// PLANTED-SOURCE-LINE"],
+              "post_context": ["// PLANTED-SOURCE-LINE"],
+              "vars": {
+                "draft": "PLANTED-CHAT-7Q1 move the Dublin offsite to Thursday"
+              }
+            },
+            {
+              "function": "loadDraft",
+              "filename": "/Users/planted-username/Library/Developer/main.jsbundle",
+              "lineno": 1,
+              "colno": 99,
+              "in_app": true
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "breadcrumbs": [
+    {
+      "timestamp": 1761471200.1,
+      "type": "navigation",
+      "category": "app.lifecycle",
+      "level": "info",
+      "data": {
+        "state": "foreground"
+      }
+    },
+    {
+      "timestamp": 1761471201.2,
+      "type": "navigation",
+      "category": "navigation",
+      "data": {
+        "from": "/home",
+        "to": "/chat/0b7e3c1a-5d2f-4e8a-9c6b-7a1d2e3f4a5b PLANTED-ROUTE"
+      }
+    },
+    {
+      "timestamp": 1761471202.3,
+      "category": "touch",
+      "message": "Touch event within element: Pressable PLANTED-TOUCH",
+      "data": {
+        "path": [
+          {
+            "name": "Send",
+            "label": "Send PLANTED-TOUCH-LABEL"
+          }
+        ]
+      }
+    },
+    {
+      "timestamp": 1761471203.4,
+      "category": "console",
+      "level": "log",
+      "message": "sending PLANTED-CHAT-7Q1 move the Dublin offsite to Thursday and keep it from the board",
+      "data": {
+        "logger": "console",
+        "arguments": ["PLANTED-CHAT-7Q1"]
+      }
+    },
+    {
+      "timestamp": 1761471203.9,
+      "category": "console",
+      "level": "warning",
+      "message": "[push] PLANTED-QUESTION-4K8 should Auto approve the Meridian invoice before Friday close",
+      "data": {
+        "logger": "console"
+      }
+    },
+    {
+      "timestamp": 1761471204.5,
+      "type": "http",
+      "category": "fetch",
+      "data": {
+        "method": "GET",
+        "url": "https://automatos.planted-host.example:8443/api/chat/0b7e3c1a-5d2f-4e8a-9c6b-7a1d2e3f4a5b/messages?limit=50&token=amd_PLANTEDdeviceTOKEN0123456789abcdefghijklmn",
+        "status_code": 200,
+        "request_body_size": 0,
+        "response_body_size": 9188,
+        "__span": "PLANTED-SPAN"
+      }
+    },
+    {
+      "timestamp": 1761471205.6,
+      "type": "http",
+      "category": "fetch",
+      "data": {
+        "method": "POST",
+        "url": "https://automatos.planted-host.example:8443/api/voice/calls/call_8PLANTEDc7b6a5f4e3d2c1b0a9f/end",
+        "status_code": 502
+      }
+    },
+    {
+      "timestamp": 1761471205.9,
+      "type": "http",
+      "category": "http",
+      "data": {
+        "method": "POST",
+        "url": "https://automatos.planted-host.example:8443/api/v1/mobile/devices?expo_push_token=ExponentPushToken[PLANTEDxR7kLm2Qp9Vt4Wz]",
+        "status_code": 201,
+        "reason": "Created PLANTED-REASON"
+      }
+    },
+    {
+      "timestamp": 1761471206.1,
+      "category": "push",
+      "message": "notification received",
+      "data": {
+        "payload": {
+          "question": "PLANTED-PUSH-9Z3 Approve the March payroll run?",
+          "sig": "5e7a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8"
+        }
+      }
+    },
+    {
+      "timestamp": 1761471206.4,
+      "category": "chat",
+      "message": "stream frame",
+      "data": {
+        "frame": {
+          "type": "chat-id",
+          "chat_id": "0b7e3c1a-5d2f-4e8a-9c6b-7a1d2e3f4a5b"
+        }
+      }
+    },
+    {
+      "timestamp": 1761471206.8,
+      "category": "voice",
+      "message": "live join",
+      "data": {
+        "call_id": "call_8PLANTEDc7b6a5f4e3d2c1b0a9f"
+      }
+    },
+    {
+      "timestamp": 1761471207.0,
+      "type": "navigation",
+      "category": "ui.lifecycle",
+      "data": {
+        "screen": "RNSScreen",
+        "title": "Dublin offsite PLANTED-TITLE",
+        "beingPresented": false
+      }
+    },
+    {
+      "timestamp": 1761471207.5,
+      "category": "auth",
+      "level": "warning",
+      "message": "token refresh for planted.person@example.org with Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6InBsYW50ZWQifQ.eyJzdWIiOiJ1c2VyX1BMQU5URUQifQ.c2lnbmF0dXJlLXBsYW50ZWQ on workspace 7c9e6679-7425-40de-944b-e07fc1f90ae7",
+      "data": {
+        "attempt": 2,
+        "server": "https://automatos.planted-host.example:8443"
+      }
+    },
+    {
+      "timestamp": 1761471208.2,
+      "type": "error",
+      "category": "sentry.event",
+      "level": "error",
+      "event_id": "4f1c2b9e8d7a4c3b9e2f1a0b8c7d6e5f",
+      "message": "TypeError: Cannot read property 'parts' of undefined for key pk_live_UExBTlRFRC1jbGVyay5hdXRvbWF0b3MuYXBwJA"
+    }
+  ],
+  "contexts": {
+    "app": {
+      "app_identifier": "com.automatos.app",
+      "app_name": "Automatos Go",
+      "app_version": "1.0.0",
+      "app_build": "12",
+      "app_start_time": "2026-10-26T09:12:40Z",
+      "in_foreground": true,
+      "view_names": ["ChatScreen PLANTED-VIEW"],
+      "device_app_hash": "PLANTEDdeviceAppHash0f9e8d7c6b5a49382716"
+    },
+    "device": {
+      "family": "iOS",
+      "model": "iPhone16,1",
+      "model_id": "D83AP",
+      "arch": "arm64e",
+      "simulator": false,
+      "memory_size": 7999832064,
+      "name": "PLANTED-DEVICE-NAME Gerard iPhone",
+      "id": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+      "timezone": "PLANTED-TIMEZONE",
+      "boot_time": "2026-10-20T07:00:00Z PLANTED-BOOT",
+      "free_storage": 12884901888,
+      "storage_size": 255999950848
+    },
+    "os": {
+      "name": "iOS",
+      "version": "18.1",
+      "build": "22B83",
+      "rooted": false
+    },
+    "runtime": {
+      "name": "hermes",
+      "version": "0.12.0"
+    },
+    "release": {
+      "channel": "testflight",
+      "edition": "own",
+      "style": "play",
+      "server": "https://automatos.planted-host.example:8443"
+    },
+    "react_native_context": {
+      "js_engine": "hermes",
+      "component_stack": "PLANTED-COMPONENT-STACK"
+    },
+    "trace": {
+      "trace_id": "PLANTEDtrace0a1b2c3d4e5f60718293a4b",
+      "span_id": "PLANTEDspan01"
+    },
+    "culture": {
+      "locale": "en-IE",
+      "timezone": "PLANTED-TIMEZONE"
+    },
+    "notification": {
+      "request": {
+        "content": {
+          "data": {
+            "v": 2,
+            "type": "needs_answer",
+            "workspace_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+            "notification_id": "PLANTED-NOTIFICATION-ID",
+            "grant_id": "4182",
+            "link_type": "ticket",
+            "link_id": "PLANTED-LINK-ID",
+            "ticket_number": "0419",
+            "question": "PLANTED-PUSH-9Z3 Approve the March payroll run?",
+            "options": ["Approve PLANTED-OPTION", "Reject"],
+            "iat": 1761471100,
+            "sig": "5e7a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8"
+          }
+        }
+      }
+    },
+    "chat": {
+      "chat_id": "0b7e3c1a-5d2f-4e8a-9c6b-7a1d2e3f4a5b",
+      "last_message": "PLANTED-CHAT-7Q1 move the Dublin offsite to Thursday and keep it from the board",
+      "question": "PLANTED-QUESTION-4K8 should Auto approve the Meridian invoice before Friday close"
+    }
+  },
+  "extra": {
+    "chat_text": "PLANTED-CHAT-7Q1 move the Dublin offsite to Thursday and keep it from the board",
+    "question_text": "PLANTED-QUESTION-4K8 should Auto approve the Meridian invoice before Friday close",
+    "call_id": "call_8PLANTEDc7b6a5f4e3d2c1b0a9f",
+    "chat_id": "0b7e3c1a-5d2f-4e8a-9c6b-7a1d2e3f4a5b",
+    "push_key": "Zq8PLANTEDpushKEY3vR7xYw2LmN5sT9uB1cD4eF6gH0j",
+    "device_token": "amd_PLANTEDdeviceTOKEN0123456789abcdefghijklmn",
+    "expo_push_token": "ExponentPushToken[PLANTEDxR7kLm2Qp9Vt4Wz]",
+    "clerk_key": "pk_live_UExBTlRFRC1jbGVyay5hdXRvbWF0b3MuYXBwJA",
+    "server": "https://automatos.planted-host.example:8443"
+  },
+  "tags": {
+    "platform": "ios",
+    "channel": "testflight",
+    "edition": "own",
+    "style": "play",
+    "call_id": "call_8PLANTEDc7b6a5f4e3d2c1b0a9f",
+    "chat_id": "0b7e3c1a-5d2f-4e8a-9c6b-7a1d2e3f4a5b",
+    "workspace_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    "event.origin": "javascript",
+    "user.email": "planted.person@example.org"
+  },
+  "request": {
+    "url": "https://automatos.planted-host.example:8443/api/chat?chat_id=0b7e3c1a-5d2f-4e8a-9c6b-7a1d2e3f4a5b",
+    "method": "POST",
+    "headers": {
+      "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6InBsYW50ZWQifQ.eyJzdWIiOiJ1c2VyX1BMQU5URUQifQ.c2lnbmF0dXJlLXBsYW50ZWQ",
+      "X-Workspace-ID": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+      "Cookie": "__session=PLANTED-COOKIE",
+      "X-Expo-Push-Token": "ExponentPushToken[PLANTEDxR7kLm2Qp9Vt4Wz]",
+      "Host": "automatos.planted-host.example:8443",
+      "Content-Type": "application/json",
+      "Accept": "text/event-stream"
+    },
+    "data": "{\"id\":\"0b7e3c1a-5d2f-4e8a-9c6b-7a1d2e3f4a5b\",\"message\":{\"role\":\"user\",\"parts\":[{\"type\":\"text\",\"text\":\"PLANTED-BODY-3M5 send the offsite plan to automatos.planted-host.example\"}]}}",
+    "cookies": {
+      "__session": "PLANTED-COOKIE"
+    },
+    "query_string": "chat_id=0b7e3c1a-5d2f-4e8a-9c6b-7a1d2e3f4a5b&token=amd_PLANTEDdeviceTOKEN0123456789abcdefghijklmn",
+    "env": {
+      "REMOTE_ADDR": "203.0.113.77"
+    }
+  },
+  "threads": {
+    "values": [
+      {
+        "id": 1,
+        "name": "PLANTED-THREAD",
+        "crashed": true,
+        "current": true
+      }
+    ]
+  }
+}
