@@ -5,9 +5,11 @@
 // (use-home-thread.ts); STOP is A2's Stop, which cancels the turn on the server; TYPE opens A2's
 // composer in a Sheet (the viewer's read-only copy and a disabled box come with it, D17), with the
 // discussion bar for a ticket above it, and a send closes the sheet; 'COMMAND · N' opens the Board
-// and LOOK the Looks drawer (HudCore); the menu square opens Settings. HOLD TO TALK stays inert
-// until A6 (src/voice/quick-ask is not in this branch). First open is the core with an empty
-// transcript and 'Say or type what you need.' (a blank draft's turn is EMPTY_TURN).
+// and LOOK the Looks drawer (HudCore); the menu square opens Settings. First open is the core with
+// an empty transcript and 'Say or type what you need.' (a blank draft's turn is EMPTY_TURN).
+//   HOLD TO TALK is A6's quick-ask in place (US-019k, useHudHomeVoice over this thread): MIC LIVE,
+// the waveform, the voice's turn in the transcript from a press until a typed send, the voice's chip
+// and line while it works, and STOP stopping the speech too (and A2's turn, typed or spoken).
 
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
@@ -18,6 +20,8 @@ import { DiscussionBar } from '../../chat/discussion/DiscussionBar';
 import type { ChatFile } from '../../chat/request';
 import { routes } from '../../navigation/routes';
 import { Sheet } from '../../ui';
+import { useHudHomeVoice } from '../../voice/home/use-hud-home-voice';
+import { VoiceLine } from '../../voice/screen/VoiceLine';
 import { HudCore } from '../hud/core/HudCore';
 import { hudTurn } from './hud-turn';
 import { useHomeThread } from './use-home-thread';
@@ -36,25 +40,33 @@ export function HudHome({ chatId, ticketId = null }: HudHomeProps) {
   const [typing, setTyping] = useState(false);
   const { state, stop } = home.thread;
   const turn = useMemo(() => hudTurn(state), [state]);
+  const voice = useHudHomeVoice(home, turn);
   const { sendMessage } = home;
+  const { typed } = voice;
   const close = useCallback(() => setTyping(false), []);
   const onSend = useCallback(
     (text: string, ready: readonly ChatFile[]) => {
       sendMessage(text, ready);
+      typed();
       setTyping(false);
     },
-    [sendMessage],
+    [sendMessage, typed],
   );
   return (
     <>
       <HudCore
-        turn={turn}
+        turn={voice.turn}
         mascotState={home.mascot}
-        micOpen={false}
+        micOpen={voice.micOpen}
         onType={() => setTyping(true)}
-        onStop={stop}
+        onStop={voice.stop}
         needsYou={total}
         onMenu={() => router.push(routes.settings)}
+        levels={voice.levels}
+        quickAsk={{
+          ...voice.core,
+          line: <VoiceLine line={voice.line} onAction={voice.lineAction} />,
+        }}
       />
       <Sheet visible={typing} onClose={close}>
         <DiscussionBar state={home.discussion} messages={state.messages} />

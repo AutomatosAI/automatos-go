@@ -1,16 +1,17 @@
 // The composer (US-009a, the handoff's 2j without its chips; D-COMPOSER, D-ROLES): a viewer's
 // notice, the attached files' chips (US-009b), then a row of the [+] (camera, photo library, files),
 // the 'Message Auto' pill and the 42 pt round ink button, arrow-up to send and a square to stop.
-// Return inserts a newline; only the button sends. No suggestion chips, no Plan toggle (D30), no
-// voice button (A6), and no AI label: that is the thread's first row (D73), and nothing about it
-// holds the send. composerState decides everything; this only wires: an upload holds the send, and
+// Return inserts a newline; only the button sends. No suggestion chips, no Plan toggle (D30), and
+// no AI label: that is the thread's first row (D73), and nothing about it holds the send. The screen
+// may hand one accessory to sit beside the send button (another kit's button, A6's); without it the
+// row is as above. composerState decides everything; this only wires: an upload holds the send, and
 // a send taps lightly (expo-haptics, in the binary since the scaffold), hands the trimmed words and
 // the ready files up, then clears the pill and the chips.
 
 import * as Haptics from 'expo-haptics';
 import ArrowUp from 'lucide-react-native/icons/arrow-up';
 import Square from 'lucide-react-native/icons/square';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import type { WorkspaceRole } from '../../api/workspace';
@@ -38,6 +39,8 @@ export type ComposerProps = {
   /** The trimmed words (blank when only files go) and the ready files; the composer clears. */
   readonly onSend: (text: string, files: readonly ChatFile[]) => void;
   readonly onStop: () => void;
+  /** One element beside the send button, given by the screen; none by default. */
+  readonly accessory?: ReactNode;
 };
 
 const NO_FILES: readonly ChatFile[] = Object.freeze([]);
@@ -65,6 +68,7 @@ export function Composer({
   files,
   onSend,
   onStop,
+  accessory,
 }: ComposerProps) {
   const { colours, spacing } = useTokens();
   const [text, setText] = useState('');
@@ -113,6 +117,7 @@ export function Composer({
           label={COMPOSER_COPY.inputLabel}
           editable={state.inputEditable}
         />
+        {accessory ?? null}
         <IconButton
           icon={button.icon === 'stop' ? Square : ArrowUp}
           accessibilityLabel={button.label}

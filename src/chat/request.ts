@@ -4,6 +4,8 @@
 // selectedVisibilityType 'private'; the page context as references only (services/page_context.py
 // keeps page, route and selected). A draft sends no id: the server creates the chat and the chat-id
 // frame names it. Plan and mission mode are never sent (D30): the strict schema refuses both.
+// spokenMode (A6 quick-ask, chat_models.py ChatRequest.spokenMode): the reply is heard, so Auto
+// answers in short spoken sentences; sent only as true, and a typed turn's body never carries it.
 
 import { z } from 'zod';
 
@@ -47,6 +49,7 @@ export const ChatRequestSchema = z
         selected: z.object({ type: ContextString, id: ContextString }).strict().optional(),
       })
       .strict(),
+    spokenMode: z.literal(true).optional(),
   })
   .strict();
 
@@ -69,6 +72,8 @@ export type ChatRequestInput = {
   readonly text: string;
   readonly files?: readonly ChatFile[];
   readonly context?: { readonly route?: string; readonly selected?: ChatSelection | null };
+  /** Quick-ask's turn (A6): sent as spokenMode true; false or absent leaves the key out. */
+  readonly spokenMode?: boolean;
 };
 
 function issueSummary(error: z.ZodError): string {
@@ -100,6 +105,7 @@ export function buildChatRequest(input: ChatRequestInput): ChatRequestBody {
       route: input.context?.route ?? CHAT_ROUTE,
       ...(selected ? { selected: { type: selected.type, id: selected.id } } : {}),
     },
+    ...(input.spokenMode === true ? { spokenMode: true } : {}),
   });
   if (!result.success) {
     throw new TypeError(`Not a chat request the server takes (${issueSummary(result.error)})`);

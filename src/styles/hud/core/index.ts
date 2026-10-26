@@ -4,7 +4,7 @@
 // in every style (D-ONE-VOICE, D60): their colours come from the resolved style.
 
 export { HudButtons, type HudButtonsProps } from './HudButtons';
-export { HudCore, type HudCoreProps } from './HudCore';
+export { HudCore, type HudCoreProps, type HudCoreVoice } from './HudCore';
 export { HudTopBar, type HudTopBarProps } from './HudTopBar';
 export { RingCore, type RingCoreProps } from './RingCore';
 export { StateChip, type StateChipProps } from './StateChip';
