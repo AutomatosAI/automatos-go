@@ -13,7 +13,10 @@
 //   AI-notice session (KV7); detaching stops the mic and the speech, and the turn runs on with
 //   nothing more spoken (A2 lets go of the read without a cancel).
 //   The speech is in the phone's language (the one recognition listens in) with the voice picked
-//   for it once (US-019d); until that voice is known, the engine's default for the language.
+//   for it (US-019d): the one Settings → Voice saved while the phone offers it, else the phone's
+//   best; until that voice is known, the engine's default for the language. The saved rate and
+//   pitch go with it. The setting is a store every reader hears (use-voice-setting.ts), so a change
+//   re-renders this hook and the next reply speaks with it.
 //   Nothing asks a permission at mount: only press() does (KV5).
 //   Leaving the screen goes through the interruption policy (use-interruptions.ts, US-019h), and the
 //   screen stays on while the mic is open or a reply is under way (keep-awake.ts, KV12).
@@ -29,6 +32,8 @@ import { COVERED } from '../interruptions/interruption-policy';
 import { useVoiceKeepAwake } from '../interruptions/keep-awake';
 import { useInterruptions } from '../interruptions/use-interruptions';
 import { permissions } from '../permissions/permissions';
+import { useVoiceSetting } from '../settings/use-voice-setting';
+import { speakOptionsFor } from '../settings/voice-setting';
 import { speaker } from '../speech/speaker';
 import { phoneLocale } from './locale';
 import {
@@ -61,12 +66,15 @@ function later(run: () => void, ms: number): () => void {
   return () => clearTimeout(timer);
 }
 
-/** The phone's voice for its language, picked once; undefined until then (the engine's default). */
-function usePhoneVoice(language: string): string | undefined {
+/**
+ * The phone's voice for its language: the saved one while the phone offers it, else its best, picked
+ * again when the saved one changes; undefined until then (the engine's default).
+ */
+function usePhoneVoice(language: string, saved: string | null): string | undefined {
   const [voice, setVoice] = useState<string | undefined>(undefined);
   useEffect(() => {
     let current = true;
-    speaker.voiceFor(language).then(
+    speaker.voiceFor(language, saved).then(
       (picked) => {
         if (current) setVoice(picked);
       },
@@ -75,7 +83,7 @@ function usePhoneVoice(language: string): string | undefined {
     return () => {
       current = false;
     };
-  }, [language]);
+  }, [language, saved]);
   return voice;
 }
 
@@ -83,12 +91,13 @@ function usePhoneVoice(language: string): string | undefined {
 function useEngineContext(thread: ThreadView): { readonly current: QuickAskContext } {
   const { discovery, workspace } = useAppSession();
   const language = useMemo(() => phoneLocale(), []);
-  const voice = usePhoneVoice(language);
+  const setting = useVoiceSetting();
+  const voice = usePhoneVoice(language, setting.voice);
   const context: QuickAskContext = {
     thread,
     roleCanChat: roleCan(workspace.role, 'chat'),
     discovery,
-    speech: voice === undefined ? { language } : { language, voice },
+    speech: speakOptionsFor(language, voice, setting),
   };
   const latest = useRef(context);
   useEffect(() => {

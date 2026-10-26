@@ -1,6 +1,7 @@
 // A list row (the digest's rows, settings rows): an optional 28 pt icon tile, a serif title and a
 // summary line, and a trailing slot (a chevron when the row opens something, or a control). At
-// least 44 tall; a pressable row reads as one button with its title and summary.
+// least 44 tall; a pressable row reads as one button with its title and summary, and a row that is
+// one of a list's choices (Settings → Voice) also says whether it is the selected one.
 
 import type { LucideIcon } from 'lucide-react-native';
 import type { ReactNode } from 'react';
@@ -29,6 +30,8 @@ export type ListRowProps = {
   readonly accessibilityLabel?: string;
   readonly accessibilityHint?: string;
   readonly disabled?: boolean;
+  /** A choice row: whether it is the chosen one (VoiceOver hears 'selected'). */
+  readonly selected?: boolean;
 };
 
 export function ListRow({
@@ -40,6 +43,7 @@ export function ListRow({
   accessibilityLabel,
   accessibilityHint,
   disabled = false,
+  selected,
 }: ListRowProps) {
   const { colours, radii, spacing } = useTokens();
   const body = (
@@ -80,7 +84,7 @@ export function ListRow({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? joinLabel(title, summary)}
       accessibilityHint={accessibilityHint}
-      accessibilityState={{ disabled }}
+      accessibilityState={selected === undefined ? { disabled } : { disabled, selected }}
       style={({ pressed }) => [
         frame,
         { borderRadius: radii.control },

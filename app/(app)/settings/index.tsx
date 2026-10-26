@@ -2,12 +2,14 @@
 // the server's name, address and edition, the unencrypted home network line, and Sign out or Forget
 // this server, US-006h), then the workspace, role and app version, then Style and look (the style
 // picker, US-016j). Nothing deletes an account or a workspace (D63); nothing about plans (D8).
-// After them, Notifications (src/push, US-014h) and, on a hosted phone with a push record,
-// Remove this phone (KP16; an own server's way out stays the server section's). The policies
-// and the other Settings pages arrive with their stories.
+// After them, Notifications (src/push, US-014h), Voice (Auto's voice, speed and pitch on this
+// phone, src/voice/settings) and, on a hosted phone with a push record, Remove this phone (KP16; an
+// own server's way out stays the server section's). The policies and the other Settings pages
+// arrive with their stories.
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
+import AudioLines from 'lucide-react-native/icons/audio-lines';
 import Bell from 'lucide-react-native/icons/bell';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 
@@ -23,6 +25,8 @@ import { pushScreens } from '../../../src/push/nav';
 import { PUSH_ACCOUNT_COPY } from '../../../src/push/strings';
 import { useTokens } from '../../../src/styles/theme';
 import { Card, Divider, IconButton, ListRow, Screen, Text } from '../../../src/ui';
+import { VOICE_SCREENS } from '../../../src/voice/nav';
+import { VOICE_SETTINGS_COPY } from '../../../src/voice/strings';
 
 const TITLE_LEVEL = 2;
 const VALUE_LEVEL = 2;
@@ -78,6 +82,14 @@ export default function AccountSettings() {
             icon={Bell}
             title={PUSH_ACCOUNT_COPY.notifications}
             onPress={() => router.push(pushScreens.notifications)}
+          />
+        </Card>
+        <Card>
+          <ListRow
+            icon={AudioLines}
+            title={VOICE_SETTINGS_COPY.row}
+            accessibilityHint={VOICE_SETTINGS_COPY.rowHint}
+            onPress={() => router.push(VOICE_SCREENS.settings)}
           />
         </Card>
         <RemovePhone />

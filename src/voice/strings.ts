@@ -180,3 +180,43 @@ export const VOICE_ENTRY_COPY = Object.freeze({
   label: 'Talk to Auto',
   hint: 'Opens the voice screen. Hold to talk there.',
 });
+
+/**
+ * Settings → Voice: the voice Auto speaks in on this phone, its speed and its pitch. Automatic is
+ * pickVoice's choice. The help line names the phone's own settings in words: no link opens them
+ * (App Review rejects private settings URLs). {language} is the phone's language by name
+ * (languageName in recognition-policy.ts).
+ */
+export const VOICE_SETTINGS_COPY = Object.freeze({
+  /** Settings' row to this screen. */
+  row: 'Voice',
+  rowHint: "Choose Auto's voice, speed and pitch",
+  back: 'Back',
+  eyebrow: 'Settings',
+  title: 'Voice',
+  lede: 'How Auto sounds when it answers you out loud. It uses the voices on this phone.',
+  voiceSection: "Auto's voice",
+  automatic: 'Automatic',
+  automaticSummary: 'Best voice on this phone',
+  tiers: { premium: 'Premium', enhanced: 'Enhanced', standard: 'Standard' },
+  voiceHint: 'Chooses this voice and plays a sample',
+  /** Spoken in the chosen voice at the chosen speed and pitch. */
+  sample: "Hi, I'm Auto. This is how I'll sound when I answer you.",
+  soundSection: 'Speed and pitch',
+  speed: 'Speed',
+  pitch: 'Pitch',
+  normal: 'Normal',
+  /** A slider's value as VoiceOver reads it: 'Slower, 0.9 times'. */
+  slower: (times: string) => `Slower, ${times} times`,
+  faster: (times: string) => `Faster, ${times} times`,
+  lower: (times: string) => `Lower, ${times} times`,
+  higher: (times: string) => `Higher, ${times} times`,
+  reset: 'Reset to default',
+  resetHint: 'Automatic voice at normal speed and pitch',
+  help: {
+    ios: (language: string) =>
+      `For a more natural voice, download a Premium voice: iPhone Settings → Accessibility → Spoken Content → Voices → ${language}.`,
+    android: (language: string) =>
+      `For a more natural voice, install Google's voice data: in your phone's Settings, search for Text-to-speech output, open the settings for Speech Services by Google, then Install voice data → ${language}.`,
+  },
+});
