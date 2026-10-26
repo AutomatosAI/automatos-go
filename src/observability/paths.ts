@@ -55,6 +55,14 @@ const QUERY_OR_FRAGMENT = /[?#]/;
 const HOME_FOLDER = /^\/(Users|home)\/[^/]+/;
 /** iOS names each install's app and data folders with a random UUID. */
 const APP_CONTAINER = /\/Application\/[0-9A-Fa-f-]{36}\//;
+/** A scheme with an empty host (app://, file://): kept as written. */
+const HOSTLESS_SCHEME = /^[a-z][a-z0-9+.-]{0,31}:\/\/(?=\/)/i;
+
+function withoutPersonalFolders(local: string): string {
+  return local
+    .replace(HOME_FOLDER, `/$1/${ID_SEGMENT}`)
+    .replace(APP_CONTAINER, `/Application/${ID_SEGMENT}/`);
+}
 
 /** True for a URL with a host (https://srv/…), false for app:///main.jsbundle or a bare path. */
 export function hasHost(url: string): boolean {
@@ -71,10 +79,10 @@ export function stripHost(url: string): string {
 
 /** A frame's or image's file as a report carries it: no host, user name or install folder id. */
 export function framePath(path: string): string {
-  const local = hasHost(path) ? stripHost(path) : path;
-  return local
-    .replace(HOME_FOLDER, `/$1/${ID_SEGMENT}`)
-    .replace(APP_CONTAINER, `/Application/${ID_SEGMENT}/`);
+  if (hasHost(path)) return withoutPersonalFolders(stripHost(path));
+  // app:///main.jsbundle keeps its scheme (source maps are matched on it), never a query
+  const scheme = HOSTLESS_SCHEME.exec(path)?.[0] ?? '';
+  return `${scheme}${withoutPersonalFolders(stripHost(path.slice(scheme.length)))}`;
 }
 
 /** The URL as a path template: no host, no query, and every segment not a route word → ':id'. */

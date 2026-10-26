@@ -90,6 +90,15 @@ describe('framePath', () => {
     expect(framePath('/home/someone/app/index.js')).toBe('/home/:id/app/index.js');
   });
 
+  it('keeps a hostless scheme but drops its query and a home folder after it', () => {
+    expect(framePath('app:///main.jsbundle?platform=ios#x')).toBe('app:///main.jsbundle');
+    expect(framePath('file:///Users/someone/dev/index.bundle?dev=true')).toBe(
+      'file:///Users/:id/dev/index.bundle',
+    );
+    expect(framePath('/var/mobile/main.jsbundle?x=1')).toBe('/var/mobile/main.jsbundle');
+    expect(framePath('main.jsbundle')).toBe('main.jsbundle');
+  });
+
   it("drops the id iOS gives the app's install folder", () => {
     expect(
       framePath(
