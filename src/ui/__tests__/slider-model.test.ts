@@ -30,6 +30,14 @@ describe('sliderRange', () => {
     expect(sliderRange({ min: 10, max: 20, step: 3 }).highest).toBe(19);
   });
 
+  it('reaches max on a fractional step despite float error (0.4 / 0.05 is 7.999…)', () => {
+    const speed = sliderRange({ min: 0.8, max: 1.2, step: 0.05 });
+    expect(speed.highest).toBeCloseTo(1.2, 10);
+    expect(clampValue(1.2, speed)).toBeCloseTo(1.2, 10);
+    expect(clampValue(9, speed)).toBeCloseTo(1.2, 10);
+    expect(sliderRange({ min: 0, max: 1, step: 0.1 }).highest).toBeCloseTo(1, 10);
+  });
+
   it('brings a maxAllowed outside the range inside it', () => {
     expect(sliderRange({ min: 0, max: 40, maxAllowed: 99 }).highest).toBe(40);
     expect(sliderRange({ min: 5, max: 40, maxAllowed: 1 }).highest).toBe(5);
