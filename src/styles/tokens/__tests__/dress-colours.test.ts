@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { EMBER } from '../../../core/web/lib/looks/presets';
+import { EMBER } from '../../../core/frozen/lib/looks/presets';
 import {
   HUD_SELECTED_GLOW,
   PLAY_CHIP_LINE_ALPHA,

@@ -4,8 +4,8 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { DAYLIGHT, EMBER, PRESETS } from '../../../../core/web/lib/looks/presets';
-import type { Look } from '../../../../core/web/lib/looks/types';
+import { DAYLIGHT, EMBER, PRESETS } from '../../../../core/frozen/lib/looks/presets';
+import type { Look } from '../../../../core/frozen/lib/looks/types';
 import { companionColours } from '../../../tokens/companion-colours';
 import { playTokens, playVars } from '../../../tokens/play';
 import { badgeInk, chipPaint, composerButtonPaint, type CompanionColourSource } from '../paint';

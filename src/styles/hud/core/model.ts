@@ -6,8 +6,8 @@
 // HudTurn. The chip, the status words and the transcript say everything the rings and the waveform
 // show (the README's text twins).
 
-import { captionFor } from '../../../core/web/lib/mascot/media';
-import type { MascotName } from '../../../core/web/lib/mascot/types';
+import { captionFor } from '../../../core/frozen/lib/mascot/media';
+import type { MascotName } from '../../../core/frozen/lib/mascot/types';
 import { badgeText, commandCentreLabel } from '../../../ui/variants';
 import type { AiLabelAgent } from '../../ai-label-state';
 import { mascotGeometry } from '../../mascot/geometry';

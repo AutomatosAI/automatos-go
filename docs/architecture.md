@@ -186,9 +186,18 @@ offline: an answer or an approval reaches the server now or fails.
 `src/core/web/` is pure TypeScript copied from automatos-ai's `frontend/` by
 [scripts/sync-core.ts](../scripts/sync-core.ts) and recorded in [core.lock.json](../core.lock.json)
 (source `AutomatosAI/automatos-ai`, sha `630fc1c85`, synced 21 Oct 2026). It holds the chat
-helpers (receipts, narration, tool calls, errors), the board and calendar helpers, the looks and
-mascot logic and the theme SDK types. Nobody edits it by hand: `npm run check:core` fails on any
-drift. The lock also lists the web's tests that could not be copied, and why.
+helpers (receipts, narration, tool calls, errors), the board and calendar helpers and the look
+kit. Nobody edits it by hand: `npm run check:core` fails on any drift. The lock also lists the
+web's tests that could not be copied, and why.
+
+`src/core/frozen/` holds what core has since deleted but the app still runs: PRD-261 W-A8 took
+built-in Play out of core (Play now ships from the Design Kit, `AutomatosAI/automatos-design-kit`
+`themes/play/src`), so Play's chat lines and caption, the looks catalogue and engine, the mascot's
+state machine, their web tests and the theme SDK type slices they import stay as `630fc1c85`
+vendored them. It mirrors `frontend/` like `src/core/web/`; each file opens with a provenance
+header (source path and SHA), and `scripts/core-manifest.json` `frozen` records its sha256, so
+`npm run check:core` fails on an edit, a lost header or a stray file. Nothing writes these files:
+to change one, make it the app's own code outside `src/core/frozen/` and drop its entry.
 
 The app's own pure code sits beside it: [turn-reducer.ts](../src/core/turn-reducer.ts) folds one
 chat turn from its stream frames, and `src/core/parity/` with `src/core/__fixtures__/parity/`

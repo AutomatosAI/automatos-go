@@ -5,7 +5,7 @@
 // screen (D-NO-BILLING, D8).
 
 import type { TurnErrorCode } from '../core/turn-reducer';
-import { WAITING_FOR_YOU, type ToolStatus } from '../core/web/components/play/chat/labels';
+import { WAITING_FOR_YOU, type ToolStatus } from '../core/frozen/components/play/chat/labels';
 import type { Receipt } from '../core/web/types';
 import { UI_COPY } from '../ui/strings';
 

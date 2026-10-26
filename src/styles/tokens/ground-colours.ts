@@ -13,9 +13,9 @@
 //         the grid and the README's scanline.
 
 import { GLOW_SCALE, rgba } from '../../core/web/lib/look-kit/css';
-import { safeGlow, safeGlowAlpha, snagGlowAlpha } from '../../core/web/lib/looks/engine';
-import { EMBER } from '../../core/web/lib/looks/presets';
-import type { Look } from '../../core/web/lib/looks/types';
+import { safeGlow, safeGlowAlpha, snagGlowAlpha } from '../../core/frozen/lib/looks/engine';
+import { EMBER } from '../../core/frozen/lib/looks/presets';
+import type { Look } from '../../core/frozen/lib/looks/types';
 import type { HudVars } from './hud';
 import type { PlayVars } from './play';
 

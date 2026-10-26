@@ -6,7 +6,7 @@
 
 import { useMemo } from 'react';
 
-import type { MascotName } from '../../core/web/lib/mascot/types';
+import type { MascotName } from '../../core/frozen/lib/mascot/types';
 import { useStyleStore } from '../provider/context';
 import type { ResolvedStyle } from '../provider/resolve';
 import { localThemeFile } from '../themes/files';

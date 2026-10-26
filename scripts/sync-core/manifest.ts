@@ -5,6 +5,8 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 
 const reason = z.string().min(1, 'every entry needs a one-line reason');
+const commit = z.string().regex(/^[0-9a-f]{40}$/, 'sha must be a full 40-character commit id');
+const fileHash = z.string().regex(/^[0-9a-f]{64}$/);
 
 const namedEntry = z.object({
   names: z.array(z.string().min(1)).min(1),
@@ -13,7 +15,7 @@ const namedEntry = z.object({
 
 export const manifestSchema = z.object({
   source: z.string().min(1),
-  sha: z.string().regex(/^[0-9a-f]{40}$/, 'sha must be a full 40-character commit id'),
+  sha: commit,
   root: z.string().min(1),
   notes: z.array(z.string()).default([]),
   sets: z.record(z.array(z.string().min(1))),
@@ -25,6 +27,8 @@ export const manifestSchema = z.object({
   skipTests: z.record(reason).default({}),
   /** checkout-relative files outside the root, copied verbatim to `to` under src/core/ */
   copy: z.record(z.object({ to: z.string().min(1), reason })).default({}),
+  /** files core has deleted, kept in src/core/frozen as `sha` vendored them (sync-core/frozen.ts) */
+  frozen: z.object({ sha: commit, reason, files: z.record(fileHash) }).optional(),
 });
 
 export type Manifest = z.infer<typeof manifestSchema>;
@@ -35,7 +39,7 @@ export const lockSchema = z
     source: z.string().min(1),
     sha: z.string().min(1),
     syncedAt: z.string().min(1),
-    files: z.record(z.string().regex(/^[0-9a-f]{64}$/)),
+    files: z.record(fileHash),
     /** every web test beside a vendored module that was not copied, with the reason */
     skippedTests: z.record(z.string().min(1)).default({}),
   })

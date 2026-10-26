@@ -16,7 +16,7 @@ import type {
   LookGround,
   LookTypeStyle,
 } from '../../core/web/lib/look-kit/types';
-import { SHELLS } from '../../core/web/lib/looks/catalogue';
+import { SHELLS } from '../../core/frozen/lib/looks/catalogue';
 
 export const HUD_LOOK_SOURCE = 'automatos-play-command/looks.json';
 export const HUD_LOOK_SOURCE_SCHEMA = 'automatos-interface-look/v0';

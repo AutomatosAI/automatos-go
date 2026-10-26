@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { rgba } from '../../../core/web/lib/look-kit/css';
-import { safeGlowAlpha, snagGlowAlpha } from '../../../core/web/lib/looks/engine';
-import { AURORA, DAYLIGHT, EMBER, PRESETS } from '../../../core/web/lib/looks/presets';
+import { safeGlowAlpha, snagGlowAlpha } from '../../../core/frozen/lib/looks/engine';
+import { AURORA, DAYLIGHT, EMBER, PRESETS } from '../../../core/frozen/lib/looks/presets';
 import { HUD_PRESET_LOOKS } from '../../hud/look-schema';
 import {
   EMBER_GLOW_ALPHA,

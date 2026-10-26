@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { atClipBoundary, BOUNDARY_MS, CLIP_MS } from '../../../core/web/lib/mascot/player';
+import { atClipBoundary, BOUNDARY_MS, CLIP_MS } from '../../../core/frozen/lib/mascot/player';
 import {
   CLIP_BACKSTOP_MS,
   CLIP_LOAD_DEADLINE_MS,

@@ -5,11 +5,11 @@
 // follow Auto's state as app/play-theme.css does. The tone is the ground's: the user's Light /
 // Dark / System does not apply under Play, as on the web (PRD-260 K4).
 
-import { lookToCssVars, lookToStudioTokens } from '../../core/web/lib/looks/engine';
-import { toneOfGround } from '../../core/web/lib/looks/tone';
-import type { Look } from '../../core/web/lib/looks/types';
-import { pageGlow, type PageGlow } from '../../core/web/lib/mascot/media';
-import type { MascotName } from '../../core/web/lib/mascot/types';
+import { lookToCssVars, lookToStudioTokens } from '../../core/frozen/lib/looks/engine';
+import { toneOfGround } from '../../core/frozen/lib/looks/tone';
+import type { Look } from '../../core/frozen/lib/looks/types';
+import { pageGlow, type PageGlow } from '../../core/frozen/lib/mascot/media';
+import type { MascotName } from '../../core/frozen/lib/mascot/types';
 import { STUDIO_COLOURS, sourceToHex, tokenName } from './studio';
 import type { ColourName, ColourScheme, Colours } from './types';
 

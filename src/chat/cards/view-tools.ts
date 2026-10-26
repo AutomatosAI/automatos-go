@@ -6,7 +6,7 @@
 // handoff's '#0431: filed to Inbox' and opens on the board through the foundation's cc.ticket.
 
 import { BOARD_COLUMNS } from '../../core/web/types/board';
-import { clip } from '../../core/web/components/play/chat/labels';
+import { clip } from '../../core/frozen/components/play/chat/labels';
 import { UNNAMED_ACTION } from '../../core/web/lib/chat/approvals';
 import { ticketNumber } from '../../core/web/lib/ticket-number';
 import type { TaskCardData } from '../../core/web/types';

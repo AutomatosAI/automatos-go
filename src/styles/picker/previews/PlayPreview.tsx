@@ -7,7 +7,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
 
-import type { Look } from '../../../core/web/lib/looks/types';
+import type { Look } from '../../../core/frozen/lib/looks/types';
 import { Text } from '../../../ui';
 import { useStyle } from '../../theme';
 import type { PlayVars } from '../../tokens/play';

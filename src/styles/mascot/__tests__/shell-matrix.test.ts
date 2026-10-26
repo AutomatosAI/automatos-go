@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { SHELLS } from '../../../core/web/lib/looks/catalogue';
+import { SHELLS } from '../../../core/frozen/lib/looks/catalogue';
 import {
   cssFilterToColorMatrix,
   isIdentityFilter,

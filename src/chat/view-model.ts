@@ -19,7 +19,7 @@ import {
   type TurnErrorCode,
   type TurnState,
 } from '../core/turn-reducer';
-import { MARK_FAILED, MARK_MUTED, type LineTone } from '../core/web/components/play/chat/labels';
+import { MARK_FAILED, MARK_MUTED, type LineTone } from '../core/frozen/components/play/chat/labels';
 import { messageText, savedTurnError } from '../core/web/lib/chat/message-text';
 import { receiptsOf } from '../core/web/lib/chat/receipts';
 import { lastTurn } from '../core/web/lib/chat/retry';

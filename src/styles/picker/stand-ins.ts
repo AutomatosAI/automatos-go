@@ -7,8 +7,8 @@
 // style's own variables, the vendored ring rule and the previews' derived colours
 // (tokens/preview-colours.ts, D-TOKENS), never from a literal.
 
-import { ringColour } from '../../core/web/lib/mascot/ring';
-import type { Look } from '../../core/web/lib/looks/types';
+import { ringColour } from '../../core/frozen/lib/mascot/ring';
+import type { Look } from '../../core/frozen/lib/looks/types';
 import type { HudVars } from '../tokens/hud';
 import type { PlayVars } from '../tokens/play';
 import { autoRingGlow, coreRingColours, glowFade } from '../tokens/preview-colours';

@@ -6,12 +6,12 @@ import { describe, expect, it } from 'vitest';
 
 import { contrastRatio } from '../../../core/web/lib/look-kit/contrast';
 import { studioConsequence } from '../../../core/web/lib/look-kit/studio-tokens';
-import { ACCENT_KEYS, GROUND_KEYS } from '../../../core/web/lib/looks/catalogue';
+import { ACCENT_KEYS, GROUND_KEYS } from '../../../core/frozen/lib/looks/catalogue';
 import {
   PLAY_LOOK_CATALOGUE,
   lookToStudioTokens,
   safeGlowAlpha,
-} from '../../../core/web/lib/looks/engine';
+} from '../../../core/frozen/lib/looks/engine';
 import {
   AURORA,
   DAYLIGHT,
@@ -19,9 +19,9 @@ import {
   OBSIDIAN,
   PRESETS,
   WORKSHOP,
-} from '../../../core/web/lib/looks/presets';
-import { GLOW_MAX, type Look } from '../../../core/web/lib/looks/types';
-import { MASCOT_STATES } from '../../../core/web/lib/mascot/types';
+} from '../../../core/frozen/lib/looks/presets';
+import { GLOW_MAX, type Look } from '../../../core/frozen/lib/looks/types';
+import { MASCOT_STATES } from '../../../core/frozen/lib/mascot/types';
 import {
   PLAY_GLOW_CROSSFADE_MS,
   PLAY_PAGE_GLOW,

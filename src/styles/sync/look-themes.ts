@@ -5,7 +5,7 @@
 // and HUD's (hud/look-store.ts). Where the theme is not installed in the workspace (404) its looks
 // stay on the phone: Play's look page says how to change that, HUD says nothing.
 
-import type { Look } from '../../core/web/lib/looks/types';
+import type { Look } from '../../core/frozen/lib/looks/types';
 import { HUD_LOOK_RULES } from '../hud/hud-looks';
 import type { HudLook } from '../hud/look-schema';
 import type { LookDoc, LookRules, LookSet } from '../play/look-sync';

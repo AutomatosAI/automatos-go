@@ -5,7 +5,7 @@
 
 import { useMemo } from 'react';
 
-import type { MascotName } from '../../core/web/lib/mascot/types';
+import type { MascotName } from '../../core/frozen/lib/mascot/types';
 import { useDress } from '../dress/use-dress';
 import { useStyle } from '../theme';
 import { groundPlan, type GroundPlan } from './ground';

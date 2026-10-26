@@ -12,7 +12,7 @@
 // copies, untinted; a state whose copy is not on the phone yet keeps the bundled Auto (files.ts),
 // and a theme with mode 'none' shows no mascot.
 
-import { MASCOT_STATES, type MascotName } from '../../core/web/lib/mascot/types';
+import { MASCOT_STATES, type MascotName } from '../../core/frozen/lib/mascot/types';
 import type { ThemeMascot } from '../themes/types';
 import type { BundledFile, BundledMascot } from './bundled';
 import { cssFilterToColorMatrix, isIdentityFilter, type ColorMatrix } from './shell-matrix';

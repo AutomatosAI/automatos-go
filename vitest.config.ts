@@ -14,7 +14,8 @@ export default defineConfig({
   test: {
     include: [
       'src/**/*.test.ts',
-      // the web's own tests for the vendored core, copied by scripts/sync-core.ts (US-003b)
+      // the web's own tests for the vendored core, copied by scripts/sync-core.ts (US-003b);
+      // the frozen copies' tests (src/core/frozen/**/__tests__) match src/**/*.test.ts
       'src/core/web/**/__tests__/*.test.ts',
       'scripts/**/*.test.ts',
       'plugins/**/*.test.ts',

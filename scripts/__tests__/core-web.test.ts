@@ -1,12 +1,14 @@
-// What src/core/web must never hold, read from the vendored files themselves with the
-// TypeScript AST (comments and strings that mention a hook or applyCssVars do not count):
-// the DOM-only applyCssVars (dropped from lib/look-kit/css.ts) and any React hook — no
-// use* function declared or called, no import of react, react-dom or react-native.
+// What src/core/web and src/core/frozen must never hold, read from the vendored and frozen
+// files themselves with the TypeScript AST (comments and strings that mention a hook or
+// applyCssVars do not count): the DOM-only applyCssVars (dropped from lib/look-kit/css.ts) and
+// any React hook — no use* function declared or called, no import of react, react-dom or
+// react-native.
 import fs from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
+import { FROZEN_DIR } from '../sync-core/frozen';
 import { listFiles } from '../sync-core/source';
 
 const REPO = path.resolve(__dirname, '..', '..');
@@ -75,12 +77,15 @@ function declaredNames(file: string): string[] {
   return names;
 }
 
-const files = listFiles(REPO, WEB_DIR).filter((file) => /\.tsx?$/.test(file));
+const files = [...listFiles(REPO, WEB_DIR), ...listFiles(REPO, FROZEN_DIR)].filter((file) =>
+  /\.tsx?$/.test(file),
+);
 
-describe('src/core/web, on the AST', () => {
-  it('has vendored files to read (the check is not vacuous)', () => {
+describe('src/core/web and src/core/frozen, on the AST', () => {
+  it('has vendored and frozen files to read (the check is not vacuous)', () => {
     expect(files).toContain(`${WEB_DIR}/lib/look-kit/css.ts`);
     expect(files).toContain(`${WEB_DIR}/hooks/use-board-event-stream.ts`);
+    expect(files).toContain(`${FROZEN_DIR}/lib/mascot/reducer.ts`);
   });
 
   it('holds no applyCssVars and no React hook', () => {

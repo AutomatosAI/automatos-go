@@ -2,7 +2,7 @@
 // words its cards and rows say to VoiceOver. Nothing commercial (D8), and nothing that points at
 // making an account (D63).
 
-import type { MascotName } from '../core/web/lib/mascot/types';
+import type { MascotName } from '../core/frozen/lib/mascot/types';
 import type { ThemeChoice } from './theme-choice';
 import type { BuiltInStyleId } from './registry/style-id';
 

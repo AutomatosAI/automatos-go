@@ -13,8 +13,8 @@ import {
 } from '../../../cc/deliverables/gallery';
 import type { DeliverableRow } from '../../../cc/deliverables/schemas';
 import { DELIVERABLES_COPY } from '../../../cc/strings';
-import { TYPE_STYLE_KEYS } from '../../../core/web/lib/looks/catalogue';
-import { PRESETS } from '../../../core/web/lib/looks/presets';
+import { TYPE_STYLE_KEYS } from '../../../core/frozen/lib/looks/catalogue';
+import { PRESETS } from '../../../core/frozen/lib/looks/presets';
 import { historyState, mergePages as mergeHistory } from '../../../chat/history/history';
 import { HistoryRowSchema, type HistoryRow } from '../../../chat/schemas';
 import { routes } from '../../../navigation/routes';

@@ -8,9 +8,9 @@
 // on Ember) at the pin 630fc1c85. The colours and the cap are the vendored engine's (safeGlow);
 // the page hands each new PlayLooks to the style store, and the look sync sends it (US-017d).
 
-import { safeGlow, validateLook } from '../../core/web/lib/looks/engine';
-import { DEFAULT_LOOK, PRESETS, findPreset, isPresetId } from '../../core/web/lib/looks/presets';
-import { GLOW_MAX, GLOW_MIN, type Look } from '../../core/web/lib/looks/types';
+import { safeGlow, validateLook } from '../../core/frozen/lib/looks/engine';
+import { DEFAULT_LOOK, PRESETS, findPreset, isPresetId } from '../../core/frozen/lib/looks/presets';
+import { GLOW_MAX, GLOW_MIN, type Look } from '../../core/frozen/lib/looks/types';
 import { LOOK_TEXT_MAX } from '../../core/web/lib/look-kit/validate';
 import { FLIP_CROSSFADE_MS } from '../provider/flip-plan';
 import { PLAY_LOOK_COPY } from '../strings';

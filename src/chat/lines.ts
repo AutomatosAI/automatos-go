@@ -11,7 +11,7 @@ import {
   toolLineLabel,
   toolStatusOf,
   type LineTone,
-} from '../core/web/components/play/chat/labels';
+} from '../core/frozen/components/play/chat/labels';
 import {
   NO_ACTIONS,
   NOTHING_ON_THE_BOARD,

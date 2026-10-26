@@ -12,7 +12,7 @@ import {
 import type { Frame } from '../../../core/ai-sdk-stream';
 import { approvalsInPart } from '../../../core/web/lib/chat/approvals';
 import { deliverablesInPart } from '../../../core/web/lib/chat/deliverables';
-import type { MascotName } from '../../../core/web/lib/mascot/types';
+import type { MascotName } from '../../../core/frozen/lib/mascot/types';
 import { startRun, stepRun, type MascotRun } from '../../mascot/run';
 import { threadMascotEvents } from '../mascot-feed';
 

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { contrastRatio } from '../../../core/web/lib/look-kit/contrast';
-import { ACCENTS, ERROR_COLOUR } from '../../../core/web/lib/looks/catalogue';
-import { PRESETS } from '../../../core/web/lib/looks/presets';
+import { ACCENTS, ERROR_COLOUR } from '../../../core/frozen/lib/looks/catalogue';
+import { PRESETS } from '../../../core/frozen/lib/looks/presets';
 import {
   HUD_STYLES,
   PLAY_STYLES,

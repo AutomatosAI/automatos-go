@@ -6,7 +6,8 @@
     "Vendored by scripts/sync-core.ts into src/core/web/ (K1); core.lock.json records every file written. Never edit a vendored file: fix this manifest or src/core/shims/ and re-run the sync.",
     "lib/discussion.ts is an addition to the PRD-001 \u00a74.3 chat list: D31 'Ask Auto about' a ticket builds its opening message with it.",
     "Tests: every __tests__/*.test.ts beside a vendored file that imports a vendored module is copied to the mirrored __tests__/ when it needs only vitest, vendored modules and test fixtures, runs in node and is pure; every other one is listed in core.lock.json skippedTests with the reason. skipTests (root-relative path \u2192 reason) skips by hand a test the rule would copy but that cannot run here.",
-    "copy: checkout-relative files outside the root, copied verbatim (no header line) to a path under src/core/ and lock-listed like any vendored file; the server's route manifest is one (US-004c, K4)."
+    "copy: checkout-relative files outside the root, copied verbatim (no header line) to a path under src/core/ and lock-listed like any vendored file; the server's route manifest is one (US-004c, K4).",
+    "frozen: files the sync vendored at an older pin and core has since deleted, kept in src/core/frozen/ (mirroring the root) exactly as written then, with a provenance header naming the source path and frozen.sha; the import paths that leave the frozen set point into src/core/web. npm run check:core holds each one to its sha256 here. Never edit a frozen copy: to change one, make it the app's own code outside src/core/frozen and remove its entry."
   ],
   "sets": {
     "chat": [
@@ -21,9 +22,6 @@
       "lib/chat/message-text.ts",
       "lib/chat/chat-session.ts",
       "lib/ai-label/copy.ts",
-      "components/play/chat/labels.ts",
-      "components/play/chat/reply.ts",
-      "components/play/chat/caption.ts",
       "lib/discussion.ts"
     ],
     "cc": [
@@ -44,16 +42,6 @@
       "lib/look-kit/studio-tokens.ts",
       "lib/look-kit/types.ts",
       "lib/look-kit/validate.ts",
-      "lib/looks/catalogue.ts",
-      "lib/looks/presets.ts",
-      "lib/looks/engine.ts",
-      "lib/looks/tone.ts",
-      "lib/mascot/types.ts",
-      "lib/mascot/reducer.ts",
-      "lib/mascot/tools.ts",
-      "lib/mascot/events.ts",
-      "lib/mascot/ring.ts",
-      "lib/mascot/player.ts",
       "lib/theme-host/look-schema.ts",
       "lib/theme-host/css-value.ts"
     ]
@@ -87,28 +75,6 @@
       "names": ["ActivityFeedItem", "ScheduleItem", "ScheduleItemType"],
       "reason": "lib/ticket-links.ts types a feed link and the calendar helpers type schedule items with these; the hook is TanStack Query"
     },
-    "lib/theme-sdk/index.ts": {
-      "names": [
-        "HostChatMessage",
-        "HostDeliverable",
-        "HostReceipt",
-        "HostToolCall",
-        "MissionSuggestionMessage"
-      ],
-      "reason": "Play's chat helpers and lib/mascot/types.ts type-import these from the SDK barrel, which re-exports React hooks and Next.js components"
-    },
-    "lib/theme-sdk/chat.ts": {
-      "names": ["HostChatMessage", "HostDeliverable", "HostReceipt", "HostToolCall"],
-      "reason": "the barrel's chat types; the module's runtime is React hooks over the web's stores"
-    },
-    "lib/theme-sdk/cards.ts": {
-      "names": ["MissionSuggestionMessage"],
-      "reason": "the barrel re-exports this type through cards.ts, whose runtime is React card components"
-    },
-    "lib/theme-sdk/host-cards/chat-cards.tsx": {
-      "names": ["MissionSuggestionMessage", "WithdrawOffer"],
-      "reason": "the SDK's chat types are declared beside React card components"
-    },
     "hooks/use-scheduled-tasks-api.ts": {
       "names": ["ScheduledTaskStatus"],
       "reason": "components/command-center/calendar-actions.ts types a routine's pause state with it; the hooks are TanStack Query and sonner toasts"
@@ -125,6 +91,41 @@
     "orchestrator/reports/route-manifest.json": {
       "to": "src/core/route-manifest.json",
       "reason": "the server's {method, path} pairs at the pin (orchestrator/scripts/dump_routes.py); scripts/check-routes.ts checks every src/**/routes.ts table against it (K4)"
+    }
+  },
+  "frozen": {
+    "sha": "630fc1c85af06c5c76e70c74e9653ee1804fdf41",
+    "reason": "PRD-261 W-A8 deleted built-in Play from core (components/play, lib/looks, lib/mascot, public/auto); Play now ships from AutomatosAI/automatos-design-kit (themes/play/src, play-v1.1.0). The app's Play style keeps Play's chat lines and caption, the looks catalogue and engine and the mascot's state machine as vendored at the last pin that had them, with their web tests and the theme SDK type slices they import",
+    "files": {
+      "components/play/chat/__tests__/caption.test.ts": "73e4afd59a1fa562ce3e30bffd8ce102c9de1e46ddc68b4523f10c52566bd4de",
+      "components/play/chat/caption.ts": "1871fb2784858603b20b6ff198dd2edd69b1166a44b08c33ff12f37cf846e4de",
+      "components/play/chat/labels.ts": "37a71bfe1f74b0690135ede5567e8f7d5c4f677fd3c2a2a4b12340086e4b9893",
+      "components/play/chat/reply.ts": "9fe6869d68b89fc23080b67288348be0b34e701701636a198aca5dda785b8e90",
+      "lib/looks/__tests__/catalogue.test.ts": "aaeb0e1b4a7e6fa902d4e0069f48cfc62df46f1e11770118b4f2682b37d4ec82",
+      "lib/looks/__tests__/css.test.ts": "12a255bf541877e580e3ff4bb28a7731f3f343aac2d588307fd14c127b8a8ee8",
+      "lib/looks/__tests__/studio-tokens.test.ts": "ec8be09ca2a77ed15fabfc0aaa8e98c7a4733f069ec1ef0863dd0dd16e9b6167",
+      "lib/looks/__tests__/validate.test.ts": "927f36fc0c3a93e0dcd83af19aafb70699c55e86cf623bf243d23f5f64b3e640",
+      "lib/looks/catalogue.ts": "dff9f2c02e6b4d1912caeadaf22489b2f7699890a085bf69031ab5474798e651",
+      "lib/looks/engine.ts": "8935d2ece99697253d7eaebfc7db10e3168284dabb9f4bf92b1d2d49cda958f7",
+      "lib/looks/presets.ts": "0ddede6ea956e8cfac8f10a6207c6de4497173cd1e31181bd995e2051aee4059",
+      "lib/looks/tone.ts": "63c8bd015ed0c6abe4ca5301688e5f4e2fb7f39d6b7425567b3b470d5a7c7b0d",
+      "lib/looks/types.ts": "cba76267c1e426f995610f20c4564ff12a2282a2cfb57d3ab8f51d802eb9b23b",
+      "lib/mascot/__tests__/helpers.ts": "0dec7ee1b647e909dd7a397c1a40b08469c11453a50f5940c29ce0c5f07de39c",
+      "lib/mascot/__tests__/media.test.ts": "5f36b3a9133fc9fb45cf31b5ecf5e2f8519746f7f0f7834bd195a47e8c3736ba",
+      "lib/mascot/__tests__/player.test.ts": "97e102e64bc98518442b1a51a224c1c4d024be73e21a0a56b2d3a8584b8b7e76",
+      "lib/mascot/__tests__/reducer.test.ts": "12c7e8b19c710c68200c52863ccbd6c3d1409fa8e07cabe4aa2bf1d62d0a2b83",
+      "lib/mascot/__tests__/tools.test.ts": "55217ec17faf16e423723df131c4c58fd595b4ef452c1dcb9f90ca9f983418e2",
+      "lib/mascot/events.ts": "76d884876e94bf2fcece918382e864c78b4ca524eb1c1a30da39f7e1ff636e6b",
+      "lib/mascot/media.ts": "90d7a44fff86320ea947f8a227c9e6d66b9db9f0509befc352cae6c0afba58ff",
+      "lib/mascot/player.ts": "bb51157d51ef4be12389ce08e52e96a5059db354f78233abe27d9b221827d084",
+      "lib/mascot/reducer.ts": "fc91bb2d3dcffe9e085d71a3fc3297d34b40c35acc2f01b78707c4e4e0de375c",
+      "lib/mascot/ring.ts": "eac023d2ab29a54729759e5283e8ba9eb6beb836dd0ce5d6b72d648a5ebc2075",
+      "lib/mascot/tools.ts": "19b8eff5494d6203a6441cf6029663d13ee0e1d78681af4cee919162d10b3230",
+      "lib/mascot/types.ts": "c79c00a4146bfdbe6e9ad7e6b86dabf32d9c4986af4519ebf1ee206b86d01c16",
+      "lib/theme-sdk/cards.ts": "af6f794768ce79c59ee0b66c7fe9c675f5e7aac97d4f6918aad0e02799f9c073",
+      "lib/theme-sdk/chat.ts": "49dcf2e4ae72a17ddfa560787052d62872495e3389693630cfd19492213d206e",
+      "lib/theme-sdk/host-cards/chat-cards.tsx": "aeac9d0ca488d38ee82f031b53e193f14f3a8a21080b3ce39bb117d941c10c91",
+      "lib/theme-sdk/index.ts": "df1a7b35a743544bd5e50c7d043f0f57aff3dee96f0719676a882e8bbf70fea1"
     }
   }
 }

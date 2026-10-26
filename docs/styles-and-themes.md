@@ -156,7 +156,7 @@ segments (`A5:src/styles/sync/look-themes.ts`, `A5:src/styles/play/looks-api.ts`
 
 **Play's "Make it yours"** (`A5:src/styles/play/look-page/`): six controls (Accent, Background,
 Type, Auto's shell, Auto's light · eyes + ring, Glow), the presets Ember, Obsidian, Aurora, Workshop
-and Daylight (vendored from the web, `src/core/web/lib/looks/presets.ts`), **Save as new look**,
+and Daylight (the web's, frozen in `src/core/frozen/lib/looks/presets.ts`), **Save as new look**,
 **Reset**, and a long press for Rename, Duplicate and Delete.
 
 **HUD's Looks drawer** (`A5:src/styles/hud/LooksDrawer.tsx`, `drawer-model.ts`, `drawer/`). Today

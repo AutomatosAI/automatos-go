@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { TYPE_STYLE_KEYS } from '../../../core/web/lib/looks/catalogue';
+import { TYPE_STYLE_KEYS } from '../../../core/frozen/lib/looks/catalogue';
 import { FONT_FACES, FONT_FAMILIES as F, fontFace } from '../../fonts';
 import { BUILT_IN_STYLE_IDS } from '../../registry/style-id';
 import { HUD_FONT_KEYS } from '../../tokens/hud-catalogue';

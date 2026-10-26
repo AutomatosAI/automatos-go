@@ -10,7 +10,7 @@ import { useState, type ReactElement } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { LOOK_TEXT_MAX } from '../../../core/web/lib/look-kit/validate';
-import { DEFAULT_LOOK } from '../../../core/web/lib/looks/presets';
+import { DEFAULT_LOOK } from '../../../core/frozen/lib/looks/presets';
 import { Button, Sheet, Text, TextField, useToast } from '../../../ui';
 import { PLAY_LOOK_COPY } from '../../strings';
 import { useTokens } from '../../theme';

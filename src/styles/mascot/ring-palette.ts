@@ -12,14 +12,14 @@
 
 import { duskOf } from '../../core/web/lib/look-kit/css';
 import { entryOf } from '../../core/web/lib/look-kit/types';
-import { ringColour, ringTone, type RingTone } from '../../core/web/lib/mascot/ring';
-import type { MascotName } from '../../core/web/lib/mascot/types';
+import { ringColour, ringTone, type RingTone } from '../../core/frozen/lib/mascot/ring';
+import type { MascotName } from '../../core/frozen/lib/mascot/types';
 import type { HudLook } from '../hud/look-schema';
 import type { ResolvedStyle } from '../provider/resolve';
 import { HUD_LOOK_CATALOGUE } from '../tokens/hud-catalogue';
 import type { Colours } from '../tokens/types';
 
-export type { RingTone } from '../../core/web/lib/mascot/ring';
+export type { RingTone } from '../../core/frozen/lib/mascot/ring';
 
 /** Each tone's #rrggbb. */
 export type RingPalette = Readonly<Record<RingTone, string>>;

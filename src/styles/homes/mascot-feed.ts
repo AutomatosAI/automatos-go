@@ -21,8 +21,8 @@
 // running call's input, the newest Deliverable's kind, a card waiting on the user.
 
 import type { ThreadState } from '../../chat/controller/thread';
-import type { CaptionFacts } from '../../core/web/components/play/chat/caption';
-import type { MascotEvent } from '../../core/web/lib/mascot/types';
+import type { CaptionFacts } from '../../core/frozen/components/play/chat/caption';
+import type { MascotEvent } from '../../core/frozen/lib/mascot/types';
 import {
   mascotEventsFromReply,
   mascotEventsFromStatus,

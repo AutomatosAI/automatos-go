@@ -11,7 +11,7 @@
 //   theme   the Studio layout with the theme's painting, or Studio's own while none is cached; its
 //           fonts once they are loaded (themes/fonts.ts), Studio's faces until then
 
-import type { Look } from '../../core/web/lib/looks/types';
+import type { Look } from '../../core/frozen/lib/looks/types';
 import { HUD_INTERFACE, type HudLook } from '../hud/look-schema';
 import { styleEntry } from '../registry/registry';
 import { layoutOf, type BuiltInStyleId, type Layout, type StyleChoice } from '../registry/style-id';

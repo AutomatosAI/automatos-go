@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { SHELLS } from '../../../core/web/lib/looks/catalogue';
-import { MASCOT_STATES, type MascotName } from '../../../core/web/lib/mascot/types';
+import { SHELLS } from '../../../core/frozen/lib/looks/catalogue';
+import { MASCOT_STATES, type MascotName } from '../../../core/frozen/lib/mascot/types';
 import type { ThemeMascot } from '../../themes/types';
 import type { BundledMascot } from '../bundled';
 import {
