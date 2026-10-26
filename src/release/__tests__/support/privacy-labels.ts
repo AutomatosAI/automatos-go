@@ -65,6 +65,17 @@ export const KR15_MANIFEST_KEYS: ReadonlySet<string> = new Set(
   APPLE_DATA_TYPES.map((type) => type.manifestKey),
 );
 
+/** KR15's accessed-API categories (Apple's required-reason APIs). */
+export const KR15_ACCESSED_API_CATEGORIES: ReadonlySet<string> = new Set(
+  ['FileTimestamp', 'SystemBootTime', 'DiskSpace', 'ActiveKeyboards', 'UserDefaults'].map(
+    (suffix) => `NSPrivacyAccessedAPICategory${suffix}`,
+  ),
+);
+
+/** A collected type's purpose key in a privacy manifest, from the labels JSON's purpose. */
+export const manifestPurpose = (purpose: string): string =>
+  `NSPrivacyCollectedDataTypePurpose${purpose}`;
+
 /** [category, type]: the Play Data safety form's 38 types, in its order. */
 const PLAY_FORM: readonly (readonly [string, readonly string[]])[] = [
   ['Location', ['Approximate location', 'Precise location']],

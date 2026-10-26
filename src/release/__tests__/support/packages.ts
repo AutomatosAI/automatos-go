@@ -17,6 +17,8 @@ const packageJsonSchema = z.object({
 
 const lockEntrySchema = z.object({
   name: z.string().optional(),
+  // true for a package npm may skip (another platform's binary): absent from node_modules is fine
+  optional: z.boolean().optional(),
   dependencies: depMap,
   optionalDependencies: depMap,
 });
