@@ -8,12 +8,15 @@
 // attachments sit in the slots: their chips above the field, the [+] at its start (US-016k). The
 // keyboard takes the look's tone (Daylight light, the rest dark), never Studio's Light / Dark /
 // System.
+// Given `voice`, A6's voice button (US-019k) sits beside Send, in Play's dress; without it the box
+// is as above.
 
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Text } from '../../../ui';
 import { DISABLED_OPACITY } from '../../../ui/paint';
+import { VoiceButton, type VoiceButtonProps } from '../../../voice/entry/VoiceButton';
 import { keyboardAppearanceFor } from '../../ground/ground';
 import {
   COMPANION,
@@ -34,6 +37,8 @@ export type PlayComposerProps = {
   readonly composerState?: PlayComposerState;
   /** First open (Ember 06): Send in the accent. */
   readonly firstOpen?: boolean;
+  /** The conversation's voice button (A6): the role and the chat's id; none by default. */
+  readonly voice?: VoiceButtonProps;
   /** Above the field: the attached files' chips. */
   readonly above?: ReactNode;
   /** At the field's start: the [+] that attaches files. */
@@ -98,6 +103,7 @@ export function PlayComposer({
   onStop,
   composerState,
   firstOpen = false,
+  voice,
   above,
   leading,
 }: PlayComposerProps) {
@@ -154,6 +160,7 @@ export function PlayComposer({
             },
           ]}
         />
+        {voice ? <VoiceButton {...voice} /> : null}
         <ComposerButton view={view} paint={paint} onSend={onSend} onStop={onStop} />
       </View>
     </View>

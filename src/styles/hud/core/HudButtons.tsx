@@ -5,12 +5,22 @@
 // TALK is drawn as designed but does nothing in this wave: VoiceOver hears it is unavailable and
 // why (A6 gives it the voice, D60). STOP works only while a turn streams. Each grows with Dynamic
 // Type and is at least 44 pt to touch.
+//   A6's voice screen (US-019j) passes `talk`: HOLD TO TALK opens the mic on the press in and sends
+// on the press out, lit (the accent, its words in the accent's ink) while the mic is held; under a
+// screen reader it toggles on its 'activate' action instead (double-tap to talk, again to send). It
+// may also turn TYPE off (a viewer). Without them the row is exactly HUD's home's.
 
-import { Pressable, StyleSheet, View } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  View,
+  type AccessibilityActionEvent,
+  type PressableProps,
+} from 'react-native';
 
 import { Text } from '../../../ui';
 import { DISABLED_OPACITY } from '../../../ui/paint';
-import { HUD_CORE, hudButtons, type HudButtonView } from './model';
+import { HUD_CORE, voiceButtons, type HudButtonView, type HudTalk } from './model';
 import { useVoiceCore, type VoiceCore } from './use-voice-core';
 
 const { buttons, tracking } = HUD_CORE;
@@ -52,11 +62,39 @@ function SideButton({ core, view, weight, ink, onPress }: SideProps) {
   );
 }
 
-function TalkButton({ core, view }: { readonly core: VoiceCore; readonly view: HudButtonView }) {
+const ACTIVATE: PressableProps['accessibilityActions'] = [{ name: 'activate' }];
+
+type TalkHandlers = Pick<
+  PressableProps,
+  'onPressIn' | 'onPressOut' | 'onPress' | 'accessibilityActions' | 'onAccessibilityAction'
+>;
+
+/** A6's hold, or under a screen reader its toggle; none without A6 (HUD's home: inert). */
+function talkHandlers(voice: HudTalk | undefined): TalkHandlers {
+  if (!voice) return {};
+  if (!voice.toggle) return { onPressIn: voice.onPressIn, onPressOut: voice.onPressOut };
+  return {
+    onPress: voice.onToggle,
+    accessibilityActions: ACTIVATE,
+    onAccessibilityAction: (event: AccessibilityActionEvent) => {
+      if (event.nativeEvent.actionName === 'activate') voice.onToggle();
+    },
+  };
+}
+
+type TalkProps = {
+  readonly core: VoiceCore;
+  readonly view: HudButtonView;
+  readonly voice?: HudTalk;
+};
+
+function TalkButton({ core, view, voice }: TalkProps) {
   const { paint, style } = core;
   const face = style.type.mono(HUD_CORE.monoSize, 600, { trackingEm: tracking.talk });
+  const lit = voice?.active === true;
   return (
     <Pressable
+      {...talkHandlers(voice)}
       disabled={view.disabled}
       accessibilityRole="button"
       accessibilityLabel={view.label}
@@ -70,12 +108,15 @@ function TalkButton({ core, view }: { readonly core: VoiceCore; readonly view: H
           borderRadius: talk.size / 2,
           borderWidth: talk.border,
           borderColor: paint.accent,
-          backgroundColor: paint.accentFill,
+          backgroundColor: lit ? paint.accent : paint.accentFill,
           boxShadow: [{ offsetX: 0, offsetY: 0, blurRadius: talk.glow, color: paint.glow }],
+          opacity: voice && view.disabled ? DISABLED_OPACITY : 1,
         },
       ]}
     >
-      <Text style={[face, styles.centred, { color: paint.accent }]}>{view.text}</Text>
+      <Text style={[face, styles.centred, { color: lit ? paint.accentInk : paint.accent }]}>
+        {view.text}
+      </Text>
     </Pressable>
   );
 }
@@ -87,11 +128,16 @@ export type HudButtonsProps = {
   readonly onStop: () => void;
   /** The home indicator's inset: the row keeps at least its 34 pt below. */
   readonly bottomInset?: number;
+  /** A6: HOLD TO TALK's hold handlers, words and state; absent, it stays inert. */
+  readonly talk?: HudTalk;
+  /** A6: TYPE is on (a viewer may not type); absent, always on. */
+  readonly typeEnabled?: boolean;
 };
 
-export function HudButtons({ streaming, onType, onStop, bottomInset = 0 }: HudButtonsProps) {
+export function HudButtons(props: HudButtonsProps) {
+  const { streaming, onType, onStop, bottomInset = 0, talk: voice, typeEnabled } = props;
   const core = useVoiceCore();
-  const view = hudButtons(streaming);
+  const view = voiceButtons(streaming, voice, typeEnabled);
   const { paint } = core;
   return (
     <View
@@ -105,7 +151,7 @@ export function HudButtons({ streaming, onType, onStop, bottomInset = 0 }: HudBu
       ]}
     >
       <SideButton core={core} view={view.type} weight={500} ink={paint.text2} onPress={onType} />
-      <TalkButton core={core} view={view.talk} />
+      <TalkButton core={core} view={view.talk} voice={voice} />
       <SideButton core={core} view={view.stop} weight={600} ink={paint.text} onPress={onStop} />
     </View>
   );

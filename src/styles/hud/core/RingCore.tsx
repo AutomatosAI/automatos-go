@@ -3,7 +3,9 @@
 // opacity. The five rings that turn do so on reanimated, each at its own period and way round, and
 // the disc at the centre breathes; while loops may not run (Reduce Motion, HUD's motion off) every
 // ring stands still at rest and the disc at full size. Decoration: no touches, hidden from
-// VoiceOver (the state chip under it says what it shows).
+// VoiceOver (the state chip under it says what it shows). A6's voice screen may paint the rings'
+// structure (the outer ring, the ticks, the dashed ring and the crosshair) in a line colour of its
+// own, Studio's ink (KV9); their motion (the arcs, the segments, the pulse) keeps the colour.
 
 import {
   BlurMask,
@@ -39,6 +41,8 @@ import {
 import { useLoop } from './use-loop';
 
 const FULL_CIRCLE = 360;
+/** The rings that are structure, not motion: lineColour paints them (and the crosshair). */
+const STRUCTURE: ReadonlySet<string> = new Set(['outer', 'ticks', 'dashed']);
 const TURN = 2 * Math.PI;
 const PULSE_EASING = Easing.bezier(...CSS_EASE_IN_OUT);
 
@@ -158,9 +162,11 @@ export type RingCoreProps = {
   readonly size: number;
   /** The resolved accent, #rrggbb: every ring is this colour at its own alpha. */
   readonly colour: string;
+  /** A6: the structure's colour (Studio's ink, #rrggbb); absent, the structure is `colour` too. */
+  readonly lineColour?: string;
 };
 
-export function RingCore({ size, colour }: RingCoreProps) {
+export function RingCore({ size, colour, lineColour = colour }: RingCoreProps) {
   const loops = useStyle().motion.loops;
   const specs = useMemo(() => ringSpecs(size), [size]);
   return (
@@ -175,12 +181,12 @@ export function RingCore({ size, colour }: RingCoreProps) {
           key={stroke.key}
           stroke={stroke}
           centre={specs.centre}
-          colour={colour}
+          colour={STRUCTURE.has(stroke.key) ? lineColour : colour}
           loops={loops}
         />
       ))}
       <Pulse pulse={specs.pulse} centre={specs.centre} colour={colour} loops={loops} />
-      <CrosshairLines crosshair={specs.crosshair} colour={colour} />
+      <CrosshairLines crosshair={specs.crosshair} colour={lineColour} />
     </Canvas>
   );
 }

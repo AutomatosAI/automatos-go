@@ -3,7 +3,7 @@
 // user's words in quotes and Auto's with the cursor while he streams, and before any words First
 // open's hint (US-017f); the top bar's mic, status row, clock and command row (KS10); the three
 // buttons (HOLD TO TALK inert until A6, STOP only while a turn streams); and the drawing's numbers. Props only: phase 2 (US-016k) maps A2's thread to a
-// HudTurn. The chip, the status words and the transcript say everything the rings and the waveform
+// HudTurn; A6's voice screen (US-019j) gives HOLD TO TALK its hold and the status row its word. The chip, the status words and the transcript say everything the rings and the waveform
 // show (the README's text twins).
 
 import { captionFor } from '../../../core/frozen/lib/mascot/media';
@@ -178,12 +178,24 @@ export function turnElapsedMs(turn: HudTurn, now: number): number {
   return Math.max(0, end - turn.startedAt);
 }
 
-export type StatusRowView = { readonly text: string; readonly clock: string; readonly label: string };
+export type StatusRowView = {
+  readonly text: string;
+  readonly clock: string;
+  readonly label: string;
+};
 
-/** 'AUTO · SEARCHING' and '02:14' (the row draws the words in capitals). */
-export function statusRow(turn: HudTurn, state: MascotName, now: number): StatusRowView {
+/**
+ * 'AUTO · SEARCHING' and '02:14' (the row draws the words in capitals). A6's voice screen passes its
+ * own state word (the chip's, 'Speaking'); without one the word is Auto's state's.
+ */
+export function statusRow(
+  turn: HudTurn,
+  state: MascotName,
+  now: number,
+  stateWord?: string,
+): StatusRowView {
   const agent = agentName(turn.agent);
-  const word = HUD_STATE_WORDS[state];
+  const word = stateWord ?? HUD_STATE_WORDS[state];
   const clock = elapsedText(turnElapsedMs(turn, now));
   return {
     text: HUD_CORE_COPY.status(agent, word).toUpperCase(),
@@ -225,5 +237,42 @@ export function hudButtons(streaming: boolean): HudButtonsView {
     type: { text: said.type, label: said.typeLabel, disabled: false },
     talk: { text: said.talk, label: said.talkLabel, hint: said.talkHint, disabled: true },
     stop: { text: said.stop, label: said.stopLabel, hint: said.stopHint, disabled: !streaming },
+  };
+}
+
+/**
+ * A6's HOLD TO TALK (US-019j): its words, whether it is on, and its hold. Held, it talks from the
+ * press in to the press out; under a screen reader (toggle) one activation talks and the next sends.
+ */
+export type HudTalk = {
+  /** The words drawn in the circle ('HOLD\nTO TALK'). */
+  readonly text: string;
+  /** The same words as a screen reader says them. */
+  readonly label: string;
+  /** How to use it, or why it is off. */
+  readonly hint: string;
+  readonly enabled: boolean;
+  /** The mic is held: the circle is lit. */
+  readonly active: boolean;
+  /** A screen reader is on: an activation toggles instead of a hold. */
+  readonly toggle: boolean;
+  readonly onPressIn: () => void;
+  readonly onPressOut: () => void;
+  readonly onToggle: () => void;
+};
+
+/** hudButtons with A6's voice: HOLD TO TALK's own words and state, TYPE off when it may not type. */
+export function voiceButtons(
+  streaming: boolean,
+  talk?: HudTalk,
+  typeEnabled?: boolean,
+): HudButtonsView {
+  const view = hudButtons(streaming);
+  return {
+    type: typeEnabled === undefined ? view.type : { ...view.type, disabled: !typeEnabled },
+    talk: talk
+      ? { text: talk.text, label: talk.label, hint: talk.hint, disabled: !talk.enabled }
+      : view.talk,
+    stop: view.stop,
   };
 }
