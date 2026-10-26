@@ -179,6 +179,7 @@ describe('notices', () => {
 
   it('says a trial or rate limit as the kit’s limit copy, never a plan', () => {
     expect(TURN_ERROR_COPY.trial_exhausted).toEqual({ text: CHAT_COPY.limit, canRetry: false });
+    expect(TURN_ERROR_COPY.credits_exhausted).toEqual({ text: CHAT_COPY.limit, canRetry: false });
     expect(TURN_ERROR_COPY.rate_limited.text).not.toMatch(/plan|credit|upgrade|price/i);
   });
 
@@ -195,6 +196,9 @@ describe('notices', () => {
     });
     expect(
       failWith(new ApiError('server', { status: 402, code: 'trial_exhausted' })),
+    ).toMatchObject({ text: CHAT_COPY.limit, retry: false });
+    expect(
+      failWith(new ApiError('server', { status: 402, code: 'credits_exhausted' })),
     ).toMatchObject({ text: CHAT_COPY.limit, retry: false });
   });
 

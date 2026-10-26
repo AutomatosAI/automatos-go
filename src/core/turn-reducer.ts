@@ -33,13 +33,18 @@ import type {
 /** The web keeps the newest six progress and narration lines on a reply (hooks.ts). */
 export const PROGRESS_LINES_KEPT = 6;
 
-/** The codes a failed turn carries (consumers/chatbot/turn_errors.py; chat.py session_agent_terminal). */
+/**
+ * The codes a failed turn carries (consumers/chatbot/turn_errors.py; chat.py session_agent_terminal).
+ * PRD-265 W1 renamed trial_exhausted to credits_exhausted; a server from before it still sends the
+ * old code, so both stay.
+ */
 export const TURN_ERROR_CODES = [
   'rate_limited',
   'model_unavailable',
   'no_api_key',
   'runtime_mismatch',
   'trial_exhausted',
+  'credits_exhausted',
   'activation_failed',
   'provider_failed',
   'turn_failed',

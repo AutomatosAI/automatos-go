@@ -12,7 +12,7 @@ import { UI_COPY } from '../ui/strings';
 /** Words a failed turn shows, and whether asking again can help. */
 export type FailureCopy = { readonly text: string; readonly canRetry: boolean };
 
-/** D-NO-BILLING's fixed copy: a limit_reached frame and a trial_exhausted error both say this. */
+/** D-NO-BILLING's fixed copy: a limit_reached frame and a trial_ or credits_exhausted error say this. */
 const LIMIT_TEXT = 'Auto has reached a limit for now. Ask your workspace owner.';
 
 export const CHAT_COPY = Object.freeze({
@@ -100,6 +100,7 @@ export const NOTICE_WORDS = Object.freeze({
 export const TURN_ERROR_COPY: Readonly<Record<TurnErrorCode, FailureCopy>> = Object.freeze({
   rate_limited: { text: 'Auto is rate-limited right now. Try again in a minute.', canRetry: true },
   trial_exhausted: { text: LIMIT_TEXT, canRetry: false },
+  credits_exhausted: { text: LIMIT_TEXT, canRetry: false },
   model_unavailable: {
     text: "The model Auto uses isn't available right now. Try again later.",
     canRetry: true,
