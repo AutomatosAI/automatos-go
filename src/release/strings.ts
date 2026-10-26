@@ -1,6 +1,6 @@
 // User-facing copy for the release wave (one strings module per feature): Settings → Privacy &
 // legal and the legal line on Welcome. Nothing commercial (D8), no pointer to making an account
-// (D64), nothing that deletes (D63), and no claim as broad as 'nothing leaves' (D70).
+// (D64), nothing that deletes (D63), and no claim about data broader than the code (D70).
 
 export const PRIVACY_COPY = Object.freeze({
   /** The section's name in Settings. */
