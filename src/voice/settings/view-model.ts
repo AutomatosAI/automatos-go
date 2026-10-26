@@ -1,7 +1,7 @@
 // Settings → Voice's rows and words, pure: no React, React Native or Expo. The words are
 // VOICE_SETTINGS_COPY's (src/voice/strings.ts).
 //   Rows: Automatic, then the phone's voices (voiceChoices' order), each named and labelled with its
-//   tier. Automatic is selected when nothing is saved, or when the saved voice is not on the list (the
+//   tier and accent ('Premium · English (US)'), since the list spans the language's regions. Automatic is selected when nothing is saved, or when the saved voice is not on the list (the
 //   phone dropped it): quick-ask then speaks with pickVoice's, so the row says what you will hear.
 //   Names: iOS may name a voice 'Ava (Premium)' while the row already says Premium, so the brackets
 //   go; Google's voices are named by their code ('en-us-x-iol-local'), shown as 'Voice IOL (en-US)'.
@@ -28,6 +28,19 @@ export type VoiceRow = Readonly<{
 const TIER_IN_NAME = /\s*\((?:premium|enhanced)\)\s*$/i;
 const GOOGLE_LOCAL = /^([a-z]{2,3})-([a-z]{2,3})-x-([a-z0-9]+)-local$/i;
 
+const REGION_TAG = /^[a-z]{2}$|^\d{3}$/i;
+
+/** A voice's accent from its language tag: 'en-US' → 'English (US)'; no region → 'English'. */
+export function accentOf(language: string): string {
+  const region = language
+    .replace(/_/g, '-')
+    .split('-')
+    .slice(1)
+    .find((part) => REGION_TAG.test(part));
+  const name = languageName(language);
+  return region ? `${name} (${region.toUpperCase()})` : name;
+}
+
 /** A voice's name as a row shows it. */
 export function voiceName(name: string): string {
   const trimmed = name.trim();
@@ -53,7 +66,7 @@ function choiceRow(choice: VoiceChoice, saved: string | null, offered: boolean):
   return Object.freeze({
     key: choice.identifier,
     title: voiceName(choice.name),
-    summary: COPY.tiers[choice.tier],
+    summary: `${COPY.tiers[choice.tier]} · ${accentOf(choice.language)}`,
     selected: choice.identifier === saved,
     voice: choice.identifier,
   });

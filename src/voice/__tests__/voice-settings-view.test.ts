@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { logger } from '../../lib/logger';
 import { createSamplePlayer } from '../settings/sample-player';
 import {
+  accentOf,
   helpLine,
   pitchWords,
   shownValue,
@@ -25,12 +26,34 @@ const MALCOLM = 'com.apple.voice.premium.en-GB.Malcolm';
 const DANIEL = 'com.apple.voice.compact.en-GB.Daniel';
 const CHOICES: readonly VoiceChoice[] = [
   AUTOMATIC_VOICE,
-  { kind: 'voice', identifier: MALCOLM, name: 'Malcolm (Premium)', tier: 'premium' },
-  { kind: 'voice', identifier: DANIEL, name: 'Daniel', tier: 'standard' },
+  {
+    kind: 'voice',
+    identifier: MALCOLM,
+    name: 'Malcolm (Premium)',
+    tier: 'premium',
+    language: 'en-GB',
+    inRegion: true,
+  },
+  {
+    kind: 'voice',
+    identifier: DANIEL,
+    name: 'Daniel',
+    tier: 'standard',
+    language: 'en-US',
+    inRegion: false,
+  },
 ];
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+describe('accentOf', () => {
+  it("names the language and the region: 'en-US' → 'English (US)', none → the language", () => {
+    expect(accentOf('en-US')).toBe('English (US)');
+    expect(accentOf('en_GB')).toBe('English (GB)');
+    expect(accentOf('en')).toBe('English');
+  });
 });
 
 describe('voiceRows', () => {
@@ -38,8 +61,8 @@ describe('voiceRows', () => {
     const rows = voiceRows(CHOICES, null);
     expect(rows.map((row) => [row.title, row.summary, row.voice])).toEqual([
       ['Automatic', 'Best voice on this phone', null],
-      ['Malcolm', 'Premium', MALCOLM],
-      ['Daniel', 'Standard', DANIEL],
+      ['Malcolm', 'Premium · English (GB)', MALCOLM],
+      ['Daniel', 'Standard · English (US)', DANIEL],
     ]);
   });
 

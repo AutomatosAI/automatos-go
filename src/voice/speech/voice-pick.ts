@@ -10,8 +10,10 @@
 //   Android: expo-speech exposes no network flag, so the voice's name decides (Google TTS names
 //   each 'en-us-x-iol-local' or 'en-us-x-iol-network'): only names with 'local' and never
 //   'network'; Enhanced (above QUALITY_NORMAL, SpeechModule.kt:87) first.
-//   The rules are shared: localeVoices (which voices may speak the locale) and voiceTier (how good
-//   each one is) are what Settings → Voice lists (voice-choices.ts), so the list and pickVoice agree.
+//   The rules are shared with Settings → Voice (voice-choices.ts): voiceTier (how good each voice is),
+//   languageVoices (every usable voice for the language, which the list offers, so a US Premium voice
+//   can be chosen on a UK phone) and inRegion (the phone's region first within a tier). pickVoice
+//   alone keeps the exact locale first, so Automatic keeps the phone's accent.
 
 import type { RecognitionPlatform } from '../quick-ask/recognition-policy';
 
@@ -85,23 +87,40 @@ function best(
   );
 }
 
+/** The voice speaks the locale's own region ('en-GB' for an en-GB phone), not just its language. */
+export function inRegion(voice: SpeechVoice, locale: string): boolean {
+  const wanted = localeKey(locale);
+  const key = localeKey(voice.language);
+  return key.language === wanted.language && key.region === wanted.region;
+}
+
 /**
- * The voices that may speak the locale, in the phone's order: the usable ones (Apple's own on iOS,
- * local ones on Android) for the exact locale, else for its language; none → [].
+ * Every usable voice (Apple's own on iOS, local ones on Android) for the locale's language, any
+ * region, in the phone's order; none → [].
+ */
+export function languageVoices(
+  voices: readonly SpeechVoice[],
+  locale: string,
+  platform: RecognitionPlatform,
+): readonly SpeechVoice[] {
+  const { language } = localeKey(locale);
+  return voices.filter(
+    (voice) => usable(voice, platform) && localeKey(voice.language).language === language,
+  );
+}
+
+/**
+ * The voices pickVoice chooses from, in the phone's order: the language's voices for the exact
+ * locale, else all of them; none → [].
  */
 export function localeVoices(
   voices: readonly SpeechVoice[],
   locale: string,
   platform: RecognitionPlatform,
 ): readonly SpeechVoice[] {
-  const wanted = localeKey(locale);
-  const candidates = voices
-    .filter((voice) => usable(voice, platform))
-    .map((voice) => ({ voice, key: localeKey(voice.language) }));
-  const sameLanguage = candidates.filter(({ key }) => key.language === wanted.language);
-  const exact = sameLanguage.filter(({ key }) => key.region === wanted.region);
-  const group = exact.length > 0 ? exact : sameLanguage;
-  return group.map(({ voice }) => voice);
+  const sameLanguage = languageVoices(voices, locale, platform);
+  const exact = sameLanguage.filter((voice) => inRegion(voice, locale));
+  return exact.length > 0 ? exact : sameLanguage;
 }
 
 /** The identifier of the phone's best voice for the locale, else undefined (the engine's default). */

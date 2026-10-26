@@ -320,12 +320,21 @@ describe('speaker.voices and voiceFor', () => {
     expect(await speaker.voiceFor('en-GB', later.identifier)).toBe('en-gb-x-gbb-local');
     expect(await speaker.choicesFor('en-GB')).toEqual([
       { kind: 'automatic' },
-      { kind: 'voice', identifier: later.identifier, name: later.name, tier: 'enhanced' },
+      {
+        kind: 'voice',
+        identifier: later.identifier,
+        name: later.name,
+        tier: 'enhanced',
+        language: 'en-GB',
+        inRegion: true,
+      },
       {
         kind: 'voice',
         identifier: 'en-gb-x-gbb-local',
         name: 'en-gb-x-gbb-local',
         tier: 'standard',
+        language: 'en-GB',
+        inRegion: true,
       },
     ]);
     expect(await speaker.voiceFor('en-GB', later.identifier)).toBe(later.identifier);

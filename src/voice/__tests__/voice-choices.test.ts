@@ -1,6 +1,7 @@
 // What Settings → Voice offers (voiceChoices) and what quick-ask speaks with (resolveVoice), by
-// voice-pick.ts's own rules: Automatic first; then the voices for the exact locale, else for its
-// language; Apple's own voices on iOS and local ones on Android; the best tier first, then by name.
+// voice-pick.ts's own rules: Automatic first; then every voice for the phone's language, any region;
+// Apple's own voices on iOS and local ones on Android; the best tier first, the phone's region first
+// within a tier, then by name. Automatic (pickVoice) still keeps the phone's region first.
 
 import { describe, expect, it } from 'vitest';
 
@@ -37,11 +38,12 @@ const identifiers = (choices: ReturnType<typeof voiceChoices>) =>
   choices.map((choice) => (choice.kind === 'voice' ? choice.identifier : 'automatic'));
 
 describe('voiceChoices on iOS', () => {
-  it('lists Automatic first, then the best tier first, then by name', () => {
+  it("lists Automatic first, then the best tier, the phone's region first within it, then by name", () => {
     expect(identifiers(voiceChoices(IOS_PHONE, 'en-GB', 'ios'))).toEqual([
       'automatic',
       MALCOLM_PREMIUM.identifier,
       DANIEL_ENHANCED.identifier,
+      SAMANTHA.identifier,
       ARTHUR.identifier,
       DANIEL.identifier,
     ]);
@@ -49,11 +51,32 @@ describe('voiceChoices on iOS', () => {
 
   it('labels each voice Premium (by its identifier), Enhanced (by its quality) or Standard', () => {
     const choices = voiceChoices(IOS_PHONE, 'en-GB', 'ios');
+    const gb = { language: 'en-GB', inRegion: true };
     expect(choices.slice(1)).toEqual([
-      { kind: 'voice', identifier: MALCOLM_PREMIUM.identifier, name: 'Malcolm', tier: 'premium' },
-      { kind: 'voice', identifier: DANIEL_ENHANCED.identifier, name: 'Daniel', tier: 'enhanced' },
-      { kind: 'voice', identifier: ARTHUR.identifier, name: 'Arthur', tier: 'standard' },
-      { kind: 'voice', identifier: DANIEL.identifier, name: 'Daniel', tier: 'standard' },
+      {
+        kind: 'voice',
+        identifier: MALCOLM_PREMIUM.identifier,
+        name: 'Malcolm',
+        tier: 'premium',
+        ...gb,
+      },
+      {
+        kind: 'voice',
+        identifier: DANIEL_ENHANCED.identifier,
+        name: 'Daniel',
+        tier: 'enhanced',
+        ...gb,
+      },
+      {
+        kind: 'voice',
+        identifier: SAMANTHA.identifier,
+        name: 'Samantha',
+        tier: 'enhanced',
+        language: 'en-US',
+        inRegion: false,
+      },
+      { kind: 'voice', identifier: ARTHUR.identifier, name: 'Arthur', tier: 'standard', ...gb },
+      { kind: 'voice', identifier: DANIEL.identifier, name: 'Daniel', tier: 'standard', ...gb },
     ]);
   });
 
@@ -62,7 +85,7 @@ describe('voiceChoices on iOS', () => {
     expect(listed).toEqual(['automatic', DANIEL.identifier]);
   });
 
-  it("falls back to the language's voices when the locale's region has none", () => {
+  it("lists the language's voices from every region when the phone's region has none", () => {
     expect(identifiers(voiceChoices(IOS_PHONE, 'en-IE', 'ios'))).toEqual([
       'automatic',
       MALCOLM_PREMIUM.identifier,
@@ -73,12 +96,23 @@ describe('voiceChoices on iOS', () => {
     ]);
   });
 
-  it("offers the exact locale's voices only when it has any, and never another language's", () => {
+  it("offers a better voice from another region (a UK Premium on a US phone), never another language's", () => {
     expect(identifiers(voiceChoices(IOS_PHONE, 'en-US', 'ios'))).toEqual([
       'automatic',
+      MALCOLM_PREMIUM.identifier,
       SAMANTHA.identifier,
+      DANIEL_ENHANCED.identifier,
+      ARTHUR.identifier,
+      DANIEL.identifier,
     ]);
     expect(identifiers(voiceChoices(IOS_PHONE, 'de-DE', 'ios'))).toEqual(['automatic']);
+  });
+
+  it("leaves Automatic on the phone's region: its accent, though a better voice is listed", () => {
+    expect(pickVoice(IOS_PHONE, 'en-US', 'ios')).toBe(SAMANTHA.identifier);
+    expect(voiceChoices(IOS_PHONE, 'en-US', 'ios')[1]).toMatchObject({
+      identifier: MALCOLM_PREMIUM.identifier,
+    });
   });
 
   it('agrees with pickVoice: Automatic speaks with a voice of the top tier listed', () => {
@@ -132,6 +166,12 @@ describe('voiceChoices with nothing on the phone', () => {
 describe('resolveVoice: what quick-ask speaks with', () => {
   it('is the saved voice while the list offers it', () => {
     expect(resolveVoice(IOS_PHONE, 'en-GB', 'ios', ARTHUR.identifier)).toBe(ARTHUR.identifier);
+  });
+
+  it("is a saved voice from another region of the phone's language", () => {
+    expect(resolveVoice(IOS_PHONE, 'en-US', 'ios', MALCOLM_PREMIUM.identifier)).toBe(
+      MALCOLM_PREMIUM.identifier,
+    );
   });
 
   it("is pickVoice's when nothing is saved", () => {
