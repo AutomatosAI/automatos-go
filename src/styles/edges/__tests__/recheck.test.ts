@@ -1,7 +1,8 @@
 // Not running's quiet re-check (US-017f) on an injected clock: the first check 5 s after the start,
 // the next 5 s after each one settles (a timeout chain: a slow check never stacks a second), a
 // check that throws or rejects keeps the chain going, and stop() ends it for good — the pending
-// timer is cleared and a check in flight schedules nothing after it.
+// timer is cleared, a check in flight schedules nothing after it, and its 'still running' test
+// turns false so its late answer can be dropped.
 
 import { describe, expect, it, vi } from 'vitest';
 
@@ -97,6 +98,17 @@ describe('startRecheck', () => {
     expect(pending.size).toBe(0);
     second.stop();
     expect(slow).toHaveBeenCalledTimes(1);
+  });
+
+  it("hands each check a 'still running' test that turns false on stop()", async () => {
+    const { clock, fire } = fakeClock();
+    const seen: (() => boolean)[] = [];
+    const chain = startRecheck((running) => void seen.push(running), { clock });
+    await fire();
+    expect(seen).toHaveLength(1);
+    expect(seen[0]()).toBe(true);
+    chain.stop();
+    expect(seen[0]()).toBe(false);
   });
 
   it('takes its own interval', () => {

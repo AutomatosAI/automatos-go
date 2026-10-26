@@ -1,8 +1,10 @@
 // Not running's quiet re-check (US-017f, Ember 07: 'Play also checks every 5 seconds'), pure: a
 // timeout chain, not an interval — the next check is set NOT_RUNNING_RECHECK_MS after the last one
 // settled, so a slow check never stacks a second on top of it — that stops for good on stop() (the
-// screen going away). A check that throws or rejects is logged and the chain goes on: the screen's
-// own Check again still works. The clock is injected so the tests drive it.
+// screen going away). Each check is handed a 'still running' test that turns false on stop(), so a
+// check still out when the screen goes can drop its answer instead of acting on a screen that is
+// gone. A check that throws or rejects is logged and the chain goes on: the screen's own Check
+// again still works. The clock is injected so the tests drive it.
 
 import { logger } from '../../lib/logger';
 
@@ -26,12 +28,15 @@ export type RecheckOptions = {
 
 export type Recheck = { readonly stop: () => void };
 
-/** What a check may answer: nothing, or a promise the chain waits for before the next. */
-export type RecheckRun = () => void | Promise<unknown>;
+/** True until the chain is stopped: a check that settles later reads it before acting. */
+export type StillRunning = () => boolean;
 
-function runOnce(check: RecheckRun): Promise<unknown> {
+/** What a check may answer: nothing, or a promise the chain waits for before the next. */
+export type RecheckRun = (running: StillRunning) => void | Promise<unknown>;
+
+function runOnce(check: RecheckRun, running: StillRunning): Promise<unknown> {
   try {
-    return Promise.resolve(check());
+    return Promise.resolve(check(running));
   } catch (error) {
     return Promise.reject(error);
   }
@@ -41,6 +46,7 @@ function runOnce(check: RecheckRun): Promise<unknown> {
 export function startRecheck(check: RecheckRun, options: RecheckOptions = {}): Recheck {
   const { every = NOT_RUNNING_RECHECK_MS, clock = SYSTEM_CLOCK } = options;
   const chain = { stopped: false, handle: null as unknown };
+  const running: StillRunning = () => !chain.stopped;
 
   const schedule = (): void => {
     if (chain.stopped) return;
@@ -49,7 +55,7 @@ export function startRecheck(check: RecheckRun, options: RecheckOptions = {}): R
   const tick = (): void => {
     chain.handle = null;
     if (chain.stopped) return;
-    runOnce(check)
+    runOnce(check, running)
       .catch((error: unknown) => logger.warn('[edges] the quiet re-check failed', error))
       .finally(schedule);
   };
