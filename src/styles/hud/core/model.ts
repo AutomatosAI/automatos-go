@@ -9,7 +9,7 @@
 // it is read there. Auto's saved reply names its message, so the transcript can offer Report this
 // on it (D15, P001R-AF-1).
 
-import type { ReportTarget } from '../../../api/reports';
+import { REPORT_TARGET_ID_MAX_CHARS, type ReportTarget } from '../../../api/reports';
 import { captionFor } from '../../../core/frozen/lib/mascot/media';
 import type { MascotName } from '../../../core/frozen/lib/mascot/types';
 import { badgeText, commandCentreLabel } from '../../../ui/variants';
@@ -165,8 +165,11 @@ export function transcriptRows(turn: HudTurn): readonly TranscriptRow[] {
 
 /** What Report this on a row reports: Auto's saved reply, never YOU's line or streaming words. */
 export function transcriptReport(row: TranscriptRow, allowed: boolean): ReportTarget | null {
-  if (!allowed || row.who !== 'auto' || row.messageId === null) return null;
-  return { target_type: 'message', target_id: row.messageId };
+  if (!allowed || row.who !== 'auto') return null;
+  const id = row.messageId?.trim();
+  // an id the server's target_id would refuse is never offered (as src/chat/report/report.ts)
+  if (!id || id.length > REPORT_TARGET_ID_MAX_CHARS) return null;
+  return { target_type: 'message', target_id: id };
 }
 
 /**
