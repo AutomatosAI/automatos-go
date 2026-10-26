@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { logger } from '../../lib/logger';
 import type { UnavailableReason } from '../machine/voice-state';
 import {
   recognitionPolicy,
@@ -7,8 +8,12 @@ import {
   type RecognitionProbe,
 } from '../quick-ask/recognition-policy';
 import { createRecognizer } from '../quick-ask/recognizer-core';
-import { RECOGNIZER_EVENTS } from '../quick-ask/recognizer-events';
-import { listening, spyPort } from './recognizer-port';
+import { RECOGNIZER_EVENTS, type RecognizerEvent } from '../quick-ask/recognizer-events';
+import { listening, result, spyPort, voiced } from './recognizer-port';
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 const REASONS: readonly UnavailableReason[] = [
   'no-on-device',
@@ -217,5 +222,99 @@ describe('createRecognizer — listen', () => {
     emit('volumechange', { value: 10 });
     expect(heard).toEqual([]);
     expect(second).toEqual([{ kind: 'level', level: 1 }]);
+  });
+});
+
+describe('createRecognizer — a newer listener covers the older one (P001V-RVW-2)', () => {
+  const LEVEL = { kind: 'level', level: 1 };
+
+  /** A listens, then B: each with its own record and its own 'covered' spy. */
+  function covering() {
+    const spy = spyPort();
+    const recognizer = createRecognizer(spy.port);
+    const a: RecognizerEvent[] = [];
+    const b: RecognizerEvent[] = [];
+    const aCovered = vi.fn();
+    const bCovered = vi.fn();
+    const removeA = recognizer.listen((event) => a.push(event), aCovered);
+    const removeB = recognizer.listen((event) => b.push(event), bCovered);
+    const level = () => spy.emit('volumechange', { value: 10 });
+    return { ...spy, recognizer, a, b, aCovered, bCovered, removeA, removeB, level };
+  }
+
+  it('tells A once that B covered it; B hears; once B is removed A hears again', () => {
+    const { port, a, b, aCovered, bCovered, removeB, level } = covering();
+    expect(aCovered).toHaveBeenCalledTimes(1);
+    level();
+    expect(b).toEqual([LEVEL]);
+    expect(a).toEqual([]);
+    removeB();
+    level();
+    expect(a).toEqual([LEVEL]);
+    expect(b).toEqual([LEVEL]);
+    expect(aCovered).toHaveBeenCalledTimes(1);
+    expect(bCovered).not.toHaveBeenCalled();
+    // One set of the module's listeners throughout: nothing is subscribed again.
+    expect(port.addListener).toHaveBeenCalledTimes(RECOGNIZER_EVENTS.length);
+  });
+
+  it("gives A a hold's events once B is removed: MIC LIVE and the final at the end", () => {
+    const { recognizer, emit, a, removeB } = covering();
+    removeB();
+    expect(recognizer.start(recognitionPolicy(IOS))).toEqual({ kind: 'started' });
+    emit('start');
+    emit('audiostart', { uri: null });
+    emit('result', result('what is on', true));
+    recognizer.stop();
+    emit('audioend', { uri: null });
+    emit('end');
+    expect(a).toEqual([
+      { kind: 'started' },
+      voiced({ type: 'mic_open' }),
+      voiced({ type: 'partial', text: 'what is on' }),
+      voiced({ type: 'mic_closed' }),
+      voiced({ type: 'final', text: 'what is on' }),
+      { kind: 'ended' },
+    ]);
+  });
+
+  it("leaves B hearing when A is removed under it; the module's listeners go with the last", () => {
+    const { listeners, a, b, removeA, removeB, level } = covering();
+    removeA();
+    level();
+    expect(b).toEqual([LEVEL]);
+    expect(listeners.size).toBe(RECOGNIZER_EVENTS.length);
+    removeB();
+    expect(listeners.size).toBe(0);
+    level();
+    expect(a).toEqual([]);
+    expect(b).toEqual([LEVEL]);
+  });
+
+  it('is harmless to remove twice: A keeps hearing, and is not told again', () => {
+    const { listeners, a, aCovered, removeA, removeB, level } = covering();
+    removeB();
+    removeB();
+    level();
+    expect(a).toEqual([LEVEL]);
+    expect(aCovered).toHaveBeenCalledTimes(1);
+    removeA();
+    removeA();
+    expect(listeners.size).toBe(0);
+  });
+
+  it('logs a covered listener that throws, and the newer listener still hears', () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
+    const { port, emit } = spyPort();
+    const recognizer = createRecognizer(port);
+    const thrown = () => {
+      throw new Error('gone');
+    };
+    recognizer.listen(() => undefined, thrown);
+    const second: RecognizerEvent[] = [];
+    recognizer.listen((event) => second.push(event));
+    expect(warn).toHaveBeenCalledTimes(1);
+    emit('volumechange', { value: 10 });
+    expect(second).toEqual([LEVEL]);
   });
 });

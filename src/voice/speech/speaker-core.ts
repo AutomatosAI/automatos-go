@@ -12,10 +12,13 @@
 //   waits on a callback for a queued utterance the engine dropped.
 //   voices() reads the phone's voices once per launch (a failed read is tried again next time);
 //   voiceFor() picks from them (voice-pick.ts).
+//   One listener hears at a time, kept as a stack (P001V-RVW-2, listener-stack.ts): a newer listen
+//   tells the one it covers, and removing it gives the events back.
 
 import { z } from 'zod';
 
 import { logger } from '../../lib/logger';
+import { createListenerStack } from '../audio/listener-stack';
 import { SPEECH_RATE } from '../config';
 import type { RecognitionPlatform } from '../quick-ask/recognition-policy';
 import { pickVoice, type SpeechVoice } from './voice-pick';
@@ -53,8 +56,11 @@ export type Speaker = {
   readonly voiceFor: (locale: string) => Promise<string | undefined>;
   readonly speak: (sentence: string, options: SpeakOptions) => void;
   readonly stop: () => void;
-  /** One listener at a time (the voice screen's hook); a second listen replaces the first. */
-  readonly listen: (handler: (event: SpeakerEvent) => void) => () => void;
+  /**
+   * One listener at a time: a second listen covers the first (told through `evicted`) until it is
+   * removed, and the first hears again.
+   */
+  readonly listen: (handler: (event: SpeakerEvent) => void, evicted?: () => void) => () => void;
 };
 
 type Run = {
@@ -147,12 +153,12 @@ function speakRequest(options: SpeakOptions, started: () => void, ended: () => v
 
 export function createSpeaker(port: SpeechPort, platform: RecognitionPlatform): Speaker {
   let run: Run = { generation: 0, pending: 0, started: false };
-  let handler: ((event: SpeakerEvent) => void) | null = null;
+  const listeners = createListenerStack<SpeakerEvent>('speaker');
   const voices = voiceCache(port);
 
   function apply(step: Step): void {
     run = step.run;
-    if (step.event !== null) handler?.(Object.freeze(step.event));
+    if (step.event !== null) listeners.emit(Object.freeze(step.event));
   }
 
   function speak(sentence: string, options: SpeakOptions): void {
@@ -180,18 +186,11 @@ export function createSpeaker(port: SpeechPort, platform: RecognitionPlatform): 
     });
   }
 
-  function listen(next: (event: SpeakerEvent) => void): () => void {
-    handler = next;
-    return () => {
-      if (handler === next) handler = null;
-    };
-  }
-
   return Object.freeze({
     voices,
     voiceFor: async (locale: string) => pickVoice(await voices(), locale, platform),
     speak,
     stop,
-    listen,
+    listen: listeners.push,
   });
 }

@@ -7,7 +7,8 @@
 //   runtime permission dialog as 'background' too (AppStateModule.kt onHostPause): that press ends,
 //   as the prompt already takes it (US-019c).
 //   'covered' (another screen pushed over HUD's home, whose quick-ask listens only while it is the
-//   screen on top, US-019k) → as 'background': the screen is left.
+//   screen on top, US-019k; or another screen's engine taking the recognizer or the speaker from this
+//   one, P001V-RVW-2) → as 'background': the screen is left.
 //   iOS 'inactive' (Control Centre, an incoming-call banner, a permission prompt) → nothing by itself.
 //   Back to 'active' → NOTHING: the mic, speech and Live never resume by themselves.
 //   The recognizer's 'interrupted' error (an AVAudioSession interruption while recognising: a call,
@@ -79,6 +80,9 @@ const RECOGNIZER_LOST: Readonly<Record<RecognizerInterruption, readonly Interrup
     ]),
     'route-change': Object.freeze([ABORT, action({ type: 'interrupted', reason: 'route-change' })]),
   });
+
+/** Another screen came over this one, or took its recognizer or speaker: it is left. */
+export const COVERED: InterruptionEvent = frozen({ type: 'covered' });
 
 const AUDIO_SESSION: InterruptionEvent = frozen({ type: 'recognizer', reason: 'audio-session' });
 const ROUTE_CHANGE: InterruptionEvent = frozen({ type: 'recognizer', reason: 'route-change' });

@@ -9,12 +9,17 @@
 //   The screen: mount starts an AI-notice session (KV7); unmount stops the mic and the speech and
 //   ends the session, and the turn runs on with nothing more spoken (KV6). interrupt() takes what
 //   use-interruptions.ts hears (AppState) through the interruption policy (US-019h).
+//   attach() is the screen taking the recognizer's and the speaker's one listener, and mounting.
+//   Another screen's engine that takes either one covers this one (the policy's 'covered': the hold
+//   aborted with nothing sent, the speech silenced, the AI-notice session ended); when it lets go,
+//   this one hears again, with no new attach (P001V-RVW-2: the voice screen under a conversation's
+//   HUD home that was pushed over it and popped).
 
 import type { ThreadState } from '../../chat/controller/thread';
 import { claim } from '../audio/audio-owner';
-import type { InterruptionEvent } from '../interruptions/interruption-policy';
+import { COVERED, type InterruptionEvent } from '../interruptions/interruption-policy';
 import { newSession } from '../notice/ai-notice';
-import type { SpeakerEvent } from '../speech/speaker-core';
+import type { Speaker, SpeakerEvent } from '../speech/speaker-core';
 import { onRecognizer, press, releaseHold } from './quick-ask-hold';
 import { interrupt } from './quick-ask-interrupt';
 import { onSpeaker, onThread } from './quick-ask-reply';
@@ -31,6 +36,7 @@ import {
   type QuickAskDeps,
   type QuickAskSnapshot,
 } from './quick-ask-store';
+import type { Recognizer } from './recognizer-core';
 import type { RecognizerEvent } from './recognizer-events';
 
 export type {
@@ -40,6 +46,12 @@ export type {
   RecognizerPort,
   ThreadPort,
 } from './quick-ask-store';
+
+/** What a screen's engine listens to: the recognizer and the speaker, one listener each. */
+export type QuickAskSources = {
+  readonly recognizer: Pick<Recognizer, 'listen'>;
+  readonly speaker: Pick<Speaker, 'listen'>;
+};
 
 export type QuickAsk = {
   readonly snapshot: () => QuickAskSnapshot;
@@ -60,6 +72,8 @@ export type QuickAsk = {
   readonly mount: () => void;
   /** The voice screen unmounted: the mic and the speech stop, and nothing more is spoken (KV6). */
   readonly unmount: () => void;
+  /** The screen takes the recognizer's and the speaker's listener and mounts; returns the detach. */
+  readonly attach: (sources: QuickAskSources) => () => void;
 };
 
 /** STOP: listening aborted (nothing sent), the speech stopped, a streaming turn cancelled. */
@@ -76,6 +90,22 @@ function unmount(engine: Engine): void {
   abortListening(engine);
   silence(engine);
   set(engine, { owner: 'none', session: newSession(), mounted: false });
+}
+
+/** Listening and mounted until the detach; covered whenever another engine takes a listener. */
+function attach(engine: Engine, sources: QuickAskSources): () => void {
+  const covered = (): void => interrupt(engine, COVERED);
+  const unlistenRecognizer = sources.recognizer.listen(
+    (event) => onRecognizer(engine, event),
+    covered,
+  );
+  const unlistenSpeaker = sources.speaker.listen((event) => onSpeaker(engine, event), covered);
+  set(engine, { session: newSession(), mounted: true });
+  return () => {
+    unlistenRecognizer();
+    unlistenSpeaker();
+    unmount(engine);
+  };
 }
 
 async function download(engine: Engine): Promise<void> {
@@ -106,5 +136,6 @@ export function createQuickAsk(deps: QuickAskDeps): QuickAsk {
     interrupt: (event: InterruptionEvent) => interrupt(engine, event),
     mount: () => set(engine, { session: newSession(), mounted: true }),
     unmount: () => unmount(engine),
+    attach: (sources: QuickAskSources) => attach(engine, sources),
   });
 }

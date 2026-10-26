@@ -14,6 +14,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { ICON_BUTTON_SIZES } from '../../ui/variants';
+import { COVERED } from '../interruptions/interruption-policy';
 
 const SRC = path.resolve(__dirname, '..', '..');
 const read = (file: string) => readFileSync(path.resolve(SRC, file), 'utf8');
@@ -155,8 +156,14 @@ describe("useQuickAsk's scope", () => {
 
   it('leaves as for the background when covered, then lets go of the listeners', () => {
     expect(code(quickAskHook)).toMatch(/engine\.interrupt\(COVERED\);\s*detach\(\);/);
-    expect(quickAskHook).toMatch(
-      /const COVERED: InterruptionEvent = Object\.freeze\(\{ type: 'covered' \}\);/,
+    expect(importsOf(quickAskHook)).toContain('../interruptions/interruption-policy');
+    expect(COVERED).toEqual({ type: 'covered' });
+  });
+
+  it("attaches through the engine's attach (the wiring listener-handover.test.ts drives)", () => {
+    expect(code(quickAskHook)).toMatch(
+      /useCallback\(\(\) => engine\.attach\(\{ recognizer, speaker \}\), \[engine\]\)/,
     );
+    expect(code(quickAskHook)).not.toMatch(/\.listen\(/);
   });
 });

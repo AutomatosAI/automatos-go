@@ -6,36 +6,16 @@ import {
   createSpeaker,
   fitToEngine,
   type SpeakerEvent,
-  type SpeakRequest,
   type SpeechPort,
 } from '../speech/speaker-core';
-
-/** A spy SpeechPort: every utterance held with its request, so a test plays the engine's callbacks. */
-function spyPort(overrides: Partial<SpeechPort> = {}) {
-  const utterances: { text: string; request: SpeakRequest }[] = [];
-  const port = {
-    speak: vi.fn((text: string, request: SpeakRequest) => {
-      utterances.push({ text, request });
-    }),
-    stop: vi.fn(async () => undefined),
-    getVoices: vi.fn(async (): Promise<unknown> => []),
-    maxInputLength: Number.MAX_VALUE,
-    ...overrides,
-  };
-  return { port, utterances };
-}
+import { spySpeechPort } from './speech-port';
 
 function speaking(overrides: Partial<SpeechPort> = {}, platform: 'ios' | 'android' = 'ios') {
-  const spy = spyPort(overrides);
+  const spy = spySpeechPort(overrides);
   const speaker = createSpeaker(spy.port, platform);
   const heard: SpeakerEvent['type'][] = [];
   const unlisten = speaker.listen((event) => heard.push(event.type));
-  const at = (index: number): SpeakRequest => {
-    const utterance = spy.utterances[index];
-    if (!utterance) throw new Error(`no utterance ${index}`);
-    return utterance.request;
-  };
-  return { ...spy, speaker, heard, unlisten, at };
+  return { ...spy, speaker, heard, unlisten };
 }
 
 afterEach(() => {
@@ -183,6 +163,89 @@ describe('speaker.listen', () => {
     unlistenSecond();
     speaker.speak('Two.', { language: 'en-GB' });
     at(1).onDone();
+    expect(second).toEqual(['speak_done']);
+  });
+});
+
+describe('speaker.listen — a newer listener covers the older one (P001V-RVW-2)', () => {
+  const EN = { language: 'en-GB' };
+
+  /** A listens, then B: each with its own record and its own 'covered' spy. */
+  function covering() {
+    const spy = spySpeechPort();
+    const speaker = createSpeaker(spy.port, 'ios');
+    const a: string[] = [];
+    const b: string[] = [];
+    const aCovered = vi.fn();
+    const bCovered = vi.fn();
+    const removeA = speaker.listen((event) => a.push(event.type), aCovered);
+    const removeB = speaker.listen((event) => b.push(event.type), bCovered);
+    return { ...spy, speaker, a, b, aCovered, bCovered, removeA, removeB };
+  }
+
+  it('tells A once that B covered it; B hears; once B is removed A hears again', () => {
+    const { speaker, at, a, b, aCovered, bCovered, removeB } = covering();
+    expect(aCovered).toHaveBeenCalledTimes(1);
+    speaker.speak('One.', EN);
+    at(0).onDone();
+    expect(b).toEqual(['speak_done']);
+    expect(a).toEqual([]);
+    removeB();
+    speaker.speak('Two.', EN);
+    at(1).onStart();
+    at(1).onDone();
+    expect(a).toEqual(['speak_start', 'speak_done']);
+    expect(b).toEqual(['speak_done']);
+    expect(aCovered).toHaveBeenCalledTimes(1);
+    expect(bCovered).not.toHaveBeenCalled();
+  });
+
+  it("gives A the speak_done of an utterance B heard start (no reply left 'speaking')", () => {
+    const { speaker, at, a, b, removeB } = covering();
+    speaker.speak('One.', EN);
+    at(0).onStart();
+    removeB();
+    at(0).onDone();
+    expect(b).toEqual(['speak_start']);
+    expect(a).toEqual(['speak_done']);
+  });
+
+  it('leaves B hearing when A is removed under it, and nobody once both are', () => {
+    const { speaker, at, a, b, removeA, removeB } = covering();
+    removeA();
+    speaker.speak('One.', EN);
+    at(0).onDone();
+    expect(b).toEqual(['speak_done']);
+    removeB();
+    speaker.speak('Two.', EN);
+    at(1).onDone();
+    expect(a).toEqual([]);
+    expect(b).toEqual(['speak_done']);
+  });
+
+  it('is harmless to remove twice: A keeps hearing, and is not told again', () => {
+    const { speaker, at, a, aCovered, removeB } = covering();
+    removeB();
+    removeB();
+    speaker.speak('One.', EN);
+    at(0).onDone();
+    expect(a).toEqual(['speak_done']);
+    expect(aCovered).toHaveBeenCalledTimes(1);
+  });
+
+  it('logs a covered listener that throws, and the newer listener still hears', () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
+    const spy = spySpeechPort();
+    const speaker = createSpeaker(spy.port, 'ios');
+    const thrown = () => {
+      throw new Error('gone');
+    };
+    speaker.listen(() => undefined, thrown);
+    const second: string[] = [];
+    speaker.listen((event) => second.push(event.type));
+    expect(warn).toHaveBeenCalledTimes(1);
+    speaker.speak('One.', EN);
+    spy.at(0).onDone();
     expect(second).toEqual(['speak_done']);
   });
 });

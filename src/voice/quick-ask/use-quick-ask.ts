@@ -3,13 +3,15 @@
 //   The thread is the caller's useThread (src/chat/controller/use-thread.ts) for the voice screen's
 //   conversation: quick-ask sends through it and A2's Stop cancels through it, so there is never a
 //   second chat request or stream; a typed turn on the same thread is never spoken (KV6).
-//   The recognizer and the speaker take one listener each: this hook's, while the screen is mounted
-//   (scope 'mounted', the voice screen) or, for HUD's home (scope 'focused', US-019k), only while it
-//   is the screen on top: a conversation's HUD home or the voice screen can stack over it, and a
-//   home under them would otherwise lose the listener for good when they go. Covered, it leaves as
-//   the app going to the background does (the interruption policy's 'covered'); on top again, it is
-//   a new session. Attaching starts an AI-notice session (KV7); detaching stops the mic and the
-//   speech, and the turn runs on with nothing more spoken (A2 lets go of the read without a cancel).
+//   The recognizer and the speaker take one listener each (a stack: the newest hears): this hook's,
+//   while the screen is mounted (scope 'mounted', the voice screen) or, for HUD's home (scope
+//   'focused', US-019k), only while it is the screen on top. Covered, it leaves as the app going to
+//   the background does (the interruption policy's 'covered'); on top again, it is a new session.
+//   The voice screen is covered only when another screen's engine takes a listener (a
+//   conversation's HUD home pushed over it, P001V-RVW-2), and hears again when that one detaches; a
+//   /cc or look page over it takes nothing, and its speech goes on (US-019j). Attaching starts an
+//   AI-notice session (KV7); detaching stops the mic and the speech, and the turn runs on with
+//   nothing more spoken (A2 lets go of the read without a cancel).
 //   The speech is in the phone's language (the one recognition listens in) with the voice picked
 //   for it once (US-019d); until that voice is known, the engine's default for the language.
 //   Nothing asks a permission at mount: only press() does (KV5).
@@ -23,7 +25,7 @@ import { useAppSession } from '../../app-state/session';
 import { roleCan } from '../../auth/role';
 import type { ThreadView } from '../../chat/controller/use-thread';
 import { logger } from '../../lib/logger';
-import type { InterruptionEvent } from '../interruptions/interruption-policy';
+import { COVERED } from '../interruptions/interruption-policy';
 import { useVoiceKeepAwake } from '../interruptions/keep-awake';
 import { useInterruptions } from '../interruptions/use-interruptions';
 import { permissions } from '../permissions/permissions';
@@ -53,8 +55,6 @@ export type QuickAskView = QuickAskSnapshot & {
  * voice screen), or only while the screen is the one on top (HUD's home).
  */
 export type QuickAskScope = 'mounted' | 'focused';
-
-const COVERED: InterruptionEvent = Object.freeze({ type: 'covered' });
 
 function later(run: () => void, ms: number): () => void {
   const timer = setTimeout(run, ms);
@@ -111,16 +111,7 @@ function useEngine(context: { readonly current: QuickAskContext }, scope: QuickA
       }),
     [context],
   );
-  const attach = useCallback(() => {
-    const unlistenRecognizer = recognizer.listen(engine.onRecognizer);
-    const unlistenSpeaker = speaker.listen(engine.onSpeaker);
-    engine.mount();
-    return () => {
-      unlistenRecognizer();
-      unlistenSpeaker();
-      engine.unmount();
-    };
-  }, [engine]);
+  const attach = useCallback(() => engine.attach({ recognizer, speaker }), [engine]);
   useEffect(() => (scope === 'mounted' ? attach() : undefined), [attach, scope]);
   useFocusEffect(
     useCallback(() => {

@@ -19,8 +19,13 @@
 // 116-205), so its calls always reach the capture. The module's second end() skips audioend (the
 // first cleared its handler, ExpoSpeechRecognizer.swift:487-496), so the end of a session whose
 // call went again closes MIC LIVE itself.
+//   One listener hears at a time, kept as a stack (P001V-RVW-2, listener-stack.ts): a newer listen
+// (a conversation's HUD home pushed over the voice screen) tells the one it covers, and removing it
+// gives the events back. The module's events are subscribed while anyone listens; the session is the
+// module's, whoever hears it.
 
 import { logger } from '../../lib/logger';
+import { createListenerStack, type ListenerStack } from '../audio/listener-stack';
 import { hasWords } from '../machine/voice-state';
 import type { RecognitionCopyKey } from '../strings';
 import {
@@ -86,8 +91,11 @@ export type Recognizer = {
   /** STOP or the background: nothing is sent. */
   readonly abort: () => void;
   readonly downloadModel: (locale: string) => Promise<DownloadOutcome>;
-  /** One listener at a time (the voice screen's hook); a second listen replaces the first. */
-  readonly listen: (handler: (event: RecognizerEvent) => void) => () => void;
+  /**
+   * One listener at a time: a second listen covers the first (told through `evicted`) until it is
+   * removed, and the first hears again.
+   */
+  readonly listen: (handler: (event: RecognizerEvent) => void, evicted?: () => void) => () => void;
 };
 
 /** A call that ends a session: the release's stop, or STOP's abort. */
@@ -310,9 +318,27 @@ function subscribeAll(
   return () => subscriptions.forEach((subscription) => subscription.remove());
 }
 
+/** listen over the stack: the module's events subscribed from the first listener to the last. */
+function listenWhileHeard(
+  listeners: ListenerStack<RecognizerEvent>,
+  subscribe: () => () => void,
+): Recognizer['listen'] {
+  let unsubscribe: (() => void) | null = null;
+  return (handler, evicted) => {
+    unsubscribe ??= subscribe();
+    const remove = listeners.push(handler, evicted);
+    return () => {
+      remove();
+      if (listeners.size() > 0) return;
+      unsubscribe?.();
+      unsubscribe = null;
+    };
+  };
+}
+
 export function createRecognizer(port: ModulePort): Recognizer {
   let session: Session = CLOSED;
-  let unlisten: (() => void) | null = null;
+  const listeners = createListenerStack<RecognizerEvent>('recognizer');
 
   function start(policy: RecognitionPolicy): StartOutcome {
     if (policy.kind !== 'ready') return { kind: 'refused', policy, copy: refusalCopyKey(policy) };
@@ -338,22 +364,13 @@ export function createRecognizer(port: ModulePort): Recognizer {
     port.abort();
   }
 
-  function listen(handler: (event: RecognizerEvent) => void): () => void {
-    unlisten?.();
-    const removeAll = subscribeAll(port, (name, payload) => {
-      const mapped = toRecognizerEvent(name, payload);
-      if (mapped === null) return;
-      const step = stepSession(session, mapped);
-      session = step.session;
-      if (step.resend !== undefined) sendAgain(port, step.resend);
-      step.out.forEach(handler);
-    });
-    const remove = (): void => {
-      removeAll();
-      if (unlisten === remove) unlisten = null;
-    };
-    unlisten = remove;
-    return remove;
+  function onNative(name: NativeEventName, payload: unknown): void {
+    const mapped = toRecognizerEvent(name, payload);
+    if (mapped === null) return;
+    const step = stepSession(session, mapped);
+    session = step.session;
+    if (step.resend !== undefined) sendAgain(port, step.resend);
+    step.out.forEach(listeners.emit);
   }
 
   return {
@@ -362,6 +379,6 @@ export function createRecognizer(port: ModulePort): Recognizer {
     stop,
     abort,
     downloadModel: (locale) => downloadWith(port, locale),
-    listen,
+    listen: listenWhileHeard(listeners, () => subscribeAll(port, onNative)),
   };
 }
