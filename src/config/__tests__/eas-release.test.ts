@@ -85,10 +85,14 @@ describe('.eas/workflows', () => {
   });
 
   it('GitHub Actions only checks: no second delivery path (testflight.yml is gone)', () => {
-    expect(readdirSync(path.join(PROJECT_ROOT, '.github/workflows')).sort()).toEqual([
-      'ci.yml',
-      'malware-scan.yml',
-    ]);
+    // push-security.yml (A7 US-021n) reads one Expo setting; release-push-security.test.ts pins it
+    const dir = path.join(PROJECT_ROOT, '.github/workflows');
+    expect(readdirSync(dir).sort()).toEqual(['ci.yml', 'malware-scan.yml', 'push-security.yml']);
+    // no GitHub workflow builds, updates or submits: no eas-cli, no Expo action
+    const delivery = /expo\/expo-github-action|eas-cli|\beas\s+(build|update|submit|workflow)/i;
+    readdirSync(dir).forEach((file) => {
+      expect(readFileSync(path.join(dir, file), 'utf8'), file).not.toMatch(delivery);
+    });
   });
 });
 
