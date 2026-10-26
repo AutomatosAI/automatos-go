@@ -237,3 +237,233 @@ deletes it.
 from TestFlight: it opens at Welcome, signed out. Repeat while paired to the VPS: it opens at
 Welcome, not paired. Pair it again: Studio's Phones & devices shows the same phone, not a second
 one, because the install ID was kept.
+
+## Auto is an AI
+
+**Draft:** Section 09, "Auto is an AI. Wherever Auto or an agent speaks: Every chat screen and the
+voice screen in the app say "Auto is an AI", or "{agent} is an AI" when another agent answers. No
+theme, look or setting can hide or recolour this label. An Auto Live call starts with "Hi, this is
+Auto, your AI assistant." It reminds you every ten minutes: "Just so you know, I'm an AI
+assistant." Quick-ask shows and speaks the same notice at the start and every ten minutes.
+Notifications from agents carry an AI badge in their title. [CHECK: these lines match what ships
+…]".
+
+**Answer:** Partly. Every way to talk to Auto shows the label, but the draft differs from the app in
+four places:
+
+- The label is one small caption [D73].
+- It names another agent only in HUD's core and on the voice screen.
+- Nothing repeats every ten minutes.
+- Auto Live is not in this build.
+
+**What the code does:**
+
+- **The label** is `src/styles/ai-label.tsx` (the foundation's; this wave never edits it). It is
+  one muted caption line: "Auto is an AI", or "{agent} is an AI" while another agent answers. Its
+  words come from the web's own rule (`src/core/web/lib/ai-label/copy.ts`, vendored). It uses the
+  smallest body size (11.5 pt, with Dynamic Type) in the style's muted text colour
+  (`src/styles/ai-label-state.ts`). No theme, look or setting changes its words or removes it. A
+  look changes its colour as it changes every muted line. Nothing in the app waits for the label or
+  locks the composer on it.
+- **Where it sits:**
+  - **Studio's thread** (home and every conversation): the thread's first row, above the first
+    message, which scrolls away with the thread (`src/chat/components/MessageList.tsx`,
+    `ThreadCaption`). On home, before the first message, First open opens with the same caption
+    (`src/styles/homes/FirstOpenThread.tsx`).
+  - **Play's thread:** the first row of the Companion chat (`src/styles/homes/PlayThread.tsx`,
+    `PlayThreadCaption`), and First open's.
+  - **HUD's home, and the voice screen in every style:** the first line of the core's transcript,
+    above YOU and AUTO (`src/styles/hud/core/Transcript.tsx`). When a long reply fills the
+    transcript, the oldest lines go off the top, the label first, as a thread's first row
+    scrolls away. TYPE's sheet and HOLD TO TALK sit over this core.
+  - **The consent sheet**, above its heading (`src/consent/ConsentSheet.tsx`).
+- **"{agent} is an AI":** HUD's and the voice screen's transcript name the agent answering while
+  its reply streams (the turn's agent-info), else Auto. Studio's and Play's thread caption always
+  reads "Auto is an AI".
+- **The spoken notice:** quick-ask (hold to talk) says "Hi, this is Auto, your AI assistant."
+  before the first spoken reply of a voice session, and never again in that session
+  (`src/voice/notice/ai-notice.ts`; D73 took the ten-minute reminder out). It shows on screen as
+  the AUTO line above the reply.
+- **Auto Live** (the Retell call) is not in this build: no LiveKit or call screen ships, so its
+  greeting and reminder are the server's and the next wave's.
+- **Notification titles** are written by the server (PRD-266 §4.4). The app registers the
+  notification types and shows what the server sends.
+
+**Evidence:**
+
+- `src/release/__tests__/surfaces.test.ts` (US-021k), part (a):
+  - It scans the whole product tree (comments removed) for every way to talk to Auto: A2's
+    composer, Play's message box, HUD's core and quick-ask.
+  - Each file found must be in the explicit list in `src/release/__tests__/support/surfaces.ts`.
+  - Its render must reach the label file by file: each file renders the next, and the last renders
+    the foundation's `AiLabel`. The label must be the first child of its row.
+  - A hook may instead be used only inside a listed screen.
+  - Studio's and Play's lists have it as their first row (`ListHeaderComponent`).
+  - The composers import nothing from the label.
+  - A new surface without the label fails CI.
+- `src/styles/__tests__/ai-label.test.ts` (the label's words and face) and
+  `src/voice/__tests__/ai-notice.test.ts` (A6: the notice once per session).
+
+**Policy wording:**
+
+- Section 09, in place of the first bullet: "Every chat screen and the voice screen in the app say
+  "Auto is an AI" at the top of the conversation. On HUD's screen and the voice screen it says
+  "{agent} is an AI" while another agent answers. No theme, look or setting can hide this label or
+  change its words."
+- In place of the quick-ask sentence: "Quick-ask says "Hi, this is Auto, your AI assistant." before
+  its first spoken reply each time you start talking."
+- Keep the Auto Live sentences only once Auto Live ships in the app, with what it says then.
+
+**Owner check:** OT-R14 (the WebSummit checklist): in Studio, Play and HUD, the caption is the first
+line of a thread and of HUD's transcript; the voice screen shows it; quick-ask's first reply speaks
+the greeting once.
+
+## Report this
+
+**Draft:** Section 12, "Every Auto message and every deliverable in the app has **Report this**.
+You choose a reason and can add a note. On hosted Studio, the report goes to the workspace owner, as
+a notification in Automatos, and to Automatos AI's moderation inbox. … On your own server, the
+report goes only to that server's operator." Section 07's "Content reports" row points there.
+
+**Answer:** Partly. Report this is on Auto's messages in Studio and Play and on every Deliverable in
+every style. It is not yet on Auto's reply in HUD's transcript or on the voice screen. P001R-AF-1 in
+this wave adds it there. The phone sends each report to the server it is connected to. Where a
+report goes from there is that server's: the edition rule above is PRD-266's, not the app's.
+
+**What the code does:**
+
+- **Where it is offered:**
+  - **Auto's messages in Studio's and Play's thread:** a long-press, or the VoiceOver action
+    "Report this", on a saved Auto message (`src/chat/report/report.ts`, `reportTarget`). It is
+    never offered on the person's own messages, on a failed reply, or on a reply still streaming
+    (it has no id yet). It opens the foundation's one sheet (`src/ui/ReportSheet.tsx`), titled
+    "Report this message", through `useMessageReport` in `src/chat/screens/ChatScreen.tsx` and
+    `src/styles/homes/PlayHome.tsx`.
+  - **Deliverables:** a Deliverable's page in every style. Studio and HUD show it in the page's foot
+    (`src/cc/deliverables/DeliverableDetail.tsx`), Play in the bottom row
+    (`src/styles/homes/PlayDeliverable.tsx`). Both use `useDeliverablePage`, which builds the target
+    in `src/cc/deliverables/detail.ts`.
+  - **Not yet in HUD:** HUD's home and the voice screen show Auto's newest reply as plain text in
+    the transcript, with no Report this (P001R-AF-1). In Studio and Play the same message has it in
+    the thread.
+- **Who sees it:** owners, admins and editors (`src/auth/role.ts`), and only when the server's
+  discovery document lists `report_content` (`src/api/capabilities.ts`). Viewers never see it.
+- **What it sends:** `POST /api/v1/reports` with `target_type` (`message` or `deliverable`),
+  `target_id`, one reason (harmful, offensive, inaccurate, privacy or other) and an optional note
+  of up to 500 characters, and no other field (`src/api/reports.ts`). It goes through the app's one
+  API client to the server the phone is signed in to or paired with. The sheet says "Your
+  workspace owner will see this report." The toast says "Thanks. Your report was sent.", or "You
+  already reported this. Thanks."
+- **Where it goes, per edition** (the server's routing, PRD-266 US-016; D15):
+  - **Hosted Studio:** the workspace owner, as a notification in Automatos, and Automatos AI's
+    moderation inbox.
+  - **Your own server:** its operator only.
+  - A crash report the phone sends later can carry the request's method, route and status (`POST
+    /api/v1/reports 201`, KR7), never its reason, note or target.
+  - The sheet's line names the workspace owner only. On hosted Studio, Automatos AI's moderation
+    inbox sees the report too: the policy says so (section 12).
+
+**Evidence:**
+
+- `src/release/__tests__/surfaces.test.ts` (US-021k), part (b):
+  - The files that mount the foundation's ReportSheet are exactly the four above. Each one opens it
+    through its target's hook.
+  - Studio's and Play's threads offer it on Auto's rows (`row.type` `auto`, `target_type`
+    `message`), and the Deliverable route opens it in every style (`target_type` `deliverable`).
+  - Every surface that can show Auto's messages says what Report this is there. HUD's home and the
+    voice screen are marked pending P001R-AF-1, so the test fails until they are marked as
+    reporting once that story mounts the sheet.
+  - Only `src/api/reports.ts` uses the reports route, `src/api/routes.ts` is the only file that
+    names it, and only the sheet calls `reportContent`.
+- `src/chat/__tests__/report.test.ts` (A2 US-009c), `src/ui/__tests__/report.test.ts` (FND-3) and
+  `src/cc/__tests__/deliverable-detail.test.ts` (A3 US-013b): the gate, the draft, the payload and
+  the toasts.
+
+**Policy wording:**
+
+- Section 12, first sentence: "Auto's messages and every deliverable in the app have **Report
+  this**." Once P001R-AF-1 is merged, HUD's screen and the voice screen have it too.
+- Keep the hosted and own-server bullets as they are. The app sends a report only to the server it
+  is connected to.
+
+**Owner check:** the device check after PRD-266 W3 is deployed (OT-C7 in the chat wave). On hosted
+Studio, report an Auto message and a Deliverable: the owner's notification and the moderation inbox
+receive each. On the VPS, the operator receives them and nothing reaches Automatos.
+
+## The consent sheet and a refusal
+
+**Draft:** Section 09, "Before your first message, the app shows which AI providers will receive
+what you send, and asks you to agree [D23]: "Auto answers using AI models from Anthropic and the
+providers your workspace has connected. Your messages are sent to them." The sheet names each
+provider, taken from your workspace. If the list changes, the app asks again. Until you agree,
+nothing you type, say or attach reaches an AI provider: the app asks before you can use it, and if
+you do not agree you can sign out (or forget the server). People with view-only access send
+nothing and are not asked. [CHECK: lead decision 20 Oct, connect kit KC11: the sheet gates the
+whole app … Gerard can choose a lighter gate (chat and voice only) instead.]" Also "Retell … [CHECK:
+… Name Retell in the sheet …]".
+
+**Answer:** The draft's description of the gate matches the app, with two corrections:
+
+- The quoted sentence is not the app's text.
+- The sheet names Retell AI whenever the server lists it.
+
+The lighter gate in the `[CHECK]` is not what ships. With it, a person could refuse and chat and
+voice would stay off while the rest of the app still works. The app has no 'Not now'. Its only
+choices are "Agree and continue", or Sign out (hosted Studio) / Forget this server (own server).
+
+**What the code does:**
+
+- **When it shows** (connect KC11): after sign-in or pairing and the workspace bootstrap, in place
+  of every signed-in screen (`app/(app)/_layout.tsx` hands `ConsentSheet` to the gate;
+  `src/app-state/gate.ts`, the consent step). It shows only to owners, admins and editors.
+  Viewers send nothing and are not asked. A server that lists no provider (an empty
+  `ai_providers`) needs no sheet.
+- **What it says** (`src/consent/sheet.ts`, `src/consent/strings.ts`):
+  - The AI label, then "Before you talk to Auto".
+  - Then, for a server that lists its providers: "Auto answers using AI models from {names}. What
+    you send to Auto and your agents — messages, answers, notes and attachments — goes to them so
+    they can reply."
+  - Then the list under "AI providers".
+  - The names are the server's own `ai_providers` (`GET /api/workspaces/current`), each once, by
+    name (`src/consent/providers.ts`). Nothing is filtered or grouped away, so Retell AI is listed
+    whenever the workspace can use Auto Live and the server says so (W3 US-017).
+  - A server from before W3 lists none: the sheet names no provider, says "the AI providers this
+    workspace uses, for chat and, where it is available, Auto Live voice", and notes "This server
+    doesn't list them yet."
+- **Agree and continue** saves the agreement on this phone, for this server and workspace, in the
+  encrypted store (`src/consent/store.ts`). The record holds the list's fingerprint (the copy
+  version and the sorted provider ids), the names shown and the time. Then the app opens.
+- **A refusal:** there is no 'Not now'. The one other button is Sign out on hosted Studio, or
+  Forget this server on an own server, asked first. Until the person agrees, no signed-in screen
+  renders, so nothing reaches Auto, an agent or an AI provider from this phone.
+- **Asked again** when the list changes (another fingerprint) or the copy version changes. Sign-out
+  deletes the records (step 5 of `clearUserData`, see "On the phone: after sign-out and after
+  uninstall").
+
+**Evidence:**
+
+- `src/release/__tests__/surfaces.test.ts` (US-021k), part (c): for a bootstrap listing Anthropic,
+  DeepSeek and Retell AI, in either order, through the foundation's schema, the sheet's view-model
+  lists all three by name, Retell AI included, says "Anthropic, DeepSeek and Retell AI", and has no
+  unlisted note. The way out is Sign out on hosted Studio and Forget this server on an own server.
+  The sheet draws every name, opens with the AI label and has no 'Not now', and the signed-in
+  gate's consent step is the sheet.
+- `src/consent/__tests__/providers.test.ts`, `policy.test.ts`, `store.test.ts`, `memory.test.ts`
+  and `consent-gate.test.ts` (A1 US-007b and US-007c): absent, null and empty lists, the
+  fingerprint, the record and the gate's order.
+
+**Policy wording:**
+
+- Section 09, the quoted sentence: "Auto answers using AI models from {the providers your
+  workspace lists}. What you send to Auto and your agents — messages, answers, notes and
+  attachments — goes to them so they can reply."
+- Keep "Until you agree, nothing you type, say or attach reaches an AI provider: the app asks
+  before you can use it, and if you do not agree you can sign out (or forget the server)." It is
+  what the app does. Drop the lighter-gate half of the `[CHECK]`, or change the app first.
+- The Retell bullet: "The sheet names Retell AI when your workspace can use Auto Live." Drop its
+  `[CHECK]`.
+
+**Owner check:** OT-R14 (the WebSummit checklist): on a fresh sign-in as an owner, the sheet lists
+the workspace's providers and nothing else opens before "Agree and continue"; Sign out from the
+sheet leaves the phone signed out. On a Business workspace with Auto Live on, Retell AI is in the
+list (after W3 is deployed).

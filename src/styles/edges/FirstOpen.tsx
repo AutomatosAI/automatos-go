@@ -1,6 +1,8 @@
 // First open (PRD-001 §4.7 Edges, Ember 06, US-017f): the home before the first message, Auto at
 // hello. FirstOpenHello is the words; FirstOpen the whole screen with the home's composer under them,
-// lifted over the keyboard on iOS as A2's ChatFrame lifts its own. US-016k mounts it.
+// lifted over the keyboard on iOS as A2's ChatFrame lifts its own. US-016k mounts it. Like every
+// thread, it opens with the AI label's one muted caption (D73): PlayThreadCaption above the hello,
+// HUD's in its core's transcript.
 //
 //   Play    the brand line; Auto 170 (right); 'Your Automatos,' / 'the fun way.' (the hero slot,
 //           58/0.92, the second line in the accent text); the lede (15/1.5, text2); three starter
@@ -21,6 +23,7 @@ import { HudCore, type HudCoreProps } from '../hud/core/HudCore';
 import { EMPTY_TURN } from '../hud/core/model';
 import { MASCOT_SIZES } from '../mascot/geometry';
 import { Mascot } from '../mascot/Mascot';
+import { PlayThreadCaption } from '../play/companion';
 import { EDGE_COPY } from '../strings';
 import { useStyle } from '../theme';
 import { STARTERS } from './edges';
@@ -139,6 +142,7 @@ export function FirstOpen({ onStarter, composer, hud }: FirstOpenProps) {
         keyboardVerticalOffset={stackTop}
         style={styles.fill}
       >
+        <PlayThreadCaption />
         <FirstOpenHello onStarter={onStarter} />
         {composer ? (
           <View
