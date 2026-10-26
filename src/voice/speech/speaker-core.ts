@@ -11,7 +11,10 @@
 //   onStop for each flushed utterance, iOS's didCancel for the current one) are ignored, and nothing
 //   waits on a callback for a queued utterance the engine dropped.
 //   voices() reads the phone's voices once per launch (a failed read is tried again next time);
-//   voiceFor() picks from them (voice-pick.ts).
+//   voiceFor() picks from them: the voice Settings → Voice saved while the phone still offers it,
+//   else voice-pick.ts's. choicesFor() reads them afresh (a voice downloaded since launch shows, and
+//   voiceFor() sees it from then on) and lists what Settings → Voice offers (voice-choices.ts).
+//   Each utterance is spoken at the rate and pitch it is given, else the voice's own (1).
 //   One listener hears at a time, kept as a stack (P001V-RVW-2, listener-stack.ts): a newer listen
 //   tells the one it covers, and removing it gives the events back.
 
@@ -19,9 +22,10 @@ import { z } from 'zod';
 
 import { logger } from '../../lib/logger';
 import { createListenerStack } from '../audio/listener-stack';
-import { SPEECH_RATE } from '../config';
+import { SPEECH_PITCH, SPEECH_RATE } from '../config';
 import type { RecognitionPlatform } from '../quick-ask/recognition-policy';
-import { pickVoice, type SpeechVoice } from './voice-pick';
+import { resolveVoice, voiceChoices, type VoiceChoice } from './voice-choices';
+import type { SpeechVoice } from './voice-pick';
 
 /** What the speaker tells quick-ask. */
 export type SpeakerEvent =
@@ -32,6 +36,7 @@ export type SpeakRequest = {
   readonly language: string;
   readonly voice?: string;
   readonly rate: number;
+  readonly pitch: number;
   readonly useApplicationAudioSession: boolean;
   readonly onStart: () => void;
   readonly onDone: () => void;
@@ -48,12 +53,23 @@ export type SpeechPort = {
   readonly maxInputLength: number;
 };
 
-/** The phone's language (the one recognition listens in) and, when one was picked, its voice. */
-export type SpeakOptions = { readonly language: string; readonly voice?: string };
+/**
+ * The phone's language (the one recognition listens in), the voice when one was picked, and the
+ * rate and pitch Settings → Voice saved (the voice's own, 1, when not given).
+ */
+export type SpeakOptions = {
+  readonly language: string;
+  readonly voice?: string;
+  readonly rate?: number;
+  readonly pitch?: number;
+};
 
 export type Speaker = {
   readonly voices: () => Promise<readonly SpeechVoice[]>;
-  readonly voiceFor: (locale: string) => Promise<string | undefined>;
+  /** The saved voice while the phone offers it for the locale, else the phone's best for it. */
+  readonly voiceFor: (locale: string, saved?: string | null) => Promise<string | undefined>;
+  /** Settings → Voice's list for the locale, from the phone's voices read afresh. */
+  readonly choicesFor: (locale: string) => Promise<readonly VoiceChoice[]>;
   readonly speak: (sentence: string, options: SpeakOptions) => void;
   readonly stop: () => void;
   /**
@@ -106,15 +122,28 @@ async function readVoices(port: SpeechPort): Promise<readonly SpeechVoice[] | nu
   }
 }
 
+type VoiceCache = {
+  readonly get: () => Promise<readonly SpeechVoice[]>;
+  /** Reads the phone's list again; later get()s answer from the new read. */
+  readonly refresh: () => Promise<readonly SpeechVoice[]>;
+};
+
 /** The phone's voices, read once per launch; a failed read is tried again next time. */
-function voiceCache(port: SpeechPort): () => Promise<readonly SpeechVoice[]> {
+function voiceCache(port: SpeechPort): VoiceCache {
   let voiceList: Promise<readonly SpeechVoice[]> | null = null;
-  return () => {
+  const get = (): Promise<readonly SpeechVoice[]> => {
     voiceList ??= readVoices(port).then((list) => {
       if (list === null) voiceList = null;
       return list ?? [];
     });
     return voiceList;
+  };
+  return {
+    get,
+    refresh: () => {
+      voiceList = null;
+      return get();
+    },
   };
 }
 
@@ -138,7 +167,8 @@ function speakRequest(options: SpeakOptions, started: () => void, ended: () => v
   return {
     language: options.language,
     ...(options.voice === undefined ? {} : { voice: options.voice }),
-    rate: SPEECH_RATE,
+    rate: options.rate ?? SPEECH_RATE,
+    pitch: options.pitch ?? SPEECH_PITCH,
     // iOS: the system's own audio session for speech (KV6); Android ignores it.
     useApplicationAudioSession: false,
     onStart: started,
@@ -187,8 +217,10 @@ export function createSpeaker(port: SpeechPort, platform: RecognitionPlatform): 
   }
 
   return Object.freeze({
-    voices,
-    voiceFor: async (locale: string) => pickVoice(await voices(), locale, platform),
+    voices: voices.get,
+    voiceFor: async (locale: string, saved?: string | null) =>
+      resolveVoice(await voices.get(), locale, platform, saved),
+    choicesFor: async (locale: string) => voiceChoices(await voices.refresh(), locale, platform),
     speak,
     stop,
     listen: listeners.push,

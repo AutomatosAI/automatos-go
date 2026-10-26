@@ -10,6 +10,8 @@
 //   Android: expo-speech exposes no network flag, so the voice's name decides (Google TTS names
 //   each 'en-us-x-iol-local' or 'en-us-x-iol-network'): only names with 'local' and never
 //   'network'; Enhanced (above QUALITY_NORMAL, SpeechModule.kt:87) first.
+//   The rules are shared: localeVoices (which voices may speak the locale) and voiceTier (how good
+//   each one is) are what Settings → Voice lists (voice-choices.ts), so the list and pickVoice agree.
 
 import type { RecognitionPlatform } from '../quick-ask/recognition-policy';
 
@@ -20,6 +22,16 @@ export type SpeechVoice = {
   readonly quality: string;
   readonly language: string;
 };
+
+/** How good a voice is: Apple's Premium (iOS only), Enhanced, or the rest (Standard). */
+export type VoiceTier = 'premium' | 'enhanced' | 'standard';
+
+/** A tier's rank: higher is better. */
+export const TIER_RANK: Readonly<Record<VoiceTier, number>> = Object.freeze({
+  premium: 2,
+  enhanced: 1,
+  standard: 0,
+});
 
 const ENHANCED = 'Enhanced';
 const APPLE_VOICES: readonly string[] = ['com.apple.voice.', 'com.apple.ttsbundle.'];
@@ -52,9 +64,14 @@ function usable(voice: SpeechVoice, platform: RecognitionPlatform): boolean {
   return APPLE_VOICES.some((prefix) => voice.identifier.startsWith(prefix));
 }
 
+/** The voice's tier: Premium by Apple's identifier (iOS), else Enhanced by its quality. */
+export function voiceTier(voice: SpeechVoice, platform: RecognitionPlatform): VoiceTier {
+  if (platform === 'ios' && voice.identifier.includes(APPLE_PREMIUM)) return 'premium';
+  return voice.quality === ENHANCED ? 'enhanced' : 'standard';
+}
+
 function rank(voice: SpeechVoice, platform: RecognitionPlatform): number {
-  if (platform === 'ios' && voice.identifier.includes(APPLE_PREMIUM)) return 2;
-  return voice.quality === ENHANCED ? 1 : 0;
+  return TIER_RANK[voiceTier(voice, platform)];
 }
 
 function best(
@@ -68,12 +85,15 @@ function best(
   );
 }
 
-/** The identifier of the phone's best voice for the locale, else undefined (the engine's default). */
-export function pickVoice(
+/**
+ * The voices that may speak the locale, in the phone's order: the usable ones (Apple's own on iOS,
+ * local ones on Android) for the exact locale, else for its language; none → [].
+ */
+export function localeVoices(
   voices: readonly SpeechVoice[],
   locale: string,
   platform: RecognitionPlatform,
-): string | undefined {
+): readonly SpeechVoice[] {
   const wanted = localeKey(locale);
   const candidates = voices
     .filter((voice) => usable(voice, platform))
@@ -81,8 +101,14 @@ export function pickVoice(
   const sameLanguage = candidates.filter(({ key }) => key.language === wanted.language);
   const exact = sameLanguage.filter(({ key }) => key.region === wanted.region);
   const group = exact.length > 0 ? exact : sameLanguage;
-  return best(
-    group.map(({ voice }) => voice),
-    platform,
-  )?.identifier;
+  return group.map(({ voice }) => voice);
+}
+
+/** The identifier of the phone's best voice for the locale, else undefined (the engine's default). */
+export function pickVoice(
+  voices: readonly SpeechVoice[],
+  locale: string,
+  platform: RecognitionPlatform,
+): string | undefined {
+  return best(localeVoices(voices, locale, platform), platform)?.identifier;
 }
