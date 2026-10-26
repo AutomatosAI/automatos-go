@@ -6,12 +6,18 @@
 // launch: nothing is written, and never to an unencrypted file.
 
 import { logger } from '../lib/logger';
+import { STORAGE_KEY_ITEM } from './secure-registry';
 
 /** The synchronous storage the query persister and the theme choice use. */
 export type KeyValueStorage = {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
   removeItem(key: string): void;
+};
+
+/** The store with its keys listed, so leaving a session can empty it item by item (switch.ts). */
+export type ListableStorage = KeyValueStorage & {
+  keys(): readonly string[];
 };
 
 /** The keychain, as expo-secure-store's synchronous calls. */
@@ -25,6 +31,7 @@ export type MmkvLike = {
   getString(key: string): string | undefined;
   set(key: string, value: string): void;
   remove(key: string): boolean;
+  getAllKeys(): string[];
 };
 
 export type EncryptedStorageDeps = {
@@ -35,13 +42,13 @@ export type EncryptedStorageDeps = {
 };
 
 export type OpenedStorage = {
-  readonly storage: KeyValueStorage;
+  readonly storage: ListableStorage;
   /** false when the store fell back to memory: nothing survives this launch. */
   readonly persistent: boolean;
 };
 
-/** The keychain item that holds the MMKV key (US-005a's secure-key registry lists it). */
-export const STORAGE_KEY_ITEM = 'automatos.storage.mmkv-key.v1';
+/** The keychain item that holds the MMKV key (named in src/storage/secure-registry.ts). */
+export { STORAGE_KEY_ITEM };
 
 /**
  * 24 random bytes as base64 is 32 ASCII characters: exactly AES-256's 32-byte key limit in MMKV
@@ -74,18 +81,19 @@ export function loadOrCreateKey(deps: Omit<EncryptedStorageDeps, 'openMmkv'>): s
   return created;
 }
 
-export function mmkvStorage(mmkv: MmkvLike): KeyValueStorage {
+export function mmkvStorage(mmkv: MmkvLike): ListableStorage {
   return Object.freeze({
     getItem: (key: string) => mmkv.getString(key) ?? null,
     setItem: (key: string, value: string) => mmkv.set(key, value),
     removeItem: (key: string) => {
       mmkv.remove(key);
     },
+    keys: () => Object.freeze([...mmkv.getAllKeys()]),
   });
 }
 
 /** A store that lives only as long as this launch. */
-export function memoryStorage(): KeyValueStorage {
+export function memoryStorage(): ListableStorage {
   const items = new Map<string, string>();
   return Object.freeze({
     getItem: (key: string) => items.get(key) ?? null,
@@ -95,6 +103,7 @@ export function memoryStorage(): KeyValueStorage {
     removeItem: (key: string) => {
       items.delete(key);
     },
+    keys: () => Object.freeze([...items.keys()]),
   });
 }
 

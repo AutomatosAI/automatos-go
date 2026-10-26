@@ -4,15 +4,15 @@
 // "this install has run before". At launch, before anything reads the keychain (the root layout
 // holds ClerkProvider and the encrypted store back until this is done, src/session/InstallGate.tsx),
 // a missing marker means a new install: the app's key registry (src/lib/secure-keys.ts) deletes
-// EVERY item it lists (the paired record, Clerk's items, the encrypted store's key, later waves'
-// keys), the paired record once more by name (an unreadable index lists nothing), then the marker
-// is written. The install id is the one survivor: it lives outside the
-// registry by design (install-id.ts).
+// EVERY item it lists (each item of src/storage/secure-registry.ts by name, so an unreadable index
+// still loses them, and every key the index names: Clerk's), the paired record once more by name,
+// then the marker is written. The install id is the one survivor: it lives outside the registry
+// by design (install-id.ts).
 //
 // The marker is not in the encrypted store: that store's key is itself a registry item, which this
-// wipe and every sign-out delete, and a marker sealed under a deleted key is lost with it at the
-// next launch, which would then wipe again (signing the phone out, or forgetting a server paired
-// since). A marker that cannot be read, or a keychain that refuses (locked before the first
+// wipe deletes, and every sign-out empties the store (src/connect/switch.ts), so a marker kept
+// there would be lost and the next launch would wipe again (signing the phone out, or forgetting a
+// server paired since). A marker that cannot be read, or a keychain that refuses (locked before the first
 // unlock), deletes nothing and writes no marker: the next launch checks again. Pure over its ports.
 
 import type { KeyValueStorage } from '../storage/encrypted-storage';

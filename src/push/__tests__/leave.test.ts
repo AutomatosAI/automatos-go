@@ -150,9 +150,9 @@ describe('the seams (read as source)', () => {
   const root = path.resolve(__dirname, '../../..');
   const read = (file: string) => readFileSync(path.join(root, file), 'utf8');
 
-  it('switch.ts clears push first in clearSession: before the cache, the workspace id and the provider', () => {
+  it('switch.ts clears push first in clearUserData: before the cache, the workspace id and the provider', () => {
     const text = read('src/connect/switch.ts');
-    const body = text.slice(text.indexOf('async function clearSession'));
+    const body = text.slice(text.indexOf('export async function clearUserData'));
     const push = body.indexOf('await clearPushBeforeLeaving();');
     expect(text.match(/clearPushBeforeLeaving\(\)/g)).toHaveLength(1);
     expect(push).toBeGreaterThan(-1);

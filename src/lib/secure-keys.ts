@@ -1,6 +1,7 @@
 // The app's secure-storage key registry (release audit, lead 20 Oct): iOS keeps keychain items
-// across an uninstall, so every item the app writes is named in ONE index item, and sign-out or a
-// reinstall wipe can list and delete them all. Items go in and out through the registry, which names
+// across an uninstall, so every item the app writes is named in ONE index item, and a reinstall
+// wipe can list and delete them all, and sign-out the person's (src/storage/secure-registry.ts
+// clearUserKeys). Items go in and out through the registry, which names
 // a key in the index BEFORE its item is written and drops it only AFTER its item is deleted, one
 // operation at a time, so no item is ever outside the index. Items with a fixed name written
 // elsewhere (the MMKV key, src/storage) are passed in as fixedKeys and always listed. Pure over its
@@ -10,10 +11,11 @@
 
 import { z } from 'zod';
 
+import { SECURE_KEY_INDEX } from '../storage/secure-registry';
 import { logger } from './logger';
 
-/** The one keychain item that names every other item the app writes. */
-export const SECURE_KEY_INDEX = 'automatos.secure-keys.v1';
+/** The one keychain item that names every other item the app writes (named in the registry). */
+export { SECURE_KEY_INDEX };
 
 /** expo-secure-store's key rule: alphanumerics, '.', '-' and '_' only. */
 const SECURE_KEY_PATTERN = /^[\w.-]+$/;
