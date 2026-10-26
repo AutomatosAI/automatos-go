@@ -7,9 +7,10 @@
 // between the top bar and the waveform: the core gives up its drawn size there (coreSizeIn) so the
 // transcript keeps three lines, and whatever still does not fit is cut, never the buttons, so HOLD
 // TO TALK and STOP stay on screen with a two-line voice line and at large Dynamic Type. LOOK opens
-// the Looks drawer over it all (US-018c), the same drawer Settings hosts. Phase 2 (US-016k) feeds
-// it A2's newest turn, Auto's state and the needs-you number; A6 opens the mic and gives HOLD TO
-// TALK its voice. Outside HUD it draws nothing.
+// the Looks drawer over it all (US-018c), the same drawer Settings hosts; the menu square is the
+// caller's (HUD's home: the header menu, New chat first, D73). Phase 2 (US-016k) feeds it A2's
+// newest turn, Auto's state and the needs-you number; A6 opens the mic and gives HOLD TO TALK its
+// voice. Outside HUD it draws nothing.
 //   A6's voice screen (US-019j, D-ONE-VOICE) passes `voice`: the core then draws in every style,
 // painted by voiceDress — on the style's own background, with HUD's ground and scanlines only where
 // the dress says, the rings' structure in its line colour, Auto in the core only where the dress
@@ -96,7 +97,7 @@ export type HudCoreProps = {
   readonly needsYou: number;
   /** LOOK opens the Looks drawer over the core (US-018c); this hears it too. */
   readonly onLook?: () => void;
-  /** The menu square: Settings. */
+  /** The menu square: HUD's home opens the header menu (HomeMenu); the voice screen closes. */
   readonly onMenu: () => void;
   /** A6's live mic levels for the waveform, 0 to 1. */
   readonly levels?: readonly number[] | null;
