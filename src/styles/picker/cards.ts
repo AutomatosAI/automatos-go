@@ -8,9 +8,9 @@
 // style's accent AND the word 'Selected' (never colour alone, D-A11Y). The accent is the style's
 // own (selectedPaint): under Play and HUD the Studio-keyed 'accent' is the look's error colour.
 
-import { toolLineLabel } from '../../core/web/components/play/chat/labels';
-import { captionFor } from '../../core/web/lib/mascot/media';
-import type { HostToolCall } from '../../core/web/lib/theme-sdk';
+import { toolLineLabel } from '../../core/frozen/components/play/chat/labels';
+import { captionFor } from '../../core/frozen/lib/mascot/media';
+import type { HostToolCall } from '../../core/frozen/lib/theme-sdk';
 import { lookScreen, type StyleScreenPath } from '../nav';
 import type { ResolvedStyle, StyleMotion } from '../provider/resolve';
 import type {

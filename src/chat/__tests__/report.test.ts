@@ -99,6 +99,16 @@ describe('reportTarget: only Auto’s saved messages', () => {
     expect(reportTarget({ type: 'cards', key: 'loose-cards', cards: [] }, true)).toBeNull();
   });
 
+  it('never offers a saved stop note (it shows this kit’s words, not Auto’s)', () => {
+    const stop: StoredMessage = {
+      ...saved('m2', 'assistant', '⚠️ This reply was stopped before it finished.'),
+      source: { label: 'Error', origin: 'turn_error', code: 'turn_stopped' },
+    };
+    const rows = threadRows(opened([saved('m1', 'user', 'Go'), stop]));
+    expect(rows.map((row) => row.type)).toEqual(['user', 'auto']);
+    expect(offered(rows, true)).toEqual([]);
+  });
+
   it('never offers an id the server’s target_id would refuse', () => {
     const long = threadRows(
       opened([saved('x'.repeat(REPORT_TARGET_ID_MAX_CHARS + 1), 'assistant', 'Long id.')]),

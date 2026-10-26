@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { DAYLIGHT, DEFAULT_LOOK, EMBER } from '../../../core/web/lib/looks/presets';
+import { DAYLIGHT, DEFAULT_LOOK, EMBER } from '../../../core/frozen/lib/looks/presets';
 import { HUD_DEFAULT_LOOK, HUD_PRESET_LOOKS } from '../../hud/look-schema';
 import { STUDIO_TYPE } from '../../type';
 import { HUD_TONE, hudTokens } from '../hud';

@@ -325,9 +325,6 @@ while running. The way out is **Remove this phone and forget this server**.
   phone' in the self-hosting docs" ([src/connect/strings.ts](../src/connect/strings.ts); a test
   pins the wording). Closed by the automatos-ai docs change (`docs/self-hosting-phone`), which adds
   that heading to `docs/getting-started/self-hosting.md`; remove this item once it merges.
-- **Route marks.** The three routes in [src/connect/routes.ts](../src/connect/routes.ts) are still
-  marked `pendingUpstream: 'PRD-266 US-003'`. automatos-ai `main` serves them; the marks come off at
-  the next core re-pin.
 - **`FRONTEND_URL` at its default.** The mint script warns only about a loopback API address, not
   about `FRONTEND_URL` left at `localhost`, which leaves the phone's Studio links on a page the phone
   cannot load. Pairing itself still works: the app ignores the link's host.

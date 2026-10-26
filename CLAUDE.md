@@ -27,7 +27,7 @@ Scaffold lifted from the academy app's TestFlight tree.
 | `npm run check:bundle`                     | `expo export --platform ios` into `.expo/bundle-check` — compiles the JS bundle, no native build         |
 | `npx expo-doctor`                          | Expo's project checks (CI job `expo-doctor · iOS bundle`)                                                |
 | `npx expo config --type introspect`        | evaluates every config plugin without writing ios/ or android/                                           |
-| `npm run check:core`                       | `src/core/web` and `src/core/route-manifest.json` match `core.lock.json` (no hand edits, no drift)       |
+| `npm run check:core`                       | `src/core/web`, `src/core/frozen` and `src/core/route-manifest.json` match `core.lock.json` / the manifest (no hand edits, no drift) |
 | `npm run check:routes`                     | server tables `src/**/routes.ts` (not `src/navigation/`) served at the pin or `pendingUpstream` (K4)     |
 
 Lint guards: `fetch` / `XMLHttpRequest` only in `src/api/**`; `expo/fetch` only in
@@ -94,6 +94,7 @@ parses them with zod (blank = "not configured").
 app/                 expo-router screens (auth, connect, (app)/home, (app)/cc/*, sheets, settings, voice)
 src/core/            pure TypeScript vendored from automatos-ai at a pinned SHA (no React, no DOM)
   web/               written ONLY by scripts/sync-core.ts (core.lock.json) — never by hand
+  frozen/            files core no longer has (Play's chat, looks, mascot; deleted by PRD-261 W-A8), frozen at their last core SHA with a provenance header; check:core fails on any edit
 src/api/             the one API client: bearer + X-Workspace-ID, capabilities, error taxonomy
 src/auth/            AuthProvider interface; providers/clerk.ts (device.ts, oidc.ts added later)
 src/connect/         discovery, QR pairing, server switching

@@ -8,7 +8,7 @@ import { createApiClient } from '../../../api/client';
 import { isApiError } from '../../../api/errors';
 import { SERVER, fakeTransport, jsonReply } from '../../../api/__tests__/fake-transport';
 import type { TransportRequest } from '../../../api/transport-types';
-import { AURORA, OBSIDIAN } from '../../../core/web/lib/looks/presets';
+import { AURORA, OBSIDIAN } from '../../../core/frozen/lib/looks/presets';
 import { logger } from '../../../lib/logger';
 import { HUD_LOOK_RULES } from '../../hud/hud-looks';
 import { HUD_DEFAULT_LOOK } from '../../hud/look-schema';

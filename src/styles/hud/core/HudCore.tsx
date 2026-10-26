@@ -3,9 +3,13 @@
 // scanlines: the top bar (8 x 20) with the command row and the status row; the 290 core centred 14
 // below with Auto 104 inside it when the look's auto is on (the Mascot decides); the state chip 10
 // below; the transcript (24 at the sides) taking the room left; the waveform (20 at the sides); the
-// buttons (14 / 24 / 34). LOOK opens the Looks drawer over it all (US-018c), the same drawer
-// Settings hosts. Phase 2 (US-016k) feeds it A2's newest turn, Auto's state and the needs-you
-// number; A6 opens the mic and gives HOLD TO TALK its voice. Outside HUD it draws nothing.
+// buttons (14 / 24 / 34). The core, the chip, the voice's line and the transcript share the room
+// between the top bar and the waveform: the core gives up its drawn size there (coreSizeIn) so the
+// transcript keeps three lines, and whatever still does not fit is cut, never the buttons, so HOLD
+// TO TALK and STOP stay on screen with a two-line voice line and at large Dynamic Type. LOOK opens
+// the Looks drawer over it all (US-018c), the same drawer Settings hosts. Phase 2 (US-016k) feeds
+// it A2's newest turn, Auto's state and the needs-you number; A6 opens the mic and gives HOLD TO
+// TALK its voice. Outside HUD it draws nothing.
 //   A6's voice screen (US-019j, D-ONE-VOICE) passes `voice`: the core then draws in every style,
 // painted by voiceDress — on the style's own background, with HUD's ground and scanlines only where
 // the dress says, the rings' structure in its line colour, Auto in the core only where the dress
@@ -23,9 +27,10 @@ import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { ThreadReport } from '../../../chat/report/report';
-import type { MascotName } from '../../../core/web/lib/mascot/types';
+import type { MascotName } from '../../../core/frozen/lib/mascot/types';
 import { hudGroundPlan, type HudGroundPlan } from '../../ground/hud-ground';
 import { HudOverlay } from '../../ground/HudOverlay';
+import { useLayoutSize } from '../../ground/use-size';
 import { Mascot } from '../../mascot/Mascot';
 import type { MascotController } from '../../mascot/use-mascot';
 import { LooksDrawer } from '../LooksDrawer';
@@ -34,6 +39,7 @@ import { HudTopBar } from './HudTopBar';
 import {
   HUD_CORE,
   coreSizeFor,
+  coreSizeIn,
   mascotPlace,
   type ChipView,
   type HudTalk,
@@ -175,6 +181,19 @@ function columnParts(voice: HudCoreVoice | undefined, turn: HudTurn, quick?: Hud
   };
 }
 
+/**
+ * The core's side: the drawn share of the screen until the middle (and the chip with the voice's
+ * line in it) are measured, then what fits the room they leave (coreSizeIn).
+ */
+function useCoreSize() {
+  const { height } = useWindowDimensions();
+  const [middle, onMiddleLayout] = useLayoutSize();
+  const [words, onWordsLayout] = useLayoutSize();
+  const size =
+    middle && words ? coreSizeIn(middle.height - words.height, height) : coreSizeFor(height);
+  return { size, onMiddleLayout, onWordsLayout };
+}
+
 /** LOOK: HUD's drawer over the core on HUD's home; the voice screen's onLook alone. */
 function useLooks(onLook: (() => void) | undefined, inPlace: boolean) {
   const [looking, setLooking] = useState(false);
@@ -191,7 +210,7 @@ export function HudCore(props: HudCoreProps) {
   const { voice } = props;
   const { paint } = useVoiceCore();
   const insets = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
+  const core = useCoreSize();
   const { looking, openLooks, closeLooks } = useLooks(onLook, voice === undefined);
   const frame = useFrame(voice);
   if (!frame) return null;
@@ -210,12 +229,16 @@ export function HudCore(props: HudCoreProps) {
           onMenu={onMenu}
           {...parts.bar}
         />
-        <Core size={coreSizeFor(height)} mascotState={mascotState} voice={voice} />
-        <View style={{ marginTop: HUD_CORE.chip.marginTop }}>
-          <StateChip state={state} words={parts.chip} />
+        <View style={styles.middle} onLayout={core.onMiddleLayout}>
+          <Core size={core.size} mascotState={mascotState} voice={voice} />
+          <View onLayout={core.onWordsLayout}>
+            <View style={{ marginTop: HUD_CORE.chip.marginTop }}>
+              <StateChip state={state} words={parts.chip} />
+            </View>
+            {parts.line}
+          </View>
+          <Transcript turn={turn} report={props.report} />
         </View>
-        {parts.line}
-        <Transcript turn={turn} report={props.report} />
         <View style={{ paddingHorizontal: HUD_CORE.wave.padX }}>
           <Waveform colour={paint.accent} levels={levels} />
         </View>
@@ -235,6 +258,8 @@ export function HudCore(props: HudCoreProps) {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   column: { flex: 1 },
+  /** The room between the top bar and the waveform: what does not fit is cut, not the buttons. */
+  middle: { flex: 1, overflow: 'hidden' },
   core: { alignSelf: 'center' },
   mascot: { position: 'absolute' },
 });

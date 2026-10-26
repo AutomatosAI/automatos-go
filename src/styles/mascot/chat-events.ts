@@ -15,7 +15,7 @@
 // mascotEventsFromReply, re-exported below, instead of the frames: one source per turn.
 
 import type { Frame, LiveReceipts, ToolEndFrame } from '../../core/ai-sdk-stream';
-import type { JsonObject, MascotEvent } from '../../core/web/lib/mascot/types';
+import type { JsonObject, MascotEvent } from '../../core/frozen/lib/mascot/types';
 
 export {
   mascotEventsFromReply,
@@ -23,7 +23,7 @@ export {
   NO_REPLY,
   type ChatStatus,
   type ReplyProgress,
-} from '../../core/web/lib/mascot/events';
+} from '../../core/frozen/lib/mascot/events';
 
 /** The unknown frame's event: the parser keeps no type name for a frame it could not read. */
 export const UNKNOWN_FRAME_TYPE = 'unknown';

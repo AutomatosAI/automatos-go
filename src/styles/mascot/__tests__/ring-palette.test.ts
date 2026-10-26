@@ -5,11 +5,11 @@ import { describe, expect, it } from 'vitest';
 
 import { mixHex } from '../../../core/web/lib/look-kit/contrast';
 import { DUSK_TOWARD_BG } from '../../../core/web/lib/look-kit/css';
-import { ACCENTS, ERROR_COLOUR, GROUNDS, LIGHTS } from '../../../core/web/lib/looks/catalogue';
-import { duskOf } from '../../../core/web/lib/looks/engine';
-import { EMBER, PRESETS } from '../../../core/web/lib/looks/presets';
-import { ringColour, ringTone, type RingTone } from '../../../core/web/lib/mascot/ring';
-import { MASCOT_STATES, type MascotName } from '../../../core/web/lib/mascot/types';
+import { ACCENTS, ERROR_COLOUR, GROUNDS, LIGHTS } from '../../../core/frozen/lib/looks/catalogue';
+import { duskOf } from '../../../core/frozen/lib/looks/engine';
+import { EMBER, PRESETS } from '../../../core/frozen/lib/looks/presets';
+import { ringColour, ringTone, type RingTone } from '../../../core/frozen/lib/mascot/ring';
+import { MASCOT_STATES, type MascotName } from '../../../core/frozen/lib/mascot/types';
 import { HUD_DEFAULT_LOOK, HUD_PRESET_LOOKS } from '../../hud/look-schema';
 import { resolveStyle, type StyleInput } from '../../provider/resolve';
 import { builtinChoice, type StyleChoice } from '../../registry/style-id';

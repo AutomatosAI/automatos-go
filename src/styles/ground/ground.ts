@@ -4,7 +4,7 @@
 // Paper as on HUD's black. ScreenGround.tsx draws the plan. The text inputs take the keyboard's
 // appearance from the same tone under Play and HUD (keyboardAppearanceFor).
 
-import type { MascotName } from '../../core/web/lib/mascot/types';
+import type { MascotName } from '../../core/frozen/lib/mascot/types';
 import type { GroundKind } from '../dress/dress';
 import type { ResolvedStyle } from '../provider/resolve';
 import type { ColourScheme } from '../tokens/types';

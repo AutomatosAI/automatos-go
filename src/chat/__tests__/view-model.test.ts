@@ -162,7 +162,9 @@ describe('notices', () => {
     ]);
   });
 
-  it.each(TURN_ERROR_CODES)('says a turn that failed with %s in the kit’s words', (code) => {
+  const FAILURE_CODES = TURN_ERROR_CODES.filter((code) => code !== 'turn_stopped');
+
+  it.each(FAILURE_CODES)('says a turn that failed with %s in the kit’s words', (code) => {
     const failed = apply(
       streaming({ kind: 'error', message: 'Your trial credit is spent: upgrade', code }),
       { type: 'finished' },
@@ -179,6 +181,7 @@ describe('notices', () => {
 
   it('says a trial or rate limit as the kit’s limit copy, never a plan', () => {
     expect(TURN_ERROR_COPY.trial_exhausted).toEqual({ text: CHAT_COPY.limit, canRetry: false });
+    expect(TURN_ERROR_COPY.credits_exhausted).toEqual({ text: CHAT_COPY.limit, canRetry: false });
     expect(TURN_ERROR_COPY.rate_limited.text).not.toMatch(/plan|credit|upgrade|price/i);
   });
 
@@ -195,6 +198,9 @@ describe('notices', () => {
     });
     expect(
       failWith(new ApiError('server', { status: 402, code: 'trial_exhausted' })),
+    ).toMatchObject({ text: CHAT_COPY.limit, retry: false });
+    expect(
+      failWith(new ApiError('server', { status: 402, code: 'credits_exhausted' })),
     ).toMatchObject({ text: CHAT_COPY.limit, retry: false });
   });
 
@@ -226,6 +232,57 @@ describe('notices', () => {
       [TURN_ERROR_COPY.turn_failed.text, true],
     ]);
     expect(allText(threadRows(state))).not.toMatch(/credit|upgrade/i);
+  });
+
+  it('says a saved turn_stopped note as the live Stop reads, muted, with no Try again', () => {
+    const note = (id: string): StoredMessage => ({
+      ...saved(id, 'assistant', '⚠️ This reply was stopped before it finished.'),
+      source: { label: 'Error', origin: 'turn_error', code: 'turn_stopped' },
+    });
+    const state = opened([saved('m1', 'user', 'One'), note('m2')]);
+    expect(notices(threadRows(state))).toEqual([
+      expect.objectContaining({
+        kind: 'stopped',
+        tone: 'muted',
+        text: CHAT_COPY.stopped,
+        retry: false,
+        accessibilityLabel: `Stopped, ${CHAT_COPY.stopped}`,
+      }),
+    ]);
+    expect(TURN_ERROR_COPY.turn_stopped).toEqual({ text: CHAT_COPY.stopped, canRetry: false });
+  });
+
+  it('keeps a live Stop’s words once the saved stop note retires the turn', () => {
+    const stopped = apply(streaming(), { type: 'stopped', at: AT });
+    const settled = apply(stopped, {
+      type: 'settled',
+      messages: [
+        saved('m1', 'user', 'Status?'),
+        {
+          ...saved('m2', 'assistant', '⚠️ This reply was stopped before it finished.'),
+          source: { label: 'Error', origin: 'turn_error', code: 'turn_stopped' },
+        },
+      ],
+    });
+    expect(settled.live).toBeNull();
+    const found = notices(threadRows(settled));
+    expect(found.map(({ kind, text, retry }) => [kind, text, retry])).toEqual([
+      ['stopped', CHAT_COPY.stopped, false],
+    ]);
+    expect(allText(threadRows(settled))).not.toMatch(/couldn.t answer|Try again/);
+  });
+
+  it('says a turn_stopped e: line as a stop, never a failure', () => {
+    const ended = apply(
+      streaming({ kind: 'error', message: 'This reply was stopped.', code: 'turn_stopped' }),
+      { type: 'finished' },
+      ...afterTurn(),
+    );
+    expect(notices(threadRows(ended))[0]).toMatchObject({
+      kind: 'stopped',
+      text: CHAT_COPY.stopped,
+      retry: false,
+    });
   });
 
   it('gives every notice its word for screen readers', () => {

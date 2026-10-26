@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/lib/chat/chat-status.ts @ 630fc1c85af06c5c76e70c74e9653ee1804fdf41 — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/lib/chat/chat-status.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b — do not edit — scripts/sync-core.ts
 /**
  * PRD-260 D5, D6; PRD-261 A-19a — the core chat's status and its newest reply, as any theme's
  * chat reads them. Pure.
@@ -8,9 +8,9 @@
  * cap that ended the turn never reach its data callback: useChat writes them onto the newest reply,
  * so they are read from it (lib/chat/message-text.ts replyProgress).
  *
- * These lived in Play's mascot library (lib/mascot/events.ts, which re-exports them until builtin
- * Play leaves core): the core's chat reading and the history refresh import them from here, so
- * deleting Play's folders can never break them.
+ * These lived in builtin Play's mascot library until A-19a moved them here; the core's chat
+ * reading and the history refresh import them from here. Play, now an installed package from the
+ * theme kit, keeps its own copy in its mascot library and imports nothing from core.
  */
 
 export type ChatStatus = 'idle' | 'streaming' | 'error'

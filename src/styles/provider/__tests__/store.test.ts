@@ -7,7 +7,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { DEFAULT_LOOK, OBSIDIAN } from '../../../core/web/lib/looks/presets';
+import { DEFAULT_LOOK, OBSIDIAN } from '../../../core/frozen/lib/looks/presets';
 import { logger } from '../../../lib/logger';
 import { memoryStorage, type KeyValueStorage } from '../../../storage/encrypted-storage';
 import { INITIAL_HUD_LOOKS, type HudLooks } from '../../hud/hud-looks';

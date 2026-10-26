@@ -2,22 +2,31 @@
 // (the style's sans 15/1.5 in text2) and Auto's (19/1.45 in text) with a 9 x 18 block cursor in the
 // accent after them while he streams, blinking each second (step-end, as hudBlink) while loops run
 // and lit and still while they may not. It opens with the AI label, the thread's one muted caption
-// (D73); before the first words, First open's 'Say or type what you need.' (US-017f). Centred while it fits; past that the newest lines show and the oldest go off the top.
+// (D73); before the first words, First open's 'Say or type what you need.' (US-017f). Centred while it
+// fits; past that it scrolls, showing the newest lines: new words scroll it down while the person
+// reads its end (transcriptAtEnd), and it stays put once they scroll up to read the start. A new
+// turn opens at its end again.
 // Given A2's ThreadReport, Auto's saved reply offers Report this (D15) as A2's AutoMessage does: a
 // long-press on the line and the 'Report this' accessible action. Never on YOU's line, never while
 // he streams, never past the gate (a viewer, a server without report_content).
 
-import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useRef, type ReactNode, type RefObject } from 'react';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 
 import { reportAccessibility, type ThreadReport } from '../../../chat/report/report';
 import { Text } from '../../../ui';
 import { AiLabel } from '../../ai-label';
-import { useLayoutSize } from '../../ground/use-size';
 import {
   HUD_CORE,
-  transcriptAlign,
+  transcriptAtEnd,
   transcriptHint,
   transcriptReport,
   transcriptRows,
@@ -31,6 +40,8 @@ const { transcript } = HUD_CORE;
 const { cursor } = transcript;
 /** hudBlink: lit for the first half of each second, dark for the second. */
 const LIT_UNTIL = 0.5;
+/** A scroll event at most every frame: enough to know whether the end is in view. */
+const SCROLL_THROTTLE_MS = 16;
 
 function Cursor({ core }: { readonly core: VoiceCore }) {
   const progress = useLoop(core.loops, cursor.blinkMs);
@@ -110,6 +121,29 @@ function Hint({ turn, core }: { readonly turn: HudTurn; readonly core: VoiceCore
   return <Text style={[face, { color: core.paint.text2 }]}>{hint}</Text>;
 }
 
+/**
+ * Follows the end: each content or size change scrolls to it while the person reads there; their own
+ * scroll decides whether they still do. A new turn (the user's new words) follows again.
+ */
+function useFollowEnd(scroll: RefObject<ScrollView | null>, turnKey: string | null) {
+  const following = useRef(true);
+  useEffect(() => {
+    following.current = true;
+  }, [turnKey]);
+  const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, layoutMeasurement, contentSize } = event.nativeEvent;
+    following.current = transcriptAtEnd(
+      contentOffset.y,
+      layoutMeasurement.height,
+      contentSize.height,
+    );
+  }, []);
+  const toEnd = useCallback(() => {
+    if (following.current) scroll.current?.scrollToEnd({ animated: false });
+  }, [scroll]);
+  return { onScroll, toEnd };
+}
+
 export type TranscriptProps = {
   readonly turn: HudTurn;
   /** Report this on Auto's saved reply (A2's useMessageReport); absent, nothing is offered. */
@@ -118,34 +152,34 @@ export type TranscriptProps = {
 
 export function Transcript({ turn, report }: TranscriptProps) {
   const core = useVoiceCore();
-  const [box, onBoxLayout] = useLayoutSize();
-  const [content, onContentLayout] = useLayoutSize();
-  const align = box && content ? transcriptAlign(content.height, box.height) : 'center';
+  const scroll = useRef<ScrollView>(null);
+  const follow = useFollowEnd(scroll, turn.you);
   return (
-    <View
-      onLayout={onBoxLayout}
-      style={[
-        styles.box,
-        {
-          paddingHorizontal: transcript.padX,
-          justifyContent: align === 'end' ? 'flex-end' : 'center',
-        },
+    <ScrollView
+      ref={scroll}
+      style={styles.box}
+      contentContainerStyle={[
+        styles.content,
+        { paddingHorizontal: transcript.padX, gap: transcript.gap },
       ]}
+      onScroll={follow.onScroll}
+      scrollEventThrottle={SCROLL_THROTTLE_MS}
+      onContentSizeChange={follow.toEnd}
+      onLayout={follow.toEnd}
     >
-      <View onLayout={onContentLayout} style={[styles.content, { gap: transcript.gap }]}>
-        <AiLabel agent={turn.agent} />
-        <Hint turn={turn} core={core} />
-        {transcriptRows(turn).map((row) => (
-          <Row key={row.who} row={row} core={core} onReport={reportOpener(row, report)} />
-        ))}
-      </View>
-    </View>
+      <AiLabel agent={turn.agent} />
+      <Hint turn={turn} core={core} />
+      {transcriptRows(turn).map((row) => (
+        <Row key={row.who} row={row} core={core} onReport={reportOpener(row, report)} />
+      ))}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  box: { flex: 1, overflow: 'hidden' },
-  content: { flexShrink: 0 },
+  box: { flex: 1 },
+  /** Centred while it fits; taller, it starts at the top and scrolls. */
+  content: { flexGrow: 1, justifyContent: 'center' },
   row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end' },
   words: { flexShrink: 1 },
 });

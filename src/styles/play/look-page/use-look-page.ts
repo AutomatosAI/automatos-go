@@ -6,7 +6,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 
-import type { Look } from '../../../core/web/lib/looks/types';
+import type { Look } from '../../../core/frozen/lib/looks/types';
 import { useStyleRoot, useStyleStore } from '../../provider/context';
 import { PLAY_LOOK_COPY } from '../../strings';
 import {

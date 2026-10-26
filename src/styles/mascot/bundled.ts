@@ -3,7 +3,7 @@
 // assets.ios.ts requires the clips and the stills, assets.android.ts the stills only, so the
 // Android bundle carries no clip; assets.d.ts gives TypeScript this one shape for both.
 
-import type { MascotName } from '../../core/web/lib/mascot/types';
+import type { MascotName } from '../../core/frozen/lib/mascot/types';
 
 /** A bundled file: the module id Metro gives a require()d asset. */
 export type BundledFile = number;

@@ -19,7 +19,7 @@ import {
   type TypePillView,
 } from '../../cc/deliverables/gallery';
 import type { DeliverableRow } from '../../cc/deliverables/schemas';
-import { TYPE_STYLE_KEYS, type TypeStyleKey } from '../../core/web/lib/looks/catalogue';
+import { TYPE_STYLE_KEYS, type TypeStyleKey } from '../../core/frozen/lib/looks/catalogue';
 import { routes } from '../../navigation/routes';
 import { joinLabel } from '../../ui/paint';
 import { countPhrase } from '../../ui/variants';

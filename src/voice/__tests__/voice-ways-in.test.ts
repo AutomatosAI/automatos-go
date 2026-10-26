@@ -2,7 +2,7 @@
 // files load React Native): VoiceButton is a 42 pt round IconButton with lucide's mic that only
 // navigates; A2's Composer has ONE voice-agnostic slot beside the send button, drawn only when given
 // (lead decision 24 Oct, option a); ChatScreen fills it with VoiceButton on the chat's id; Play's
-// PlayComposer shows it beside Send only when given `voice`. The voice screen's own TYPE composer
+// PlayComposer shows it beside Send only when given `voice`, and Play's home gives it. The voice screen's own TYPE composer
 // carries none. HUD's home holds to talk in place: HudHome wires quick-ask (useHudHomeVoice, scope
 // 'focused') into HudCore's optional quickAsk, its STOP is the voice's, a typed send hands the
 // transcript back to the thread, and its TYPE composer keeps A2's Stop. A2's and A5's own tests are
@@ -29,6 +29,7 @@ const button = read('voice/entry/VoiceButton.tsx');
 const composer = read('chat/composer/Composer.tsx');
 const chatScreen = read('chat/screens/ChatScreen.tsx');
 const playComposer = read('styles/play/companion/PlayComposer.tsx');
+const playHome = read('styles/homes/PlayHome.tsx');
 const voiceScreen = read('voice/screen/VoiceScreen.tsx');
 const hudHome = read('styles/homes/HudHome.tsx');
 const hudCore = read('styles/hud/core/HudCore.tsx');
@@ -92,6 +93,15 @@ describe("Play's PlayComposer (SEAM EDIT)", () => {
     expect(code(playComposer)).toMatch(
       /\{voice \? <VoiceButton \{\.\.\.voice\} \/> : null\}\s*<ComposerButton/,
     );
+  });
+});
+
+describe("Play's home (the way in under Play)", () => {
+  it('gives PlayComposer its voice on the conversation’s id and the role’s chat right', () => {
+    expect(code(playHome)).toMatch(
+      /<PlayComposer[\s\S]*?voice=\{\{ roleCanChat: roleCan\(role, 'chat'\), chatId: home\.thread\.state\.chatId \}\}[\s\S]*?\/>/,
+    );
+    expect(playHome).toMatch(/from '\.\.\/\.\.\/auth\/role'/);
   });
 });
 

@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { INITIAL_MASCOT, mascotReducer } from '../../../core/web/lib/mascot/reducer';
+import { INITIAL_MASCOT, mascotReducer } from '../../../core/frozen/lib/mascot/reducer';
 import { FOLLOW_STUDIO, builtinChoice, themeChoice } from '../../registry/style-id';
 import { FLIP_CROSSFADE_MS, FLIP_HELLO, flipPlan, phoneFlipPlan } from '../flip-plan';
 

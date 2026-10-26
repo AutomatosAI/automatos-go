@@ -8,8 +8,8 @@
 // for a screen that feeds Auto no events (an edge screen, a preview): it starts the driver there.
 
 import type { Frame } from '../../core/ai-sdk-stream';
-import { INITIAL_MASCOT } from '../../core/web/lib/mascot/reducer';
-import type { MascotEvent, MascotName } from '../../core/web/lib/mascot/types';
+import { INITIAL_MASCOT } from '../../core/frozen/lib/mascot/reducer';
+import type { MascotEvent, MascotName } from '../../core/frozen/lib/mascot/types';
 import { mascotEventsFromFrame } from './chat-events';
 import { startDriver, stepMascot, type DriverInput, type MascotDriver } from './driver';
 

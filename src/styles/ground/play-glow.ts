@@ -6,8 +6,8 @@
 // Reduce Motion. The edge screens that bring their own light (Not running's dusk, Something went
 // wrong's coral) hold it whatever Auto's state, with no snag layer.
 
-import type { Look } from '../../core/web/lib/looks/types';
-import type { MascotName } from '../../core/web/lib/mascot/types';
+import type { Look } from '../../core/frozen/lib/looks/types';
+import type { MascotName } from '../../core/frozen/lib/mascot/types';
 import { playLightStops, playSnagStops, type RadialStops } from '../tokens/ground-colours';
 import { PLAY_GLOW_CROSSFADE_MS, pageGlowLayers, type PlayVars } from '../tokens/play';
 import { PLAY_SPOTS, type PlaySpot, type ScreenKind } from './spots';

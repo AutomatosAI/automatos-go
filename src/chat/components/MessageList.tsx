@@ -11,10 +11,14 @@
 // and it is not animated under Reduce Motion. What sits above the thread on home (the needs strip)
 // stays outside the list, as the handoff draws it. Cards whose reply was never saved are drawn
 // after the saved messages (their own row). Report this goes only to the Auto messages report.ts
-// names.
+// names. Every row is built anew on each streamed delta, so each row is memoised on row-same.ts's
+// sameThreadRow (equal in value, the same handlers) and Try again is one stable function that
+// calls the screen's latest: only the row that changed draws again.
 
 import {
+  memo,
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -33,6 +37,7 @@ import { reportTarget, type ThreadReport } from '../report/report';
 import { shouldScrollToEnd, type ChatRow } from '../view-model';
 import { AutoColumn } from './AutoColumn';
 import { AutoMessage } from './AutoMessage';
+import { sameThreadRow } from './row-same';
 import {
   THREAD,
   entranceFor,
@@ -70,7 +75,7 @@ type RowProps = Pick<MessageListProps, 'onLink' | 'onRetry' | 'onCard' | 'report
   readonly place: RowPlace;
 };
 
-function ThreadRow({ row, place, onLink, onRetry, onCard, report }: RowProps) {
+function ThreadRowView({ row, place, onLink, onRetry, onCard, report }: RowProps) {
   const tokens = useTokens();
   switch (row.type) {
     case 'user':
@@ -110,6 +115,9 @@ function ThreadRow({ row, place, onLink, onRetry, onCard, report }: RowProps) {
       );
   }
 }
+
+/** A row draws again only when it changed: a streamed delta redraws the reply, not the thread. */
+const ThreadRow = memo(ThreadRowView, sameThreadRow);
 
 type RowFrameProps = {
   readonly row: ChatRow;
@@ -151,6 +159,19 @@ function useScrollOnAdd(list: RefObject<FlatList<ChatRow> | null>, count: number
   }, [list, animated]);
 }
 
+/**
+ * Try again as one function for the list's life, calling the screen's latest (which changes with
+ * every delta): a row's memo then holds while the reply streams. None while the screen gives none.
+ */
+function useStableRetry(onRetry: (() => void) | undefined): (() => void) | undefined {
+  const latest = useRef(onRetry);
+  useEffect(() => {
+    latest.current = onRetry;
+  });
+  const retry = useCallback(() => latest.current?.(), []);
+  return onRetry ? retry : undefined;
+}
+
 const keyOf = (row: ChatRow) => row.key;
 
 /** The thread's first row: the AI label, centred, 16 pt above the first message. */
@@ -166,6 +187,7 @@ function ThreadCaption() {
 export function MessageList({ rows, onLink, onRetry, onCard, report }: MessageListProps) {
   const { spacing } = useTokens();
   const list = useRef<FlatList<ChatRow>>(null);
+  const retry = useStableRetry(onRetry);
   // counted before the fold: a notice landing in the reply's box still scrolls to it
   const onContentSizeChange = useScrollOnAdd(list, rows.length);
   const shown = useMemo(() => foldNotices(rows), [rows]);
@@ -177,13 +199,13 @@ export function MessageList({ rows, onLink, onRetry, onCard, report }: MessageLi
           row={item}
           place={places[index]}
           onLink={onLink}
-          onRetry={onRetry}
+          onRetry={retry}
           onCard={onCard}
           report={report}
         />
       </RowFrame>
     ),
-    [places, onLink, onRetry, onCard, report],
+    [places, onLink, retry, onCard, report],
   );
   return (
     <FlatList

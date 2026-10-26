@@ -2,11 +2,13 @@
 // cards, newest first as the server lists them, and 'Load more' while there are older ones. The
 // filters stay on screen while a filter loads; a filter that fails with nothing to show is the
 // foundation's ErrorState, and each filter has its own empty copy. A pull refetches the loaded pages.
+// The shell's head opens the list (TabHead), so it scrolls away with the cards.
 
 import { FlatList, RefreshControl, View, type ListRenderItem } from 'react-native';
 
 import { useTokens } from '../../styles/theme';
 import { Button, EmptyState, ErrorState, LoadingState } from '../../ui';
+import { TabHead } from '../shell/TabHead';
 import { DELIVERABLES_COPY } from '../strings';
 import { GALLERY_LAYOUT } from './chrome';
 import { DeliverableCard } from './DeliverableCard';
@@ -74,7 +76,12 @@ export function DeliverablesTab() {
       keyExtractor={keyOf}
       renderItem={renderCard}
       accessibilityLabel={DELIVERABLES_COPY.listLabel}
-      ListHeaderComponent={<TypePills pills={view.pills} onChoose={choose} />}
+      ListHeaderComponent={
+        <>
+          <TabHead />
+          <TypePills pills={view.pills} onChoose={choose} />
+        </>
+      }
       ListHeaderComponentStyle={{ marginBottom: spacing[GALLERY_LAYOUT.gap] }}
       ItemSeparatorComponent={CardGap}
       ListEmptyComponent={<NoCards gallery={gallery} />}

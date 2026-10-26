@@ -22,12 +22,18 @@ export type SliderLimits = {
   readonly maxAllowed?: number;
 };
 
+/**
+ * How far short of a whole step a count of steps may fall and still be that step: a fractional
+ * step's float error (0.4 / 0.05 is 7.999999999999998) never loses the last step.
+ */
+const STEP_TOLERANCE = 1e-9;
+
 /** The range for these limits; maxAllowed outside [min, max] is brought inside it. */
 export function sliderRange({ min, max, step = 1, maxAllowed = max }: SliderLimits): SliderRange {
   if (!(max > min)) throw new RangeError(`a slider needs max above min (${min}..${max})`);
   if (!(step > 0)) throw new RangeError(`a slider's step must be above 0 (${step})`);
   const cap = Math.min(Math.max(maxAllowed, min), max);
-  const highest = min + Math.floor((cap - min) / step) * step;
+  const highest = min + Math.floor((cap - min) / step + STEP_TOLERANCE) * step;
   return Object.freeze({ min, max, step, highest });
 }
 

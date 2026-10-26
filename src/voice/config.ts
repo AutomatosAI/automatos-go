@@ -31,6 +31,15 @@ export const VOLUME_MAX = 10;
 /** expo-speech's rate: 1 is the voice's normal speed. */
 export const SPEECH_RATE = 1;
 
+/** expo-speech's pitch: 1 is the voice's own. */
+export const SPEECH_PITCH = 1;
+
+/** Settings → Voice's Speed slider: around the voice's normal speed, in steps of 0.05. */
+export const SPEECH_RATE_LIMITS = Object.freeze({ min: 0.8, max: 1.2, step: 0.05 });
+
+/** Settings → Voice's Pitch slider: around the voice's own pitch, in steps of 0.05. */
+export const SPEECH_PITCH_LIMITS = Object.freeze({ min: 0.8, max: 1.2, step: 0.05 });
+
 /** Said as the whole utterance during a hold, these act as STOP and send nothing (KV5). */
 export const STOP_PHRASES: readonly string[] = Object.freeze([
   'stop',

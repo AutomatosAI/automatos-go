@@ -12,7 +12,7 @@
 
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
-import type { Look } from '../../core/web/lib/looks/types';
+import type { Look } from '../../core/frozen/lib/looks/types';
 import type { KeyValueStorage } from '../../storage/encrypted-storage';
 import type { HudLooks } from '../hud/hud-looks';
 import { createHudLooksStore, type HudLooksStore } from '../hud/look-store';

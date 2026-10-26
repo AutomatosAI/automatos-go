@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { TYPE_STYLES } from '../../../core/web/lib/looks/catalogue';
+import { TYPE_STYLES } from '../../../core/frozen/lib/looks/catalogue';
 import { HUD_LABEL_TRACKING } from '../../tokens/hud-catalogue';
 import { parseEm, trackingPt } from '../tracking';
 

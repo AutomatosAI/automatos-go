@@ -7,7 +7,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { EMBER, PRESETS } from '../../../core/web/lib/looks/presets';
+import { EMBER, PRESETS } from '../../../core/frozen/lib/looks/presets';
 import { dressOf } from '../../dress/dress';
 import { HUD, HUD_STYLES, PLAY, PLAY_STYLES, STUDIO_STYLES } from '../../dress/__tests__/fixtures';
 import { HUD_DEFAULT_LOOK } from '../../hud/look-schema';

@@ -21,7 +21,7 @@ import type { LiveTurn, ThreadDraft, ThreadState } from '../../chat/controller/t
 import type { StoredMessage } from '../../chat/schemas';
 import { streamingText } from '../../chat/view-model';
 import type { TurnState } from '../../core/turn-reducer';
-import { toolLineLabel } from '../../core/web/components/play/chat/labels';
+import { toolLineLabel } from '../../core/frozen/components/play/chat/labels';
 import { messageText, savedTurnError } from '../../core/web/lib/chat/message-text';
 import { receiptsOf } from '../../core/web/lib/chat/receipts';
 import type { ToolCall } from '../../core/web/types';

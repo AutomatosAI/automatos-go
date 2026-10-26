@@ -3,6 +3,7 @@
 // as its colour's 8 pt square and its WORD, the serif title and the meta. A paused item is greyed
 // and says 'Paused'; an overdue deadline says 'Overdue'. A row or a band line opens the item sheet.
 // 'Nothing scheduled this day.' when the day has no rows. Views are view-model.ts's; sizes chrome.ts's.
+// A band line is at least 44 tall to touch, its words centred, the '24/7' mark beside the first.
 
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -75,7 +76,11 @@ function BandLine({
       accessibilityHint={CALENDAR_COPY.openHint}
       style={[
         styles.bandLine,
-        { gap: spacing[ALWAYS_ON_BAND.gap], opacity: pausedOpacity(line.paused) },
+        {
+          gap: spacing[ALWAYS_ON_BAND.gap],
+          minHeight: ALWAYS_ON_BAND.lineMinHeight,
+          opacity: pausedOpacity(line.paused),
+        },
       ]}
     >
       <KindSquare kind={line.kind} />
@@ -117,13 +122,15 @@ function AlwaysOnBand({
         },
       ]}
     >
-      <Text
-        variant="mono"
-        tone={ALWAYS_ON_BAND.markTone}
-        accessibilityLabel={CALENDAR_COPY.bandLabel}
-      >
-        {CALENDAR_COPY.bandMark}
-      </Text>
+      <View style={[styles.mark, { minHeight: ALWAYS_ON_BAND.lineMinHeight }]}>
+        <Text
+          variant="mono"
+          tone={ALWAYS_ON_BAND.markTone}
+          accessibilityLabel={CALENDAR_COPY.bandLabel}
+        >
+          {CALENDAR_COPY.bandMark}
+        </Text>
+      </View>
       <View style={[styles.grow, { gap: spacing[ALWAYS_ON_BAND.lineGap] }]}>
         {lines.map((line) => (
           <BandLine key={line.itemId} line={line} onPress={() => onOpen(line)} />
@@ -210,6 +217,7 @@ export function DayView({ view, onOpenRow, onOpenBand }: DayViewProps) {
 const styles = StyleSheet.create({
   line: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
   bandLine: { flexDirection: 'row', alignItems: 'center' },
+  mark: { justifyContent: 'center' },
   band: { flexDirection: 'row', alignItems: 'flex-start' },
   row: { flexDirection: 'row', alignItems: 'stretch' },
   grow: { flex: 1, minWidth: 0 },

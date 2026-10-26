@@ -1,7 +1,9 @@
 // The sheet's and the toast's logic, pure (PRD-001 §4.11, K5). The handoff (README 'Interactions'):
 // sheets slide up 220 ms ease and the backdrop fades to the handoff's ink at 34 %, a tap on it
 // closes the sheet; feedback is a toast at the top on iOS and an ink snackbar at the bottom on
-// Android, for 2.4 s. Under Reduce Motion the sheet does not slide: it cross-fades in place.
+// Android, for 2.4 s. Under Reduce Motion the sheet does not slide: it cross-fades in place. With
+// the keyboard up a tall sheet fits between the safe area's top and the keyboard, its last field
+// right above the keyboard.
 
 import type { ColourName, ColourScheme, Colours, RadiusName, SpaceName } from '../styles/tokens';
 import { tint } from './paint';
@@ -16,6 +18,24 @@ export const BACKDROP_ALPHA = 0.34;
 /** The sheet never covers more than this share of the window (the prototype's max-height: 84%). */
 export const SHEET_MAX_HEIGHT_RATIO = 0.84;
 export const GRABBER = Object.freeze({ width: 36, height: 4, radius: 2 });
+
+/**
+ * The sheet's tallest: 84 % of the window, and with the keyboard up no more than the room between
+ * the safe area's top and the keyboard, so a tall sheet keeps its top on screen.
+ */
+export function sheetMaxHeight(windowHeight: number, keyboard: number, safeTop: number): number {
+  const share = windowHeight * SHEET_MAX_HEIGHT_RATIO;
+  if (!(keyboard > 0)) return share;
+  return Math.max(0, Math.min(share, windowHeight - keyboard - safeTop));
+}
+
+/**
+ * The content's bottom padding: its own, and the home indicator's inset only while the keyboard is
+ * down (the keyboard covers the indicator, so the inset would be a gap above the keyboard).
+ */
+export function sheetBottomPadding(own: number, safeBottom: number, keyboard: number): number {
+  return keyboard > 0 ? own : own + safeBottom;
+}
 
 export type SheetMotion = {
   /** Slides up from below the window; false under Reduce Motion (a cross-fade instead). */

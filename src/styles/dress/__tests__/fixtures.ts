@@ -1,8 +1,8 @@
 // Resolved styles for the dress tests: Studio Light and Dark, an installed theme's painting on the
 // Studio layout, Play at every preset and every type knob, HUD at every preset and every font knob.
 
-import { TYPE_STYLE_KEYS } from '../../../core/web/lib/looks/catalogue';
-import { DAYLIGHT, EMBER, OBSIDIAN, PRESETS } from '../../../core/web/lib/looks/presets';
+import { TYPE_STYLE_KEYS } from '../../../core/frozen/lib/looks/catalogue';
+import { DAYLIGHT, EMBER, OBSIDIAN, PRESETS } from '../../../core/frozen/lib/looks/presets';
 import { HUD_DEFAULT_LOOK, HUD_PRESET_LOOKS, type HudLook } from '../../hud/look-schema';
 import { resolveStyle, type ResolvedStyle, type StyleInput } from '../../provider/resolve';
 import { builtinChoice, themeChoice, type StyleChoice } from '../../registry/style-id';

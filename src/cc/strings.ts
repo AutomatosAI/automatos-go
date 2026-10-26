@@ -130,8 +130,16 @@ export const CALENDAR_COPY = Object.freeze({
       task: 'Pausing holds this task’s runs until it is resumed.',
       resume: 'Resuming starts its runs again on its schedule.',
     }),
-    /** activity_service.py lists active items only until PRD-266 §4.9 keeps a paused one. */
-    leavesFeed: 'While it is paused it may not show on this calendar; Studio lists it.',
+    /**
+     * What pausing does to the feed: a routine leaves it (activity_service.py lists enabled
+     * heartbeats only; Studio resumes it on the agent's Heartbeat tab); a scheduled task stays with
+     * paused: true (activity_scheduled_task_items.py), so its sheet offers Resume.
+     */
+    pausedFeed: Object.freeze({
+      routine:
+        'A paused routine leaves this calendar. Resume it in Studio, on its agent’s Heartbeat tab.',
+      task: 'It stays on this calendar, marked Paused, so you can resume it here.',
+    }),
     paused: (title: string) => `Paused. “${title}” will not run until it is resumed.`,
     resumed: (title: string) => `Resumed. “${title}” runs on its schedule again.`,
     /** D-ROLES: a viewer reads the item and is told who pauses it. */

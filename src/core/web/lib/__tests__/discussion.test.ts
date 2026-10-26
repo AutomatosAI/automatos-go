@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/lib/__tests__/discussion.test.ts @ 630fc1c85af06c5c76e70c74e9653ee1804fdf41 — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/lib/__tests__/discussion.test.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b — do not edit — scripts/sync-core.ts
 /**
  * PRD-252 R2 — Discuss: a chat with the ticket in its context, and the brief
  * Auto proposed in it, ready to go back onto the ticket.
@@ -37,15 +37,27 @@ describe('a discussion', () => {
 describe("the bar's hint (PRD-260 M67)", () => {
   it("names the ticket's agent: in Studio's chat through the message box, in Play's chat through Studio", () => {
     const discussion = discussionOf(ticket())
-    expect(discussionHint(discussion, false)).toBe('You are talking to Auto. To ask Words instead, pick them in the message box.')
-    expect(discussionHint(discussion, true)).toBe(
+    expect(discussionHint(discussion, null)).toBe('You are talking to Auto. To ask Words instead, pick them in the message box.')
+    expect(discussionHint(discussion, { themeName: 'Play' })).toBe(
       "You are talking to Auto in Play's chat. To ask Words, switch to Studio from the theme menu.",
     )
   })
 
+  it("names the active theme's chat, never Play's under another theme", () => {
+    const hint = discussionHint(discussionOf(ticket()), { themeName: 'HUD' })
+    expect(hint).toBe("You are talking to Auto in HUD's chat. To ask Words, switch to Studio from the theme menu.")
+    expect(hint).not.toContain('Play')
+  })
+
+  it.each([null, '', '   '])("says this theme's chat for a theme with no name to show (%j)", (themeName) => {
+    expect(discussionHint(discussionOf(ticket()), { themeName })).toBe(
+      "You are talking to Auto in this theme's chat. To ask Words, switch to Studio from the theme menu.",
+    )
+  })
+
   it("is null on a mission's ticket and on a ticket with no agent", () => {
-    expect(discussionHint(discussionOf(ticket({ type: 'mission', mission_id: 'run-9' })), true)).toBeNull()
-    expect(discussionHint(discussionOf(ticket({ assignee: undefined })), false)).toBeNull()
+    expect(discussionHint(discussionOf(ticket({ type: 'mission', mission_id: 'run-9' })), { themeName: 'Play' })).toBeNull()
+    expect(discussionHint(discussionOf(ticket({ assignee: undefined })), null)).toBeNull()
   })
 })
 

@@ -172,13 +172,17 @@ export type TicketCheck = Readonly<z.output<typeof ticketCheckSchema>>;
 export type SocialPostCheck = Readonly<z.output<typeof socialPostCheckSchema>>;
 export type ChatCheck = Readonly<z.output<typeof chatCheckSchema>>;
 
-/** W1's DeviceConflict codes and the push token's unique index (W2 US-009 adds push_token_missing). */
+/**
+ * W1's DeviceConflict codes and the push token's unique index (W2 US-009 adds push_token_missing;
+ * #1317 adds device_limit_reached, POST /devices from a person who already holds the most devices).
+ */
 export const DEVICE_CONFLICT_CODES = [
   'push_token_in_use',
   'push_token_missing',
   'device_revoked',
   'install_id_mismatch',
   'install_id_paired',
+  'device_limit_reached',
 ] as const;
 
 export const deviceConflictSchema = z.object({ code: z.enum(DEVICE_CONFLICT_CODES) });

@@ -42,7 +42,7 @@ export type PauseButtonView = {
   readonly resumes: boolean;
   /** What pressing it does. */
   readonly effect: string;
-  /** Pausing today: the item may leave the feed (PRD-266 §4.9 not yet served). */
+  /** Pausing: where the item is then (a routine leaves the feed, a task stays); none on Resume. */
   readonly note: string | null;
   readonly action: SentPause;
 };
@@ -86,7 +86,7 @@ export function pauseButton(action: SentPause, paused: boolean): PauseButtonView
     label: resumes ? words.resume[which] : words.pause[which],
     resumes,
     effect: resumes ? words.effect.resume : words.effect[which],
-    note: resumes ? null : words.leavesFeed,
+    note: resumes ? null : words.pausedFeed[which],
     action,
   };
 }

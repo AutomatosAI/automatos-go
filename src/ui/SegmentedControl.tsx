@@ -2,7 +2,8 @@
 // shadow. Light / Dark / System, the digest's 07:00 / 08:00 / 09:00, Ask | Plan. A tab list to
 // VoiceOver: the group has a label and each segment says whether it is selected. A5: the dress
 // gives the label's face, case and tracking and the paints (Play: the chosen segment cream, HUD:
-// the accent fill); the radii are the style's.
+// the accent fill); the radii are the style's. A segment is at least 38 tall, so with the track's
+// 3 pt inset as its slop it takes the 44 pt touch in every style (a slop past the track is lost).
 
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -11,7 +12,12 @@ import { useStyle } from '../styles/theme';
 import { Text } from './Text';
 import { controlLabel, dressedSegmentPaint } from './dressed';
 import { MIN_TOUCH } from './paint';
-import { SEGMENT_GAP, SEGMENT_PADDING_Y, SEGMENT_TRACK_INSET } from './variants';
+import {
+  SEGMENT_GAP,
+  SEGMENT_MIN_HEIGHT,
+  SEGMENT_PADDING_Y,
+  SEGMENT_TRACK_INSET,
+} from './variants';
 
 const SEGMENT_LABEL_LEVEL = 6;
 const SEGMENT_SLOP = Object.freeze({ top: SEGMENT_TRACK_INSET, bottom: SEGMENT_TRACK_INSET });
@@ -86,5 +92,10 @@ export function SegmentedControl<T extends string>({
 
 const styles = StyleSheet.create({
   track: { flexDirection: 'row', alignSelf: 'flex-start' },
-  segment: { alignItems: 'center', justifyContent: 'center', minWidth: MIN_TOUCH },
+  segment: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: MIN_TOUCH,
+    minHeight: SEGMENT_MIN_HEIGHT,
+  },
 });

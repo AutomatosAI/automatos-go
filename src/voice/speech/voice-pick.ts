@@ -10,6 +10,10 @@
 //   Android: expo-speech exposes no network flag, so the voice's name decides (Google TTS names
 //   each 'en-us-x-iol-local' or 'en-us-x-iol-network'): only names with 'local' and never
 //   'network'; Enhanced (above QUALITY_NORMAL, SpeechModule.kt:87) first.
+//   The rules are shared with Settings → Voice (voice-choices.ts): voiceTier (how good each voice is),
+//   languageVoices (every usable voice for the language, which the list offers, so a US Premium voice
+//   can be chosen on a UK phone) and inRegion (the phone's region first within a tier). pickVoice
+//   alone keeps the exact locale first, so Automatic keeps the phone's accent.
 
 import type { RecognitionPlatform } from '../quick-ask/recognition-policy';
 
@@ -20,6 +24,16 @@ export type SpeechVoice = {
   readonly quality: string;
   readonly language: string;
 };
+
+/** How good a voice is: Apple's Premium (iOS only), Enhanced, or the rest (Standard). */
+export type VoiceTier = 'premium' | 'enhanced' | 'standard';
+
+/** A tier's rank: higher is better. */
+export const TIER_RANK: Readonly<Record<VoiceTier, number>> = Object.freeze({
+  premium: 2,
+  enhanced: 1,
+  standard: 0,
+});
 
 const ENHANCED = 'Enhanced';
 const APPLE_VOICES: readonly string[] = ['com.apple.voice.', 'com.apple.ttsbundle.'];
@@ -52,9 +66,14 @@ function usable(voice: SpeechVoice, platform: RecognitionPlatform): boolean {
   return APPLE_VOICES.some((prefix) => voice.identifier.startsWith(prefix));
 }
 
+/** The voice's tier: Premium by Apple's identifier (iOS), else Enhanced by its quality. */
+export function voiceTier(voice: SpeechVoice, platform: RecognitionPlatform): VoiceTier {
+  if (platform === 'ios' && voice.identifier.includes(APPLE_PREMIUM)) return 'premium';
+  return voice.quality === ENHANCED ? 'enhanced' : 'standard';
+}
+
 function rank(voice: SpeechVoice, platform: RecognitionPlatform): number {
-  if (platform === 'ios' && voice.identifier.includes(APPLE_PREMIUM)) return 2;
-  return voice.quality === ENHANCED ? 1 : 0;
+  return TIER_RANK[voiceTier(voice, platform)];
 }
 
 function best(
@@ -68,21 +87,47 @@ function best(
   );
 }
 
+/** The voice speaks the locale's own region ('en-GB' for an en-GB phone), not just its language. */
+export function inRegion(voice: SpeechVoice, locale: string): boolean {
+  const wanted = localeKey(locale);
+  const key = localeKey(voice.language);
+  return key.language === wanted.language && key.region === wanted.region;
+}
+
+/**
+ * Every usable voice (Apple's own on iOS, local ones on Android) for the locale's language, any
+ * region, in the phone's order; none → [].
+ */
+export function languageVoices(
+  voices: readonly SpeechVoice[],
+  locale: string,
+  platform: RecognitionPlatform,
+): readonly SpeechVoice[] {
+  const { language } = localeKey(locale);
+  return voices.filter(
+    (voice) => usable(voice, platform) && localeKey(voice.language).language === language,
+  );
+}
+
+/**
+ * The voices pickVoice chooses from, in the phone's order: the language's voices for the exact
+ * locale, else all of them; none → [].
+ */
+export function localeVoices(
+  voices: readonly SpeechVoice[],
+  locale: string,
+  platform: RecognitionPlatform,
+): readonly SpeechVoice[] {
+  const sameLanguage = languageVoices(voices, locale, platform);
+  const exact = sameLanguage.filter((voice) => inRegion(voice, locale));
+  return exact.length > 0 ? exact : sameLanguage;
+}
+
 /** The identifier of the phone's best voice for the locale, else undefined (the engine's default). */
 export function pickVoice(
   voices: readonly SpeechVoice[],
   locale: string,
   platform: RecognitionPlatform,
 ): string | undefined {
-  const wanted = localeKey(locale);
-  const candidates = voices
-    .filter((voice) => usable(voice, platform))
-    .map((voice) => ({ voice, key: localeKey(voice.language) }));
-  const sameLanguage = candidates.filter(({ key }) => key.language === wanted.language);
-  const exact = sameLanguage.filter(({ key }) => key.region === wanted.region);
-  const group = exact.length > 0 ? exact : sameLanguage;
-  return best(
-    group.map(({ voice }) => voice),
-    platform,
-  )?.identifier;
+  return best(localeVoices(voices, locale, platform), platform)?.identifier;
 }

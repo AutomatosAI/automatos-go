@@ -14,6 +14,13 @@ export const QUESTION_KIND = 'question';
 /** W1 answers a device conflict as 409 {"detail": {"code": …}} (api/mobile_devices.py _write). */
 export const CONFLICT_STATUS = 409;
 
+/**
+ * The most active devices one person may hold in one workspace (W1 services/mobile/devices.py
+ * MAX_ACTIVE_DEVICES_PER_PERSON, #1317): a registration that would add one more is 409
+ * device_limit_reached.
+ */
+export const MAX_DEVICES_PER_PERSON = 10;
+
 /** W1's device ids and the notifications table's ids are UUIDs (the routes take `UUID`). */
 export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

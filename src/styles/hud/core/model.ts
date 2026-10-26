@@ -4,12 +4,14 @@
 // open's hint (US-017f); the top bar's mic, status row, clock and command row (KS10); the three
 // buttons (HOLD TO TALK inert until A6, STOP only while a turn streams); and the drawing's numbers. Props only: phase 2 (US-016k) maps A2's thread to a
 // HudTurn; A6's voice screen (US-019j) gives HOLD TO TALK its hold and the status row its word. The chip, the status words and the transcript say everything the rings and the waveform
-// show (the README's text twins). Auto's saved reply names its message, so the transcript can offer
-// Report this on it (D15, P001R-AF-1).
+// show (the README's text twins). On a short screen the core gives up its size so the transcript
+// keeps three lines and the buttons stay on screen; the transcript scrolls, following its end while
+// it is read there. Auto's saved reply names its message, so the transcript can offer Report this
+// on it (D15, P001R-AF-1).
 
 import type { ReportTarget } from '../../../api/reports';
-import { captionFor } from '../../../core/web/lib/mascot/media';
-import type { MascotName } from '../../../core/web/lib/mascot/types';
+import { captionFor } from '../../../core/frozen/lib/mascot/media';
+import type { MascotName } from '../../../core/frozen/lib/mascot/types';
 import { badgeText, commandCentreLabel } from '../../../ui/variants';
 import type { AiLabelAgent } from '../../ai-label-state';
 import { mascotGeometry } from '../../mascot/geometry';
@@ -24,7 +26,8 @@ export const HUD_CORE = Object.freeze({
   topBar: Object.freeze({ padY: 8, padX: 20, brandSize: 16 }),
   statusRow: Object.freeze({ padY: 6, padX: 20 }),
   commandRow: Object.freeze({ padY: 6, padX: 20, gap: 8, height: 34, padItem: 14, border: 1 }),
-  core: Object.freeze({ size: CORE_SIZE.phone, marginTop: 14 }),
+  /** minSize: the least the core shrinks to on a short screen, Auto still readable inside it. */
+  core: Object.freeze({ size: CORE_SIZE.phone, marginTop: 14, minSize: 120 }),
   /** Auto 104 in the 290 core, nudged down: translate(-50 %, -46 %). */
   mascot: Object.freeze({ size: 104, lift: 0.46 }),
   chip: Object.freeze({ marginTop: 10, padY: 5, padX: 12, border: 1 }),
@@ -34,6 +37,10 @@ export const HUD_CORE = Object.freeze({
     you: Object.freeze({ size: 15, leading: 1.5 }),
     auto: Object.freeze({ size: 19, leading: 1.45 }),
     cursor: Object.freeze({ width: 9, height: 18, gap: 4, blinkMs: 1000 }),
+    /** The least it keeps under the core: three of Auto's 19/1.45 lines. */
+    minHeight: 84,
+    /** Within this of the end it follows new words down; scrolled further up, it stays put. */
+    followSlack: 24,
   }),
   wave: Object.freeze({ padX: 20, bars: WAVE.phone.bars, height: WAVE.phone.height }),
   buttons: Object.freeze({
@@ -54,6 +61,18 @@ export function coreSizeFor(screenHeight: number): number {
   const { size } = HUD_CORE.core;
   if (!Number.isFinite(screenHeight) || screenHeight <= 0) return size;
   return Math.min(size, Math.floor((screenHeight * size) / HUD_CORE.frameHeight));
+}
+
+/**
+ * The core's side in the room the column leaves it (the middle's height less the chip and the
+ * voice's line): its drawn size, or less so the transcript keeps its least height, never under
+ * minSize. Before the column is measured (room not finite), the drawn size.
+ */
+export function coreSizeIn(room: number, screenHeight: number): number {
+  const drawn = coreSizeFor(screenHeight);
+  if (!Number.isFinite(room)) return drawn;
+  const fits = Math.floor(room - HUD_CORE.core.marginTop - HUD_CORE.transcript.minHeight);
+  return Math.max(HUD_CORE.core.minSize, Math.min(drawn, fits));
 }
 
 export type MascotPlace = { readonly size: number; readonly left: number; readonly top: number };
@@ -158,11 +177,16 @@ export function transcriptHint(turn: HudTurn): string | null {
   return transcriptRows(turn).length === 0 ? EDGE_COPY.firstOpen.hud : null;
 }
 
-export type TranscriptAlign = 'center' | 'end';
-
-/** Centred while it fits; past that the box shows the newest lines (the oldest go off the top). */
-export function transcriptAlign(contentHeight: number, boxHeight: number): TranscriptAlign {
-  return contentHeight > boxHeight ? 'end' : 'center';
+/**
+ * The person is reading the transcript's end: the bottom of what shows is within followSlack of
+ * the bottom of the words. Then new words scroll it down; scrolled further up, it stays put.
+ */
+export function transcriptAtEnd(
+  offsetY: number,
+  viewHeight: number,
+  contentHeight: number,
+): boolean {
+  return offsetY + viewHeight >= contentHeight - HUD_CORE.transcript.followSlack;
 }
 
 // ── The top bar ──────────────────────────────────────────────────────────────────────────────

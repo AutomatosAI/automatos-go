@@ -4,8 +4,8 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { DEFAULT_LOOK, OBSIDIAN } from '../../../core/web/lib/looks/presets';
-import type { Look } from '../../../core/web/lib/looks/types';
+import { DEFAULT_LOOK, OBSIDIAN } from '../../../core/frozen/lib/looks/presets';
+import type { Look } from '../../../core/frozen/lib/looks/types';
 import { logger } from '../../../lib/logger';
 import { memoryStorage, type KeyValueStorage } from '../../../storage/encrypted-storage';
 import {

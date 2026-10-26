@@ -49,6 +49,7 @@ export type PushStatusKind =
   | 'on'
   | 'revoked_by_admin'
   | 'token_elsewhere'
+  | 'device_limit'
   | 'key_missing';
 
 export type PushStatus =
@@ -68,10 +69,14 @@ const ON = status('on');
 const KEY_MISSING = status('key_missing');
 const OFF_OTHER = off('other');
 
-/** A 409 → its status: an admin's revoke stands; another row holds the token; the rest is 'other'. */
+/**
+ * A 409 → its status: an admin's revoke stands; another row holds the token; the person already
+ * holds the most devices in this workspace; the rest is 'other'.
+ */
 const CONFLICT_STATUSES: Readonly<Record<DeviceConflictCode, PushStatus>> = Object.freeze({
   device_revoked: status('revoked_by_admin'),
   push_token_in_use: status('token_elsewhere'),
+  device_limit_reached: status('device_limit'),
   install_id_mismatch: OFF_OTHER,
   install_id_paired: OFF_OTHER,
   push_token_missing: OFF_OTHER,

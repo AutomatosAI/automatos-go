@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { EMBER } from '../../../core/web/lib/looks/presets';
+import { EMBER } from '../../../core/frozen/lib/looks/presets';
 import { EDGE_ALPHAS, edgeColours, type EdgeColourSource } from '../edge-colours';
 import { playVars } from '../play';
 

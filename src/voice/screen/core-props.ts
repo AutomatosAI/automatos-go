@@ -15,7 +15,7 @@
 //   or, for 'See it in the chat', the button alone.
 
 import type { ThreadState } from '../../chat/controller/thread';
-import type { MascotName } from '../../core/web/lib/mascot/types';
+import type { MascotName } from '../../core/frozen/lib/mascot/types';
 import { reportableId } from '../../styles/homes/hud-turn';
 import type { ChipView, HudTalk, HudTurn } from '../../styles/hud/core/model';
 import { WAVEFORM_BARS } from '../config';

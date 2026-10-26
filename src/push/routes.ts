@@ -1,40 +1,25 @@
 // The push wave's route table (KP4, K4): every server path push calls, as {method, path}, beside the
 // foundation's src/api/routes.ts and never inside it. GET /api/workspaces/current and discovery stay
 // the foundation's (imported from there, never repeated here). scripts/check-routes.ts checks each
-// entry against the pinned route manifest: W1's device routes and W2's push settings are
-// pendingUpstream until the re-pin after W1 and W2 merge (a lead step, OT-P12). Shapes: W1
-// api/mobile_devices.py, api/notifications.py, api/approval_grants.py (src/push/schemas/server.ts).
+// entry against the pinned route manifest, which has W1's device routes and W2's push settings
+// since the re-pin to 8c9361687. Shapes: W1 api/mobile_devices.py, W2 api/mobile_push.py,
+// api/notifications.py, api/approval_grants.py (src/push/schemas/server.ts).
 
 import type { Route } from '../api/routes';
-
-const DEVICES_PENDING = 'PRD-266 US-003';
-const PUSH_SETTINGS_PENDING = 'PRD-266 US-014';
 
 export const PUSH_ROUTES = Object.freeze({
   devices: Object.freeze({
     /** Register this phone or update its row: {device_id, push_key}, the key only when minted. */
-    register: { method: 'POST', path: '/api/v1/mobile/devices', pendingUpstream: DEVICES_PENDING },
+    register: { method: 'POST', path: '/api/v1/mobile/devices' },
     /** The caller's devices (an owner or admin sees the workspace's): {devices: [to_dict]}. */
-    list: { method: 'GET', path: '/api/v1/mobile/devices', pendingUpstream: DEVICES_PENDING },
+    list: { method: 'GET', path: '/api/v1/mobile/devices' },
     /** push_enabled, digest_time or timezone of one of the caller's own devices (extra=forbid). */
-    update: {
-      method: 'PATCH',
-      path: '/api/v1/mobile/devices/{device_id}',
-      pendingUpstream: DEVICES_PENDING,
-    },
+    update: { method: 'PATCH', path: '/api/v1/mobile/devices/{device_id}' },
     /** Revokes this phone's own row (sign-out, Remove this phone); it deletes no account (D63). */
-    revoke: {
-      method: 'DELETE',
-      path: '/api/v1/mobile/devices/{device_id}',
-      pendingUpstream: DEVICES_PENDING,
-    },
+    revoke: { method: 'DELETE', path: '/api/v1/mobile/devices/{device_id}' },
   } as const),
   /** {redact_questions}: owners and admins make question pushes generic (W2 US-014b). */
-  pushSettings: {
-    method: 'PUT',
-    path: '/api/v1/mobile/push-settings',
-    pendingUpstream: PUSH_SETTINGS_PENDING,
-  },
+  pushSettings: { method: 'PUT', path: '/api/v1/mobile/push-settings' },
   preferences: Object.freeze({
     /** The caller's merged rows, push rows and push_types included once W2 lands (US-014a). */
     list: { method: 'GET', path: '/api/notification-preferences' },

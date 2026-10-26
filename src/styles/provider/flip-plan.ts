@@ -4,7 +4,7 @@
 // under Reduce Motion; a flip that enters Play also has Auto say hello: the vendored reducer's
 // 'app-open', once per flip (the store's playEntries).
 
-import type { ClientEvent } from '../../core/web/lib/mascot/types';
+import type { ClientEvent } from '../../core/frozen/lib/mascot/types';
 import {
   layoutOf,
   paintedChoice,

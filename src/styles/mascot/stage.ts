@@ -10,8 +10,8 @@
 //               on top (Mascot.dc.html: the shell, then brightness(.55) saturate(.6)); a theme's
 //               own files are never tinted (media.ts)
 
-import { captionFor } from '../../core/web/lib/mascot/media';
-import type { MascotName } from '../../core/web/lib/mascot/types';
+import { captionFor } from '../../core/frozen/lib/mascot/media';
+import type { MascotName } from '../../core/frozen/lib/mascot/types';
 import type { ResolvedStyle } from '../provider/resolve';
 import type { StyleChoice } from '../registry/style-id';
 import { MASCOT_COPY } from '../strings';

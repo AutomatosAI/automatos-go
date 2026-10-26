@@ -5,7 +5,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { EMBER } from '../../core/web/lib/looks/presets';
+import { EMBER } from '../../core/frozen/lib/looks/presets';
 import { HUD_DEFAULT_LOOK } from '../../styles/hud/look-schema';
 import { resolveStyle, type StyleInput } from '../../styles/provider/resolve';
 import { builtinChoice, type StyleChoice } from '../../styles/registry/style-id';

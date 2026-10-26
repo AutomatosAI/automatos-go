@@ -9,7 +9,7 @@ import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
-import type { MascotName } from '../core/web/lib/mascot/types';
+import type { MascotName } from '../core/frozen/lib/mascot/types';
 import { statusBarStyle } from '../styles/ground/ground';
 import { RESTING_STATE } from '../styles/ground/play-glow';
 import { ScreenGround, ScreenOverlay, useGroundPlan } from '../styles/ground/ScreenGround';

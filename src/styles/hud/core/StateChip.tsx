@@ -6,7 +6,7 @@
 
 import { StyleSheet, View } from 'react-native';
 
-import type { MascotName } from '../../../core/web/lib/mascot/types';
+import type { MascotName } from '../../../core/frozen/lib/mascot/types';
 import { Text } from '../../../ui';
 import { HUD_CORE, chipView, type ChipView } from './model';
 import { useVoiceCore } from './use-voice-core';
