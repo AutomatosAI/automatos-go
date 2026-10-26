@@ -5,7 +5,8 @@
 // Play's message box on A2's composerState with A2's attachments in its slots. First open (Ember
 // 06, US-017f) takes the header's and the thread's place on home while its conversation is a blank
 // draft: the brand line, Auto's hello and the three starters, which fill the box and never send
-// (KS13); the box's Send in the accent. The frame is First open's: the ground's light where the
+// (KS13); the box's Send in the accent, A6's voice button beside it (US-019k: the conversation's id,
+// none for a viewer). The frame is First open's: the ground's light where the
 // screen kind puts it, everything lifted over the keyboard on iOS. Report this opens A2's one
 // ReportSheet. Chats goes back on the chat route, else to the history; Shelf to the Deliverables.
 
@@ -14,6 +15,7 @@ import { useCallback, useMemo } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaFrame } from 'react-native-safe-area-context';
 
+import { roleCan } from '../../auth/role';
 import { AttachMenu } from '../../chat/attachments/AttachMenu';
 import { AttachmentChips } from '../../chat/attachments/AttachmentChips';
 import { useFollowLink } from '../../chat/components/follow-link';
@@ -54,7 +56,7 @@ type ComposerProps = {
 };
 
 function Composer({ home, composer, firstOpen }: ComposerProps) {
-  const { files } = home;
+  const { files, role } = home;
   return (
     <PlayComposer
       value={composer.text}
@@ -71,6 +73,7 @@ function Composer({ home, composer, firstOpen }: ComposerProps) {
           onPicked={files.add}
         />
       }
+      voice={{ roleCanChat: roleCan(role, 'chat'), chatId: home.thread.state.chatId }}
     />
   );
 }
