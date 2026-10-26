@@ -1,7 +1,9 @@
 // The thread's small targets on the phone, read from source (vitest runs in node with no React
 // renderer, and these files load React Native): an attachment chip's 30 pt remove button takes a
-// 44 pt touch without the chip changing (the chip passes its slop, the row makes room for it).
-// touchRoom is src/ui/__tests__/paint.test.ts's.
+// 44 pt touch without the chip changing (the chip passes its slop, the row makes room for it); a
+// receipt's link reaches toward 44 pt without reaching a link beside it; the Mission card's 'Filed'
+// link is padded toward 44 pt with the padding taken back. touchRoom and stackedSlop are
+// src/ui/__tests__/paint.test.ts's.
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -38,5 +40,23 @@ describe('an attachment chip’s remove button', () => {
     expect(chips).toMatch(/style=\{\{ marginVertical: ROW_ROOM\.marginVertical \}\}/);
     expect(chips).toMatch(/paddingVertical: ROW_ROOM\.paddingVertical,/);
     expect(chips).toMatch(/paddingRight: REMOVE_SLOP\.right,/);
+  });
+});
+
+describe('a receipt’s link', () => {
+  const receipts = code('components/ReceiptsCard.tsx');
+
+  it('takes stackedSlop: toward 44 pt, half the gap toward a link beside it', () => {
+    expect(receipts).toMatch(/hitSlop=\{slop\}/);
+    expect(receipts).toMatch(/stackedSlop\(type\[LINE_ROLE\]\.lineHeight, gap, \{/);
+    expect(receipts).toMatch(/above: Boolean\(lines\[index - 1\]\?\.link\),/);
+    expect(receipts).toMatch(/below: Boolean\(lines\[index \+ 1\]\?\.link\),/);
+  });
+});
+
+describe('the Mission card’s Filed link', () => {
+  it('is padded toward 44 pt with the padding taken back', () => {
+    const card = code('cards/MissionSuggestionCard.tsx');
+    expect(card).toMatch(/style=\{touchRoom\(type\.label\.lineHeight\)\}/);
   });
 });

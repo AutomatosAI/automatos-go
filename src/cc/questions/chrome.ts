@@ -65,6 +65,11 @@ export const CASCADE_BOX = Object.freeze({
 export const QUESTION_CONTROLS = Object.freeze({
   gap: 9,
   optionGap: 'space3' as SpaceName,
+  /**
+   * Between wrapped rows of options: 14, so two 30 pt buttons' 7 pt slops meet and never overlap
+   * (an option answers at once, so a mis-hit sends the wrong answer).
+   */
+  optionRowGap: 'space6' as SpaceName,
   actionGap: 'space3' as SpaceName,
   /** What dismissing does, over Keep and Dismiss. */
   effectLevel: 5 as TextLevel,

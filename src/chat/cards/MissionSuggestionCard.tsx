@@ -2,13 +2,16 @@
 // the suggested goal, why a Mission, and 'File it' → POST /api/missions with the chat and its newest
 // five messages; 'No thanks' puts it away. Filed, it says so in olive with its word and opens the
 // Mission's page (Studio, in the system browser). A role that cannot file it reads it with the D17
-// words, never a button the server would refuse.
+// words, never a button the server would refuse. The 13 pt 'Filed · Open the Mission' link is
+// padded toward a 44 pt touch and takes the padding back (touchRoom): a slop alone stops at the
+// foot's edge, and the card cuts what passes its bottom.
 
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { WebLinkTarget } from '../../navigation/web-links';
 import { useTokens } from '../../styles/theme';
 import { Button, Text } from '../../ui';
+import { touchRoom } from '../../ui/paint';
 import { CARD_COPY } from '../strings';
 import { createMission } from './api';
 import type { CardAccess } from './actions';
@@ -28,7 +31,7 @@ function FiledLine({
   readonly link: WebLinkTarget | null;
   readonly onLink: (target: WebLinkTarget) => void;
 }) {
-  const { colours } = useTokens();
+  const { colours, type } = useTokens();
   const words = link
     ? `${CARD_COPY.filed} · ${CARD_COPY.openMission} ${LINK_ARROW}`
     : CARD_COPY.filed;
@@ -39,7 +42,12 @@ function FiledLine({
   );
   if (!link) return line;
   return (
-    <Pressable onPress={() => onLink(link)} accessibilityRole="link" accessibilityLabel={words}>
+    <Pressable
+      onPress={() => onLink(link)}
+      accessibilityRole="link"
+      accessibilityLabel={words}
+      style={touchRoom(type.label.lineHeight)}
+    >
       {line}
     </Pressable>
   );

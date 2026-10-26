@@ -1,16 +1,19 @@
 // The Command Centre on a 375 x 667 phone, read from source (vitest runs in node with no React
 // renderer, and these files load React Native): the Questions list keeps the own-words field above
 // the keyboard, and a tap on Answer with the keyboard up still answers; the filter pills' rows give
-// their slop room to reach 44 pt; an always-on band line is 44 tall.
+// their slop room to reach 44 pt; an always-on band line is 44 tall; wrapped option buttons sit far
+// enough apart that their slops never overlap.
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { tokensFor } from '../../styles/tokens';
 import { MIN_TOUCH, hitSlopFor } from '../../ui/paint';
-import { PILL_HEIGHT } from '../../ui/variants';
+import { BUTTON_SIZES, PILL_HEIGHT } from '../../ui/variants';
 import { ALWAYS_ON_BAND } from '../calendar/chrome';
+import { QUESTION_CONTROLS } from '../questions/chrome';
 
 const SRC = path.resolve(__dirname, '..', '..');
 /** The code alone: comments stripped. */
@@ -62,5 +65,21 @@ describe('the always-on band', () => {
     expect(day).toMatch(
       /<View style=\{\[styles\.mark, \{ minHeight: ALWAYS_ON_BAND\.lineMinHeight \}\]\}>\s*<Text/,
     );
+  });
+});
+
+describe('a question’s option buttons', () => {
+  it('wrap 14 apart, so two small buttons’ slops meet and never overlap', () => {
+    const { spacing } = tokensFor('studio', 'light');
+    const slop = hitSlopFor(BUTTON_SIZES.sm.height).top;
+    expect(2 * slop).toBeLessThanOrEqual(spacing[QUESTION_CONTROLS.optionRowGap]);
+    // a button reaches 44 only up and down: the gap within a row can stay 8
+    expect(hitSlopFor(BUTTON_SIZES.sm.height).left).toBe(0);
+  });
+
+  it('uses that row gap between wrapped rows, and keeps the gap between buttons in a row', () => {
+    const controls = code('cc/questions/QuestionControls.tsx');
+    expect(controls).toMatch(/columnGap: spacing\[QUESTION_CONTROLS\.optionGap\]/);
+    expect(controls).toMatch(/rowGap: spacing\[QUESTION_CONTROLS\.optionRowGap\]/);
   });
 });
