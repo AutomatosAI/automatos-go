@@ -2,9 +2,9 @@
 // (src/cc/routes.ts): the seven-day feed under the shared key (query-keys.ts 'schedule', the web's
 // activityQueryKeys.schedule('7d')), and the two pauses D27 allows. A pause is sent at once and
 // never queued (the client's mutations run networkMode 'always'); the server's answer is the truth.
-// After a pause the feed is read again: today a paused routine or scheduled task then leaves it
-// (activity_service.py lists enabled heartbeats and active tasks only) until PRD-266 §4.9 keeps a
-// paused one with paused: true.
+// After a pause the feed is read again: a paused routine then leaves it (activity_service.py lists
+// enabled heartbeats only), and a paused scheduled task stays with paused: true
+// (activity_scheduled_task_items.py), greyed, with Resume.
 
 import { queryOptions } from '@tanstack/react-query';
 

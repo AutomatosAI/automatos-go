@@ -222,7 +222,7 @@ const rowOrigin = (item: ScheduleEntry, items = entries()): SheetOrigin => {
 };
 
 describe('the item sheet', () => {
-  it('a routine pauses for an editor; the line says what it does, and that it may leave', () => {
+  it('a routine pauses for an editor; the line says what it does, and that it leaves', () => {
     const item = entry('sweep');
     const sheet = itemSheetView({
       item,
@@ -237,12 +237,19 @@ describe('the item sheet', () => {
       label: 'Pause this routine',
       resumes: false,
       effect: CALENDAR_COPY.sheet.effect.routine,
-      note: CALENDAR_COPY.sheet.leavesFeed,
+      note: CALENDAR_COPY.sheet.pausedFeed.routine,
       action: { kind: 'routine', agentId: 8 },
     });
     expect(sheet.studio).toBeNull();
     expect(sheet.board).toBeNull();
     expect(sheet.readOnly).toBeNull();
+  });
+
+  it('pausing a task says it stays on the calendar; a routine, that it leaves (D27)', () => {
+    const task = pauseButton({ kind: 'scheduled_task', id: 12, next: 'paused' }, false);
+    expect(task).toMatchObject({ resumes: false, note: CALENDAR_COPY.sheet.pausedFeed.task });
+    expect(task.note).toMatch(/stays on this calendar/);
+    expect(CALENDAR_COPY.sheet.pausedFeed.routine).toMatch(/leaves this calendar/);
   });
 
   it('a paused routine and a paused scheduled task offer Resume', () => {
