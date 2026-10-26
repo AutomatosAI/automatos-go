@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { tokensFor } from '../../styles/tokens';
-import { MIN_TOUCH, hitSlopFor, joinLabel, paint, tint } from '../paint';
+import { MIN_TOUCH, hitSlopFor, joinLabel, paint, stackedSlop, tint, touchRoom } from '../paint';
 
 const { colours } = tokensFor('studio', 'light');
 
@@ -46,6 +46,48 @@ describe('hitSlopFor: the 44 pt touch target', () => {
     expect(hitSlopFor(42, 42)).toEqual({ top: 1, bottom: 1, left: 1, right: 1 });
     expect(hitSlopFor(44)).toEqual({ top: 0, bottom: 0, left: 0, right: 0 });
     expect(hitSlopFor(60, 120)).toEqual({ top: 0, bottom: 0, left: 0, right: 0 });
+  });
+});
+
+describe('touchRoom: the 44 pt touch where the parent would cut the slop off', () => {
+  it('pads a row of small controls to 44 and takes the same margin back', () => {
+    expect(touchRoom(28)).toEqual({ paddingVertical: 8, marginVertical: -8 });
+    expect(touchRoom(30)).toEqual({ paddingVertical: 7, marginVertical: -7 });
+    expect(touchRoom(40)).toEqual({ paddingVertical: 2, marginVertical: -2 });
+  });
+
+  it('leaves a row of 44 pt controls alone', () => {
+    expect(touchRoom(44)).toEqual({ paddingVertical: 0, marginVertical: 0 });
+    expect(Object.is(touchRoom(48).marginVertical, 0)).toBe(true);
+  });
+
+  it('makes the row exactly the touch target, its drawn height unchanged', () => {
+    for (const height of [12.65, 18.75, 28, 30, 36]) {
+      const room = touchRoom(height);
+      expect(height + 2 * room.paddingVertical).toBeGreaterThanOrEqual(MIN_TOUCH);
+      expect(height + 2 * room.paddingVertical).toBeLessThan(MIN_TOUCH + 2);
+      expect(room.paddingVertical + room.marginVertical).toBe(0);
+    }
+  });
+});
+
+describe('stackedSlop: a column of small controls', () => {
+  it('reaches 44 where no control is beside it', () => {
+    expect(stackedSlop(18.75, 6, { above: false, below: false })).toEqual(hitSlopFor(18.75));
+  });
+
+  it('stops at half the gap toward another control, so two slops never overlap', () => {
+    const between = stackedSlop(18.75, 6, { above: true, below: true });
+    expect(between).toEqual({ top: 3, bottom: 3, left: 0, right: 0 });
+    const first = stackedSlop(18.75, 6, { above: false, below: true });
+    const second = stackedSlop(18.75, 6, { above: true, below: false });
+    expect(first.bottom + second.top).toBeLessThanOrEqual(6);
+    expect(first.top).toBe(13);
+  });
+
+  it('never grows a slop past what 44 needs, nor below nothing', () => {
+    expect(stackedSlop(40, 30, { above: true, below: true })).toEqual(hitSlopFor(40));
+    expect(stackedSlop(20, -4, { above: true, below: false }).top).toBe(0);
   });
 });
 
