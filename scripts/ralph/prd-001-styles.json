@@ -987,14 +987,14 @@
       "title": "The keyboard takes Play's and HUD's tone, not Studio's Light / Dark / System",
       "description": "Review finding (MEDIUM, US-016b 'the user's Light / Dark / System does not apply under Play'; 'Light/Dark/System leaking into Play'). src/styles/theme.tsx:85-87 sets Appearance.setColorScheme(appearanceOverride(choice)) from Studio's choice whatever style is painted, and none of the app's three text inputs sets keyboardAppearance (src/ui/TextField.tsx:104, src/chat/composer/PillInput.tsx:33, src/styles/play/companion/PlayComposer.tsx:130). So a phone in Light mode on the default System choice opens a light keyboard under Play's dark Ember composer and HUD's always-dark TYPE sheet, and Studio set to Dark gives a dark keyboard over Play's Daylight. The colours, the status bar (Screen.tsx statusBarStyle(tone)) and the sheet do follow the painted tone; only the system keyboard leaks.",
       "acceptanceCriteria": [
-        "Cause: nothing passes the painted style's tone to the keyboard; the window appearance follows Studio's choice only (theme.tsx:85-87)",
-        "Change: one pure helper (src/styles/, e.g. keyboardAppearanceFor(resolved style)) gives 'dark' | 'light' from the painted style's tone under Play and HUD, and 'default' under Studio and an installed theme (Studio's behaviour unchanged); TextField, PillInput and PlayComposer set keyboardAppearance from it through useStyle(); Appearance.setColorScheme stays Studio's choice, so the Studio card's System preview still reads the device's scheme. SEAM EDIT: src/chat/composer/PillInput.tsx recorded in this story's DONE notes",
-        "Test: the helper for Studio (Light, Dark, System), every Play preset (Daylight light, the rest dark) and HUD (dark); src/ui/__tests__/dressed.test.ts or a styles test pins it",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes",
-        "npm run check:bundle passes",
-        "bash scripts/ralph/acceptance-prd001-styles.sh --no-ci passes"
+        "Cause: nothing passes the painted style's tone to the keyboard; the window appearance follows Studio's choice only (theme.tsx:85-87) → DONE — confirmed on main: theme.tsx keeps Appearance.setColorScheme on Studio's choice; the inputs now take the keyboard from keyboardAppearanceFor (0fca1a1, merged with #14)",
+        "Change: one pure helper (src/styles/, e.g. keyboardAppearanceFor(resolved style)) gives 'dark' | 'light' from the painted style's tone under Play and HUD, and 'default' under Studio and an installed theme (Studio's behaviour unchanged); TextField, PillInput and PlayComposer set keyboardAppearance from it through useStyle(); Appearance.setColorScheme stays Studio's choice, so the Studio card's System preview still reads the device's scheme. SEAM EDIT: src/chat/composer/PillInput.tsx recorded in this story's DONE notes → DONE — 0fca1a1: keyboardAppearanceFor(style) in src/styles/ground/ground.ts ('default' under Studio and an installed theme, else the style's tone); TextField (a caller's keyboardAppearance first), PillInput (SEAM EDIT) and PlayComposer set it through useStyle()",
+        "Test: the helper for Studio (Light, Dark, System), every Play preset (Daylight light, the rest dark) and HUD (dark); src/ui/__tests__/dressed.test.ts or a styles test pins it → DONE — src/styles/ground/__tests__/ground.test.ts 'keyboardAppearanceFor': Studio under every Light/Dark/System pair gives 'default'; every Play preset Daylight light, the rest dark; HUD dark",
+        "npm run typecheck passes → DONE — npm run typecheck: tsc --noEmit clean",
+        "npm run lint passes (0 errors) → DONE — npm run lint: 0 errors (2 pre-existing line-count warnings)",
+        "npx vitest run passes → DONE — npx vitest run: passes on fix/styles-rvw-6-7",
+        "npm run check:bundle passes → DONE — npm run check:bundle: exported",
+        "bash scripts/ralph/acceptance-prd001-styles.sh --no-ci passes → DONE — acceptance --no-ci: every check passes (typecheck, lint, vitest, bundle, check:core, the DONE marks)"
       ],
       "files": [
         "src/styles/ground/ground.ts",
@@ -1004,8 +1004,8 @@
         "src/styles/ground/__tests__/ground.test.ts"
       ],
       "priority": 28,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "DONE (26 Oct, by hand): built in 0fca1a1 (fix(prd-001): the keyboard takes Play's and HUD's tone) and merged with #14, but the flag was never set. keyboardAppearanceFor in src/styles/ground/ground.ts; TextField, PillInput (SEAM EDIT) and PlayComposer set keyboardAppearance from it; pinned in src/styles/ground/__tests__/ground.test.ts."
     },
     {
       "id": "P001S-RVW-7",
@@ -1014,13 +1014,13 @@
       "title": "Not running: a re-check answered after the screen went never runs the gate's Retry",
       "description": "Review finding (LOW, US-017f / US-016j: 'the 5 s re-check left running after the screen goes'). src/styles/edges/recheck.ts:49-63 stop() clears the next timer but cannot reach a check already running, and src/styles/edges/gate-recheck.ts:16-24 calls onRetry when that probe settles; use-recheck.ts:14 stops the chain on unmount only. A throwaway node run confirmed onRetry is called once after stop(). After Sign out or Forget this server (the screen goes while the discovery probe is out), the late answer runs the unmounted gate's Retry (use-launch.ts refetch), a refetch from a gate that no longer exists; after Check again it refetches twice.",
       "acceptanceCriteria": [
-        "Cause: the re-check chain's stop() does not stop a check in flight from acting on its answer (recheck.ts:49-63, gate-recheck.ts:16-24)",
-        "Change: a check that settles after stop() does nothing (the chain hands each run a 'still running' test or an AbortSignal that quietRecheck honours before calling onRetry); the chain otherwise behaves as today (5 s after the last check settled, a failing check logged and the chain going on)",
-        "Test (src/styles/edges/__tests__/recheck.test.ts and gate-recheck.test.ts, the injected clock): a probe that answers after stop() calls onRetry zero times; a probe that answers before stop() calls it once; no timer is left after stop()",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes",
-        "bash scripts/ralph/acceptance-prd001-styles.sh --no-ci passes"
+        "Cause: the re-check chain's stop() does not stop a check in flight from acting on its answer (recheck.ts:49-63, gate-recheck.ts:16-24) → DONE — confirmed: startRecheck's stop() cleared the next timer only; quietRecheck called onRetry on a probe that settled after stop()",
+        "Change: a check that settles after stop() does nothing (the chain hands each run a 'still running' test or an AbortSignal that quietRecheck honours before calling onRetry); the chain otherwise behaves as today (5 s after the last check settled, a failing check logged and the chain going on) → DONE — startRecheck hands each check a StillRunning test (false once stop() runs); quietRecheck reads it before onRetry on both the answer and the error path; use-recheck passes it through; the chain is otherwise unchanged (5 s after the last check settled, failures logged, the chain goes on)",
+        "Test (src/styles/edges/__tests__/recheck.test.ts and gate-recheck.test.ts, the injected clock): a probe that answers after stop() calls onRetry zero times; a probe that answers before stop() calls it once; no timer is left after stop() → DONE — gate-recheck.test.ts 'an answer after the screen went': an answer (or a server error) after stop() runs Retry 0 times, before stop() once, and no timer is left after stop(); recheck.test.ts: the StillRunning test turns false on stop(). The 'after stop' test fails on main's gate-recheck.ts",
+        "npm run typecheck passes → DONE — npm run typecheck: tsc --noEmit clean",
+        "npm run lint passes (0 errors) → DONE — npm run lint: 0 errors (2 pre-existing line-count warnings)",
+        "npx vitest run passes → DONE — npx vitest run: passes on fix/styles-rvw-6-7",
+        "bash scripts/ralph/acceptance-prd001-styles.sh --no-ci passes → DONE — acceptance --no-ci: every check passes (typecheck, lint, vitest, bundle, check:core, the DONE marks)"
       ],
       "files": [
         "src/styles/edges/recheck.ts",
@@ -1031,8 +1031,8 @@
         "src/styles/edges/__tests__/gate-recheck.test.ts"
       ],
       "priority": 29,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "DONE (26 Oct, by hand, fix/styles-rvw-6-7): startRecheck hands each check a StillRunning test that turns false on stop(); quietRecheck reads it before calling onRetry, so a probe that answers after the screen went does nothing. use-recheck passes it through. Tests: recheck.test.ts (the test turns false on stop) and gate-recheck.test.ts (answer after stop -> 0 retries, before stop -> 1, no timer left)."
     }
   ]
 }

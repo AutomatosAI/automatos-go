@@ -1,7 +1,8 @@
 // Not running's quiet re-check on the gate (US-016j): the server is asked aside, and the gate's
 // Retry runs only once it has something to say (an answer, or an error that is no longer Not
-// running's), so the gate never shows loading for a check that finds it still asleep. Driven
-// through startRecheck on a fake clock, as recheck.test.ts drives the chain.
+// running's), so the gate never shows loading for a check that finds it still asleep, and an
+// answer that lands after the screen went is dropped. Driven through startRecheck on a fake clock,
+// as recheck.test.ts drives the chain.
 
 import { describe, expect, it } from 'vitest';
 
@@ -73,6 +74,67 @@ describe('quietRecheck', () => {
     const { probe } = probeOf([new ApiError('network')]);
     const { onRetry } = retrySpy();
     await expect(quietRecheck(probe, onRetry)()).resolves.toBeUndefined();
+  });
+
+  describe('an answer after the screen went (stop())', () => {
+    /** A chain on a fake clock whose one probe answers only when told to. */
+    function heldChain(outcome: unknown) {
+      const timers = new Map<number, () => void>();
+      const counter = { next: 1 };
+      const clock: RecheckClock = {
+        setTimeout: (run) => {
+          const id = counter.next++;
+          timers.set(id, run);
+          return id;
+        },
+        clearTimeout: (handle) => void timers.delete(handle as number),
+      };
+      const held = { answer: () => {} };
+      const probe = () =>
+        new Promise<unknown>((resolve, reject) => {
+          held.answer = () => (outcome instanceof Error ? reject(outcome) : resolve(outcome));
+        });
+      const { retries, onRetry } = retrySpy();
+      const chain = startRecheck(quietRecheck(probe, onRetry), { clock });
+      const tick = () => {
+        const [[id, run]] = [...timers.entries()];
+        timers.delete(id);
+        run();
+      };
+      return { chain, held, retries, timers, tick };
+    }
+    const settle = () => new Promise((done) => setImmediate(done));
+
+    it('an answer after stop() runs Retry zero times', async () => {
+      for (const outcome of [{}, new ApiError('server', { status: SERVER_ERROR })]) {
+        const { chain, held, retries, timers, tick } = heldChain(outcome);
+        tick();
+        chain.stop();
+        held.answer();
+        await settle();
+        expect(retries.count).toBe(0);
+        expect(timers.size).toBe(0);
+      }
+    });
+
+    it('an answer before stop() runs Retry once', async () => {
+      const { chain, held, retries, tick } = heldChain({});
+      tick();
+      held.answer();
+      await settle();
+      chain.stop();
+      expect(retries.count).toBe(1);
+    });
+
+    it('leaves no timer after stop()', async () => {
+      const { chain, held, timers, tick } = heldChain(new ApiError('network'));
+      tick();
+      held.answer();
+      await settle();
+      expect(timers.size).toBe(1);
+      chain.stop();
+      expect(timers.size).toBe(0);
+    });
   });
 
   it('every 5 s on the chain: asleep, asleep, then awake runs Retry once', async () => {

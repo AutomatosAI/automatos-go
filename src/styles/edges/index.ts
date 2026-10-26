@@ -9,4 +9,10 @@ export { Lost, type LostProps } from './Lost';
 export { NotRunning, type NotRunningProps } from './NotRunning';
 export { SomethingWrong, type SomethingWrongProps } from './SomethingWrong';
 export * from './edges';
-export { NOT_RUNNING_RECHECK_MS, startRecheck, type Recheck, type RecheckRun } from './recheck';
+export {
+  NOT_RUNNING_RECHECK_MS,
+  startRecheck,
+  type Recheck,
+  type RecheckRun,
+  type StillRunning,
+} from './recheck';
