@@ -4,9 +4,9 @@
 // builds its editor on these. Play's looks are kept on the server under 'automatos/play' (looks.py
 // BUILTIN_PLAY_THEME_ID), so a look changed here repaints Play in the browser (look-sync.ts).
 
-import { validateLook } from '../../core/web/lib/looks/engine';
-import { DEFAULT_LOOK, PRESETS, isPresetId } from '../../core/web/lib/looks/presets';
-import type { Look } from '../../core/web/lib/looks/types';
+import { validateLook } from '../../core/frozen/lib/looks/engine';
+import { DEFAULT_LOOK, PRESETS, isPresetId } from '../../core/frozen/lib/looks/presets';
+import type { Look } from '../../core/frozen/lib/looks/types';
 import type { LookRules } from './look-sync';
 
 /** The id Play's looks are kept under on the server, sent as two path segments. */

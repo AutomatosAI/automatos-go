@@ -4,8 +4,8 @@
 // chips are Play's done chips (companion/model.ts ToolChipView) with the vendored done mark, so
 // they read as the real thread's do.
 
-import { MARK_DONE } from '../../../core/web/components/play/chat/labels';
-import type { MascotName } from '../../../core/web/lib/mascot/types';
+import { MARK_DONE } from '../../../core/frozen/components/play/chat/labels';
+import type { MascotName } from '../../../core/frozen/lib/mascot/types';
 import { PLAY_CHAT_COPY, PLAY_LOOK_COPY } from '../../strings';
 import type { ToolChipView } from '../companion/model';
 

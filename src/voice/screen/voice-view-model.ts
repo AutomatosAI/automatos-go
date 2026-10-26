@@ -19,7 +19,7 @@
 import { ROLE_COPY } from '../../auth/strings';
 import type { ThreadFailure } from '../../chat/controller/thread';
 import { failureCopy } from '../../chat/view-model';
-import type { MascotName } from '../../core/web/lib/mascot/types';
+import type { MascotName } from '../../core/frozen/lib/mascot/types';
 import {
   hasWords,
   type PermissionStep,

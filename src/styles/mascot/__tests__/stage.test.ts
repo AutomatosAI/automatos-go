@@ -5,12 +5,12 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { SHELLS } from '../../../core/web/lib/looks/catalogue';
-import { DAYLIGHT, EMBER, OBSIDIAN } from '../../../core/web/lib/looks/presets';
-import type { Look } from '../../../core/web/lib/looks/types';
-import { captionFor } from '../../../core/web/lib/mascot/media';
-import { ringColour } from '../../../core/web/lib/mascot/ring';
-import { MASCOT_STATES, type MascotName } from '../../../core/web/lib/mascot/types';
+import { SHELLS } from '../../../core/frozen/lib/looks/catalogue';
+import { DAYLIGHT, EMBER, OBSIDIAN } from '../../../core/frozen/lib/looks/presets';
+import type { Look } from '../../../core/frozen/lib/looks/types';
+import { captionFor } from '../../../core/frozen/lib/mascot/media';
+import { ringColour } from '../../../core/frozen/lib/mascot/ring';
+import { MASCOT_STATES, type MascotName } from '../../../core/frozen/lib/mascot/types';
 import { HUD_DEFAULT_LOOK, HUD_PRESET_LOOKS, type HudLook } from '../../hud/look-schema';
 import { resolveStyle, type StyleInput, type ThemePaint } from '../../provider/resolve';
 import { builtinChoice, themeChoice, type StyleChoice } from '../../registry/style-id';

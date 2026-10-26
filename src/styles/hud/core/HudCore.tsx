@@ -20,7 +20,7 @@ import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import type { MascotName } from '../../../core/web/lib/mascot/types';
+import type { MascotName } from '../../../core/frozen/lib/mascot/types';
 import { hudGroundPlan, type HudGroundPlan } from '../../ground/hud-ground';
 import { HudOverlay } from '../../ground/HudOverlay';
 import { Mascot } from '../../mascot/Mascot';

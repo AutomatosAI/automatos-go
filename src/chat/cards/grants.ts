@@ -11,7 +11,7 @@ import {
   MARK_MUTED,
   MARK_WAITING,
   type LineTone,
-} from '../../core/web/components/play/chat/labels';
+} from '../../core/frozen/components/play/chat/labels';
 import type { GrantRun } from '../schemas';
 import { GRANT_COPY } from '../strings';
 import { isUserSentence } from './actions';

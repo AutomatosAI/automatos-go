@@ -6,7 +6,7 @@ import { API_ERROR_COPY } from '../../api/strings';
 import { WORKSPACE_ROLES, type WorkspaceRole } from '../../api/workspace';
 import { ROLE_COPY } from '../../auth/strings';
 import type { Frame } from '../../core/ai-sdk-stream';
-import { WAITING_FOR_YOU } from '../../core/web/components/play/chat/labels';
+import { WAITING_FOR_YOU } from '../../core/frozen/components/play/chat/labels';
 import { approvalsInPart } from '../../core/web/lib/chat/approvals';
 import { cardAccess, grantRefusalText } from '../cards/actions';
 import {

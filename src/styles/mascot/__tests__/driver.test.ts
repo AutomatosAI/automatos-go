@@ -4,9 +4,9 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { CLIP_MS } from '../../../core/web/lib/mascot/player';
-import { INITIAL_MASCOT } from '../../../core/web/lib/mascot/reducer';
-import { RANK, type MascotEvent } from '../../../core/web/lib/mascot/types';
+import { CLIP_MS } from '../../../core/frozen/lib/mascot/player';
+import { INITIAL_MASCOT } from '../../../core/frozen/lib/mascot/reducer';
+import { RANK, type MascotEvent } from '../../../core/frozen/lib/mascot/types';
 import {
   startDriver,
   stepMascot,

@@ -5,7 +5,7 @@
 // value per look (or painting) object, so a screen's memoised styles hold until the look changes.
 // Studio's own two sets stay studio.ts's (studioTokens), unchanged.
 
-import type { Look } from '../../core/web/lib/looks/types';
+import type { Look } from '../../core/frozen/lib/looks/types';
 import { STUDIO_TYPE } from '../type';
 import { HUD_TONE, hudTokens, type HudPaintPicks } from './hud';
 import { playTokens, playTone } from './play';

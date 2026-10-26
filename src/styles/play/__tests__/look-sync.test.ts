@@ -9,8 +9,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '../../../api/errors';
 import { API_ERROR_COPY } from '../../../api/strings';
-import { AURORA, DEFAULT_LOOK, OBSIDIAN } from '../../../core/web/lib/looks/presets';
-import type { Look } from '../../../core/web/lib/looks/types';
+import { AURORA, DEFAULT_LOOK, OBSIDIAN } from '../../../core/frozen/lib/looks/presets';
+import type { Look } from '../../../core/frozen/lib/looks/types';
 import { logger } from '../../../lib/logger';
 import { LOOK_SYNC_COPY } from '../../strings';
 import { createLookOutbox } from '../../sync/look-outbox';

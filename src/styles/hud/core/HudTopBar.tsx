@@ -12,7 +12,7 @@ import Menu from 'lucide-react-native/icons/menu';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import type { MascotName } from '../../../core/web/lib/mascot/types';
+import type { MascotName } from '../../../core/frozen/lib/mascot/types';
 import { routes } from '../../../navigation/routes';
 import { Text } from '../../../ui';
 import { ICON_STROKE, hitSlopFor } from '../../../ui/paint';

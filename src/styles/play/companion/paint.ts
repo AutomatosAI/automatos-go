@@ -3,7 +3,7 @@
 // meta text --fg-3; molten → accent, #FF8A3D / #FFB070 → accentText, hearth → groundSurface) and
 // the lines tokens/companion-colours.ts derives. No colour is written here: each is a token.
 
-import type { LineTone } from '../../../core/web/components/play/chat/labels';
+import type { LineTone } from '../../../core/frozen/components/play/chat/labels';
 import type { CompanionColours } from '../../tokens/companion-colours';
 import type { PlayVars } from '../../tokens/play';
 import type { BadgeTone, ComposerView } from './model';

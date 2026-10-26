@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/hooks/use-board-event-stream.ts @ 630fc1c85af06c5c76e70c74e9653ee1804fdf41 · extract: parseSSEFrames — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/hooks/use-board-event-stream.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b · extract: parseSSEFrames — do not edit — scripts/sync-core.ts
 /** One parsed SSE frame (event name + JSON-decoded data, if any). */
 interface SSEEvent {
   event: string

@@ -13,10 +13,10 @@ import {
   GROUND_KEYS,
   LIGHTS,
   TYPE_STYLE_KEYS,
-} from '../../../core/web/lib/looks/catalogue';
-import { safeGlow } from '../../../core/web/lib/looks/engine';
-import { AURORA, DAYLIGHT, EMBER, OBSIDIAN, PRESETS } from '../../../core/web/lib/looks/presets';
-import { GLOW_MAX, type Look } from '../../../core/web/lib/looks/types';
+} from '../../../core/frozen/lib/looks/catalogue';
+import { safeGlow } from '../../../core/frozen/lib/looks/engine';
+import { AURORA, DAYLIGHT, EMBER, OBSIDIAN, PRESETS } from '../../../core/frozen/lib/looks/presets';
+import { GLOW_MAX, type Look } from '../../../core/frozen/lib/looks/types';
 import { FLIP_CROSSFADE_MS } from '../../provider/flip-plan';
 import { LOOK_SYNC_COPY } from '../../strings';
 import {

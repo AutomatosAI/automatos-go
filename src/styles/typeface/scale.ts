@@ -4,7 +4,7 @@
 // Nothing is below 11 pt, and Dynamic Type stays on: these are plain text styles, and the Text
 // primitive passes TEXT_SCALING (allowFontScaling true, uncapped) with every one of them.
 
-import { TYPE_STYLE_KEYS, type TypeStyleKey } from '../../core/web/lib/looks/catalogue';
+import { TYPE_STYLE_KEYS, type TypeStyleKey } from '../../core/frozen/lib/looks/catalogue';
 import { HUD_FONT_KEYS, type HudFontKey } from '../tokens/hud-catalogue';
 import { hudType } from './hud-type';
 import { playType } from './play-type';

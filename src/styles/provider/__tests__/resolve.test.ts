@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { DAYLIGHT, EMBER, OBSIDIAN, PRESETS } from '../../../core/web/lib/looks/presets';
+import { DAYLIGHT, EMBER, OBSIDIAN, PRESETS } from '../../../core/frozen/lib/looks/presets';
 import { HUD_DEFAULT_LOOK, HUD_PRESET_LOOKS, type HudLook } from '../../hud/look-schema';
 import { builtinChoice, themeChoice, type StyleChoice } from '../../registry/style-id';
 import { THEME_CHOICES, type SystemScheme } from '../../theme-choice';

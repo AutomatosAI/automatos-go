@@ -5,7 +5,8 @@
 //   npx tsx scripts/sync-core.ts --check                            (npm run check:core) drift check
 //
 // --check needs no checkout: it compares src/core/web (and every lock-listed copy, such as
-// src/core/route-manifest.json) with the lock. The engine lives in
+// src/core/route-manifest.json) with the lock, and src/core/frozen with the manifest's frozen
+// entries (files core has deleted that the app keeps; nothing writes them). The engine lives in
 // scripts/sync-core/ (pure, tested in scripts/__tests__/sync-core.test.ts); this file does the
 // reading, the writing and the exit codes.
 import fs from 'node:fs';
@@ -14,6 +15,7 @@ import { parseArgs } from 'node:util';
 
 import { vendor, type VendoredFile } from './sync-core/closure';
 import { copyFiles } from './sync-core/copy';
+import { FROZEN_DIR, frozenProblems } from './sync-core/frozen';
 import {
   buildLock,
   checkLock,
@@ -87,13 +89,26 @@ function check(): void {
   const manifest = readManifest();
   const lock = lockSchema.parse(readJson(LOCK_PATH));
   const outside = Object.keys(lock.files).filter((p) => !p.startsWith(`${WEB_DIR}/`));
-  const present = [...listFiles(REPO, WEB_DIR), ...outside].filter((p) =>
-    fs.existsSync(path.join(REPO, p)),
+  const present = [...listFiles(REPO, WEB_DIR), ...listFiles(REPO, FROZEN_DIR), ...outside].filter(
+    (p) => fs.existsSync(path.join(REPO, p)),
   );
   const files = new Map(present.map((p) => [p, fs.readFileSync(path.join(REPO, p), 'utf8')]));
-  const problems = checkLock(manifest, lock, files);
-  if (problems.length > 0) fail([...problems, 'src/core/web has drifted from core.lock.json']);
+  const problems = [...checkLock(manifest, lock, files), ...frozenProblems(manifest, files)];
+  if (problems.length > 0) {
+    fail([
+      ...problems,
+      `src/core has drifted from ${LOCK_PATH} or the frozen entries in ${MANIFEST_PATH}`,
+    ]);
+  }
   say(process.stdout, `${Object.keys(lock.files).length} files match ${LOCK_PATH} (${lock.sha})`);
+  const frozen = manifest.frozen;
+  if (frozen) {
+    const count = Object.keys(frozen.files).length;
+    say(
+      process.stdout,
+      `${count} frozen copies in ${FROZEN_DIR} match ${MANIFEST_PATH} (${frozen.sha})`,
+    );
+  }
 }
 
 function main(): void {

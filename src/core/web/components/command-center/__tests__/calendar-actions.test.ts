@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/components/command-center/__tests__/calendar-actions.test.ts @ 630fc1c85af06c5c76e70c74e9653ee1804fdf41 — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/components/command-center/__tests__/calendar-actions.test.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b — do not edit — scripts/sync-core.ts
 /**
  * The calendar's event menu is a pure function of the feed item: every item
  * kind gets the actions its backing endpoint supports, nothing more. Routes and

@@ -20,7 +20,7 @@ import { roleCan } from '../../auth/role';
 import type { WorkspaceRole } from '../../api/workspace';
 import { useThread, type ThreadView } from '../../chat/controller/use-thread';
 import type { ChatFile } from '../../chat/request';
-import type { MascotName } from '../../core/web/lib/mascot/types';
+import type { MascotName } from '../../core/frozen/lib/mascot/types';
 import { logger } from '../../lib/logger';
 import { routes } from '../../navigation/routes';
 import type { HudTurn } from '../../styles/hud/core/model';

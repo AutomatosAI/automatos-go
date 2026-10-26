@@ -261,6 +261,7 @@ describe('register: refusals and failures', () => {
     ['push_token_in_use', { kind: 'token_elsewhere' }],
     ['install_id_mismatch', { kind: 'off', reason: 'other' }],
     ['install_id_paired', { kind: 'off', reason: 'other' }],
+    ['device_limit_reached', { kind: 'device_limit' }],
   ])('409 %s → its status, and no retry', async (code, status) => {
     const run = setup({ script: { register: [conflict(code), minted(KEY)] } });
     const outcome = await register(run.deps);

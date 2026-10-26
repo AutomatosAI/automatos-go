@@ -5,14 +5,14 @@
 // screen (D-NO-BILLING, D8).
 
 import type { TurnErrorCode } from '../core/turn-reducer';
-import { WAITING_FOR_YOU, type ToolStatus } from '../core/web/components/play/chat/labels';
+import { WAITING_FOR_YOU, type ToolStatus } from '../core/frozen/components/play/chat/labels';
 import type { Receipt } from '../core/web/types';
 import { UI_COPY } from '../ui/strings';
 
 /** Words a failed turn shows, and whether asking again can help. */
 export type FailureCopy = { readonly text: string; readonly canRetry: boolean };
 
-/** D-NO-BILLING's fixed copy: a limit_reached frame and a trial_exhausted error both say this. */
+/** D-NO-BILLING's fixed copy: a limit_reached frame and a trial_ or credits_exhausted error say this. */
 const LIMIT_TEXT = 'Auto has reached a limit for now. Ask your workspace owner.';
 
 export const CHAT_COPY = Object.freeze({
@@ -100,6 +100,7 @@ export const NOTICE_WORDS = Object.freeze({
 export const TURN_ERROR_COPY: Readonly<Record<TurnErrorCode, FailureCopy>> = Object.freeze({
   rate_limited: { text: 'Auto is rate-limited right now. Try again in a minute.', canRetry: true },
   trial_exhausted: { text: LIMIT_TEXT, canRetry: false },
+  credits_exhausted: { text: LIMIT_TEXT, canRetry: false },
   model_unavailable: {
     text: "The model Auto uses isn't available right now. Try again later.",
     canRetry: true,
@@ -115,6 +116,8 @@ export const TURN_ERROR_COPY: Readonly<Record<TurnErrorCode, FailureCopy>> = Obj
   activation_failed: { text: "Auto couldn't start the agent for this reply.", canRetry: true },
   provider_failed: { text: "The AI provider couldn't finish this reply.", canRetry: true },
   turn_failed: { text: "Auto couldn't answer that.", canRetry: true },
+  /** The note a stopped turn leaves: the live Stop's words, quiet, with nothing to ask again. */
+  turn_stopped: { text: CHAT_COPY.stopped, canRetry: false },
   session_agent_terminal: {
     text: 'This agent works in its terminal session, not in chat. Talk to it in Studio.',
     canRetry: false,

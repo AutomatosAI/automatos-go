@@ -23,9 +23,9 @@ import {
   startPlayer,
   type BoundaryAction,
   type PlayerState,
-} from '../../core/web/lib/mascot/player';
-import { INITIAL_MASCOT, mascotReducer } from '../../core/web/lib/mascot/reducer';
-import { ONE_SHOTS, type MascotEvent, type MascotState } from '../../core/web/lib/mascot/types';
+} from '../../core/frozen/lib/mascot/player';
+import { INITIAL_MASCOT, mascotReducer } from '../../core/frozen/lib/mascot/reducer';
+import { ONE_SHOTS, type MascotEvent, type MascotState } from '../../core/frozen/lib/mascot/types';
 
 export type MascotDriver = {
   readonly mascot: MascotState;

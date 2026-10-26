@@ -176,16 +176,15 @@ describe('the server answers (unknown fields ignored)', () => {
 });
 
 describe('the route table (KP4)', () => {
-  it("marks exactly W1's four device routes and W2's push settings pendingUpstream", () => {
-    const pending = [
-      PUSH_ROUTES.devices.register,
-      PUSH_ROUTES.devices.list,
-      PUSH_ROUTES.devices.update,
-      PUSH_ROUTES.devices.revoke,
-    ].map((route) => route.pendingUpstream);
-    expect(pending).toEqual(Array(4).fill('PRD-266 US-003'));
-    expect(PUSH_ROUTES.pushSettings.pendingUpstream).toBe('PRD-266 US-014');
-    expect('pendingUpstream' in PUSH_ROUTES.preferences.replace).toBe(false);
+  it("marks no route pendingUpstream: the pin serves W1's device routes and W2's push settings", () => {
+    const leaves = (table: object): object[] =>
+      Object.values(table).flatMap((entry: object) =>
+        'method' in entry ? [entry] : leaves(entry),
+      );
+    const routes = leaves(PUSH_ROUTES);
+    expect(routes).toContain(PUSH_ROUTES.devices.register);
+    expect(routes).toContain(PUSH_ROUTES.pushSettings);
+    expect(routes.filter((route) => 'pendingUpstream' in route)).toEqual([]);
   });
 });
 

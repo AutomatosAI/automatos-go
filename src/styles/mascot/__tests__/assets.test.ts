@@ -8,7 +8,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { MASCOT_STATES } from '../../../core/web/lib/mascot/types';
+import { MASCOT_STATES } from '../../../core/frozen/lib/mascot/types';
 
 const ROOT = path.resolve(__dirname, '../../../..');
 const MASCOT_DIR = path.join(ROOT, 'assets/mascot');

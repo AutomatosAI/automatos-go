@@ -7,7 +7,7 @@
 
 import { StyleSheet, View } from 'react-native';
 
-import type { Look } from '../../../core/web/lib/looks/types';
+import type { Look } from '../../../core/frozen/lib/looks/types';
 import { Text } from '../../../ui';
 import { MASCOT_SIZES } from '../../mascot/geometry';
 import { Mascot } from '../../mascot/Mascot';

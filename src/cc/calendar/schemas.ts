@@ -4,8 +4,8 @@
 // playbook_id, mission_id, board_task_id, post_id). The list is persisted (query-keys.ts
 // 'schedule'), so the schema keeps only what the day view, the band and the pause rules read. A
 // kind outside the six is kept as sent (day-model.ts gives it its own word); an item this version
-// cannot read at all is left out, never the whole calendar. `paused` arrives with PRD-266 §4.9
-// (US-018); until then a paused scheduled task, like a paused routine, is not in the feed at all.
+// cannot read at all is left out, never the whole calendar. `paused` is a scheduled task's (PRD-266
+// D27): a paused task stays in the feed with paused: true; a paused routine is not in the feed.
 
 import { z } from 'zod';
 
@@ -47,7 +47,7 @@ export const ScheduleEntrySchema = z.object({
   mission_id: AnyId,
   board_task_id: RowId,
   post_id: Text,
-  /** PRD-266 §4.9: a paused item stays in the feed, greyed. Absent today: not paused. */
+  /** PRD-266 D27: a paused scheduled task stays in the feed, greyed. Absent: not paused. */
   paused: z.boolean().catch(false),
   recurrence: RecurrenceSchema,
 });

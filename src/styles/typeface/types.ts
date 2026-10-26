@@ -3,7 +3,7 @@
 // draws it in its own face and size. Play's slots are Ember's phone screens; HUD's are its brand
 // line, panel labels and big numbers; Studio answers each with a role of its unchanged scale.
 
-import type { TypeStyleKey } from '../../core/web/lib/looks/catalogue';
+import type { TypeStyleKey } from '../../core/frozen/lib/looks/catalogue';
 import type { FontWeight } from '../fonts';
 import type { HudFontKey } from '../tokens/hud-catalogue';
 import type { TypeRole, TypeStyle } from '../type';

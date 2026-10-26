@@ -57,6 +57,8 @@ const FIXED_VIEWS: Readonly<Record<FixedKind, PhoneStatusView>> = Object.freeze(
   on: view(PUSH_PHONE_COPY.on),
   revoked_by_admin: view(PUSH_PHONE_COPY.revokedByAdmin),
   token_elsewhere: view(PUSH_PHONE_COPY.tokenElsewhere),
+  // removed in Studio, then Try again registers past the 409 (phone-link.ts runPhoneAction)
+  device_limit: view(PUSH_PHONE_COPY.deviceLimit, 'try_again'),
 });
 
 const ACTION_LABELS: Readonly<Record<PhoneAction, string>> = Object.freeze({

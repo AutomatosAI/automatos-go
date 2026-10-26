@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, View } from 'react-native';
 
-import type { MascotName } from '../../core/web/lib/mascot/types';
+import type { MascotName } from '../../core/frozen/lib/mascot/types';
 import { useStyle } from '../theme';
 import { BUNDLED_MASCOT } from './assets';
 import { mascotGeometry, type Box } from './geometry';

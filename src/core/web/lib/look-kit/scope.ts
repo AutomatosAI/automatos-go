@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/lib/look-kit/scope.ts @ 630fc1c85af06c5c76e70c74e9653ee1804fdf41 — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/lib/look-kit/scope.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b — do not edit — scripts/sync-core.ts
 /**
  * PRD-260 F5 (Gerard, 15 Oct) — looks, the active look and the seen
  * Deliverables record are kept per signed-in user and workspace, in this
@@ -10,8 +10,9 @@
  * scope that reads it, once (moveUnscopedOnce): never to a second account, and
  * the unscoped keys are never deleted.
  *
- * PRD-261 A-19a — the host's look runtime's, not Play's: it was lib/looks/scope.ts (which
- * re-exports it until builtin Play leaves core), so the host's look scope survives Play's deletion.
+ * PRD-261 A-19a — the host's look runtime's, not a theme's: it moved here from builtin Play's look
+ * folder before A-19f1 deleted that folder, and the generic look runtime (lib/theme-host/looks)
+ * and the account look scope (components/theme-host/account-look-scope.tsx) read it.
  */
 
 /** The user part of a scope when there is no user id: the local edition's single user. */

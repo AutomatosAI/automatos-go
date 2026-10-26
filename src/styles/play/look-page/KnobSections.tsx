@@ -9,8 +9,8 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import type { TypeStyleKey } from '../../../core/web/lib/looks/catalogue';
-import type { Look } from '../../../core/web/lib/looks/types';
+import type { TypeStyleKey } from '../../../core/frozen/lib/looks/catalogue';
+import type { Look } from '../../../core/frozen/lib/looks/types';
 import { Slider, Text } from '../../../ui';
 import { SWATCH_EDGE, lightGlow } from '../../tokens/look-page-colours';
 import { useCompanionPaint, type CompanionPaint } from '../companion/use-companion';

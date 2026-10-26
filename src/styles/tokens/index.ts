@@ -4,7 +4,7 @@
 // their default looks (Ember, ARC); the phone's chosen look reaches a screen through useTokens()
 // (src/styles/provider/resolve.ts).
 
-import { DEFAULT_LOOK } from '../../core/web/lib/looks/presets';
+import { DEFAULT_LOOK } from '../../core/frozen/lib/looks/presets';
 import { HUD_DEFAULT_PRESET_ID, HUD_PRESETS } from './hud-catalogue';
 import { studioTokens } from './studio';
 import { hudStyleTokens, playStyleTokens } from './style-tokens';

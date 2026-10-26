@@ -9,9 +9,9 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   ON_THE_SHELF,
   WAKE_HINT,
-} from '../../../../core/web/components/play/chat/caption';
-import { MASCOT_STATES } from '../../../../core/web/lib/mascot/types';
-import type { HostToolCall } from '../../../../core/web/lib/theme-sdk';
+} from '../../../../core/frozen/components/play/chat/caption';
+import { MASCOT_STATES } from '../../../../core/frozen/lib/mascot/types';
+import type { HostToolCall } from '../../../../core/frozen/lib/theme-sdk';
 import type { Receipt } from '../../../../core/web/types/chat';
 import { logger } from '../../../../lib/logger';
 import { PLAY_STATUS } from '../../../strings';

@@ -5,8 +5,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { parseLine } from '../../../core/ai-sdk-stream';
-import { INITIAL_MASCOT } from '../../../core/web/lib/mascot/reducer';
-import type { MascotEvent } from '../../../core/web/lib/mascot/types';
+import { INITIAL_MASCOT } from '../../../core/frozen/lib/mascot/reducer';
+import type { MascotEvent } from '../../../core/frozen/lib/mascot/types';
 import { startRun, stepRun, type MascotRun, type RunInput } from '../run';
 
 const event = (e: MascotEvent): RunInput => ({ type: 'event', event: e });

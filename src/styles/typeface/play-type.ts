@@ -8,7 +8,7 @@
 // in the thread, 15/1.5 in bubbles), buttons Geist 600 14, labels Geist 500 11 caps at .14em
 // (Ember draws some at 10: D38 raises them to 11), mono Geist Mono 12-13.
 
-import { TYPE_STYLES, type TypeSizes, type TypeStyleKey } from '../../core/web/lib/looks/catalogue';
+import { TYPE_STYLES, type TypeSizes, type TypeStyleKey } from '../../core/frozen/lib/looks/catalogue';
 import { FONT_FAMILIES, type FontWeight } from '../fonts';
 import { LEADING, TYPE_SPECS, type TypeStyle } from '../type';
 import { STYLE_FACES, playDisplayFace, type FaceSpec } from './faces';

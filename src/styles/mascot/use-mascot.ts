@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 
 import type { Frame } from '../../core/ai-sdk-stream';
-import type { MascotEvent, MascotName } from '../../core/web/lib/mascot/types';
+import type { MascotEvent, MascotName } from '../../core/frozen/lib/mascot/types';
 import { useStyleStore } from '../provider/context';
 import { stillBoundaryMs, type MascotDriver } from './driver';
 import { startRun, stepRun, type RunInput } from './run';

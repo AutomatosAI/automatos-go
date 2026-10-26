@@ -7,7 +7,7 @@
 // the app bundles) and Geist Mono 400/500. HUD: looks.json's display face by its font knob
 // (Rajdhani 700, Chakra Petch 600, Geist Mono 500), Geist and Geist Mono.
 
-import { TYPE_STYLES, type TypeStyleKey } from '../../core/web/lib/looks/catalogue';
+import { TYPE_STYLES, type TypeStyleKey } from '../../core/frozen/lib/looks/catalogue';
 import {
   FONT_FAMILIES,
   fontFace,

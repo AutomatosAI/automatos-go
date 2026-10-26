@@ -4,8 +4,8 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { captionFor } from '../../../../core/web/lib/mascot/media';
-import { MASCOT_STATES } from '../../../../core/web/lib/mascot/types';
+import { captionFor } from '../../../../core/frozen/lib/mascot/media';
+import { MASCOT_STATES } from '../../../../core/frozen/lib/mascot/types';
 import { mascotGeometry } from '../../../mascot/geometry';
 import { HUD_CORE_COPY, HUD_STATE_WORDS } from '../../../strings';
 import {

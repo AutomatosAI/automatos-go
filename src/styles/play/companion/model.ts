@@ -7,7 +7,7 @@
 // and times are conversations.ts's, re-exported here. Props only: nothing here fetches or imports
 // from src/chat (phase 1); phase 2 feeds these from A2's thread and history.
 
-import { chatCaption, type CaptionFacts } from '../../../core/web/components/play/chat/caption';
+import { chatCaption, type CaptionFacts } from '../../../core/frozen/components/play/chat/caption';
 import {
   MARK_DONE,
   MARK_FAILED,
@@ -16,10 +16,10 @@ import {
   toolDetail,
   toolLineLabel,
   type LineTone,
-} from '../../../core/web/components/play/chat/labels';
+} from '../../../core/frozen/components/play/chat/labels';
 import { receiptLine } from '../../../core/web/lib/chat/receipts';
-import type { MascotName } from '../../../core/web/lib/mascot/types';
-import type { HostToolCall } from '../../../core/web/lib/theme-sdk';
+import type { MascotName } from '../../../core/frozen/lib/mascot/types';
+import type { HostToolCall } from '../../../core/frozen/lib/theme-sdk';
 import type { Receipt } from '../../../core/web/types/chat';
 import { routes } from '../../../navigation/routes';
 import { commandCentreLabel } from '../../../ui/variants';

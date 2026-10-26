@@ -15,7 +15,7 @@
 // the clip the player has loaded being the run's clip, once per run (the web's P260-FX-15: each
 // handler names the clip it belongs to).
 
-import { atClipBoundary, BOUNDARY_MS, CLIP_MS } from '../../core/web/lib/mascot/player';
+import { atClipBoundary, BOUNDARY_MS, CLIP_MS } from '../../core/frozen/lib/mascot/player';
 import type { MascotFile } from './media';
 
 /** After the clip's length, this long again before the timer calls its boundary. */

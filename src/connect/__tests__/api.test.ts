@@ -61,19 +61,11 @@ async function pairWith(response: StreamingResponse, input: Partial<PairInput> =
 const consoleMethods = ['log', 'info', 'warn', 'error'] as const;
 
 describe('CONNECT_ROUTES (KC3)', () => {
-  it('names pair, rotate and Remove this phone, each pending PRD-266 US-003', () => {
+  it('names pair, rotate and Remove this phone, all served at the pin (PRD-266 W1)', () => {
     expect(CONNECT_ROUTES).toEqual({
-      pair: { method: 'POST', path: '/api/v1/mobile/pair', pendingUpstream: 'PRD-266 US-003' },
-      rotate: {
-        method: 'POST',
-        path: '/api/v1/mobile/devices/{device_id}/rotate',
-        pendingUpstream: 'PRD-266 US-003',
-      },
-      removeDevice: {
-        method: 'DELETE',
-        path: '/api/v1/mobile/devices/{device_id}',
-        pendingUpstream: 'PRD-266 US-003',
-      },
+      pair: { method: 'POST', path: '/api/v1/mobile/pair' },
+      rotate: { method: 'POST', path: '/api/v1/mobile/devices/{device_id}/rotate' },
+      removeDevice: { method: 'DELETE', path: '/api/v1/mobile/devices/{device_id}' },
     });
   });
 

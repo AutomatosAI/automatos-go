@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { rgba } from '../../../core/web/lib/look-kit/css';
-import { safeGlowAlpha } from '../../../core/web/lib/looks/engine';
-import { DAYLIGHT, EMBER, OBSIDIAN, PRESETS } from '../../../core/web/lib/looks/presets';
-import type { Look } from '../../../core/web/lib/looks/types';
-import { MASCOT_STATES, type MascotName } from '../../../core/web/lib/mascot/types';
+import { safeGlowAlpha } from '../../../core/frozen/lib/looks/engine';
+import { DAYLIGHT, EMBER, OBSIDIAN, PRESETS } from '../../../core/frozen/lib/looks/presets';
+import type { Look } from '../../../core/frozen/lib/looks/types';
+import { MASCOT_STATES, type MascotName } from '../../../core/frozen/lib/mascot/types';
 import { PLAY_PAGE_GLOW, PLAY_GLOW_CROSSFADE_MS, playVars } from '../../tokens/play';
 import { PLAY_GLOW_EASING, RESTING_STATE, playGlowPlan } from '../play-glow';
 import { PLAY_SPOTS, SCREEN_KINDS, type ScreenKind } from '../spots';

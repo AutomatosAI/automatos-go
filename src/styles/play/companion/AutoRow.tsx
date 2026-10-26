@@ -5,8 +5,8 @@
 
 import { StyleSheet, View } from 'react-native';
 
-import type { CaptionFacts } from '../../../core/web/components/play/chat/caption';
-import type { MascotName } from '../../../core/web/lib/mascot/types';
+import type { CaptionFacts } from '../../../core/frozen/components/play/chat/caption';
+import type { MascotName } from '../../../core/frozen/lib/mascot/types';
 import { Text } from '../../../ui';
 import { joinLabel } from '../../../ui/paint';
 import { MASCOT_SIZES } from '../../mascot/geometry';

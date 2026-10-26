@@ -21,8 +21,8 @@ import {
   type LightKey,
   type ShellKey,
   type TypeStyleKey,
-} from '../../../core/web/lib/looks/catalogue';
-import type { Look } from '../../../core/web/lib/looks/types';
+} from '../../../core/frozen/lib/looks/catalogue';
+import type { Look } from '../../../core/frozen/lib/looks/types';
 import { PLAY_LOOK_COPY } from '../../strings';
 import type { TypeStyle } from '../../type';
 import { styleType } from '../../typeface/scale';

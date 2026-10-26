@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import { resolveStyle, type StyleInput } from '../../provider/resolve';
 import { HUD_DEFAULT_LOOK } from '../../hud/look-schema';
-import { DEFAULT_LOOK } from '../../../core/web/lib/looks/presets';
+import { DEFAULT_LOOK } from '../../../core/frozen/lib/looks/presets';
 import { builtinChoice, themeChoice } from '../../registry/style-id';
 import { STUDIO_TYPE } from '../../type';
 import { STUDIO_STYLE_TYPE } from '../../typeface/studio-type';

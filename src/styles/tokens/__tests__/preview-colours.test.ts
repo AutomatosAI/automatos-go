@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { rgba } from '../../../core/web/lib/look-kit/css';
-import { EMBER } from '../../../core/web/lib/looks/presets';
+import { EMBER } from '../../../core/frozen/lib/looks/presets';
 import { HUD_PRESET_LOOKS } from '../../hud/look-schema';
 import { hudVars } from '../hud';
 import { playVars } from '../play';

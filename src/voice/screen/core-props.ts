@@ -12,7 +12,7 @@
 //   The line under the chip: the view-model's message, with its button (Open Settings, Download)
 //   or, for 'See it in the chat', the button alone.
 
-import type { MascotName } from '../../core/web/lib/mascot/types';
+import type { MascotName } from '../../core/frozen/lib/mascot/types';
 import type { ChipView, HudTalk, HudTurn } from '../../styles/hud/core/model';
 import { WAVEFORM_BARS } from '../config';
 import type { VoicePhase, VoiceState } from '../machine/voice-state';

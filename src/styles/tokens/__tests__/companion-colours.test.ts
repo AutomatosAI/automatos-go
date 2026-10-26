@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { DAYLIGHT, EMBER, PRESETS } from '../../../core/web/lib/looks/presets';
+import { DAYLIGHT, EMBER, PRESETS } from '../../../core/frozen/lib/looks/presets';
 import { COMPANION_ALPHAS, companionColours } from '../companion-colours';
 import { playVars } from '../play';
 

@@ -5,7 +5,7 @@
 
 import { useMemo, type ReactNode } from 'react';
 
-import type { Look } from '../../core/web/lib/looks/types';
+import type { Look } from '../../core/frozen/lib/looks/types';
 import type { HudLook } from '../hud/look-schema';
 import type { StyleChoice } from '../registry/style-id';
 import { StyleContext, useStyleRoot } from './context';
