@@ -38,6 +38,13 @@ export const ALLOWED: readonly AllowedA11y[] = [
       "HUD's command row (KS10, D38): the menu square is the same RowButton as LOOK beside it, 34 high in the 1 pt accent lines the row is drawn in, with a 44 pt hit area. IconButton's HUD dress is a different box. RowButton's label prop is required by its type and becomes the accessibilityLabel ('Settings'; 'Close voice' on the voice screen).",
   },
   {
+    file: 'src/styles/play/companion/PlayComposer.tsx',
+    text: 'Pressable in ComposerButton',
+    rule: 'ICON_ONLY',
+    reason:
+      "Play's Send / Stop (US-017c; Ember 01-02, 06): one 42 pt circle in Play's own paint (composerButtonPaint: the ground's text with the ground as ink, the accent on First open) holding lucide's arrow up for Send or Play's 10 x 10 radius-2 square for Stop. IconButton takes a lucide icon only and paints from the dress's variants, so it can draw neither the square nor that paint. Its accessibilityLabel is composerView's label ('Send' / 'Stop', with Stop's hint), always set.",
+  },
+  {
     file: 'src/styles/edges/Lost.tsx',
     text: 'allowFontScaling: false',
     rule: 'SCALING_OFF',
