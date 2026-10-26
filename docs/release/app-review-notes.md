@@ -88,15 +88,17 @@ lists) and has no secret-shaped string.
 
 ## Notes
 
-Paste the block as it is, then replace the three angle-bracket values in App Store Connect.
+Paste the block as it is, then replace the three angle-bracket values in App Store Connect. The
+real values are shorter than the placeholders; anything added must keep the block under 4,000
+characters.
 
 ```text
-Automatos Go is the phone app for Automatos, a workspace in which Auto, an AI assistant, and AI agents do work for a team: tickets on a board, scheduled routines, questions for the team, and documents and other Deliverables. The app signs in to a workspace that already exists, or connects to an Automatos server its owner runs. Both ways in are on the first screen.
+Automatos Go is the phone app for Automatos, a workspace where Auto, an AI assistant, and AI agents do a team's work: tickets on a board, routines, questions and Deliverables. The app signs in to an existing workspace, or connects to an Automatos server its owner runs. Both ways in are on the first screen.
 
 HOSTED SIGN-IN (the demo account above)
 1. Tap "Sign in to Automatos". Enter the email above, tap "Use my password", enter the password and tap "Sign in". No second step is asked.
 2. "Before you talk to Auto" lists the AI providers that receive what you send (5.1.2(i)). Tap "Agree and continue".
-3. Home is the conversation with Auto. Work waiting for you is above it: questions, a ticket in Review and a social post to approve. The workspace and its data are made up.
+3. Home is the conversation with Auto, with waiting work above it: questions, a ticket in Review and a social post to approve. The workspace and its data are made up.
 
 YOUR OWN SERVER (2.3.1)
 1. On the first screen, tap "Connect to your own server". If you are signed in, first open Menu, then Settings, and tap "Sign out".
@@ -120,13 +122,13 @@ NOTHING IS SOLD (3.1.1)
 Automatos Go sells nothing, asks for no money and shows nothing about what a workspace costs.
 
 NOTIFICATIONS
-The app offers notifications once something is waiting for you, or from the second time you open it; Settings, Notifications, "Turn on notifications" does it at any time. There are three kinds: a question needs your answer (answer it from the notification with "Reply…" on an unlocked phone), a ticket is ready for review, and Auto messaged you (including a daily digest you can switch off). Approving work always opens the app first.
+The app offers notifications once something waits for you, or from your second visit; Settings, Notifications, "Turn on notifications" works at any time. Three kinds: a question needs your answer ("Reply…" answers it from the notification on an unlocked phone), a ticket is ready for review, and Auto messaged you (including a daily digest you can switch off). Approving always opens the app first.
 
 VOICE
 "Talk to Auto", the microphone button beside the message box, opens the voice screen. Hold "HOLD TO TALK" and speak: the phone turns your speech into text on the device, sends it to Auto as a chat message and reads the reply aloud. The first reply starts "Hi, this is Auto, your AI assistant." The microphone and speech recognition are asked for at the first hold, never at launch.
 
 OTHER PERMISSIONS
-Camera: scanning a pairing QR code, and taking a photo to attach. Photos: the system photo picker, to attach a picture. Face ID: asked before you approve or answer in the app, a setting that is on by default; the passcode works too.
+Camera: scanning a pairing QR code and taking a photo to attach. Photos: the system photo picker. Face ID: before you approve or answer in the app (a setting, on by default; the passcode works too).
 ```
 
 ## Auto Live (add only when the build under review has it)
