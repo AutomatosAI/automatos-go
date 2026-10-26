@@ -15,12 +15,13 @@ import {
   chipView,
   commandView,
   coreSizeFor,
+  coreSizeIn,
   elapsedText,
   hudButtons,
   mascotPlace,
   micView,
   statusRow,
-  transcriptAlign,
+  transcriptAtEnd,
   transcriptHint,
   transcriptRows,
   turnElapsedMs,
@@ -89,10 +90,18 @@ describe('the transcript', () => {
     expect(transcriptRows({ you: '   ', auto: '', streaming: false })).toEqual([]);
   });
 
-  it('is centred while it fits and shows the newest lines past that', () => {
-    expect(transcriptAlign(120, 200)).toBe('center');
-    expect(transcriptAlign(200, 200)).toBe('center');
-    expect(transcriptAlign(260, 200)).toBe('end');
+  it('follows new words while the person reads its end, within 24 pt of it', () => {
+    expect(HUD_CORE.transcript.followSlack).toBe(24);
+    // it fits: the end is always in view
+    expect(transcriptAtEnd(0, 200, 120)).toBe(true);
+    // scrolled to the end of 600 pt of words in a 200 pt box
+    expect(transcriptAtEnd(400, 200, 600)).toBe(true);
+    expect(transcriptAtEnd(376, 200, 600)).toBe(true);
+  });
+
+  it('stays put once the person scrolls up to read the start', () => {
+    expect(transcriptAtEnd(375, 200, 600)).toBe(false);
+    expect(transcriptAtEnd(0, 200, 600)).toBe(false);
   });
 
   it('is drawn in 15/1.5 and 19/1.45 with a 9 x 18 cursor blinking each second', () => {
@@ -207,6 +216,28 @@ describe('the core and Auto', () => {
     expect(coreSizeFor(932)).toBe(290);
     expect(coreSizeFor(667)).toBe(Math.floor((667 * 290) / 844));
     expect(coreSizeFor(0)).toBe(290);
+  });
+
+  it('keeps its drawn size where the room under the top bar holds it and three lines of words', () => {
+    expect(HUD_CORE.transcript.minHeight).toBe(84);
+    // the drawn phone: 484 pt between the top bar and the waveform, less the chip
+    expect(coreSizeIn(484, 844)).toBe(290);
+    expect(coreSizeIn(14 + 290 + 84, 844)).toBe(290);
+    expect(coreSizeIn(334, 667)).toBe(coreSizeFor(667));
+  });
+
+  it('gives up its size to keep the transcript and the buttons on a short screen', () => {
+    // 375 x 667 with a two-line voice line and its button under the chip
+    expect(coreSizeIn(236, 667)).toBe(236 - 14 - 84);
+    expect(coreSizeIn(14 + 200 + 84 + 0.6, 844)).toBe(200);
+  });
+
+  it('never shrinks under 120, and draws its share until the column is measured', () => {
+    expect(HUD_CORE.core.minSize).toBe(120);
+    expect(coreSizeIn(150, 667)).toBe(120);
+    expect(coreSizeIn(-40, 667)).toBe(120);
+    expect(coreSizeIn(Number.NaN, 667)).toBe(coreSizeFor(667));
+    expect(coreSizeIn(Number.POSITIVE_INFINITY, 844)).toBe(290);
   });
 
   it('puts Auto 104 in the 290 core, centred across and lifted 46 % of his height', () => {
