@@ -2,7 +2,8 @@
 // renderer, and these files load React Native): the Questions list keeps the own-words field above
 // the keyboard, and a tap on Answer with the keyboard up still answers; the filter pills' rows give
 // their slop room to reach 44 pt; an always-on band line is 44 tall; wrapped option buttons sit far
-// enough apart that their slops never overlap.
+// enough apart that their slops never overlap; the shell keeps only the top bar and the tabs sticky,
+// and each tab draws the head at the top of its list, so it scrolls away.
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -16,7 +17,7 @@ import { ALWAYS_ON_BAND } from '../calendar/chrome';
 import { QUESTION_CONTROLS } from '../questions/chrome';
 
 const SRC = path.resolve(__dirname, '..', '..');
-/** The code alone: comments stripped. */
+/** The code alone: comments stripped; a path from src/, or from the repo for app/. */
 const code = (file: string) =>
   readFileSync(path.resolve(SRC, file), 'utf8')
     .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -81,5 +82,50 @@ describe('a question’s option buttons', () => {
     const controls = code('cc/questions/QuestionControls.tsx');
     expect(controls).toMatch(/columnGap: spacing\[QUESTION_CONTROLS\.optionGap\]/);
     expect(controls).toMatch(/rowGap: spacing\[QUESTION_CONTROLS\.optionRowGap\]/);
+  });
+});
+
+describe('the shell’s head scrolls with the tab', () => {
+  const layout = code('../app/(app)/cc/_layout.tsx');
+
+  it('keeps only the top bar and the tabs over the tab’s screen', () => {
+    expect(layout).toMatch(/<TopBar \/>\s*<TabStrip active=\{tab\} counts=\{counts\} \/>/);
+    expect(layout).not.toMatch(/<Head\b/);
+  });
+
+  it('hands the lede to the tabs, none where the shell steps aside', () => {
+    expect(layout).toMatch(
+      /<ShellHeadProvider lede=\{aside \? null : lede\}>\s*<Stack screenOptions=\{screenOptions\}>[\s\S]*?<\/Stack>\s*<\/ShellHeadProvider>/,
+    );
+  });
+
+  it('draws the head as it was, from the shell’s lede, and nothing outside the shell', () => {
+    const head = code('cc/shell/TabHead.tsx');
+    expect(head).toMatch(/const lede = useContext\(ShellLede\);\s*if \(!lede\) return null;/);
+    expect(head).toMatch(/<Head lede=\{lede\} \/>/);
+    expect(head).toMatch(/createContext<readonly LedePart\[\] \| null>\(null\)/);
+  });
+
+  it.each([
+    ['cc/board/BoardTab.tsx', /ListHeaderComponent=\{\s*<>\s*<TabHead \/>\s*<FilterPills/],
+    [
+      'cc/deliverables/DeliverablesTab.tsx',
+      /ListHeaderComponent=\{\s*<>\s*<TabHead \/>\s*<TypePills/,
+    ],
+    ['cc/questions/QuestionsTab.tsx', /ListHeaderComponent=\{\s*<>\s*<TabHead \/>/],
+    [
+      'cc/calendar/CalendarTab.tsx',
+      /<TabHead bleed=\{spacing\[CALENDAR_LAYOUT\.paddingX\]\} \/>\s*<DayStrip/,
+    ],
+  ])('%s opens its list with the head', (file, opening) => {
+    expect(code(file)).toMatch(opening);
+  });
+
+  it.each([
+    'cc/board/BoardTab.tsx',
+    'cc/questions/QuestionsTab.tsx',
+    'cc/calendar/CalendarTab.tsx',
+  ])('%s shows the head over its loading or error state too', (file) => {
+    expect(code(file)).toMatch(/<TabFrame>[\s\S]*?(LoadingState|NotLoaded)[\s\S]*?<\/TabFrame>/);
   });
 });

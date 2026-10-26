@@ -2,12 +2,14 @@
 // always-on band, then its rows), all in the phone's timezone. It reads the week's one query (the
 // shell's Calendar figure shares the cache entry); a pull reads it again, and a pause reads it
 // again once the server has answered. A load that fails with nothing to show is the foundation's
-// ErrorState. A row or a band line opens the item sheet over the tab.
+// ErrorState. A row or a band line opens the item sheet over the tab. The shell's head opens the
+// scroll (TabHead, out to the screen's edges as the shell drew it), so it scrolls away with the day.
 
 import { RefreshControl, ScrollView } from 'react-native';
 
 import { useTokens } from '../../styles/theme';
 import { ErrorState, LoadingState } from '../../ui';
+import { TabFrame, TabHead } from '../shell/TabHead';
 import { CALENDAR_COPY } from '../strings';
 import { CALENDAR_LAYOUT } from './chrome';
 import { DayStrip } from './DayStrip';
@@ -22,10 +24,14 @@ export function CalendarTab() {
   const sheet = useItemSheet();
 
   if (!model || !view) {
-    return query.error ? (
-      <ErrorState error={query.error} onRetry={() => void query.refetch()} />
-    ) : (
-      <LoadingState label={CALENDAR_COPY.loading} />
+    return (
+      <TabFrame>
+        {query.error ? (
+          <ErrorState error={query.error} onRetry={() => void query.refetch()} />
+        ) : (
+          <LoadingState label={CALENDAR_COPY.loading} />
+        )}
+      </TabFrame>
     );
   }
   const target = sheet.opened ? sheetTarget(items, model, view.selectedDay, sheet.opened) : null;
@@ -47,6 +53,7 @@ export function CalendarTab() {
           />
         }
       >
+        <TabHead bleed={spacing[CALENDAR_LAYOUT.paddingX]} />
         <DayStrip cells={view.strip} onChoose={choose} />
         <DayView
           view={view}
