@@ -1,10 +1,11 @@
 // HUD's phone core in words (US-018b): the chip, the transcript (and First open's hint, US-017f),
-// the top bar's mic, status row, clock and command row, the buttons (HOLD TO TALK inert), and
-// where the core and Auto sit.
+// the top bar's mic, status row, clock, command row and menu square, the buttons (HOLD TO TALK
+// inert), and where the core and Auto sit.
 
 import { describe, expect, it } from 'vitest';
 
 import { REPORT_TARGET_ID_MAX_CHARS } from '../../../../api/reports';
+import { MENU_HINT } from '../../../../chat/home/menu';
 import { captionFor } from '../../../../core/frozen/lib/mascot/media';
 import { MASCOT_STATES } from '../../../../core/frozen/lib/mascot/types';
 import { mascotGeometry } from '../../../mascot/geometry';
@@ -20,6 +21,7 @@ import {
   elapsedText,
   hudButtons,
   mascotPlace,
+  menuSquareView,
   micView,
   statusRow,
   transcriptAtEnd,
@@ -210,6 +212,12 @@ describe('the top bar', () => {
 
   it('draws the command row 34 high in 1 pt lines', () => {
     expect(HUD_CORE.commandRow).toMatchObject({ height: 34, border: 1, padItem: 14 });
+  });
+
+  it("names the menu square as Studio's menu button on home, and as a screen names it", () => {
+    expect(menuSquareView()).toEqual({ label: 'Menu', hint: MENU_HINT });
+    expect(MENU_HINT).toBe('Opens New chat, Chats, Command Centre and Settings');
+    expect(menuSquareView('Close voice')).toEqual({ label: 'Close voice', hint: undefined });
   });
 });
 

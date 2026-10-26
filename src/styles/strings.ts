@@ -415,7 +415,6 @@ export const HUD_CORE_COPY = Object.freeze({
   look: 'LOOK',
   lookLabel: 'Look',
   lookHint: 'Changes how HUD looks',
-  menuLabel: 'Settings',
   type: 'TYPE',
   typeLabel: 'Type to Auto',
   talk: 'HOLD\nTO TALK',

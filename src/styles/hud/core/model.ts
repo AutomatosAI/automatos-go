@@ -1,8 +1,9 @@
 // HUD's phone core (D54, US-018b), pure: what the core's words say, so the components only draw. The
 // state chip is the vendored captionFor in capitals; the transcript is the turn's two rows, the
 // user's words in quotes and Auto's with the cursor while he streams, and before any words First
-// open's hint (US-017f); the top bar's mic, status row, clock and command row (KS10); the three
-// buttons (HOLD TO TALK inert until A6, STOP only while a turn streams); and the drawing's numbers. Props only: phase 2 (US-016k) maps A2's thread to a
+// open's hint (US-017f); the top bar's mic, status row, clock, command row (KS10) and the menu
+// square's words (the header menu's on HUD's home, D73); the three buttons (HOLD TO TALK inert
+// until A6, STOP only while a turn streams); and the drawing's numbers. Props only: phase 2 (US-016k) maps A2's thread to a
 // HudTurn; A6's voice screen (US-019j) gives HOLD TO TALK its hold and the status row its word. The chip, the status words and the transcript say everything the rings and the waveform
 // show (the README's text twins). On a short screen the core gives up its size so the transcript
 // keeps three lines and the buttons stay on screen; the transcript scrolls, following its end while
@@ -10,6 +11,8 @@
 // on it (D15, P001R-AF-1).
 
 import { REPORT_TARGET_ID_MAX_CHARS, type ReportTarget } from '../../../api/reports';
+import { MENU_HINT } from '../../../chat/home/menu';
+import { HOME_COPY } from '../../../chat/strings';
 import { captionFor } from '../../../core/frozen/lib/mascot/media';
 import type { MascotName } from '../../../core/frozen/lib/mascot/types';
 import { badgeText, commandCentreLabel } from '../../../ui/variants';
@@ -256,6 +259,18 @@ export function commandView(needsYou: number): CommandView {
     text: count === null ? HUD_CORE_COPY.command : HUD_CORE_COPY.commandCount(count),
     label: commandCentreLabel(needsYou),
   };
+}
+
+export type MenuSquareView = { readonly label: string; readonly hint: string | undefined };
+
+/**
+ * The menu square's words: on HUD's home the header menu's own, 'Menu' with the hint naming its
+ * rows (MENU_HINT, so a new row is named here too); where a screen names the square for what it
+ * does there (the voice screen's 'Close voice'), that name alone.
+ */
+export function menuSquareView(named?: string): MenuSquareView {
+  if (named !== undefined) return { label: named, hint: undefined };
+  return { label: HOME_COPY.menu, hint: MENU_HINT };
 }
 
 // ── The buttons ──────────────────────────────────────────────────────────────────────────────

@@ -5,8 +5,12 @@
 // (use-home-thread.ts); STOP is A2's Stop, which cancels the turn on the server; TYPE opens A2's
 // composer in a Sheet (the viewer's read-only copy and a disabled box come with it, D17), with the
 // discussion bar for a ticket above it, and a send closes the sheet; 'COMMAND · N' opens the Board
-// and LOOK the Looks drawer (HudCore); the menu square opens Settings. First open is the core with
-// an empty transcript and 'Say or type what you need.' (a blank draft's turn is EMPTY_TURN).
+// and LOOK the Looks drawer (HudCore). The menu square opens Studio's header menu itself (D73:
+// HomeMenu over menu.ts MENU_ITEMS, New chat, Chats, the Command Centre with the needs-you number,
+// Settings; useHomeMenu slides it away before a row's screen opens), the foundation's Sheet in HUD's
+// dress; a blank draft is already New chat (menuHere), so that row only closes the menu. First open
+// is the core with an empty transcript and 'Say or type what you need.' (a blank draft's turn is
+// EMPTY_TURN).
 //   HOLD TO TALK is A6's quick-ask in place (US-019k, useHudHomeVoice over this thread): MIC LIVE,
 // the waveform, the voice's turn in the transcript from a press until a typed send, the voice's chip
 // and line while it works, and STOP stopping the speech too (and A2's turn, typed or spoken).
@@ -14,15 +18,16 @@
 // transcript opens the foundation's one ReportSheet (A2's useMessageReport), mounted once beside
 // TYPE's Sheet, never inside it.
 
-import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 
 import { useNeedsYou } from '../../api/needs-you';
 import { Composer } from '../../chat/composer/Composer';
 import { DiscussionBar } from '../../chat/discussion/DiscussionBar';
+import { HomeMenu } from '../../chat/home/HomeMenu';
+import { menuHere } from '../../chat/home/menu';
+import { useHomeMenu } from '../../chat/home/use-home-menu';
 import { useMessageReport } from '../../chat/report/use-message-report';
 import type { ChatFile } from '../../chat/request';
-import { routes } from '../../navigation/routes';
 import { ReportSheet, Sheet } from '../../ui';
 import { useHudHomeVoice } from '../../voice/home/use-hud-home-voice';
 import { VoiceLine } from '../../voice/screen/VoiceLine';
@@ -38,11 +43,11 @@ export type HudHomeProps = {
 };
 
 export function HudHome({ chatId, ticketId = null }: HudHomeProps) {
-  const router = useRouter();
   const home = useHomeThread(chatId, ticketId);
   const { total } = useNeedsYou();
   const [typing, setTyping] = useState(false);
   const { state, stop } = home.thread;
+  const menu = useHomeMenu(menuHere(state, ticketId));
   const turn = useMemo(() => hudTurn(state), [state]);
   const voice = useHudHomeVoice(home, turn);
   const { report, sheet } = useMessageReport();
@@ -66,7 +71,7 @@ export function HudHome({ chatId, ticketId = null }: HudHomeProps) {
         onType={() => setTyping(true)}
         onStop={voice.stop}
         needsYou={total}
-        onMenu={() => router.push(routes.settings)}
+        onMenu={menu.open}
         levels={voice.levels}
         quickAsk={{
           ...voice.core,
@@ -85,6 +90,7 @@ export function HudHome({ chatId, ticketId = null }: HudHomeProps) {
           onStop={stop}
         />
       </Sheet>
+      <HomeMenu menu={menu} needsYou={total} />
       <ReportSheet {...sheet} />
     </>
   );

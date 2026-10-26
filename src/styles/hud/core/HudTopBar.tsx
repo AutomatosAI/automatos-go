@@ -2,7 +2,8 @@
 // display face (16, .18em; '//' in the accent) with the mic right (Geist Mono 500 11 .1em: '● MIC
 // LIVE' in the accent whenever the mic is open, A6, else '○ MIC OFF' in text2); the command row the
 // phone adds, 34 high in 1 pt accent lines — 'COMMAND · N' to the Board with the server's needs-you
-// number (the caller's useNeedsYou), 'LOOK' and a menu square to Settings; and the status row,
+// number (the caller's useNeedsYou), 'LOOK' and a menu square (the caller's onMenu: HUD's home opens
+// the header menu, D73, and the square says 'Menu' as Studio's button does); and the status row,
 // '<AGENT> · <STATE>' and the turn's mm:ss (Geist Mono 11 .1em, text2), ticking while it streams.
 // A6's voice screen (US-019j) names the menu square for what it does there ('Close voice'), LOOK's
 // hint and the status row's state word; without them the bar is HUD's home's.
@@ -17,7 +18,7 @@ import { routes } from '../../../navigation/routes';
 import { Text } from '../../../ui';
 import { ICON_STROKE, hitSlopFor } from '../../../ui/paint';
 import { HUD_CORE_COPY } from '../../strings';
-import { HUD_CORE, commandView, micView, statusRow, type HudTurn } from './model';
+import { HUD_CORE, commandView, menuSquareView, micView, statusRow, type HudTurn } from './model';
 import { useVoiceCore, type VoiceCore } from './use-voice-core';
 
 const { topBar, statusRow: statusPad, commandRow, tracking } = HUD_CORE;
@@ -112,6 +113,7 @@ function CommandRow({ core, needsYou, onLook, onMenu, menuLabel, lookHint }: Com
   const router = useRouter();
   const { paint, style } = core;
   const command = commandView(needsYou);
+  const menu = menuSquareView(menuLabel);
   const said = HUD_CORE_COPY;
   const face = [
     style.type.mono(HUD_CORE.rowSize, 600, { trackingEm: tracking.row }),
@@ -140,7 +142,7 @@ function CommandRow({ core, needsYou, onLook, onMenu, menuLabel, lookHint }: Com
         >
           <Text style={face}>{said.look}</Text>
         </RowButton>
-        <RowButton core={core} label={menuLabel ?? said.menuLabel} square onPress={onMenu}>
+        <RowButton core={core} label={menu.label} hint={menu.hint} square onPress={onMenu}>
           <Menu size={ICON_SIZE} color={paint.accent} strokeWidth={ICON_STROKE} />
         </RowButton>
       </View>
@@ -184,7 +186,7 @@ export type HudTopBarProps = {
   readonly needsYou: number;
   readonly onLook: () => void;
   readonly onMenu: () => void;
-  /** A6: what the menu square says to a screen reader ('Close voice'); else 'Settings'. */
+  /** A6: what the menu square says to a screen reader ('Close voice'); else the header menu's. */
   readonly menuLabel?: string;
   /** A6: LOOK's hint where it opens a style's look page; else HUD's. */
   readonly lookHint?: string;
