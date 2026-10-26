@@ -66,6 +66,27 @@ describe("the app leaves the screen ('background')", () => {
   });
 });
 
+describe("another screen comes over HUD's home ('covered', US-019k)", () => {
+  const covered = { type: 'covered' } as const;
+
+  it.each([
+    ['idle', LEFT],
+    ['listening', LEFT_MID_TURN],
+    ['thinking', LEFT_MID_TURN],
+    ['speaking', LEFT_MID_TURN],
+    ['error', LEFT],
+  ] as const)('in %s: the screen is left, as for the background', (phase, expected) => {
+    expect(interruptionActions(covered, at(phase))).toEqual(expected);
+    expect(interruptionActions(covered, at(phase))).toEqual(
+      interruptionActions(app('background'), at(phase)),
+    );
+  });
+
+  it.each(PHASES)('with the mic open in %s, the line says it was interrupted', (phase) => {
+    expect(interruptionActions(covered, at(phase, true))).toEqual(LEFT_MID_TURN);
+  });
+});
+
 describe('the app stays on screen or comes back: nothing resumes by itself', () => {
   it.each(PHASES.flatMap((phase) => [true, false].map((micOpen) => [phase, micOpen] as const)))(
     "'inactive', 'active' and 'unknown' in %s (mic open: %s) do nothing",

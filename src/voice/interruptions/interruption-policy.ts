@@ -6,6 +6,8 @@
 //   'Interrupted. Hold to talk when you're ready.' (phase 2 adds: leave Live). Android reports a
 //   runtime permission dialog as 'background' too (AppStateModule.kt onHostPause): that press ends,
 //   as the prompt already takes it (US-019c).
+//   'covered' (another screen pushed over HUD's home, whose quick-ask listens only while it is the
+//   screen on top, US-019k) → as 'background': the screen is left.
 //   iOS 'inactive' (Control Centre, an incoming-call banner, a permission prompt) → nothing by itself.
 //   Back to 'active' → NOTHING: the mic, speech and Live never resume by themselves.
 //   The recognizer's 'interrupted' error (an AVAudioSession interruption while recognising: a call,
@@ -27,6 +29,8 @@ export type RecognizerInterruption = Exclude<InterruptReason, 'background'>;
 export type InterruptionEvent =
   /** AppState's status: 'active', 'background', 'inactive' (iOS), 'unknown' or 'extension'. */
   | { readonly type: 'app'; readonly status: string }
+  /** Another screen came over this one (HUD's home under a pushed route): it is left. */
+  | { readonly type: 'covered' }
   | { readonly type: 'recognizer'; readonly reason: RecognizerInterruption };
 
 export type InterruptionAction =
@@ -104,16 +108,14 @@ export function interruptionOf(
 
 /**
  * What to do, in order. An app status that is not away does nothing (iOS 'inactive', and 'active':
- * nothing resumes by itself). A recognizer interruption after the hold is over (STOP or the release
- * already ended it) does nothing either.
+ * nothing resumes by itself); being covered is leaving. A recognizer interruption after the hold is
+ * over (STOP or the release already ended it) does nothing either.
  */
 export function interruptionActions(
   event: InterruptionEvent,
   state: InterruptionState,
 ): readonly InterruptionAction[] {
-  if (event.type === 'app') {
-    if (!AWAY.has(event.status)) return NONE;
-    return busy(state) ? LEFT_MID_TURN : LEFT_THE_SCREEN;
-  }
-  return holding(state) ? RECOGNIZER_LOST[event.reason] : NONE;
+  if (event.type === 'recognizer') return holding(state) ? RECOGNIZER_LOST[event.reason] : NONE;
+  if (event.type === 'app' && !AWAY.has(event.status)) return NONE;
+  return busy(state) ? LEFT_MID_TURN : LEFT_THE_SCREEN;
 }

@@ -101,6 +101,38 @@ describe("leaving the screen ('background')", () => {
   });
 });
 
+describe("covered ('covered': a screen over HUD's home, US-019k)", () => {
+  const covered = { type: 'covered' } as const;
+
+  it('mid-hold: the recognizer aborts, nothing is sent, MIC LIVE goes out', async () => {
+    const h = harness();
+    await holding(h);
+    h.quickAsk.interrupt(covered);
+    expect(h.recognizer.abort).toHaveBeenCalledTimes(1);
+    expect(h.voice()).toMatchObject({ phase: 'idle', micOpen: false, message: 'interrupted' });
+    h.quickAsk.release();
+    h.quickAsk.unmount();
+    expect(h.sends).toEqual([]);
+  });
+
+  it('mid-reply: the rest is never spoken, the turn is not cancelled; back on top, a new session', async () => {
+    const h = harness();
+    await speaking(h);
+    h.quickAsk.interrupt(covered);
+    h.quickAsk.unmount();
+    expect(h.log).not.toContain('thread.stop');
+    const spokenBefore = h.speaker.speak.mock.calls.length;
+    h.feed(...frames(wire.text('ten.'), wire.finish), { type: 'finished' });
+    expect(h.speaker.speak).toHaveBeenCalledTimes(spokenBefore);
+    h.feed({ type: 'settled', messages: EARLIER });
+    h.quickAsk.mount();
+    await ask(h, 'And tomorrow?');
+    h.feed(...frames(wire.text('Nothing yet.'), wire.finish), { type: 'finished' });
+    const spoken = h.speaker.speak.mock.calls.slice(spokenBefore).map(([sentence]) => sentence);
+    expect(spoken).toEqual([AI_VOICE_GREETING, 'Nothing yet.']);
+  });
+});
+
 describe('coming back to the screen reopens nothing (KV10)', () => {
   it("'active' after leaving mid-hold or mid-reply starts no mic, speech or turn", async () => {
     const h = harness();

@@ -3,21 +3,27 @@
 //   The thread is the caller's useThread (src/chat/controller/use-thread.ts) for the voice screen's
 //   conversation: quick-ask sends through it and A2's Stop cancels through it, so there is never a
 //   second chat request or stream; a typed turn on the same thread is never spoken (KV6).
-//   The recognizer and the speaker take one listener each: this hook's, while the screen is mounted.
-//   Mounting starts an AI-notice session (KV7); unmounting stops the mic and the speech, and the turn
-//   runs on with nothing more spoken (A2 lets go of the read without a cancel).
+//   The recognizer and the speaker take one listener each: this hook's, while the screen is mounted
+//   (scope 'mounted', the voice screen) or, for HUD's home (scope 'focused', US-019k), only while it
+//   is the screen on top: a conversation's HUD home or the voice screen can stack over it, and a
+//   home under them would otherwise lose the listener for good when they go. Covered, it leaves as
+//   the app going to the background does (the interruption policy's 'covered'); on top again, it is
+//   a new session. Attaching starts an AI-notice session (KV7); detaching stops the mic and the
+//   speech, and the turn runs on with nothing more spoken (A2 lets go of the read without a cancel).
 //   The speech is in the phone's language (the one recognition listens in) with the voice picked
 //   for it once (US-019d); until that voice is known, the engine's default for the language.
 //   Nothing asks a permission at mount: only press() does (KV5).
 //   Leaving the screen goes through the interruption policy (use-interruptions.ts, US-019h), and the
 //   screen stays on while the mic is open or a reply is under way (keep-awake.ts, KV12).
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import { useAppSession } from '../../app-state/session';
 import { roleCan } from '../../auth/role';
 import type { ThreadView } from '../../chat/controller/use-thread';
 import { logger } from '../../lib/logger';
+import type { InterruptionEvent } from '../interruptions/interruption-policy';
 import { useVoiceKeepAwake } from '../interruptions/keep-awake';
 import { useInterruptions } from '../interruptions/use-interruptions';
 import { permissions } from '../permissions/permissions';
@@ -41,6 +47,14 @@ export type QuickAskView = QuickAskSnapshot & {
   /** A new AI-notice session: the next spoken reply greets again (KV7). */
   readonly newSession: () => void;
 };
+
+/**
+ * When the engine holds the recognizer's and the speaker's one listener: from mount to unmount (the
+ * voice screen), or only while the screen is the one on top (HUD's home).
+ */
+export type QuickAskScope = 'mounted' | 'focused';
+
+const COVERED: InterruptionEvent = Object.freeze({ type: 'covered' });
 
 function later(run: () => void, ms: number): () => void {
   const timer = setTimeout(run, ms);
@@ -83,8 +97,8 @@ function useEngineContext(thread: ThreadView): { readonly current: QuickAskConte
   return latest;
 }
 
-/** One engine per screen, listening to the recognizer and the speaker while it is mounted. */
-function useEngine(context: { readonly current: QuickAskContext }): QuickAsk {
+/** One engine per screen, listening to the recognizer and the speaker while its scope holds. */
+function useEngine(context: { readonly current: QuickAskContext }, scope: QuickAskScope): QuickAsk {
   const engine = useMemo(
     () =>
       createQuickAsk({
@@ -97,7 +111,7 @@ function useEngine(context: { readonly current: QuickAskContext }): QuickAsk {
       }),
     [context],
   );
-  useEffect(() => {
+  const attach = useCallback(() => {
     const unlistenRecognizer = recognizer.listen(engine.onRecognizer);
     const unlistenSpeaker = speaker.listen(engine.onSpeaker);
     engine.mount();
@@ -107,13 +121,24 @@ function useEngine(context: { readonly current: QuickAskContext }): QuickAsk {
       engine.unmount();
     };
   }, [engine]);
+  useEffect(() => (scope === 'mounted' ? attach() : undefined), [attach, scope]);
+  useFocusEffect(
+    useCallback(() => {
+      if (scope !== 'focused') return undefined;
+      const detach = attach();
+      return () => {
+        engine.interrupt(COVERED);
+        detach();
+      };
+    }, [attach, engine, scope]),
+  );
   return engine;
 }
 
-/** Quick-ask over `thread`, the conversation the voice screen shows (A2's useThread). */
-export function useQuickAsk(thread: ThreadView): QuickAskView {
+/** Quick-ask over `thread`, the conversation the screen shows (A2's useThread). */
+export function useQuickAsk(thread: ThreadView, scope: QuickAskScope = 'mounted'): QuickAskView {
   const context = useEngineContext(thread);
-  const engine = useEngine(context);
+  const engine = useEngine(context, scope);
   useEffect(() => engine.onThread(thread.state), [engine, thread.state]);
   useInterruptions(engine.interrupt);
   const snapshot = useSyncExternalStore(engine.subscribe, engine.snapshot);

@@ -6,13 +6,13 @@
 //   typed turn goes through the same thread and is never spoken (KV6). STOP is quick-ask's (the mic
 //   aborted, the speech stopped, its turn cancelled through A2's Stop). LOOK opens the style's look
 //   page; the menu square closes the screen (back, or home when it was opened on its own).
-//   HOLD TO TALK presses in and out; under a screen reader (AccessibilityInfo, KV5) it toggles.
+//   HOLD TO TALK presses in and out; under a screen reader (AccessibilityInfo, KV5) it toggles
+//   (use-voice-parts.ts, shared with HUD's home).
 //   Permissions are read at mount for MIC OFF, never asked (KV5: only a press asks); a press's own
 //   verdict, always the newer, wins.
 
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AccessibilityInfo } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useNeedsYou } from '../../api/needs-you';
 import { useAppSession } from '../../app-state/session';
@@ -31,9 +31,7 @@ import { permissions } from '../permissions/permissions';
 import { phoneLocale } from '../quick-ask/locale';
 import { useQuickAsk, type QuickAskView } from '../quick-ask/use-quick-ask';
 import {
-  nextLevels,
   phaseMascot,
-  toggleStep,
   voiceCoreProps,
   voiceLine,
   voiceTurn,
@@ -41,6 +39,7 @@ import {
   type VoiceLine,
 } from './core-props';
 import { voiceDress } from './dress';
+import { useHold, useLevels, useScreenReader } from './use-voice-parts';
 import { voiceView, type MessageAction, type VoiceView } from './voice-view-model';
 
 export type VoiceScreenActions = {
@@ -68,26 +67,6 @@ export type VoiceScreenModel = {
   readonly on: VoiceScreenActions;
 };
 
-/** VoiceOver or TalkBack is on, and stays in step while the screen is up. */
-function useScreenReader(): boolean {
-  const [on, setOn] = useState(false);
-  useEffect(() => {
-    let current = true;
-    AccessibilityInfo.isScreenReaderEnabled().then(
-      (enabled) => {
-        if (current) setOn(enabled);
-      },
-      (error: unknown) => logger.warn('[voice] the screen reader was not read', error),
-    );
-    const subscription = AccessibilityInfo.addEventListener('screenReaderChanged', setOn);
-    return () => {
-      current = false;
-      subscription.remove();
-    };
-  }, []);
-  return on;
-}
-
 /** The permissions as they stand at mount, read only (never a prompt); null until read. */
 function useMountPermission(): PermissionVerdict | null {
   const [verdict, setVerdict] = useState<PermissionVerdict | null>(null);
@@ -104,26 +83,6 @@ function useMountPermission(): PermissionVerdict | null {
     };
   }, []);
   return verdict;
-}
-
-/** The waveform's run of levels while the mic is open; null once it closes. */
-function useLevels(level: number | null): readonly number[] | null {
-  const [levels, setLevels] = useState<readonly number[] | null>(null);
-  useEffect(() => setLevels((previous) => nextLevels(previous, level)), [level]);
-  return levels;
-}
-
-/** HOLD TO TALK's hold, and its toggle under a screen reader. */
-function useHold(quick: QuickAskView) {
-  const { press, release, voice } = quick;
-  const onToggle = useCallback(
-    () => (toggleStep(voice.phase) === 'release' ? release() : press()),
-    [voice.phase, press, release],
-  );
-  return useMemo(
-    () => ({ onPressIn: press, onPressOut: release, onToggle }),
-    [press, release, onToggle],
-  );
 }
 
 function useActions(quick: QuickAskView, thread: ThreadView, setTyping: (on: boolean) => void) {

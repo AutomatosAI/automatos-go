@@ -12,6 +12,9 @@
 // puts him — with the voice view-model's chip and status words, its line under the chip, HOLD TO
 // TALK's hold, STOP and TYPE as the voice says, the menu square named for closing the screen, and
 // LOOK going to the style's look page (onLook) instead of opening HUD's drawer here.
+//   A6's quick-ask on HUD's home (US-019k) passes `quickAsk` instead: HUD's home as A5 built it, with
+// HOLD TO TALK's hold, STOP on while the voice works, and, while it does or has a line, the voice's
+// chip and status word and its line under the chip. Under `voice` it is not read.
 
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
@@ -61,6 +64,17 @@ export type HudCoreVoice = {
   readonly line?: ReactNode;
 };
 
+/** A6's quick-ask on HUD's home: HOLD TO TALK live in place; the rest is HUD's home's own. */
+export type HudCoreQuickAsk = {
+  readonly talk: HudTalk;
+  /** STOP is on: the mic is held, Auto has the voice's turn, or a typed turn streams. */
+  readonly stopEnabled: boolean;
+  /** The voice's chip and status word; absent, Auto's state's (HUD's home's own). */
+  readonly chip?: ChipView;
+  /** Drawn under the state chip: the voice's line and its button. */
+  readonly line?: ReactNode;
+};
+
 export type HudCoreProps = {
   /** The newest turn (US-016k maps it from A2's thread). */
   readonly turn: HudTurn;
@@ -82,6 +96,8 @@ export type HudCoreProps = {
   readonly levels?: readonly number[] | null;
   /** A6's voice screen; absent, HUD's home exactly as A5 built it. */
   readonly voice?: HudCoreVoice;
+  /** A6's quick-ask on HUD's home; absent, HOLD TO TALK inert as A5 built it. */
+  readonly quickAsk?: HudCoreQuickAsk;
 };
 
 /** The state Auto should show: the one held, or the controller's target. */
@@ -131,8 +147,19 @@ function Overlay({ plan, layer }: OverlayProps) {
   return plan ? <HudOverlay plan={plan} layer={layer} /> : null;
 }
 
-/** What the voice group changes in the column; HUD's home's own values without it. */
-function columnParts(voice: HudCoreVoice | undefined, turn: HudTurn) {
+/** What quick-ask changes on HUD's home: HOLD TO TALK, STOP, and the voice's words while given. */
+function quickAskParts(quick: HudCoreQuickAsk) {
+  return {
+    bar: quick.chip ? { stateWord: quick.chip.label } : {},
+    chip: quick.chip,
+    line: quick.line ?? null,
+    buttons: { streaming: quick.stopEnabled, talk: quick.talk },
+  };
+}
+
+/** What the voice group (or quick-ask) changes in the column; HUD's home's own values without. */
+function columnParts(voice: HudCoreVoice | undefined, turn: HudTurn, quick?: HudCoreQuickAsk) {
+  if (!voice && quick) return quickAskParts(quick);
   if (!voice)
     return { bar: {}, chip: undefined, line: null, buttons: { streaming: turn.streaming } };
   return {
@@ -164,7 +191,7 @@ export function HudCore(props: HudCoreProps) {
   const frame = useFrame(voice);
   if (!frame) return null;
   const state = stateOf(mascotState);
-  const parts = columnParts(voice, turn);
+  const parts = columnParts(voice, turn, props.quickAsk);
   return (
     <View style={[styles.screen, { backgroundColor: frame.background }]}>
       <Overlay plan={frame.plan} layer="ground" />
