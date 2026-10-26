@@ -338,7 +338,7 @@
     },
     {
       "id": "OT-R4",
-      "what": "On the next iOS build after this wave (the privacy manifest's native change): no ITMS-90683 or ITMS-91053 email from Apple; download the IPA and run `node scripts/release/scan-ipa.mjs <ipa>`: PASS (docs/release/ipa-scan.md). Repeat the scan before the first submit of every native build.",
+      "what": "On the next iOS build: no ITMS-90683 or ITMS-91053 email from Apple (the privacy manifest has been in app.json since the foundation, so this wave makes no native change; remote CocoaPods are checked only by Apple's processing); download the IPA and run `node scripts/release/scan-ipa.mjs <ipa>`: PASS (docs/release/ipa-scan.md). Repeat the scan before the first submit of every native build.",
       "why": "R06, R07; needs EAS and Apple's processing."
     },
     {
@@ -571,18 +571,18 @@
       "title": "The iOS privacy manifest and Android backup off: the wave's one native change",
       "description": "As Automatos, we want Apple's processing to accept the build and the manifest to say what the labels say (R06); and the app's local cache and install marker out of Android Auto Backup (critic-security-privacy). KR3: the only app.json keys this wave may touch.",
       "acceptanceCriteria": [
-        "app.json expo.ios.privacyManifests (added here if the merged base lacks it; if the foundation already added it, this story audits it and writes 'ALREADY ON BASE' in the DONE marks): NSPrivacyTracking false; NSPrivacyTrackingDomains []; NSPrivacyCollectedDataTypes exactly the docs/release/privacy-labels.json apple rows with collected true, each {NSPrivacyCollectedDataType, NSPrivacyCollectedDataTypeLinked, NSPrivacyCollectedDataTypeTracking false, NSPrivacyCollectedDataTypePurposes ['NSPrivacyCollectedDataTypePurposeAppFunctionality']}; NSPrivacyAccessedAPITypes covering every category and reason any installed dependency's PrivacyInfo.xcprivacy declares (on 21 Oct: FileTimestamp C617.1, 0A2A.1, 3B52.1; UserDefaults CA92.1; SystemBootTime 35F9.1; DiskSpace E174.1, 85F4.1 — RE-VERIFY on the merged lockfile)",
-        "app.json expo.android.allowBackup false (audit only if already on the base)",
-        "No other app.json key changes (gate: app.json minus those two keys equals the base's); no package.json, package-lock.json or eas.json change",
-        "src/release/__tests__/support/plist.ts: a minimal XML-plist reader (dict, array, string, true, false, integer) tested on node_modules/react-native/React/Resources/PrivacyInfo.xcprivacy; src/release/__tests__/privacy-manifest.test.ts: finds every PrivacyInfo.xcprivacy under node_modules of the packages package-lock.json lists, unions their NSPrivacyAccessedAPITypes, and asserts app.json declares every category with every reason; asserts NSPrivacyCollectedDataTypes equals the labels JSON's collected apple rows; asserts allowBackup false",
-        "src/config/__tests__/app-config.test.ts is updated only where an existing assertion covers these keys (SEAM EDIT; no case removed)",
-        "npx expo-doctor passes; npx expo config --type introspect exits 0",
-        "When app.json changed, the story commit's body starts 'NATIVE CHANGE: app.json (privacy manifest, Android backup) — the merge costs one iOS build through the fingerprint loop (D43)'",
-        "OWNER — after the next iOS build: no ITMS-91053 or ITMS-90683 email from Apple for it (OT-R4)",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes",
-        "npm run check:bundle passes"
+        "app.json expo.ios.privacyManifests (added here if the merged base lacks it; if the foundation already added it, this story audits it and writes 'ALREADY ON BASE' in the DONE marks): NSPrivacyTracking false; NSPrivacyTrackingDomains []; NSPrivacyCollectedDataTypes exactly the docs/release/privacy-labels.json apple rows with collected true, each {NSPrivacyCollectedDataType, NSPrivacyCollectedDataTypeLinked, NSPrivacyCollectedDataTypeTracking false, NSPrivacyCollectedDataTypePurposes ['NSPrivacyCollectedDataTypePurposeAppFunctionality']}; NSPrivacyAccessedAPITypes covering every category and reason any installed dependency's PrivacyInfo.xcprivacy declares (on 21 Oct: FileTimestamp C617.1, 0A2A.1, 3B52.1; UserDefaults CA92.1; SystemBootTime 35F9.1; DiskSpace E174.1, 85F4.1 — RE-VERIFY on the merged lockfile) → DONE — ALREADY ON BASE (foundation US-002f; app.json identical to the base 24a8fa6): NSPrivacyTracking false, no tracking domains, 11 collected types equal to privacy-labels.json's collected Apple rows (10 linked, CrashData not), each tracking false for AppFunctionality only; NSPrivacyAccessedAPITypes DiskSpace 85F4.1 E174.1, FileTimestamp 0A2A.1 3B52.1 C617.1, SystemBootTime 35F9.1, UserDefaults CA92.1 = the union of the 13 installed PrivacyInfo.xcprivacy files (RE-VERIFY: expo-device's is new since 21 Oct, SystemBootTime 35F9.1, already covered via boost); privacy-manifest.test.ts PASS",
+        "app.json expo.android.allowBackup false (audit only if already on the base) → DONE — ALREADY ON BASE (foundation US-002f): audited by privacy-manifest.test.ts 'Android Auto Backup' and app-config.test.ts's introspected android:allowBackup 'false'",
+        "No other app.json key changes (gate: app.json minus those two keys equals the base's); no package.json, package-lock.json or eas.json change → DONE — app.json unchanged (git diff 24a8fa6 -- app.json empty; no commit since the base touches it); no package.json, package-lock.json or eas.json change",
+        "src/release/__tests__/support/plist.ts: a minimal XML-plist reader (dict, array, string, true, false, integer) tested on node_modules/react-native/React/Resources/PrivacyInfo.xcprivacy; src/release/__tests__/privacy-manifest.test.ts: finds every PrivacyInfo.xcprivacy under node_modules of the packages package-lock.json lists, unions their NSPrivacyAccessedAPITypes, and asserts app.json declares every category with every reason; asserts NSPrivacyCollectedDataTypes equals the labels JSON's collected apple rows; asserts allowBackup false → DONE — plist.ts (159 lines; Map-dispatched readers, throws on data/date/real, stray text, duplicate keys, unclosed elements); privacy-manifest.test.ts 38 tests: reader on react-native's manifest (key count = <key> count) + fixture + 14 refusals; walks every package-lock.json package on disk (no required one missing), 13 manifests parsed and zod-checked, union covered, none tracks, none collects outside the labels; collected types equal the labels; allowBackup false. Mutation check: dropping C617.1, a collected type or allowBackup each fails",
+        "src/config/__tests__/app-config.test.ts is updated only where an existing assertion covers these keys (SEAM EDIT; no case removed) → DONE — no edit needed (app.json unchanged): its introspected privacyManifests toEqual(app.json) and android:allowBackup 'false' cases pass as they are; no SEAM EDIT",
+        "npx expo-doctor passes; npx expo config --type introspect exits 0 → DONE — expo-doctor 18/18 checks passed; expo config --type introspect exit 0",
+        "When app.json changed, the story commit's body starts 'NATIVE CHANGE: app.json (privacy manifest, Android backup) — the merge costs one iOS build through the fingerprint loop (D43)' → DONE — app.json did not change, so no NATIVE CHANGE body and no iOS build (gate native_commits_marked: no commit touches app.json)",
+        "OWNER — after the next iOS build: no ITMS-91053 or ITMS-90683 email from Apple for it (OT-R4) → OWNER — docs/release/README.md (OT-R4)",
+        "npm run typecheck passes → DONE — tsc --noEmit PASS",
+        "npm run lint passes (0 errors) → DONE — eslint 0 errors (2 warnings on the base's src/cc/strings.ts and src/styles/strings.ts)",
+        "npx vitest run passes → DONE — 348 files, 6413 tests PASS",
+        "npm run check:bundle passes → DONE — expo export --platform ios exit 0"
       ],
       "files": [
         "app.json",
@@ -596,8 +596,8 @@
         "src/config/__tests__/app-config.test.ts (foundation US-001..US-002c) — RE-VERIFY its exact-key assertions"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "RE-VERIFY: ALREADY ON BASE — app.json has carried ios.privacyManifests and android.allowBackup false since the foundation (US-002f), so this wave makes no native change (KR3 unused) and costs no iOS build; the title's 'one native change' did not happen. DIFFERS from the seams: 13 PrivacyInfo.xcprivacy files on the merged lockfile, not 12 (expo-device added; SystemBootTime 35F9.1, already in the union via boost); the reason union is the 21 Oct one. src/config/__tests__/app-privacy.test.ts (foundation) already pins the manifest with a regex scan of find node_modules; privacy-manifest.test.ts is the release's own, lock-anchored and plist-parsed, and adds the labels JSON comparison, the KR15 shape and the dependency tracking/collected checks. support/packages.ts keeps the lock's optional flag; support/privacy-labels.ts gains KR15_ACCESSED_API_CATEGORIES and manifestPurpose. docs/release/README.md R06 row filled; OT-R4 reworded (no native change in this wave; remote CocoaPods sentry-cocoa, LiveKit WebRTC and Clerk's pods are checked only by Apple's processing), the kit's ownerTest OT-R4 likewise. No SEAM EDIT, no AUDIT FIX."
     },
     {
       "id": "US-021g",
