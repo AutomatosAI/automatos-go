@@ -1,7 +1,9 @@
 // Switching servers (US-006d): forgetServer() and connectTo(record) clear the query cache and its
-// persisted copy (only the persister's own MMKV key), the stored X-Workspace-ID, the active provider
-// and the consent step's memory, in that order, before the next server is used. Over the real
-// QueryClient, persister and workspace-id registry; the provider, consent and keychain are fakes.
+// persisted copy, the stored X-Workspace-ID, the active provider and the consent step's memory, in
+// that order, then (release KR9, clearUserData) every entry of the encrypted store but the phone's
+// own choices and the person's keychain items, before the next server is used. Over the real
+// QueryClient, persister, workspace-id registry and a memory store; the provider, consent and
+// keychain are fakes. src/release/__tests__/user-data.test.ts runs the same over the real registry.
 
 import { persistQueryClientSave } from '@tanstack/react-query-persist-client';
 import { describe, expect, it, vi } from 'vitest';
@@ -18,6 +20,8 @@ import type { AuthProvider } from '../../auth/providers/types';
 import { consentKeyFor, createConsentStore, type ConsentRecord } from '../../consent/store';
 import { createWorkspaceIdRegistry } from '../../session/workspace-ids';
 import { memoryStorage } from '../../storage/encrypted-storage';
+import { STYLE_CHOICE_KEY } from '../../styles/registry/choice-store';
+import { THEME_CHOICE_STORAGE_KEY } from '../../styles/theme-choice';
 import { createCurrentServerStore, ownServerOf } from '../current-server';
 import type { PairedRecord } from '../device-store';
 import { createServerSwitch, type ServerSwitchDeps } from '../switch';
@@ -25,7 +29,7 @@ import { OTHER_RECORD, RECORD } from './paired-record';
 
 const HOSTED = hostedServerFrom({ apiUrl: 'https://api.example.test', webUrl: '' });
 const HOSTED_WORKSPACE = '11111111-1111-4111-8111-111111111111';
-/** Another MMKV item of the app's store, kept beside the cache (a server's consent records, US-007b). */
+/** Another MMKV item of the app's store beside the cache (a server's consent records, US-007b). */
 const NEIGHBOUR_KEY = consentKeyFor('https://neighbour.example.test');
 
 const AGREED: ConsentRecord = Object.freeze({
@@ -42,6 +46,9 @@ async function setup({ kind = 'clerk', paired = null as PairedRecord | null } = 
   const log: string[] = [];
   const storage = memoryStorage();
   storage.setItem(NEIGHBOUR_KEY, 'agreed');
+  // the phone's own choices (switch.ts PHONE_CHOICES)
+  storage.setItem(THEME_CHOICE_STORAGE_KEY, 'dark');
+  storage.setItem(STYLE_CHOICE_KEY, 'play');
   const persister = createQueryPersister(storage);
   const queryClient = createQueryClient();
   queryClient.setQueryData(queryKeys.workspace(), { id: HOSTED_WORKSPACE });
@@ -85,6 +92,19 @@ async function setup({ kind = 'clerk', paired = null as PairedRecord | null } = 
         log.push(`consent-records:${origin}`);
       },
     },
+    storage: () => {
+      log.push('store');
+      return storage;
+    },
+    storagePersistent: () => true,
+    files: () => log.push('files'),
+    keys: {
+      keys: async () => {
+        log.push('user-keys');
+        return [];
+      },
+      remove: async () => undefined,
+    },
     deviceStore: {
       save: async (record: PairedRecord) => {
         log.push('save');
@@ -119,6 +139,9 @@ describe('connectTo(record): from the hosted server to an own one', () => {
       'workspace-id',
       'provider:clerk',
       'consent-memory',
+      'store',
+      'files',
+      'user-keys',
       'save',
       'current',
     ]);
@@ -144,10 +167,11 @@ describe('connectTo(record): from the hosted server to an own one', () => {
     expect(HOSTED && workspaceIds.forServer(HOSTED).get()).toBeNull();
   });
 
-  it("removes only the persister's own MMKV key, never the whole store", async () => {
+  it("empties the store but the phone's own choices: no server's consent record stays", async () => {
     const { storage, deps } = await setup();
     await createServerSwitch(deps).connectTo(RECORD);
-    expect(storage.getItem(NEIGHBOUR_KEY)).toBe('agreed');
+    expect(storage.getItem(NEIGHBOUR_KEY)).toBeNull();
+    expect(storage.keys()).toEqual([THEME_CHOICE_STORAGE_KEY, STYLE_CHOICE_KEY]);
   });
 
   it('stops with the pairing unsaved when Clerk cannot sign out (offline)', async () => {
@@ -176,6 +200,9 @@ describe('connectTo(record): from one own server to another', () => {
       'provider:device',
       'consent-memory',
       `consent-records:${RECORD.origin}`,
+      'store',
+      'files',
+      'user-keys',
       'save',
       'current',
     ]);
@@ -193,6 +220,9 @@ describe('forgetServer()', () => {
       'provider:device',
       'consent-memory',
       `consent-records:${RECORD.origin}`,
+      'store',
+      'files',
+      'user-keys',
       'device-clear',
       'current',
     ]);
@@ -200,14 +230,15 @@ describe('forgetServer()', () => {
     expect(servers.getSnapshot()).toEqual({ status: 'ready', own: null, ended: null });
   });
 
-  it("removes only the persister's own MMKV key here too", async () => {
+  it("empties the store here too: the cache and every entry but the phone's own choices", async () => {
     const { storage, deps } = await setup({ kind: 'device', paired: RECORD });
     await createServerSwitch(deps).forgetServer();
     expect(storage.getItem(QUERY_CACHE_STORAGE_KEY)).toBeNull();
-    expect(storage.getItem(NEIGHBOUR_KEY)).toBe('agreed');
+    expect(storage.getItem(NEIGHBOUR_KEY)).toBeNull();
+    expect(storage.keys()).toEqual([THEME_CHOICE_STORAGE_KEY, STYLE_CHOICE_KEY]);
   });
 
-  it("over the consent store: the forgotten server's records go, the hosted server's stay", async () => {
+  it("over the consent store: the forgotten server's records go, and the hosted server's (the person's)", async () => {
     const { storage, deps } = await setup({ kind: 'device', paired: RECORD });
     const consent = createConsentStore({ storage: () => storage });
     const own = { origin: RECORD.origin, workspaceId: RECORD.workspaceId };
@@ -218,7 +249,7 @@ describe('forgetServer()', () => {
     await createServerSwitch({ ...deps, consent: port }).forgetServer();
     expect(consent.read(own)).toBeNull();
     expect(storage.getItem(consentKeyFor(RECORD.origin))).toBeNull();
-    expect(consent.read(hosted)).toEqual(AGREED);
+    expect(consent.read(hosted)).toBeNull();
   });
 
   it('keeps the server when the cache cannot be cleared, and says so', async () => {

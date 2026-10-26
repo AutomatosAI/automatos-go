@@ -11,7 +11,7 @@ import { createMMKV } from 'react-native-mmkv';
 import { KEYCHAIN_OPTIONS } from '../lib/secure-store';
 import {
   openEncryptedStorage,
-  type KeyValueStorage,
+  type ListableStorage,
   type OpenedStorage,
   type SecureKeyStore,
 } from './encrypted-storage';
@@ -42,7 +42,7 @@ function open(): OpenedStorage {
 }
 
 /** The store: the encrypted MMKV file, or memory for this launch when the keychain is unavailable. */
-export function appStorage(): KeyValueStorage {
+export function appStorage(): ListableStorage {
   opened ??= open();
   return opened.storage;
 }

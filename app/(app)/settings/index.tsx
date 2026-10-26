@@ -23,6 +23,7 @@ import { PICKER_COPY } from '../../../src/styles/strings';
 import { RemovePhone } from '../../../src/push/bind/RemovePhone';
 import { pushScreens } from '../../../src/push/nav';
 import { PUSH_ACCOUNT_COPY } from '../../../src/push/strings';
+import { PrivacySection } from '../../../src/release/components/PrivacySection';
 import { useTokens } from '../../../src/styles/theme';
 import { Card, Divider, IconButton, ListRow, Screen, Text } from '../../../src/ui';
 import { VOICE_SCREENS } from '../../../src/voice/nav';
@@ -92,6 +93,7 @@ export default function AccountSettings() {
             onPress={() => router.push(VOICE_SCREENS.settings)}
           />
         </Card>
+        <PrivacySection />
         <RemovePhone />
       </View>
     </Screen>

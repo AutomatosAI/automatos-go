@@ -1,0 +1,100 @@
+{
+  "about": "Every NS…UsageDescription key in the evaluated Info.plist of Automatos Go (npx expo config --type introspect on the merged base 24a8fa6, 26 Oct 2026), as data (R07, KR12). kind 'used' is a permission the app asks for, with what it is for; kind 'notice' is a key Apple requires because a bundled library references the framework (ITMS-90683), although the app never asks. needs lists the framework classes that require the key, as docs/native-modules.md 'Symbols and usage keys' maps them (Framework: class); an empty needs carries a note. proposed is the privacy draft's Appendix A.3 string for the key (reports/mobile-review-2026-10-20/drafts/privacy-policy-automatos-go.md; null where A.3 proposes none), and differences lists, for Gerard, where the shipped string and the proposal differ. This story changes no shipped string: a change is an app.json edit, which moves the fingerprint and costs an iOS build. src/release/__tests__/permissions.test.ts holds the evaluated Info.plist to keys and strings here.",
+  "reviewed": "2026-10-26",
+  "keys": [
+    {
+      "key": "NSCameraUsageDescription",
+      "kind": "used",
+      "string": "Automatos Go uses the camera to scan the QR code that connects it to your server, and to take photos you send to Auto.",
+      "needs": ["AVFoundation: AVCaptureDevice (video)"],
+      "proposed": "Automatos Go uses the camera to scan the pairing code for your own server and to take photos you send to Auto."
+    },
+    {
+      "key": "NSMicrophoneUsageDescription",
+      "kind": "used",
+      "string": "Automatos Go uses the microphone when you talk to Auto.",
+      "needs": [
+        "AVFoundation: AVCaptureDevice (audio)",
+        "AVFoundation: AVAudioSession.requestRecordPermission"
+      ],
+      "proposed": "Automatos Go uses the microphone while you hold to talk or are in an Auto Live call."
+    },
+    {
+      "key": "NSSpeechRecognitionUsageDescription",
+      "kind": "used",
+      "string": "Automatos Go turns what you say to Auto into text, using speech recognition on this iPhone.",
+      "needs": ["Speech: SFSpeechRecognizer"],
+      "proposed": "Automatos Go turns what you say into text on your iPhone, so you can talk to Auto."
+    },
+    {
+      "key": "NSPhotoLibraryUsageDescription",
+      "kind": "used",
+      "string": "Automatos Go lets you choose photos from your library to attach to a message for Auto.",
+      "needs": ["Photos: PHAsset", "Photos: PHPhotoLibrary"],
+      "proposed": "Automatos Go opens your photo library only to attach the photos you pick."
+    },
+    {
+      "key": "NSFaceIDUsageDescription",
+      "kind": "used",
+      "string": "Automatos Go asks for Face ID before you approve a request or answer a question in your workspace.",
+      "needs": ["LocalAuthentication: LAContext"],
+      "proposed": "Automatos Go can check it's you before you approve or answer."
+    },
+    {
+      "key": "NSLocalNetworkUsageDescription",
+      "kind": "used",
+      "string": "Automatos Go connects to your own Automatos server when it runs on your home or office network.",
+      "needs": [],
+      "note": "No class: iOS asks on the app's first connection to a device on the local network (the API client, for a self-hosted server on a private address).",
+      "proposed": "Automatos Go connects to your own Automatos server on this network."
+    },
+    {
+      "key": "NSPhotoLibraryAddUsageDescription",
+      "kind": "notice",
+      "string": "Automatos Go does not save anything to your photo library; a bundled library references it, so Apple requires this notice; the app never asks for access.",
+      "needs": ["Photos: PHAccessLevel.addOnly"],
+      "proposed": null
+    },
+    {
+      "key": "NSMotionUsageDescription",
+      "kind": "notice",
+      "string": "Automatos Go does not use motion data; a bundled library references it, so Apple requires this notice; the app never asks for access.",
+      "needs": ["CoreMotion: CMMotionManager"],
+      "proposed": null
+    }
+  ],
+  "differences": [
+    {
+      "key": "NSCameraUsageDescription",
+      "difference": "Same two purposes. Shipped says 'the QR code that connects it to your server'; A.3 says 'the pairing code for your own server'."
+    },
+    {
+      "key": "NSMicrophoneUsageDescription",
+      "difference": "A.3 says when the microphone is open ('while you hold to talk or are in an Auto Live call'), which matches D33 (never in the background); shipped says only 'when you talk to Auto'."
+    },
+    {
+      "key": "NSSpeechRecognitionUsageDescription",
+      "difference": "Word order only: both say the speech becomes text on the iPhone, which the code holds to (quick-ask always starts with requiresOnDeviceRecognition true: src/voice/quick-ask/recognition-policy.ts)."
+    },
+    {
+      "key": "NSPhotoLibraryUsageDescription",
+      "difference": "A.3 adds 'only' and 'the photos you pick'; shipped names what they are for ('to attach to a message for Auto'). The library opens in the system photo picker (PHPicker), which gives the app only the photos chosen."
+    },
+    {
+      "key": "NSFaceIDUsageDescription",
+      "difference": "A.3's 'can check' says the check is optional, which it is (a setting: src/step-up/policy.ts); shipped's 'asks for Face ID before …' reads as always and names what is approved or answered."
+    },
+    {
+      "key": "NSLocalNetworkUsageDescription",
+      "difference": "Shipped says 'when it runs on your home or office network'; A.3 says 'on this network'."
+    },
+    {
+      "key": "NSPhotoLibraryAddUsageDescription",
+      "difference": "A.3 proposes no string: it lists only the six keys the app uses. The shipped notice is the foundation's (US-002c)."
+    },
+    {
+      "key": "NSMotionUsageDescription",
+      "difference": "A.3 proposes no string: it lists only the six keys the app uses. The shipped notice is the foundation's (US-002c)."
+    }
+  ]
+}

@@ -1,0 +1,147 @@
+{
+  "about": "The framework symbols scripts/release/scan-ipa.mjs looks for in a built Automatos Go binary (US-021h, R07, KR12), each with the Info.plist key(s) App Store processing requires when a binary references it (ITMS-90683: the academy app's first upload bounced for PHAsset without NSPhotoLibraryUsageDescription), and why. A referenced symbol needs every key in keys, each a non-empty string in the app's Info.plist; a forbidden symbol fails the scan whatever the plist holds. doc is the name docs/native-modules.md 'Symbols and usage keys' and docs/release/ios-usage-keys.json use when it differs from the bytes searched for. scripts/__tests__/release-scan-ipa.test.ts keeps this list in step with both.",
+  "reviewed": "2026-10-26",
+  "symbols": [
+    {
+      "symbol": "PHAsset",
+      "framework": "Photos",
+      "keys": ["NSPhotoLibraryUsageDescription"],
+      "reason": "Reads photo library items; expo-image-picker, expo-file-system, expo-image-manipulator and expo-video reference it."
+    },
+    {
+      "symbol": "PHPhotoLibrary",
+      "framework": "Photos",
+      "keys": ["NSPhotoLibraryUsageDescription"],
+      "reason": "Photo library authorisation and changes; expo-image-picker and expo-file-system reference it."
+    },
+    {
+      "symbol": "UIImageWriteToSavedPhotosAlbum",
+      "framework": "UIKit",
+      "keys": ["NSPhotoLibraryAddUsageDescription"],
+      "reason": "Saves an image to the photo library, which needs the add-only key."
+    },
+    {
+      "symbol": "PHAccessLevelAddOnly",
+      "doc": "PHAccessLevel.addOnly",
+      "framework": "Photos",
+      "keys": ["NSPhotoLibraryAddUsageDescription"],
+      "reason": "Add-only photo library access (expo-image-picker's MediaLibraryWriteOnlyPermissionRequester). An enum case: compiled code holds its value, not its name, so a byte search rarely sees it and a miss proves nothing; the notice key stays in app.json for that reason."
+    },
+    {
+      "symbol": "AVCaptureDevice",
+      "framework": "AVFoundation",
+      "keys": ["NSCameraUsageDescription", "NSMicrophoneUsageDescription"],
+      "reason": "Camera and microphone capture (expo-camera, expo-image-picker, @livekit/react-native-webrtc and the LiveKitWebRTC pod). One class serves video and audio, and a byte search cannot tell which a binary uses, so both keys (docs/native-modules.md maps the class to both)."
+    },
+    {
+      "symbol": "requestRecordPermission",
+      "doc": "AVAudioSession.requestRecordPermission",
+      "framework": "AVFoundation",
+      "keys": ["NSMicrophoneUsageDescription"],
+      "reason": "Asks for the microphone (AVAudioSession and AVAudioApplication selectors); expo-speech-recognition calls it."
+    },
+    {
+      "symbol": "AVAudioApplication",
+      "framework": "AVFoundation",
+      "keys": ["NSMicrophoneUsageDescription"],
+      "reason": "The iOS 17 class that asks for and reports microphone permission."
+    },
+    {
+      "symbol": "SFSpeechRecognizer",
+      "framework": "Speech",
+      "keys": ["NSSpeechRecognitionUsageDescription"],
+      "reason": "Speech recognition; expo-speech-recognition (quick-ask) uses it."
+    },
+    {
+      "symbol": "CMMotionManager",
+      "framework": "CoreMotion",
+      "keys": ["NSMotionUsageDescription"],
+      "reason": "Motion sensors; expo-camera and react-native-reanimated reference it."
+    },
+    {
+      "symbol": "CMMotionActivityManager",
+      "framework": "CoreMotion",
+      "keys": ["NSMotionUsageDescription"],
+      "reason": "Motion activity (walking, driving)."
+    },
+    {
+      "symbol": "CMPedometer",
+      "framework": "CoreMotion",
+      "keys": ["NSMotionUsageDescription"],
+      "reason": "Step counting."
+    },
+    {
+      "symbol": "CLLocationManager",
+      "framework": "CoreLocation",
+      "keys": ["NSLocationWhenInUseUsageDescription"],
+      "reason": "Location. No bundled module references it (docs/native-modules.md), so the app has no location key: a hit means a dependency brought it and a key and a new build are needed."
+    },
+    {
+      "symbol": "CNContactStore",
+      "framework": "Contacts",
+      "keys": ["NSContactsUsageDescription"],
+      "reason": "The address book. No bundled module references it."
+    },
+    {
+      "symbol": "EKEventStore",
+      "framework": "EventKit",
+      "keys": ["NSCalendarsFullAccessUsageDescription"],
+      "reason": "Calendars and reminders (iOS 17 full-access key). No bundled module references it."
+    },
+    {
+      "symbol": "LAContext",
+      "framework": "LocalAuthentication",
+      "keys": ["NSFaceIDUsageDescription"],
+      "reason": "Face ID; expo-local-authentication (step-up) and expo-secure-store reference it."
+    },
+    {
+      "symbol": "MPMediaLibrary",
+      "framework": "MediaPlayer",
+      "keys": ["NSAppleMusicUsageDescription"],
+      "reason": "The music library. expo-video imports MediaPlayer for MPNowPlayingInfoCenter and MPRemoteCommandCenter only."
+    },
+    {
+      "symbol": "CBCentralManager",
+      "framework": "CoreBluetooth",
+      "keys": ["NSBluetoothAlwaysUsageDescription"],
+      "reason": "Bluetooth. No bundled module references it."
+    },
+    {
+      "symbol": "CBPeripheralManager",
+      "framework": "CoreBluetooth",
+      "keys": ["NSBluetoothAlwaysUsageDescription"],
+      "reason": "Bluetooth advertising. No bundled module references it."
+    },
+    {
+      "symbol": "HKHealthStore",
+      "framework": "HealthKit",
+      "keys": ["NSHealthShareUsageDescription"],
+      "reason": "Health data."
+    },
+    {
+      "symbol": "NFCNDEFReaderSession",
+      "framework": "CoreNFC",
+      "keys": ["NFCReaderUsageDescription"],
+      "reason": "NFC tag reading."
+    },
+    {
+      "symbol": "NWBrowser",
+      "framework": "Network",
+      "keys": ["NSLocalNetworkUsageDescription"],
+      "reason": "Bonjour browsing on the local network."
+    },
+    {
+      "symbol": "NSNetServiceBrowser",
+      "framework": "Foundation",
+      "keys": ["NSLocalNetworkUsageDescription"],
+      "reason": "Bonjour browsing on the local network (the older API)."
+    },
+    {
+      "symbol": "ATTrackingManager",
+      "framework": "AppTrackingTransparency",
+      "keys": [],
+      "forbidden": true,
+      "reason": "App Tracking Transparency (KR10: no tracking, no ATT, privacy label 'Tracking: No'). expo-speech-recognition imports the framework but uses no symbol from it, so a hit means tracking code reached the binary."
+    }
+  ]
+}

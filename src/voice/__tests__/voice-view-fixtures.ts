@@ -42,6 +42,7 @@ export function reply(overrides: Partial<QuickAskReply> = {}): QuickAskReply {
     stopped: false,
     hasCards: false,
     hasReceipts: false,
+    since: 2,
     ...overrides,
   };
 }

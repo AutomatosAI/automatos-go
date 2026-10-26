@@ -5,13 +5,16 @@
 // (a half-written list marker held back, as A2's thread holds it), else the saved reply after the
 // user's message. A turn that failed or stopped says A2's notice in its words (D-NO-BILLING: never
 // the server's). The clock runs from the user's message to Auto's reply. The agent answering is
-// the live turn's (agent-info), else Auto.
+// the live turn's (agent-info), else Auto. The saved reply carries its id where A2's thread offers
+// Report this on that message (reportTarget on A2's own row: never a failure, never an id the
+// server would refuse); the reply being written carries none (P001R-AF-1).
 
 import { canStop, shownMessages, type ThreadState } from '../../chat/controller/thread';
 import { markdownBlocks, type Block } from '../../chat/markdown/blocks';
 import { spansText } from '../../chat/markdown/inline';
+import { reportTarget } from '../../chat/report/report';
 import type { StoredMessage } from '../../chat/schemas';
-import { failureCopy, streamingText, turnNotice } from '../../chat/view-model';
+import { failureCopy, streamingText, threadRows, turnNotice } from '../../chat/view-model';
 import { turnErrorCode } from '../../core/turn-reducer';
 import { messageText, savedTurnError } from '../../core/web/lib/chat/message-text';
 import { EMPTY_TURN, type HudTurn } from '../hud/core/model';
@@ -64,31 +67,57 @@ function savedReplyWords(reply: StoredMessage | undefined): string | null {
   return failureCopy({ kind: 'turn', code: turnErrorCode(reply.source?.code ?? null) }).text;
 }
 
+/**
+ * The id Report this names for this saved message, where A2's thread offers it: A2's own row for
+ * it through reportTarget (an Auto message, not a failure, an id the server takes); null otherwise.
+ * The gate (canReport) is the caller's ThreadReport.
+ */
+export function reportableId(
+  state: ThreadState,
+  messageId: string | null | undefined,
+): string | null {
+  if (!messageId) return null;
+  const rows = threadRows(state);
+  const row = rows.find((each) => each.type === 'auto' && each.messageId === messageId);
+  return row ? (reportTarget(row, true)?.target_id ?? null) : null;
+}
+
+type SavedExchange = { readonly turn: HudTurn; readonly replyId: string | null };
+
 /** The newest saved exchange: the user's last message and the reply after it. */
-function savedTurn(messages: readonly StoredMessage[]): HudTurn {
+function savedExchange(messages: readonly StoredMessage[]): SavedExchange {
   const asked = lastIndexWhere(messages, 'user');
   const question = asked >= 0 ? messages[asked] : undefined;
   const reply = messages.slice(asked + 1).find((message) => message.role === 'assistant');
-  return {
+  const turn = {
     you: question ? messageText(question) : null,
     auto: savedReplyWords(reply),
     streaming: false,
     startedAt: timeOf(question?.createdAt),
     endedAt: timeOf(reply?.createdAt),
   };
+  return { turn, replyId: reply?.id ?? null };
+}
+
+/** The newest saved exchange as the core draws it, naming the reply for Report this. */
+function savedTurn(state: ThreadState): HudTurn {
+  const { turn, replyId } = savedExchange(shownMessages(state));
+  return { ...turn, autoMessageId: turn.auto === null ? null : reportableId(state, replyId) };
 }
 
 /** The turn on screen: the draft (or the saved question a reopened turn answers) and the reply so far. */
 function liveTurn(state: ThreadState): HudTurn {
   const { live } = state;
   if (!live) return EMPTY_TURN;
-  const before = savedTurn(shownMessages(state));
+  const before = savedExchange(shownMessages(state)).turn;
   const streaming = canStop(state);
   const words = plainText(streaming ? streamingText(live.turn.text) : live.turn.text);
   return {
     you: live.draft ? live.draft.text : before.you,
     auto: words || null,
     streaming,
+    // not saved yet, or a stop or failure A2 says in its own words
+    autoMessageId: null,
     agent: live.turn.agent ?? undefined,
     startedAt: live.draft ? timeOf(live.draft.sentAt) : before.startedAt,
     endedAt: null,
@@ -98,7 +127,7 @@ function liveTurn(state: ThreadState): HudTurn {
 /** The newest turn as HUD's core draws it; EMPTY_TURN for a blank draft (First open's hint). */
 export function hudTurn(state: ThreadState): HudTurn {
   if (state.status === 'loading') return EMPTY_TURN;
-  const turn = state.live ? liveTurn(state) : savedTurn(shownMessages(state));
+  const turn = state.live ? liveTurn(state) : savedTurn(state);
   const notice = turnNotice(state);
   const auto = turn.auto ?? (notice ? notice.text : null);
   if (turn.you === null && auto === null && !turn.streaming) return EMPTY_TURN;

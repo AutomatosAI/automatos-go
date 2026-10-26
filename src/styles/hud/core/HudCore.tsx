@@ -19,11 +19,14 @@
 //   A6's quick-ask on HUD's home (US-019k) passes `quickAsk` instead: HUD's home as A5 built it, with
 // HOLD TO TALK's hold, STOP on while the voice works, and, while it does or has a line, the voice's
 // chip and status word and its line under the chip. Under `voice` it is not read.
+//   HUD's home and the voice screen pass `report` (A2's useMessageReport): the transcript offers
+// Report this on Auto's saved reply (P001R-AF-1). First open and the look previews pass none.
 
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import type { ThreadReport } from '../../../chat/report/report';
 import type { MascotName } from '../../../core/frozen/lib/mascot/types';
 import { hudGroundPlan, type HudGroundPlan } from '../../ground/hud-ground';
 import { HudOverlay } from '../../ground/HudOverlay';
@@ -104,6 +107,8 @@ export type HudCoreProps = {
   readonly voice?: HudCoreVoice;
   /** A6's quick-ask on HUD's home; absent, HOLD TO TALK inert as A5 built it. */
   readonly quickAsk?: HudCoreQuickAsk;
+  /** Report this on Auto's saved reply in the transcript; absent, nothing is offered. */
+  readonly report?: ThreadReport;
 };
 
 /** The state Auto should show: the one held, or the controller's target. */
@@ -232,7 +237,7 @@ export function HudCore(props: HudCoreProps) {
             </View>
             {parts.line}
           </View>
-          <Transcript turn={turn} />
+          <Transcript turn={turn} report={props.report} />
         </View>
         <View style={{ paddingHorizontal: HUD_CORE.wave.padX }}>
           <Waveform colour={paint.accent} levels={levels} />

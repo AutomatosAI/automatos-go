@@ -2,6 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ApiError, APP_ERROR_CODES, userMessage } from '../../api/errors';
 import { APP_ERROR_COPY } from '../../api/strings';
+import {
+  CLERK_CLIENT_ITEM,
+  PUSH_RECORD_ITEM,
+  STORAGE_KEY_ITEM,
+} from '../../storage/secure-registry';
 import { MOBILE_TOKEN_TEMPLATE } from '../config';
 import { createClerkProvider, type ClerkSessionPort } from '../providers/clerk';
 import { createExpirySignal } from '../providers/expiry';
@@ -26,13 +31,15 @@ function clerkOffline() {
 function providerWith(port: Partial<ClerkSessionPort> = {}) {
   const getToken = vi.fn<ClerkSessionPort['getToken']>(async () => 'mobile.session.jwt');
   const signOut = vi.fn<ClerkSessionPort['signOut']>(async () => undefined);
-  const wipe = vi.fn(async () => undefined);
+  // what the key registry lists: the store's key, Clerk's item and the push record
+  const keys = vi.fn(async () => [STORAGE_KEY_ITEM, CLERK_CLIENT_ITEM, PUSH_RECORD_ITEM]);
+  const remove = vi.fn(async (_key: string) => undefined);
   const expiry = createExpirySignal();
   const provider = createClerkProvider(
     { getToken: port.getToken ?? getToken, signOut: port.signOut ?? signOut },
-    { expiry, secureKeys: { wipe } },
+    { expiry, secureKeys: { keys, remove } },
   );
-  return { provider, getToken, signOut, wipe, expiry };
+  return { provider, getToken, signOut, remove, expiry };
 }
 
 async function failureOf(promise: Promise<unknown>): Promise<ApiError> {
@@ -124,31 +131,34 @@ describe('the Clerk provider: the token', () => {
 });
 
 describe('the Clerk provider: sign-out', () => {
-  it('signs out of Clerk, then wipes every keychain item', async () => {
+  it("signs out of Clerk, then deletes the person's keychain items, never the store's key", async () => {
     const order: string[] = [];
-    const { provider, signOut, wipe } = providerWith();
+    const { provider, signOut, remove } = providerWith();
     signOut.mockImplementation(async () => {
       order.push('clerk');
     });
-    wipe.mockImplementation(async () => {
-      order.push('wipe');
+    remove.mockImplementation(async (key: string) => {
+      order.push(`remove:${key}`);
     });
     await provider.signOut();
-    expect(order).toEqual(['clerk', 'wipe']);
+    expect(order).toEqual(['clerk', `remove:${CLERK_CLIENT_ITEM}`, `remove:${PUSH_RECORD_ITEM}`]);
   });
 
   it('keeps the keychain when Clerk could not sign out, and says why', async () => {
     const signOut = vi.fn(async () => {
       throw clerkOffline();
     });
-    const { provider, wipe } = providerWith({ signOut });
+    const { provider, remove } = providerWith({ signOut });
     expect((await failureOf(provider.signOut())).kind).toBe('network');
-    expect(wipe).not.toHaveBeenCalled();
+    expect(remove).not.toHaveBeenCalled();
   });
 
-  it('reports a wipe that failed', async () => {
-    const { provider, wipe } = providerWith();
-    wipe.mockRejectedValue(new Error('could not delete 1 keychain item(s)'));
-    await expect(provider.signOut()).rejects.toThrow('could not delete');
+  it('reports a keychain item it could not delete, after trying every one', async () => {
+    const { provider, remove } = providerWith();
+    remove.mockImplementation(async (key: string) => {
+      if (key === CLERK_CLIENT_ITEM) throw new Error('keychain delete failed');
+    });
+    await expect(provider.signOut()).rejects.toThrow('could not delete 1 keychain item(s)');
+    expect(remove).toHaveBeenCalledWith(PUSH_RECORD_ITEM);
   });
 });

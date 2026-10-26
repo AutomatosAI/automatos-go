@@ -8,6 +8,7 @@
 //   Auto in the core listens while the mic is open: A5's driver hears 'input-focus' when the capture
 //   opens and 'input-blur' when it closes, as it does for a focused box.
 //   A typed send (HudHome's TYPE sheet) makes the thread's turn the newest again (typed()).
+//   Report this on the voice's reply: its saved message (voiceReportId), read per thread change.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -19,7 +20,7 @@ import type { MascotController } from '../../styles/mascot/use-mascot';
 import { permissions } from '../permissions/permissions';
 import { phoneLocale } from '../quick-ask/locale';
 import { useQuickAsk, type QuickAskView } from '../quick-ask/use-quick-ask';
-import type { HoldHandlers, VoiceLine } from '../screen/core-props';
+import { voiceReportId, type HoldHandlers, type VoiceLine } from '../screen/core-props';
 import { useHold, useLevels, useScreenReader } from '../screen/use-voice-parts';
 import { voiceView, type MessageAction } from '../screen/voice-view-model';
 import { hudHomeVoice, stopsThread, type HomeShows, type HudHomeVoice } from './hud-home-voice';
@@ -88,6 +89,10 @@ export function useHudHomeVoice(home: HomeThread, threadTurn: HudTurn): HudHomeV
   const hold = useHomeHold(quick, setShows);
   const { stop, lineAction } = useHomeActions(quick, home);
   const typed = useCallback(() => setShows('thread'), []);
+  const replyId = useMemo(
+    () => voiceReportId(thread.state, quick.reply),
+    [thread.state, quick.reply],
+  );
   const view = voiceView({
     state: quick.voice,
     policy: quick.policy,
@@ -107,6 +112,7 @@ export function useHudHomeVoice(home: HomeThread, threadTurn: HudTurn): HudHomeV
     shows,
     threadStreams: canStop(thread.state),
     hold,
+    replyId,
   });
   useListeningMascot(shown.micOpen, mascot);
   const { turn, micOpen, talk, stopEnabled, chip, line } = shown;

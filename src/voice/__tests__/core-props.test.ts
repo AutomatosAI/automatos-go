@@ -78,6 +78,7 @@ describe('voiceTurn', () => {
       you: null,
       auto: null,
       streaming: false,
+      autoMessageId: null,
       agent: null,
     });
   });

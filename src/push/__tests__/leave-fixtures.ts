@@ -108,6 +108,10 @@ export async function serverSwitchOver(
     workspaceIds: { clear: () => void order.push('workspace-id') },
     provider: { kind, signOut: async () => void order.push(`provider:${kind}`) },
     consent: { resetMemory: () => undefined, forgetServer: async () => undefined },
+    keys: { keys: async () => [], remove: async () => undefined },
+    storage: memoryStorage,
+    storagePersistent: () => true,
+    files: () => undefined,
     deviceStore: {
       save: async () => void order.push('save'),
       clear: async () => void order.push('device-clear'),

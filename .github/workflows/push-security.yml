@@ -1,0 +1,51 @@
+# Expo enhanced push security stays off (US-021n, R19, D21, PRD §4.10, KR13).
+#
+# Self-hosted Automatos servers send push through Expo's push service without an Expo access
+# token; if "enhanced push security" is switched on for the EAS project or its account, that push
+# stops. This job asks Expo's GraphQL API for both settings (scripts/release/check-push-security.mjs)
+# and goes red when either is on. What a red run means: docs/release/push-security.md.
+#
+# Its own workflow, not a required check: it never gates CI or the TestFlight delivery on EAS.
+#
+# Trust boundary: EXPO_TOKEN is a secret of the GitHub environment "testflight", whose deployment
+# branches must be restricted to main BEFORE the token is added (D50). That rule is the control:
+# the `if` below only keeps this file's own runs on main (push, the schedule, a dispatch from
+# main), never a pull request. Nothing is installed, so no package code runs; the token is handed
+# to the one step that runs the repository's own script with Node, which sends it to
+# api.expo.dev and nowhere else. docs/release/push-security.md, "Trust boundary".
+name: Expo push security
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: push-security
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Expo enhanced push security is off
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: testflight
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check Expo enhanced push security
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: node scripts/release/check-push-security.mjs

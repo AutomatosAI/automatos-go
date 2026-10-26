@@ -6,24 +6,22 @@
 
 import * as SecureStore from 'expo-secure-store';
 
-import { STORAGE_KEY_ITEM } from '../storage/encrypted-storage';
+import { LISTED_KEYS } from '../storage/secure-registry';
 import { createSecureKeyRegistry, type Keychain, type SecureKeyRegistry } from './secure-keys';
 
 export const KEYCHAIN_OPTIONS: SecureStore.SecureStoreOptions = Object.freeze({
   keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
 });
 
-/**
- * @clerk/expo's CLERK_CLIENT_JWT_KEY (dist/constants.js), the item its token cache is asked for.
- * The registry indexes it when written; listing it as fixed too means a wipe still finds it if the
- * index were ever lost.
- */
-const CLERK_CLIENT_ITEM = '__clerk_client_jwt';
-
 export const keychain: Keychain = Object.freeze({ store: SecureStore, options: KEYCHAIN_OPTIONS });
 
-/** Lists the MMKV key (written by src/storage/mmkv.ts under a fixed name) and Clerk's client item. */
+/**
+ * Lists every item of src/storage/secure-registry.ts but the index and the install id, written
+ * through the registry or not (the MMKV key, Clerk's client item, the paired and push records):
+ * the registry indexes those written through it, and listing them as fixed too means a reinstall
+ * wipe still finds each one by name if the index were ever lost.
+ */
 export const secureKeys: SecureKeyRegistry = createSecureKeyRegistry({
   ...keychain,
-  fixedKeys: [STORAGE_KEY_ITEM, CLERK_CLIENT_ITEM],
+  fixedKeys: LISTED_KEYS,
 });
