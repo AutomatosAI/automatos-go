@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/lib/chat/message-text.ts @ 630fc1c85af06c5c76e70c74e9653ee1804fdf41 — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/lib/chat/message-text.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b — do not edit — scripts/sync-core.ts
 import { NO_REPLY, type ReplyProgress } from './chat-status'
 import { upsertTaskCard } from './tool-calls'
 import type { ChatMessage, TaskCardData } from '../../types'

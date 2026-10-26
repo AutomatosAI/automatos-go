@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/lib/theme-host/css-value.ts @ 630fc1c85af06c5c76e70c74e9653ee1804fdf41 — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/lib/theme-host/css-value.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b — do not edit — scripts/sync-core.ts
 /**
  * PRD-261 A-06b — the value checks every theme validator shares, and the CSS-value grammar for a
  * theme's first-paint values (`boot/prepaint.json`).
@@ -166,7 +166,7 @@ function tokenProblem(groups: TokenGroups): string | null {
 /** var() must start with a custom property name. */
 function varProblem(value: string, at: number): string | null {
   const name = VAR_NAME.exec(value.slice(at))
-  if (name === null || !CUSTOM_PROPERTY_PATTERN.test(name[1])) return 'var() must name a custom property such as --pl-accent'
+  if (name === null || !CUSTOM_PROPERTY_PATTERN.test(name[1])) return 'var() must name a custom property such as --theme-accent'
   return null
 }
 

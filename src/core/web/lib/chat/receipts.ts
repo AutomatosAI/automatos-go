@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/lib/chat/receipts.ts @ 630fc1c85af06c5c76e70c74e9653ee1804fdf41 — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/lib/chat/receipts.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b — do not edit — scripts/sync-core.ts
 /**
  * PRD-256 US-001 — what Auto did this turn, written by the platform from the calls
  * that ran, never by the model.

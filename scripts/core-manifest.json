@@ -1,6 +1,6 @@
 {
   "source": "AutomatosAI/automatos-ai",
-  "sha": "630fc1c85af06c5c76e70c74e9653ee1804fdf41",
+  "sha": "8c9361687013cc31bfb7e42d5c51736116fb4b9b",
   "root": "frontend",
   "notes": [
     "Vendored by scripts/sync-core.ts into src/core/web/ (K1); core.lock.json records every file written. Never edit a vendored file: fix this manifest or src/core/shims/ and re-run the sync.",

@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/lib/chat/__tests__/errors.test.ts @ 630fc1c85af06c5c76e70c74e9653ee1804fdf41 — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/lib/chat/__tests__/errors.test.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b — do not edit — scripts/sync-core.ts
 /**
  * PRD-239 S4 — the error frames a turn can end with, parsed into one shape.
  */
@@ -27,9 +27,9 @@ describe('parseErrorFrame', () => {
 
 describe('errorFromDataPayload', () => {
   it('prefers error over message and accepts error_code', () => {
-    expect(errorFromDataPayload({ type: 'error', error: 'spent', error_code: 'trial_exhausted' })).toEqual({
+    expect(errorFromDataPayload({ type: 'error', error: 'spent', error_code: 'credits_exhausted' })).toEqual({
       message: 'spent',
-      code: 'trial_exhausted',
+      code: 'credits_exhausted',
     })
     expect(errorFromDataPayload({ type: 'error', message: 'm' })).toEqual({ message: 'm', code: null })
     expect(errorFromDataPayload(null)).toEqual({ message: FALLBACK_TURN_ERROR, code: null })

@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/lib/chat/suggestion.ts @ 630fc1c85af06c5c76e70c74e9653ee1804fdf41 — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/lib/chat/suggestion.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b — do not edit — scripts/sync-core.ts
 import type { ChatMessage } from '../../types'
 
 import { messageText } from './message-text'

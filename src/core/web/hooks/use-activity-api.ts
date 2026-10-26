@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/hooks/use-activity-api.ts @ 630fc1c85af06c5c76e70c74e9653ee1804fdf41 · typeOnly: ActivityFeedItem, ScheduleItem, ScheduleItemType — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/hooks/use-activity-api.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b · typeOnly: ActivityFeedItem, ScheduleItem, ScheduleItemType — do not edit — scripts/sync-core.ts
 // ============= TYPES =============
 
 export interface ActivityAgent {
@@ -81,6 +81,9 @@ export interface ScheduleItem {
   /** The row behind the item, so the calendar can act on it (pause, cancel,
    *  open) without parsing the composite `id`. Each source sets its own. */
   scheduled_task_id?: number
+  /** task only: the user paused it (PRD-266 D27). A paused task stays in the feed at
+   *  the slot it would run, greyed, with Resume in place of Pause; Next up skips it. */
+  paused?: boolean
   task_type?: 'one_shot' | 'recurring'
   /** task only: what firing does — open a chat, or file a board ticket */
   deliver_as?: 'chat' | 'board_task'

@@ -25,7 +25,7 @@ the system browser ([CLAUDE.md](../CLAUDE.md) "Never").
  | src/navigation  app routes, web link -> app route                                |
  | src/auth        AuthProvider: clerk (hosted) | device (paired own server)        |
  | src/api         the one client: bearer + X-Workspace-ID, zod, errors, SSE, cache |
- | src/core        pure TypeScript vendored from automatos-ai at 630fc1c85          |
+ | src/core        pure TypeScript vendored from automatos-ai at 8c9361687          |
  | src/storage     encrypted MMKV          src/lib  env, logger, keychain registry  |
  +----------------------------------------------------------------------------------+
                          |  HTTPS (http only to a home-network address)
@@ -185,7 +185,7 @@ offline: an answer or an approval reaches the server now or fails.
 
 `src/core/web/` is pure TypeScript copied from automatos-ai's `frontend/` by
 [scripts/sync-core.ts](../scripts/sync-core.ts) and recorded in [core.lock.json](../core.lock.json)
-(source `AutomatosAI/automatos-ai`, sha `630fc1c85`, synced 21 Oct 2026). It holds the chat
+(source `AutomatosAI/automatos-ai`, sha `8c9361687`, synced 26 Oct 2026). It holds the chat
 helpers (receipts, narration, tool calls, errors), the board and calendar helpers and the look
 kit. Nobody edits it by hand: `npm run check:core` fails on any drift. The lock also lists the
 web's tests that could not be copied, and why.

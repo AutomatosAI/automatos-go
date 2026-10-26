@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/lib/look-kit/css.ts @ 630fc1c85af06c5c76e70c74e9653ee1804fdf41 · drop: applyCssVars — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/lib/look-kit/css.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b · drop: applyCssVars — do not edit — scripts/sync-core.ts
 import { AA_TEXT, contrastRatio, mixHex, readableOn, readableOnAll, relativeLuminance } from './contrast'
 import {
   entryOf,

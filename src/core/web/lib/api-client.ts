@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/lib/api-client.ts @ 630fc1c85af06c5c76e70c74e9653ee1804fdf41 · typeOnly: ApprovalGrant, GrantOwner — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/lib/api-client.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b · typeOnly: ApprovalGrant, GrantOwner — do not edit — scripts/sync-core.ts
 // ─── PRD-196 governance surface types ────────────────────────────────
 export interface ApprovalGrantOversight {
   risk_class: string
