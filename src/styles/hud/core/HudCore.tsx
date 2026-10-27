@@ -20,6 +20,7 @@
 //   A6's quick-ask on HUD's home (US-019k) passes `quickAsk` instead: HUD's home as A5 built it, with
 // HOLD TO TALK's hold, STOP on while the voice works, and, while it does or has a line, the voice's
 // chip and status word and its line under the chip. Under `voice` it is not read.
+//   Both may pass `language` (27 Oct 2026): the EN/PT switch beside HOLD TO TALK (HudButtons).
 //   HUD's home and the voice screen pass `report` (A2's useMessageReport): the transcript offers
 // Report this on Auto's saved reply (P001R-AF-1). First open and the look previews pass none.
 
@@ -43,6 +44,7 @@ import {
   coreSizeIn,
   mascotPlace,
   type ChipView,
+  type HudLanguage,
   type HudTalk,
   type HudTurn,
 } from './model';
@@ -72,6 +74,8 @@ export type HudCoreVoice = {
   readonly lookHint: string;
   /** Drawn under the state chip: the voice's line and its button. */
   readonly line?: ReactNode;
+  /** The EN/PT switch beside HOLD TO TALK; absent, none. */
+  readonly language?: HudLanguage;
 };
 
 /** A6's quick-ask on HUD's home: HOLD TO TALK live in place; the rest is HUD's home's own. */
@@ -83,6 +87,8 @@ export type HudCoreQuickAsk = {
   readonly chip?: ChipView;
   /** Drawn under the state chip: the voice's line and its button. */
   readonly line?: ReactNode;
+  /** The EN/PT switch beside HOLD TO TALK; absent, none. */
+  readonly language?: HudLanguage;
 };
 
 export type HudCoreProps = {
@@ -166,6 +172,7 @@ function quickAskParts(quick: HudCoreQuickAsk) {
     chip: quick.chip,
     line: quick.line ?? null,
     buttons: { streaming: quick.stopEnabled, talk: quick.talk },
+    language: quick.language,
   };
 }
 
@@ -173,12 +180,19 @@ function quickAskParts(quick: HudCoreQuickAsk) {
 function columnParts(voice: HudCoreVoice | undefined, turn: HudTurn, quick?: HudCoreQuickAsk) {
   if (!voice && quick) return quickAskParts(quick);
   if (!voice)
-    return { bar: {}, chip: undefined, line: null, buttons: { streaming: turn.streaming } };
+    return {
+      bar: {},
+      chip: undefined,
+      line: null,
+      buttons: { streaming: turn.streaming },
+      language: undefined,
+    };
   return {
     bar: { menuLabel: voice.menuLabel, lookHint: voice.lookHint, stateWord: voice.chip.label },
     chip: voice.chip,
     line: voice.line ?? null,
     buttons: { streaming: voice.stopEnabled, talk: voice.talk, typeEnabled: voice.typeEnabled },
+    language: voice.language,
   };
 }
 
@@ -247,6 +261,7 @@ export function HudCore(props: HudCoreProps) {
           onType={onType}
           onStop={onStop}
           bottomInset={insets.bottom}
+          language={parts.language}
           {...parts.buttons}
         />
       </View>

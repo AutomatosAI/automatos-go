@@ -97,3 +97,58 @@ describe('Settings → Voice: the chosen language’s voice (source)', () => {
     expect(hook).toMatch(/void player\.play\(language, setting, server\);/);
   });
 });
+
+describe('the EN/PT switch beside HOLD TO TALK (source)', () => {
+  const hook = code(read('voice/language/use-language-switch.ts'));
+  const buttons = code(read('styles/hud/core/HudButtons.tsx'));
+  const hudCore = code(read('styles/hud/core/HudCore.tsx'));
+  const chip = code(read('voice/language/LanguageChip.tsx'));
+
+  it('is always there for someone who may talk, and a tap saves the switched choice', () => {
+    expect(hook).toMatch(/if \(!shown\) return undefined;/);
+    expect(hook).toMatch(
+      /voiceSetting\.set\(withSpeakChoice\(saved, switchedChoice\(saved, phone\)\)\);/,
+    );
+  });
+
+  it('on the voice screen, in the core’s voice group', () => {
+    const screen = code(read('voice/screen/use-voice-screen.ts'));
+    expect(screen).toMatch(/const language = useLanguageSwitch\(roleCanChat\);/);
+    expect(screen).toMatch(/core: \{ \.\.\.voiceCoreProps\(\{[^}]*\}\), language \},/);
+    expect(code(read('voice/screen/VoiceScreen.tsx'))).toMatch(
+      /voice=\{\{ \.\.\.model\.core, line:/,
+    );
+  });
+
+  it('on HUD’s home, in the core’s quickAsk', () => {
+    const home = code(read('voice/home/use-hud-home-voice.ts'));
+    expect(home).toMatch(/const language = useLanguageSwitch\(roleCan\(home\.role, 'chat'\)\);/);
+    expect(home).toMatch(/core: \{ talk, stopEnabled, chip, language \},/);
+    expect(code(read('styles/homes/HudHome.tsx'))).toMatch(/quickAsk=\{\{\s*\.\.\.voice\.core,/);
+  });
+
+  it('HudCore hands it to the buttons, from the voice group or quick-ask', () => {
+    expect(hudCore).toMatch(/language: quick\.language,/);
+    expect(hudCore).toMatch(/language: voice\.language,/);
+    expect(hudCore).toMatch(/language=\{parts\.language\}/);
+  });
+
+  it('HUD’s buttons draw it right of HOLD TO TALK, a twin room left so the circle stays centred', () => {
+    expect(buttons).toMatch(
+      /<View style=\{\{ width: switchSize\.size \}\} \/>\s*\{button\}\s*<LanguageButton core=\{core\} language=\{language\} \/>/,
+    );
+    expect(buttons).toMatch(/accessibilityLabel=\{language\.label\}/);
+    expect(buttons).toMatch(/minWidth: switchSize\.size,\s*minHeight: switchSize\.size,/);
+  });
+
+  it('on Play’s home, just before the voice button, for someone who may talk', () => {
+    const composer = code(read('styles/play/companion/PlayComposer.tsx'));
+    expect(composer).toMatch(/\{language\}\s*\{voice \? <VoiceButton \{\.\.\.voice\} \/> : null\}/);
+    expect(code(read('styles/homes/PlayHome.tsx'))).toMatch(
+      /language=\{<LanguageChip shown=\{roleCan\(role, 'chat'\)\} \/>\}/,
+    );
+    expect(chip).toMatch(/accessibilityLabel=\{language\.label\}/);
+    expect(chip).toMatch(/hitSlop=\{hitSlopFor\(pill\.minHeight\)\}/);
+    expect(chip).toMatch(/minWidth: MIN_TOUCH,/);
+  });
+});
