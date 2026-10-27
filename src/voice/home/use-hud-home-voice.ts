@@ -9,6 +9,7 @@
 //   opens and 'input-blur' when it closes, as it does for a focused box.
 //   A typed send (HudHome's TYPE sheet) makes the thread's turn the newest again (typed()).
 //   Report this on the voice's reply: its saved message (voiceReportId), read per thread change.
+//   The EN/PT switch beside HOLD TO TALK (useLanguageSwitch) for someone who may talk.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -18,7 +19,8 @@ import type { HudTurn } from '../../styles/hud/core/model';
 import type { HomeThread } from '../../styles/homes/use-home-thread';
 import type { MascotController } from '../../styles/mascot/use-mascot';
 import { permissions } from '../permissions/permissions';
-import { phoneLocale } from '../quick-ask/locale';
+import { useLanguageSwitch, type LanguageSwitch } from '../language/use-language-switch';
+import { useListening } from '../language/use-speak-language';
 import { useQuickAsk, type QuickAskView } from '../quick-ask/use-quick-ask';
 import { voiceReportId, type HoldHandlers, type VoiceLine } from '../screen/core-props';
 import { useHold, useLevels, useScreenReader } from '../screen/use-voice-parts';
@@ -29,8 +31,10 @@ export type HudHomeVoiceModel = {
   readonly turn: HudTurn;
   readonly micOpen: boolean;
   readonly levels: readonly number[] | null;
-  /** HudCore's quickAsk but the line, which the home draws (VoiceLine). */
-  readonly core: Pick<HudHomeVoice, 'talk' | 'stopEnabled' | 'chip'>;
+  /** HudCore's quickAsk but the line, which the home draws (VoiceLine); the EN/PT switch with it. */
+  readonly core: Pick<HudHomeVoice, 'talk' | 'stopEnabled' | 'chip'> & {
+    readonly language?: LanguageSwitch;
+  };
   readonly line: VoiceLine | null;
   readonly lineAction: (action: MessageAction) => void;
   /** STOP: quick-ask's, and A2's for a typed turn. */
@@ -84,7 +88,8 @@ export function useHudHomeVoice(home: HomeThread, threadTurn: HudTurn): HudHomeV
   const quick = useQuickAsk(thread, 'focused');
   const [shows, setShows] = useState<HomeShows>('thread');
   const screenReader = useScreenReader();
-  const locale = useMemo(() => phoneLocale(), []);
+  const { listening, phone } = useListening();
+  const language = useLanguageSwitch(roleCan(home.role, 'chat'));
   const levels = useLevels(quick.level);
   const hold = useHomeHold(quick, setShows);
   const { stop, lineAction } = useHomeActions(quick, home);
@@ -100,7 +105,8 @@ export function useHudHomeVoice(home: HomeThread, threadTurn: HudTurn): HudHomeV
     roleCanChat: roleCan(home.role, 'chat'),
     screenReader,
     mascotState: mascot.driver.mascot.mascot,
-    locale,
+    locale: listening,
+    phoneLocale: phone,
     reply: quick.reply,
     failure: thread.state.failure,
   });
@@ -120,7 +126,7 @@ export function useHudHomeVoice(home: HomeThread, threadTurn: HudTurn): HudHomeV
     turn,
     micOpen,
     levels,
-    core: { talk, stopEnabled, chip },
+    core: { talk, stopEnabled, chip, language },
     line,
     lineAction,
     stop,

@@ -40,8 +40,9 @@ notification settings, links into the app, and what the operator sets. On branch
 the server side, W2, merged into automatos-ai `main` on 24 Oct (#1300).
 
 **[voice.md](voice.md).** Talking to Auto: quick-ask (hold to talk, recognition on the phone, the
-reply spoken by the phone, the AI notice once per voice session) and, later, Auto Live through
-Retell. Kit only: this page is written from the A6 kit contract.
+reply spoken by the phone or by Auto's server voice, the AI notice once per voice session), the
+languages (English and Portuguese, with a one-tap EN/PT switch) and, later, Auto Live through
+Retell. Quick-ask, the server voice and the languages are on `main`; Auto Live is not built.
 
 **[release.md](release.md).** How a merge reaches phones. GitHub CI checks; EAS Workflows ship.
 `testflight.yml` takes the fingerprint and either publishes an over-the-air update or builds iOS and

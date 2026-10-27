@@ -1,0 +1,68 @@
+// Settings → Voice's "I speak" (27 Oct 2026): its rows and its note, pure (no React, React Native or
+// Expo). The words are LANGUAGE_COPY's (src/voice/strings.ts).
+//   Rows: Automatic (the phone's language, named with its accent: 'English (GB)'), English (the
+// English it listens in: the phone's own, else British), Português (Portugal), Português (Brasil);
+// exactly one selected. A tap saves the choice (withSpeakChoice) and plays the sample in it.
+//   The note, iOS only: while the choice listens in another language than the iPhone's own, hold to
+// talk refuses (recognition-policy.ts 'other-language'), and the note says so before any press.
+//   Portuguese (Portugal)'s server note: Kokoro has no European Portuguese, so the phone's voice
+// speaks it unless a Brazilian server voice is chosen (language-voice.ts).
+
+import type { RecognitionPlatform } from '../quick-ask/recognition-policy';
+import { accentOf } from '../settings/view-model';
+import { SPEAK_CHOICES, type SpeakChoice, type VoiceSetting } from '../settings/voice-setting';
+import { LANGUAGE_COPY } from '../strings';
+import {
+  choiceLocale,
+  isPortuguese,
+  listeningLocale,
+  portugueseFor,
+  sameLocale,
+  speakChoiceOf,
+  spokenName,
+} from './speak-language';
+
+const COPY = LANGUAGE_COPY;
+
+export type LanguageRow = Readonly<{
+  key: SpeakChoice;
+  title: string;
+  summary: string;
+  selected: boolean;
+}>;
+
+function summaryOf(choice: SpeakChoice, phone: string): string {
+  if (choice === 'auto') return COPY.automaticSummary(accentOf(phone));
+  if (isPortuguese(choice)) return COPY.names[choice];
+  return accentOf(choiceLocale(choice, phone));
+}
+
+/** One row per choice, in SPEAK_CHOICES' order; the saved one selected. */
+export function languageRows(setting: VoiceSetting, phone: string): readonly LanguageRow[] {
+  const saved = speakChoiceOf(setting);
+  return Object.freeze(
+    SPEAK_CHOICES.map((choice) =>
+      Object.freeze({
+        key: choice,
+        title: COPY.choices[choice],
+        summary: summaryOf(choice, phone),
+        selected: choice === saved,
+      }),
+    ),
+  );
+}
+
+/** iOS, while the choice is not the iPhone's own language: hold to talk works only in that one. */
+export function languageNote(
+  platform: RecognitionPlatform,
+  setting: VoiceSetting,
+  phone: string,
+): string | null {
+  if (platform !== 'ios' || sameLocale(listeningLocale(setting, phone), phone)) return null;
+  return COPY.iosNote(spokenName(phone));
+}
+
+/** Above the server's voices for Portuguese (Portugal), which has none of its own; else null. */
+export function serverNote(language: string, serverOffered: boolean): string | null {
+  return serverOffered && portugueseFor(language) === 'pt-PT' ? COPY.portugalServerNote : null;
+}

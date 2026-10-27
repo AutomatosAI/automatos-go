@@ -14,7 +14,9 @@
 //   everyone who may chat; STOP while the mic is held or Auto has the turn.
 //   The line under the core, first that applies: a viewer's words; the error's; why the next hold
 //   cannot start (a permission, the download offer, the reason); the reducer's message; 'See it in
-//   the chat' when this turn's reply came with cards or receipts.
+//   the chat' when this turn's reply came with cards or receipts. The reason names the language hold
+//   to talk listens in ("I speak", spokenName: 'Portuguese (Portugal)') and, for iOS's
+//   'other-language', the iPhone's own.
 
 import { ROLE_COPY } from '../../auth/strings';
 import type { ThreadFailure } from '../../chat/controller/thread';
@@ -31,11 +33,8 @@ import {
 } from '../machine/voice-state';
 import { noticeText } from '../notice/ai-notice';
 import { permissionNotice, type PermissionVerdict } from '../permissions/permission-flow';
-import {
-  languageName,
-  refusalCopyKey,
-  type RecognitionPolicy,
-} from '../quick-ask/recognition-policy';
+import { spokenName } from '../language/speak-language';
+import { refusalCopyKey, type RecognitionPolicy } from '../quick-ask/recognition-policy';
 import type { QuickAskReply } from '../quick-ask/reply-text';
 import {
   RECOGNITION_COPY,
@@ -57,8 +56,10 @@ export type VoiceViewInput = {
   readonly screenReader: boolean;
   /** What A5's mascot driver shows for Auto (useMascot's driver.mascot.mascot). */
   readonly mascotState: MascotName;
-  /** The phone's locale (locale.ts phoneLocale): the language the unavailable words name. */
+  /** The language hold to talk listens in ("I speak"): the one the unavailable words name. */
   readonly locale: string;
+  /** The phone's own locale (locale.ts phoneLocale); absent, the same as `locale`. */
+  readonly phoneLocale?: string;
   /** Quick-ask's last reply (the snapshot's): 'See it in the chat' and the answering agent. */
   readonly reply?: QuickAskReply | null;
   /** A2's failure for a failed turn (the thread state's): its words, as the chat says them. */
@@ -125,6 +126,7 @@ const ERROR_GROUPS: Readonly<Record<VoiceErrorKind, ErrorGroup>> = Object.freeze
   'android-too-old': 'unavailable',
   'language-missing': 'unavailable',
   'no-recognizer': 'unavailable',
+  'other-language': 'unavailable',
   'permission-settings': 'permission',
   'permission-restricted': 'permission',
   'mic-busy': 'recognizer',
@@ -156,9 +158,9 @@ function isRecognizerFailure(kind: VoiceErrorKind): kind is RecognizerFailure {
   return ERROR_GROUPS[kind] === 'recognizer';
 }
 
-function unavailableTrouble(reason: UnavailableReason, locale: string): Trouble {
+function unavailableTrouble(reason: UnavailableReason, input: VoiceViewInput): Trouble {
   const words = RECOGNITION_COPY[refusalCopyKey({ kind: 'unavailable', reason })];
-  const text = words(languageName(locale));
+  const text = words(spokenName(input.locale), spokenName(input.phoneLocale ?? input.locale));
   return { chip: 'unavailable', message: line('unavailable', text) };
 }
 
@@ -187,7 +189,7 @@ function turnText(state: VoiceState, failure: ThreadFailure | null | undefined):
 function errorTrouble(input: VoiceViewInput): Trouble | null {
   const kind = input.state.errorKind;
   if (kind === null) return null;
-  if (isUnavailable(kind)) return unavailableTrouble(kind, input.locale);
+  if (isUnavailable(kind)) return unavailableTrouble(kind, input);
   if (isRecognizerFailure(kind))
     return { chip: 'error', message: line('error', VOICE_ERROR_COPY[kind]) };
   if (kind === 'turn')
@@ -202,8 +204,8 @@ function idleTrouble(input: VoiceViewInput): Trouble | null {
   if (blocked !== null) return blocked;
   const { policy } = input;
   if (policy === null || policy.kind === 'ready') return null;
-  if (policy.kind === 'unavailable') return unavailableTrouble(policy.reason, input.locale);
-  const text = RECOGNITION_COPY.download(languageName(policy.locale));
+  if (policy.kind === 'unavailable') return unavailableTrouble(policy.reason, input);
+  const text = RECOGNITION_COPY.download(spokenName(policy.locale));
   return { chip: 'unavailable', message: line('download', text, 'download') };
 }
 
@@ -251,7 +253,7 @@ function tooOld(input: VoiceViewInput): boolean {
 /** Why HOLD TO TALK is off, or null while it is on. */
 function centreOff(input: VoiceViewInput): string | null {
   if (!input.roleCanChat) return ROLE_COPY.viewerReadOnly;
-  return tooOld(input) ? RECOGNITION_COPY.androidTooOld(languageName(input.locale)) : null;
+  return tooOld(input) ? RECOGNITION_COPY.androidTooOld(spokenName(input.locale)) : null;
 }
 
 function centreView(input: VoiceViewInput): CentreView {

@@ -65,6 +65,9 @@ export const ANDROID_ON_DEVICE_API = 33;
 /** The recognition and speech language when the phone reports no locale (KV4). */
 export const FALLBACK_LOCALE = 'en-US';
 
+/** "I speak" English on a phone that is not in English: British English (Settings → Voice). */
+export const ENGLISH_FALLBACK_LOCALE = 'en-GB';
+
 /**
  * Auto's server voice (POST /api/voice/speech): how long a sentence that is due (nothing playing
  * before it) may keep the person waiting for its MP3 before this phone's voice speaks it and the

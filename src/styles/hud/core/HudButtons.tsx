@@ -9,6 +9,9 @@
 // on the press out, lit (the accent, its words in the accent's ink) while the mic is held; under a
 // screen reader it toggles on its 'activate' action instead (double-tap to talk, again to send). It
 // may also turn TYPE off (a viewer). Without them the row is exactly HUD's home's.
+//   A6's EN/PT switch (27 Oct 2026, `language`): a 44 pt square with a 1 pt line and the
+// language's letters, 6 to the right of HOLD TO TALK, with the same room left empty on its other
+// side so the circle stays in the middle of the row. Without it the row is as above.
 
 import {
   Pressable,
@@ -20,11 +23,17 @@ import {
 
 import { Text } from '../../../ui';
 import { DISABLED_OPACITY } from '../../../ui/paint';
-import { HUD_CORE, voiceButtons, type HudButtonView, type HudTalk } from './model';
+import {
+  HUD_CORE,
+  voiceButtons,
+  type HudButtonView,
+  type HudLanguage,
+  type HudTalk,
+} from './model';
 import { useVoiceCore, type VoiceCore } from './use-voice-core';
 
 const { buttons, tracking } = HUD_CORE;
-const { side, talk } = buttons;
+const { side, talk, language: switchSize } = buttons;
 
 type SideProps = {
   readonly core: VoiceCore;
@@ -121,6 +130,47 @@ function TalkButton({ core, view, voice }: TalkProps) {
   );
 }
 
+type LanguageProps = { readonly core: VoiceCore; readonly language: HudLanguage };
+
+/** The EN/PT switch: the language's letters in a 44 pt square, a tap switching it. */
+function LanguageButton({ core, language }: LanguageProps) {
+  const { paint, style } = core;
+  const face = style.type.mono(HUD_CORE.monoSize, 600, { trackingEm: tracking.mono });
+  return (
+    <Pressable
+      onPress={language.onPress}
+      accessibilityRole="button"
+      accessibilityLabel={language.label}
+      accessibilityHint={language.hint}
+      style={({ pressed }) => [
+        styles.side,
+        {
+          minWidth: switchSize.size,
+          minHeight: switchSize.size,
+          borderWidth: switchSize.border,
+          borderColor: paint.line,
+          backgroundColor: pressed ? paint.accentFill : undefined,
+        },
+      ]}
+    >
+      <Text style={[face, { color: paint.text }]}>{language.text}</Text>
+    </Pressable>
+  );
+}
+
+/** HOLD TO TALK, with the EN/PT switch to its right when given (and its twin room to its left). */
+function Centre({ core, view, voice, language }: TalkProps & { readonly language?: HudLanguage }) {
+  const button = <TalkButton core={core} view={view} voice={voice} />;
+  if (!language) return button;
+  return (
+    <View style={[styles.centre, { gap: switchSize.gap }]}>
+      <View style={{ width: switchSize.size }} />
+      {button}
+      <LanguageButton core={core} language={language} />
+    </View>
+  );
+}
+
 export type HudButtonsProps = {
   /** A turn is streaming: STOP is on. */
   readonly streaming: boolean;
@@ -132,10 +182,12 @@ export type HudButtonsProps = {
   readonly talk?: HudTalk;
   /** A6: TYPE is on (a viewer may not type); absent, always on. */
   readonly typeEnabled?: boolean;
+  /** A6: the EN/PT switch beside HOLD TO TALK; absent, none. */
+  readonly language?: HudLanguage;
 };
 
 export function HudButtons(props: HudButtonsProps) {
-  const { streaming, onType, onStop, bottomInset = 0, talk: voice, typeEnabled } = props;
+  const { streaming, onType, onStop, bottomInset = 0, talk: voice, typeEnabled, language } = props;
   const core = useVoiceCore();
   const view = voiceButtons(streaming, voice, typeEnabled);
   const { paint } = core;
@@ -151,7 +203,7 @@ export function HudButtons(props: HudButtonsProps) {
       ]}
     >
       <SideButton core={core} view={view.type} weight={500} ink={paint.text2} onPress={onType} />
-      <TalkButton core={core} view={view.talk} voice={voice} />
+      <Centre core={core} view={view.talk} voice={voice} language={language} />
       <SideButton core={core} view={view.stop} weight={600} ink={paint.text} onPress={onStop} />
     </View>
   );
@@ -161,5 +213,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   side: { alignItems: 'center', justifyContent: 'center' },
   talk: { alignItems: 'center', justifyContent: 'center' },
+  centre: { flexDirection: 'row', alignItems: 'center' },
   centred: { textAlign: 'center' },
 });

@@ -96,10 +96,10 @@ function begin(engine: Engine, plan: PressStart, hold: Hold): void {
   steps.forEach((step) => STEPS[step](engine, plan, hold));
 }
 
-/** The permission and the policy, read from the press (never at mount: KV5). */
+/** The permission and the policy for the language it listens in, read from the press (KV5). */
 async function checks(engine: Engine) {
   const permission = await engine.deps.permissions.press('quick-ask');
-  const policy = await engine.deps.recognizer.policy();
+  const policy = await engine.deps.recognizer.policy(engine.deps.context().speech.language);
   show(engine, { permission, policy });
   return { permission, policy };
 }

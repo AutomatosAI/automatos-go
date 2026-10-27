@@ -1,5 +1,5 @@
-// Settings → Voice (VOICE_SCREENS.settings: /settings/voice, src/voice/nav.ts): the voice Auto
-// answers in on this phone: Auto's server voices first when the server offers them, with "Use this
+// Settings → Voice (VOICE_SCREENS.settings: /settings/voice, src/voice/nav.ts): "I speak" (the
+// language hold to talk listens in and Auto answers in), then the voice Auto answers in on this phone: Auto's server voices first when the server offers them, with "Use this
 // phone's voice instead"; the phone's voices (Automatic first) without them or once chosen; then
 // Speed (and Pitch for the phone's voice) and Reset to default (VoiceSections.tsx). Every value is
 // the phone's own (use-voice-setting.ts) and quick-ask speaks its next reply with it. Back returns
@@ -14,7 +14,7 @@ import { useTokens } from '../../styles/theme';
 import { IconButton, Screen, Text } from '../../ui';
 import { VOICE_SETTINGS_COPY } from '../strings';
 import { useVoiceSettings } from './use-voice-settings';
-import { ServerVoiceList, SoundSection, VoiceList } from './VoiceSections';
+import { LanguageList, ServerVoiceList, SoundSection, VoiceList } from './VoiceSections';
 
 const COPY = VOICE_SETTINGS_COPY;
 const TITLE_LEVEL = 2;
@@ -44,8 +44,13 @@ export function VoiceSettingsScreen() {
       <View style={[styles.column, { gap: spacing.space6 }]}>
         <IconButton icon={ChevronLeft} accessibilityLabel={COPY.back} onPress={goBack} />
         <Head lede={view.lede} />
+        <LanguageList
+          rows={view.languages}
+          note={view.languageNote}
+          onChoose={view.chooseLanguage}
+        />
         {view.server === null ? null : (
-          <ServerVoiceList rows={view.server} onChoose={view.chooseServer} />
+          <ServerVoiceList rows={view.server} note={view.serverNote} onChoose={view.chooseServer} />
         )}
         {view.phone === null ? null : (
           <VoiceList

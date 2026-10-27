@@ -10,7 +10,7 @@
 // the field, the [+] at its start (US-016k). The keyboard takes the look's tone (Daylight light,
 // the rest dark), never Studio's Light / Dark / System.
 // Given `voice`, A6's voice button (US-019k) sits beside Send, in Play's dress; without it the box
-// is as above.
+// is as above. Given `language` (27 Oct 2026), the EN/PT switch sits just before the voice button.
 
 import ArrowUp from 'lucide-react-native/icons/arrow-up';
 import type { ReactNode } from 'react';
@@ -41,6 +41,8 @@ export type PlayComposerProps = {
   readonly firstOpen?: boolean;
   /** The conversation's voice button (A6): the role and the chat's id; none by default. */
   readonly voice?: VoiceButtonProps;
+  /** Just before the voice button: the EN/PT switch (A6, LanguageChip); none by default. */
+  readonly language?: ReactNode;
   /** Above the field: the attached files' chips. */
   readonly above?: ReactNode;
   /** At the field's start: the [+] that attaches files. */
@@ -108,6 +110,7 @@ export function PlayComposer({
   composerState,
   firstOpen = false,
   voice,
+  language,
   above,
   leading,
 }: PlayComposerProps) {
@@ -164,6 +167,7 @@ export function PlayComposer({
             },
           ]}
         />
+        {language}
         {voice ? <VoiceButton {...voice} /> : null}
         <ComposerButton view={view} paint={paint} onSend={onSend} onStop={onStop} />
       </View>

@@ -6,7 +6,7 @@
 // 06, US-017f) takes the header's and the thread's place on home while its conversation is a blank
 // draft: the brand line, Auto's hello and the three starters, which fill the box and never send
 // (KS13); the box's Send in the accent, A6's voice button beside it (US-019k: the conversation's id,
-// none for a viewer). The frame is First open's: the ground's light where the
+// none for a viewer), and the EN/PT switch just before it (LanguageChip, none for a viewer). The frame is First open's: the ground's light where the
 // screen kind puts it, everything lifted over the keyboard on iOS. Report this opens A2's one
 // ReportSheet. Chats goes back on the chat route, else to the history; Shelf to the Deliverables.
 
@@ -24,6 +24,7 @@ import { useMessageReport } from '../../chat/report/use-message-report';
 import { LIVE_AUTO_KEY, retryInput, threadRows } from '../../chat/view-model';
 import { routes } from '../../navigation/routes';
 import { ReportSheet, Screen } from '../../ui';
+import { LanguageChip } from '../../voice/language/LanguageChip';
 import { EdgeBrand } from '../edges/parts';
 import { AutoRow, PlayComposer, PlayHeader } from '../play/companion';
 import { useTokens } from '../theme';
@@ -74,6 +75,7 @@ function Composer({ home, composer, firstOpen }: ComposerProps) {
         />
       }
       voice={{ roleCanChat: roleCan(role, 'chat'), chatId: home.thread.state.chatId }}
+      language={<LanguageChip shown={roleCan(role, 'chat')} />}
     />
   );
 }

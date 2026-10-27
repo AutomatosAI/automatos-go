@@ -52,6 +52,8 @@ export const HUD_CORE = Object.freeze({
     padBottom: 34,
     side: Object.freeze({ width: 64, height: 44, border: 1 }),
     talk: Object.freeze({ size: 84, border: 2, glow: 30 }),
+    /** A6's EN/PT switch beside HOLD TO TALK: 44 pt square, 6 from the circle (a twin space left). */
+    language: Object.freeze({ size: 44, gap: 6, border: 1 }),
   }),
   /** Geist Mono 11 at .1em (status, mic, TYPE, STOP), .12em (HOLD TO TALK), .16em (the chip). */
   tracking: Object.freeze({ mono: 0.1, talk: 0.12, chip: 0.16, brand: 0.18, row: 0.14 }),
@@ -317,6 +319,17 @@ export type HudTalk = {
   readonly onPressIn: () => void;
   readonly onPressOut: () => void;
   readonly onToggle: () => void;
+};
+
+/**
+ * A6's EN/PT switch beside HOLD TO TALK (27 Oct 2026): the listening language's letters ('EN'),
+ * what a screen reader says ('Speaking English. Switch to Portuguese'), and the tap.
+ */
+export type HudLanguage = {
+  readonly text: string;
+  readonly label: string;
+  readonly hint: string;
+  readonly onPress: () => void;
 };
 
 /** hudButtons with A6's voice: HOLD TO TALK's own words and state, TYPE off when it may not type. */

@@ -11,6 +11,7 @@
 //   Permissions are read at mount for MIC OFF, never asked (KV5: only a press asks); a press's own
 //   verdict, always the newer, wins.
 //   Report this on the voice's reply: its saved message (voiceReportId), read per thread change.
+//   The EN/PT switch beside HOLD TO TALK (useLanguageSwitch) for someone who may talk.
 
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -29,7 +30,8 @@ import { useStyle } from '../../styles/theme';
 import { voiceLookPath } from '../nav';
 import type { PermissionVerdict } from '../permissions/permission-flow';
 import { permissions } from '../permissions/permissions';
-import { phoneLocale } from '../quick-ask/locale';
+import { useLanguageSwitch, type LanguageSwitch } from '../language/use-language-switch';
+import { useListening } from '../language/use-speak-language';
 import { useQuickAsk, type QuickAskView } from '../quick-ask/use-quick-ask';
 import {
   phaseMascot,
@@ -60,7 +62,8 @@ export type VoiceScreenModel = {
   readonly view: VoiceView;
   readonly turn: HudTurn;
   readonly mascot: MascotName;
-  readonly core: VoiceCoreProps;
+  /** HudCore's voice but the line: with the EN/PT switch for someone who may talk. */
+  readonly core: VoiceCoreProps & { readonly language?: LanguageSwitch };
   readonly line: VoiceLine | null;
   readonly levels: readonly number[] | null;
   readonly needsYou: number;
@@ -122,7 +125,9 @@ export function useVoiceScreen(chatId: string | null): VoiceScreenModel {
   const style = useStyle();
   const screenReader = useScreenReader();
   const mounted = useMountPermission();
-  const locale = useMemo(() => phoneLocale(), []);
+  const { listening, phone } = useListening();
+  const roleCanChat = roleCan(workspace.role, 'chat');
+  const language = useLanguageSwitch(roleCanChat);
   const levels = useLevels(quick.level);
   const hold = useHold(quick);
   const [typing, setTyping] = useState(false);
@@ -133,10 +138,11 @@ export function useVoiceScreen(chatId: string | null): VoiceScreenModel {
     state: voice,
     policy: quick.policy,
     permission: quick.permission ?? mounted,
-    roleCanChat: roleCan(workspace.role, 'chat'),
+    roleCanChat,
     screenReader,
     mascotState: phaseMascot(voice),
-    locale,
+    locale: listening,
+    phoneLocale: phone,
     reply: quick.reply,
     failure: thread.state.failure,
   });
@@ -151,7 +157,7 @@ export function useVoiceScreen(chatId: string | null): VoiceScreenModel {
     view,
     turn: voiceTurn(view, quick.reply, replyId),
     mascot: view.mascot,
-    core: voiceCoreProps({ view, phase: voice.phase, dress, hold }),
+    core: { ...voiceCoreProps({ view, phase: voice.phase, dress, hold }), language },
     line: voiceLine(view.message),
     levels,
     needsYou: total,

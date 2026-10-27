@@ -6,7 +6,7 @@
 //   line show only once that is chosen, under "This phone's voices". Selected: the phone row when
 //   the phone's voice is chosen, else the saved server voice while the list offers it, else the
 //   server's default. While the list loads, or when it did not load, one row stands for the
-//   server's default voice. Speed is for both voices; Pitch only for the phone's, so with the
+//   server's default voice (for Portuguese, which has no server default, only while it loads). Speed is for both voices; Pitch only for the phone's, so with the
 //   server voice it gives way to a one-line reason.
 
 import type { ServerVoicesState } from '../server/server-voices';
@@ -78,13 +78,19 @@ function chosenId(voices: readonly ServerVoice[], defaultId: string | null, save
   return saved ?? defaultId ?? voices[0]?.id ?? null;
 }
 
-/** "Auto's voice" with tts: the server's voices, then the phone's; null without tts. */
+/**
+ * "Auto's voice" with tts: the server's voices, then the phone's; null without tts. A language with
+ * no server default worth asking for (Portuguese, language-voice.ts) shows no default row: once its
+ * list is known to have none of its voices, the phone's row alone.
+ */
 export function serverVoiceRows(
   voices: ServerVoicesState,
   setting: VoiceSetting,
+  serverDefault = true,
 ): readonly ServerVoiceRow[] | null {
   if (voices.kind === 'off') return null;
   if (voices.kind !== 'ready' || voices.list.voices.length === 0) {
+    if (!serverDefault && voices.kind !== 'loading') return Object.freeze([phoneRow(setting)]);
     return Object.freeze([defaultRow(voices, setting), phoneRow(setting)]);
   }
   const { defaultId } = voices.list;

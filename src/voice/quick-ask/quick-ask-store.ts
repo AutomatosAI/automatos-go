@@ -20,7 +20,8 @@ import type { QuickAskReply, TurnTracking } from './reply-text';
 import type { QuickAskMessage } from './spoken-mode';
 
 export type RecognizerPort = Pick<Recognizer, 'start' | 'stop' | 'abort' | 'downloadModel'> & {
-  readonly policy: () => Promise<RecognitionPolicy>;
+  /** The recognition policy for the language quick-ask listens in (the speech's language). */
+  readonly policy: (locale: string) => Promise<RecognitionPolicy>;
 };
 
 /** The voice screen's conversation: A2's useThread (one request, one stream). */
@@ -35,7 +36,10 @@ export type QuickAskContext = {
   readonly thread: ThreadPort;
   readonly roleCanChat: boolean;
   readonly discovery: GateInput;
-  /** The phone's language and the voice picked for it (US-019d); Auto's server voice when chosen. */
+  /**
+   * The language quick-ask listens and speaks in ("I speak"; the phone's when Automatic), the voice
+   * picked for it (US-019d), and Auto's server voice when chosen.
+   */
   readonly speech: SpeakOptions;
 };
 
