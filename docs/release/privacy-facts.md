@@ -807,7 +807,8 @@ text-to-speech engine does not use a network voice]".
   the app's API client, with the same bearer and workspace headers as every call, never in a URL
   (`voice-api.ts`). The MP3 it answers is written to the app's cache (`<cache>/server-voice`,
   `speech-files.ts`), played with expo-audio and deleted once played or stopped; the folder is
-  emptied at the first sentence of each launch. A failure is logged by its kind only, never the
+  emptied at every app start (`sweepSpeechFiles` in `app/_layout.tsx`), whether or not the voice
+  is used, so nothing a crash left stays. A failure is logged by its kind only, never the
   text, and the phone's voice speaks the rest of that turn.
 
 **Evidence:** `src/voice/__tests__/recognition-policy.test.ts` (iOS and Android policies, every

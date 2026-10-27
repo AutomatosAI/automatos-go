@@ -1,8 +1,10 @@
 // The server voice's MP3s on the phone (27 Oct 2026): the server speaker's SpeechFiles bound to
 // expo-file-system, in one folder under the cache. Each sentence's file lives from its download to
-// the end of its playback (or the stop that cut it short) and is then deleted; the folder is
-// emptied before the first file of each launch, so a file a crash left behind goes too. Nothing
-// here is logged with a file's contents, and the bytes never leave the phone's cache.
+// the end of its playback (or the stop that cut it short) and is then deleted. sweepSpeechFiles()
+// empties the folder once per launch: the root layout calls it at app start, whether or not the
+// server voice is used, so a file a crash left behind goes; the first write calls it too (a no-op
+// once it ran). A sweep that fails is logged and never stops the launch. Nothing here is logged
+// with a file's contents, and the bytes never leave the phone's cache.
 
 import { Directory, File, Paths } from 'expo-file-system';
 
@@ -12,7 +14,7 @@ import type { SpeechFiles } from './server-speaker-ports';
 /** The one folder under the cache the server voice's files are kept in. */
 export const SERVER_VOICE_FOLDER = 'server-voice';
 
-let emptied = false;
+let swept = false;
 let written = 0;
 
 function folder(): Directory {
@@ -27,12 +29,20 @@ function removeQuietly(entry: File | Directory): void {
   }
 }
 
-function write(bytes: Uint8Array): string {
-  const dir = folder();
-  if (!emptied) {
-    emptied = true;
-    removeQuietly(dir);
+/** Empties <cache>/server-voice once per launch (a crash's leftovers); never throws. */
+export function sweepSpeechFiles(): void {
+  if (swept) return;
+  swept = true;
+  try {
+    removeQuietly(folder());
+  } catch (error) {
+    logger.warn('[voice] the server voice folder could not be swept', error);
   }
+}
+
+function write(bytes: Uint8Array): string {
+  sweepSpeechFiles();
+  const dir = folder();
   dir.create({ intermediates: true, idempotent: true });
   written += 1;
   const file = new File(dir, `sentence-${Date.now()}-${written}.mp3`);
