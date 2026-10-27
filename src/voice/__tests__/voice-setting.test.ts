@@ -1,7 +1,8 @@
 // Auto's voice setting on the phone's store (Settings → Voice): the default with nothing stored
-// (Automatic at the voice's own speed and pitch), a round trip through the store, anything
-// unreadable read as the default, a speed or pitch outside its slider brought inside it in whole
-// steps, and a store that fails logged without losing the choice for this launch.
+// (Auto's server voice when offered, else Automatic, at the voice's own speed and pitch), a round
+// trip through the store, a value saved before the server voice read with its new fields'
+// defaults, anything unreadable read as the default, a speed or pitch outside its slider brought
+// inside it in whole steps, and a store that fails logged without losing the choice for this launch.
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -20,6 +21,15 @@ import {
 import { VOICE_SETTING_KEY, createVoiceSettingStore } from '../settings/voice-setting-store';
 
 const DANIEL = 'com.apple.voice.enhanced.en-GB.Daniel';
+/** The fields the server voice added, at their defaults (Auto's voice, the server's default). */
+const SERVER_DEFAULTS = { source: 'server', serverVoice: null } as const;
+/** A setting as before the server voice, with the new fields at their defaults. */
+const phone = (voice: string | null, rate: number, pitch: number): VoiceSetting => ({
+  ...SERVER_DEFAULTS,
+  voice,
+  rate,
+  pitch,
+});
 
 function memoryStorage(initial: Record<string, string> = {}) {
   const items = new Map(Object.entries(initial));
@@ -43,8 +53,14 @@ afterEach(() => {
 });
 
 describe('the default', () => {
-  it('is Automatic at the voice’s own speed and pitch', () => {
-    expect(DEFAULT_VOICE_SETTING).toEqual({ voice: null, rate: SPEECH_RATE, pitch: SPEECH_PITCH });
+  it('is Auto’s server voice (its default), else Automatic, at the voice’s own speed and pitch', () => {
+    expect(DEFAULT_VOICE_SETTING).toEqual({
+      source: 'server',
+      serverVoice: null,
+      voice: null,
+      rate: SPEECH_RATE,
+      pitch: SPEECH_PITCH,
+    });
     expect(SPEECH_RATE).toBe(1);
     expect(SPEECH_PITCH).toBe(1);
   });
@@ -63,7 +79,13 @@ describe('the default', () => {
 describe('a round trip through the store', () => {
   it('reads back what was saved, in a new store over the same storage (the next launch)', () => {
     const { storage, items } = memoryStorage();
-    const setting: VoiceSetting = { voice: DANIEL, rate: 1.15, pitch: 0.9 };
+    const setting: VoiceSetting = {
+      source: 'phone',
+      serverVoice: 'bm_george',
+      voice: DANIEL,
+      rate: 1.15,
+      pitch: 0.9,
+    };
     expect(createVoiceSettingStore(() => storage).set(setting)).toBe(true);
     expect(JSON.parse(items.get(VOICE_SETTING_KEY) ?? '')).toEqual({
       v: VOICE_SETTING_VERSION,
@@ -74,12 +96,8 @@ describe('a round trip through the store', () => {
 
   it('keeps Automatic as null', () => {
     const { storage } = memoryStorage();
-    createVoiceSettingStore(() => storage).set({ voice: null, rate: 0.8, pitch: 1.2 });
-    expect(createVoiceSettingStore(() => storage).get()).toEqual({
-      voice: null,
-      rate: 0.8,
-      pitch: 1.2,
-    });
+    createVoiceSettingStore(() => storage).set(phone(null, 0.8, 1.2));
+    expect(createVoiceSettingStore(() => storage).get()).toEqual(phone(null, 0.8, 1.2));
   });
 
   it('reads the store once, then answers from memory', () => {
@@ -96,7 +114,7 @@ describe('a round trip through the store', () => {
     const store = createVoiceSettingStore(() => storage);
     const heard = vi.fn();
     const unsubscribe = store.subscribe(heard);
-    store.set({ voice: DANIEL, rate: 1, pitch: 1 });
+    store.set(phone(DANIEL, 1, 1));
     expect(heard).toHaveBeenCalledTimes(1);
     expect(store.get().voice).toBe(DANIEL);
     unsubscribe();
@@ -108,7 +126,7 @@ describe('a round trip through the store', () => {
   it('holds frozen settings, never the object it was handed', () => {
     const { storage } = memoryStorage();
     const store = createVoiceSettingStore(() => storage);
-    const handed = { voice: DANIEL, rate: 1, pitch: 1 };
+    const handed = phone(DANIEL, 1, 1);
     store.set(handed);
     expect(store.get()).not.toBe(handed);
     expect(Object.isFrozen(store.get())).toBe(true);
@@ -139,14 +157,59 @@ describe('corrupt data reads as the default', () => {
 
   it('ignores fields it does not know', () => {
     const raw = stored({ voice: DANIEL, rate: 1.1, pitch: 1, volume: 3 });
-    expect(parseVoiceSetting(raw)).toEqual({ voice: DANIEL, rate: 1.1, pitch: 1 });
+    expect(parseVoiceSetting(raw)).toEqual(phone(DANIEL, 1.1, 1));
+  });
+});
+
+describe('a value saved before the server voice', () => {
+  it('still reads, its phone voice, speed and pitch kept, with Auto’s voice by default', () => {
+    const raw = stored({ voice: DANIEL, rate: 0.9, pitch: 1.1 });
+    const { storage } = memoryStorage({ [VOICE_SETTING_KEY]: raw });
+    expect(createVoiceSettingStore(() => storage).get()).toEqual({
+      source: 'server',
+      serverVoice: null,
+      voice: DANIEL,
+      rate: 0.9,
+      pitch: 1.1,
+    });
+  });
+
+  it('a bad source or server voice reads as its default alone', () => {
+    const raw = stored({ voice: DANIEL, rate: 1, pitch: 1, source: 'robot', serverVoice: 42 });
+    expect(parseVoiceSetting(raw)).toEqual(phone(DANIEL, 1, 1));
+    const blank = stored({ voice: null, rate: 1, pitch: 1, source: 'phone', serverVoice: ' ' });
+    expect(parseVoiceSetting(blank)).toEqual({ ...phone(null, 1, 1), source: 'phone' });
+  });
+
+  it('round-trips the new fields', () => {
+    const setting: VoiceSetting = {
+      source: 'server',
+      serverVoice: 'af_heart',
+      voice: null,
+      rate: 1.05,
+      pitch: 1,
+    };
+    expect(parseVoiceSetting(serialiseVoiceSetting(setting))).toEqual(setting);
+    expect(JSON.parse(serialiseVoiceSetting(setting))).toMatchObject({
+      v: 1,
+      source: 'server',
+      serverVoice: 'af_heart',
+    });
+  });
+
+  it('settles anything but phone to the server voice, and a blank server voice to its default', () => {
+    const odd = { ...phone(null, 1, 1), source: 'other', serverVoice: '  ' } as unknown;
+    const { storage } = memoryStorage();
+    const store = createVoiceSettingStore(() => storage);
+    store.set(odd as VoiceSetting);
+    expect(store.get()).toEqual(phone(null, 1, 1));
   });
 });
 
 describe('out-of-range values are brought inside the sliders', () => {
   it('clamps a stored speed or pitch to 0.8–1.2', () => {
     const raw = stored({ voice: DANIEL, rate: 3, pitch: 0.1 });
-    expect(parseVoiceSetting(raw)).toEqual({ voice: DANIEL, rate: 1.2, pitch: 0.8 });
+    expect(parseVoiceSetting(raw)).toEqual(phone(DANIEL, 1.2, 0.8));
   });
 
   it('takes a value between steps to the nearest step, to two places', () => {
@@ -159,9 +222,9 @@ describe('out-of-range values are brought inside the sliders', () => {
   it('clamps what is saved, too', () => {
     const { storage } = memoryStorage();
     const store = createVoiceSettingStore(() => storage);
-    store.set({ voice: ` ${DANIEL} `, rate: 9, pitch: 0.5 });
-    expect(store.get()).toEqual({ voice: DANIEL, rate: 1.2, pitch: 0.8 });
-    expect(parseVoiceSetting(serialiseVoiceSetting({ voice: '', rate: 1, pitch: 1 }))).toEqual(
+    store.set(phone(` ${DANIEL} `, 9, 0.5));
+    expect(store.get()).toEqual(phone(DANIEL, 1.2, 0.8));
+    expect(parseVoiceSetting(serialiseVoiceSetting(phone('', 1, 1)))).toEqual(
       DEFAULT_VOICE_SETTING,
     );
   });
@@ -190,15 +253,15 @@ describe('a store that fails', () => {
       },
     };
     const store = createVoiceSettingStore(() => failing);
-    expect(store.set({ voice: DANIEL, rate: 1.1, pitch: 1 })).toBe(false);
-    expect(store.get()).toEqual({ voice: DANIEL, rate: 1.1, pitch: 1 });
+    expect(store.set(phone(DANIEL, 1.1, 1))).toBe(false);
+    expect(store.get()).toEqual(phone(DANIEL, 1.1, 1));
     expect(warn).toHaveBeenCalledTimes(1);
   });
 });
 
 describe('speakOptionsFor: what the speaker is given', () => {
   it('the language, the voice when there is one, and the saved rate and pitch', () => {
-    const setting: VoiceSetting = { voice: DANIEL, rate: 0.9, pitch: 1.1 };
+    const setting: VoiceSetting = phone(DANIEL, 0.9, 1.1);
     expect(speakOptionsFor('en-GB', DANIEL, setting)).toEqual({
       language: 'en-GB',
       voice: DANIEL,
@@ -209,6 +272,18 @@ describe('speakOptionsFor: what the speaker is given', () => {
       language: 'en-GB',
       rate: 1,
       pitch: 1,
+    });
+  });
+
+  it("carries Auto's server voice when it is given, the phone voice kept for a fallback", () => {
+    const client = { binary: vi.fn() };
+    const server = { voice: 'af_heart', speed: 0.9, client };
+    expect(speakOptionsFor('en-GB', DANIEL, phone(DANIEL, 0.9, 1.1), server)).toEqual({
+      language: 'en-GB',
+      voice: DANIEL,
+      rate: 0.9,
+      pitch: 1.1,
+      server,
     });
   });
 });

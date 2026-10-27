@@ -11,7 +11,8 @@ import { voiceReducer, type VoiceEvent } from '../machine/voice-reducer';
 import { INITIAL_VOICE_STATE, type VoiceState } from '../machine/voice-state';
 import { newSession, type NoticeSession } from '../notice/ai-notice';
 import type { PermissionGate, PermissionVerdict } from '../permissions/permission-flow';
-import type { SpeakOptions, Speaker } from '../speech/speaker-core';
+import type { ReplyVoice } from '../speech/reply-voice';
+import type { SpeakOptions } from '../speech/speaker-core';
 import type { RecognitionPolicy } from './recognition-policy';
 import type { Recognizer } from './recognizer-core';
 import type { ReplyFeed } from './reply-feed';
@@ -34,13 +35,14 @@ export type QuickAskContext = {
   readonly thread: ThreadPort;
   readonly roleCanChat: boolean;
   readonly discovery: GateInput;
-  /** The phone's language and the voice picked for it (US-019d). */
+  /** The phone's language and the voice picked for it (US-019d); Auto's server voice when chosen. */
   readonly speech: SpeakOptions;
 };
 
 export type QuickAskDeps = {
   readonly recognizer: RecognizerPort;
-  readonly speaker: Pick<Speaker, 'speak' | 'stop'>;
+  /** The one voice out (reply-voice.ts): newTurn() at each send lets a turn try the server again. */
+  readonly speaker: Pick<ReplyVoice, 'speak' | 'stop' | 'newTurn'>;
   readonly permissions: Pick<PermissionGate, 'press'>;
   readonly context: () => QuickAskContext;
   readonly now: () => number;

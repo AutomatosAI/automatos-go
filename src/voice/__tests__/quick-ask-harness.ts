@@ -16,6 +16,7 @@ import { onDeviceOptions, type RecognitionPolicy } from '../quick-ask/recognitio
 import { createRecognizer, type Recognizer, type StartOutcome } from '../quick-ask/recognizer-core';
 import type { RecognizerVoiceEvent } from '../quick-ask/recognizer-events';
 import type { QuickAskMessage } from '../quick-ask/spoken-mode';
+import type { ReplyVoice } from '../speech/reply-voice';
 import { createSpeaker, type SpeakOptions, type Speaker } from '../speech/speaker-core';
 import { spyPort } from './recognizer-port';
 import { spySpeechPort } from './speech-port';
@@ -43,8 +44,8 @@ export type HarnessOptions = {
   readonly thread?: ThreadState;
   /** recognizer-core behind the spies (overModule): start, stop and abort reach it too. */
   readonly core?: Pick<Recognizer, 'start' | 'stop' | 'abort'>;
-  /** speaker-core behind the spies (twoScreens): speak and stop reach it too. */
-  readonly voiceOut?: Pick<Speaker, 'speak' | 'stop'>;
+  /** speaker-core (twoScreens) or the reply voice behind the spies: speak, stop and newTurn reach it. */
+  readonly voiceOut?: Pick<Speaker, 'speak' | 'stop'> & Partial<Pick<ReplyVoice, 'newTurn'>>;
   /** What the hook hands the engine to speak with; the phone's language alone when omitted. */
   readonly speech?: SpeakOptions;
 };
@@ -82,6 +83,8 @@ function spies(log: string[], options: HarnessOptions) {
       log.push('speaker.stop');
       voiceOut?.stop();
     }),
+    // Not logged: the order tests read speak and stop only.
+    newTurn: vi.fn(() => voiceOut?.newTurn?.()),
   };
   const permissions = {
     press: vi.fn((_purpose: string) => {

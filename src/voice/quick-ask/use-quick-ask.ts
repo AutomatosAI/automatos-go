@@ -17,6 +17,11 @@
 //   best; until that voice is known, the engine's default for the language. The saved rate and
 //   pitch go with it. The setting is a store every reader hears (use-voice-setting.ts), so a change
 //   re-renders this hook and the next reply speaks with it.
+//   Auto's server voice (27 Oct 2026): when the server lists tts and the person keeps Auto's voice,
+//   the speech also carries the server voice (serverSpeechFor: the saved server voice while the
+//   server's list offers it, else its default; the saved speed; the session's client), and the one
+//   voice out (voice-out.ts) speaks each sentence through the server, the phone's voice taking over
+//   the rest of a turn the server fails. Without tts the speech carries none: as before.
 //   Nothing asks a permission at mount: only press() does (KV5).
 //   Leaving the screen goes through the interruption policy (use-interruptions.ts, US-019h), and the
 //   screen stays on while the mic is open or a reply is under way (keep-awake.ts, KV12).
@@ -34,7 +39,9 @@ import { useInterruptions } from '../interruptions/use-interruptions';
 import { permissions } from '../permissions/permissions';
 import { useVoiceSetting } from '../settings/use-voice-setting';
 import { speakOptionsFor } from '../settings/voice-setting';
-import { speaker } from '../speech/speaker';
+import { serverSpeechFor } from '../server/server-voices';
+import { useServerVoices } from '../server/use-server-voices';
+import { voiceOut } from '../speech/voice-out';
 import { phoneLocale } from './locale';
 import {
   createQuickAsk,
@@ -74,7 +81,7 @@ function usePhoneVoice(language: string, saved: string | null): string | undefin
   const [voice, setVoice] = useState<string | undefined>(undefined);
   useEffect(() => {
     let current = true;
-    speaker.voiceFor(language, saved).then(
+    voiceOut.voiceFor(language, saved).then(
       (picked) => {
         if (current) setVoice(picked);
       },
@@ -89,15 +96,17 @@ function usePhoneVoice(language: string, saved: string | null): string | undefin
 
 /** What the engine reads at each event: this render's thread, role, discovery and speech. */
 function useEngineContext(thread: ThreadView): { readonly current: QuickAskContext } {
-  const { discovery, workspace } = useAppSession();
+  const { discovery, workspace, client } = useAppSession();
   const language = useMemo(() => phoneLocale(), []);
   const setting = useVoiceSetting();
   const voice = usePhoneVoice(language, setting.voice);
+  const voices = useServerVoices();
+  const server = serverSpeechFor({ discovery, setting, voices, client });
   const context: QuickAskContext = {
     thread,
     roleCanChat: roleCan(workspace.role, 'chat'),
     discovery,
-    speech: speakOptionsFor(language, voice, setting),
+    speech: speakOptionsFor(language, voice, setting, server),
   };
   const latest = useRef(context);
   useEffect(() => {
@@ -112,7 +121,7 @@ function useEngine(context: { readonly current: QuickAskContext }, scope: QuickA
     () =>
       createQuickAsk({
         recognizer,
-        speaker,
+        speaker: voiceOut,
         permissions,
         context: () => context.current,
         now: Date.now,
@@ -120,7 +129,7 @@ function useEngine(context: { readonly current: QuickAskContext }, scope: QuickA
       }),
     [context],
   );
-  const attach = useCallback(() => engine.attach({ recognizer, speaker }), [engine]);
+  const attach = useCallback(() => engine.attach({ recognizer, speaker: voiceOut }), [engine]);
   useEffect(() => (scope === 'mounted' ? attach() : undefined), [attach, scope]);
   useFocusEffect(
     useCallback(() => {

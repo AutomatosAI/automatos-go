@@ -172,7 +172,7 @@ describe("useQuickAsk's scope", () => {
 
   it("attaches through the engine's attach (the wiring listener-handover.test.ts drives)", () => {
     expect(code(quickAskHook)).toMatch(
-      /useCallback\(\(\) => engine\.attach\(\{ recognizer, speaker \}\), \[engine\]\)/,
+      /useCallback\(\(\) => engine\.attach\(\{ recognizer, speaker: voiceOut \}\), \[engine\]\)/,
     );
     expect(code(quickAskHook)).not.toMatch(/\.listen\(/);
   });
