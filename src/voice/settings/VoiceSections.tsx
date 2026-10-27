@@ -1,4 +1,5 @@
-// Settings → Voice's parts: with Auto's server voice, its voices first (each a button that says
+// Settings → Voice's parts: "I speak" first (the language rows, each a button that says whether it
+// is the chosen one, and a note under them when there is one); with Auto's server voice, its voices (each a button that says
 // whether it is the chosen one, with a check beside it) and "Use this phone's voice instead"; the
 // phone's voices (Automatic, then the phone's) and the help line under them; then Speed and Pitch
 // (src/ui's Slider, named, its value read out in words; Pitch gives way to a one-line reason with
@@ -12,9 +13,11 @@ import Check from 'lucide-react-native/icons/check';
 import { useTokens } from '../../styles/theme';
 import { Button, Card, Divider, ListRow, Slider, Text } from '../../ui';
 import { ICON_STROKE } from '../../ui/paint';
-import { VOICE_SETTINGS_COPY } from '../strings';
+import type { LanguageRow } from '../language/language-rows';
+import { LANGUAGE_COPY, VOICE_SETTINGS_COPY } from '../strings';
 import type { ServerChoice, ServerVoiceRow, SoundPart } from './server-view-model';
 import type { SoundKey, SoundSlider, VoiceRow } from './view-model';
+import type { SpeakChoice } from './voice-setting';
 
 const COPY = VOICE_SETTINGS_COPY;
 const MARK_SIZE = 18;
@@ -42,10 +45,11 @@ function Mark({ selected }: { readonly selected: boolean }) {
 
 type ChoiceRow = Pick<VoiceRow, 'key' | 'title' | 'summary' | 'selected'>;
 
-/** The rows of a list of voices, one chosen (its check), each a button. */
+/** The rows of a list of choices, one chosen (its check), each a button. */
 function Rows<R extends ChoiceRow>(props: {
   readonly rows: readonly R[];
   readonly onPress: (row: R) => void;
+  readonly hint?: string;
 }) {
   return (
     <Card>
@@ -57,12 +61,38 @@ function Rows<R extends ChoiceRow>(props: {
             summary={row.summary}
             selected={row.selected}
             trailing={<Mark selected={row.selected} />}
-            accessibilityHint={COPY.voiceHint}
+            accessibilityHint={props.hint ?? COPY.voiceHint}
             onPress={() => props.onPress(row)}
           />
         </View>
       ))}
     </Card>
+  );
+}
+
+/** A muted line under a section's rows; nothing without words. */
+function Note({ text }: { readonly text: string | null | undefined }) {
+  if (!text) return null;
+  return (
+    <Text level={NOTE_LEVEL} tone="muted">
+      {text}
+    </Text>
+  );
+}
+
+export type LanguageListProps = {
+  readonly rows: readonly LanguageRow[];
+  readonly note?: string | null;
+  readonly onChoose: (choice: SpeakChoice) => void;
+};
+
+/** "I speak": Automatic, English and the two Portuguese, one chosen. */
+export function LanguageList({ rows, note, onChoose }: LanguageListProps) {
+  return (
+    <Titled title={LANGUAGE_COPY.section}>
+      <Rows rows={rows} hint={LANGUAGE_COPY.rowHint} onPress={(row) => onChoose(row.key)} />
+      <Note text={note} />
+    </Titled>
   );
 }
 

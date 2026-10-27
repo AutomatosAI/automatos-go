@@ -13,12 +13,16 @@
 //   open (use-server-voices.ts) and listed first (server-view-model.ts); a tap on one saves it and
 //   plays the sample through the server, as quick-ask would speak (serverSpeechFor), the phone's
 //   voice saying it when the server cannot. Speaks through the one voice out (voice-out.ts).
+//   "I speak" (27 Oct 2026): the language rows first (language/language-rows.ts); a tap saves the
+//   choice (withSpeakChoice) and plays the sample.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 
 import { useAppSession } from '../../app-state/session';
 import { logger } from '../../lib/logger';
+import { languageRows, type LanguageRow } from '../language/language-rows';
+import { withSpeakChoice } from '../language/speak-language';
 import { SPEECH_PITCH_LIMITS, SPEECH_RATE_LIMITS } from '../config';
 import { phoneLocale } from '../quick-ask/locale';
 import type { RecognitionPlatform } from '../quick-ask/recognition-policy';
@@ -39,7 +43,12 @@ import {
   type SoundPart,
 } from './server-view-model';
 import { useVoiceSetting, voiceSetting } from './use-voice-setting';
-import { DEFAULT_VOICE_SETTING, settleValue, type VoiceSetting } from './voice-setting';
+import {
+  DEFAULT_VOICE_SETTING,
+  settleValue,
+  type SpeakChoice,
+  type VoiceSetting,
+} from './voice-setting';
 import { helpLine, voiceRows, type SoundKey, type VoiceRow } from './view-model';
 
 const PLATFORM: RecognitionPlatform = Platform.OS === 'android' ? 'android' : 'ios';
@@ -51,6 +60,9 @@ export type PhonePart = Readonly<{ title: string; rows: readonly VoiceRow[]; hel
 
 export type VoiceSettingsView = Readonly<{
   lede: string;
+  /** "I speak": Automatic, English, Português (Portugal), Português (Brasil). */
+  languages: readonly LanguageRow[];
+  chooseLanguage: (choice: SpeakChoice) => void;
   /** "Auto's voice" with the server's voices; null when the server lists no tts. */
   server: readonly ServerVoiceRow[] | null;
   chooseServer: (choice: ServerChoice) => void;
@@ -135,7 +147,8 @@ function without(moving: Moving, key: SoundKey): Moving {
 }
 
 export function useVoiceSettings(): VoiceSettingsView {
-  const language = useMemo(() => phoneLocale(), []);
+  const phone = useMemo(() => phoneLocale(), []);
+  const language = phone;
   const setting = useVoiceSetting();
   const choices = useVoiceChoices(language);
   const voices = useServerVoices(true);
@@ -151,6 +164,8 @@ export function useVoiceSettings(): VoiceSettingsView {
   const words = screenWords(voices);
   return {
     lede: words.lede,
+    languages: languageRows(setting, phone),
+    chooseLanguage: (choice) => save(withSpeakChoice(voiceSetting.get(), choice)),
     server: serverVoiceRows(voices, setting),
     chooseServer: (choice) => save(withServerChoice(voiceSetting.get(), choice)),
     phone: phonePart(voices, setting, choices, language),

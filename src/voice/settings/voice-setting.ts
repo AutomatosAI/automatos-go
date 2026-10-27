@@ -8,6 +8,12 @@
 //   source and serverVoice came with the server voice (27 Oct 2026) under the same version: a value
 // saved before them reads with their defaults (source 'server', the server's default voice) and
 // keeps its phone voice, speed and pitch; a bad value in either reads as its default alone.
+//   language, portuguese and voices came with "I speak" (27 Oct 2026), also under the same version
+// and kept only when they are not their defaults: absent, the language is Automatic (the phone's,
+// as before), the EN/PT switch goes to Portuguese (Portugal), and each Portuguese has its default
+// voice. The top-level source, serverVoice and voice stay the voice for English and for any language
+// other than Portuguese (language-voice.ts), so a value saved before reads exactly as it did. A bad
+// value in any of the three reads as its default alone.
 
 import { z } from 'zod';
 
@@ -18,6 +24,19 @@ import type { SpeakOptions } from '../speech/speaker-core';
 
 /** Whose voice Auto speaks in: the server's (when it offers one) or this phone's. */
 export type VoiceSource = 'server' | 'phone';
+
+/** Settings → Voice's "I speak": the phone's language (Automatic), English, or a Portuguese. */
+export type SpeakChoice = 'auto' | 'en' | 'pt-PT' | 'pt-BR';
+
+/** The two Portuguese the app speaks: Portugal's and Brazil's. */
+export type Portuguese = 'pt-PT' | 'pt-BR';
+
+/** One language's voice: Auto's server voice (an id, or the language's default) or this phone's. */
+export type LanguageVoice = {
+  readonly source: VoiceSource;
+  readonly serverVoice: string | null;
+  readonly voice: string | null;
+};
 
 export type VoiceSetting = {
   /** 'server': Auto's server voice whenever the server lists tts; 'phone': this phone's always. */
@@ -30,7 +49,21 @@ export type VoiceSetting = {
   readonly rate: number;
   /** Pitch, for the phone's voice only. */
   readonly pitch: number;
+  /** "I speak"; absent is 'auto' (the phone's language). */
+  readonly language?: SpeakChoice;
+  /** The Portuguese the EN/PT switch goes to; absent is 'pt-PT'. */
+  readonly portuguese?: Portuguese;
+  /** Each Portuguese's own voice; absent is that language's default (language-voice.ts). */
+  readonly voices?: Readonly<Partial<Record<Portuguese, LanguageVoice>>>;
 };
+
+export const SPEAK_CHOICES: readonly SpeakChoice[] = Object.freeze([
+  'auto',
+  'en',
+  'pt-PT',
+  'pt-BR',
+]);
+export const PORTUGUESE: readonly Portuguese[] = Object.freeze(['pt-PT', 'pt-BR']);
 
 /** The stored shape's version; a value written under any other version reads as the default. */
 export const VOICE_SETTING_VERSION = 1;
@@ -50,6 +83,12 @@ const PLACES = 100;
 
 const identifier = z.string().trim().min(1).max(IDENTIFIER_MAX);
 
+const LanguageVoiceSchema = z.object({
+  source: z.enum(['server', 'phone']),
+  serverVoice: identifier.nullable(),
+  voice: identifier.nullable(),
+});
+
 const StoredSchema = z.object({
   v: z.literal(VOICE_SETTING_VERSION),
   voice: identifier.nullable(),
@@ -58,6 +97,16 @@ const StoredSchema = z.object({
   // Added with the server voice: absent (an older value) or unreadable → the default.
   source: z.enum(['server', 'phone']).optional().catch(undefined),
   serverVoice: identifier.nullable().optional().catch(null),
+  // Added with "I speak": absent (an older value) or unreadable → the default.
+  language: z.enum(['auto', 'en', 'pt-PT', 'pt-BR']).optional().catch(undefined),
+  portuguese: z.enum(['pt-PT', 'pt-BR']).optional().catch(undefined),
+  voices: z
+    .object({
+      'pt-PT': LanguageVoiceSchema.optional().catch(undefined),
+      'pt-BR': LanguageVoiceSchema.optional().catch(undefined),
+    })
+    .optional()
+    .catch(undefined),
 });
 
 /** The nearest whole step inside the limits, to two places. */
@@ -71,23 +120,55 @@ function trimmed(value: string | null | undefined): string | null {
   return text ? text : null;
 }
 
+function settleVoice(voice: LanguageVoice): LanguageVoice {
+  return Object.freeze({
+    source: voice.source === 'phone' ? 'phone' : 'server',
+    serverVoice: trimmed(voice.serverVoice),
+    voice: trimmed(voice.voice),
+  });
+}
+
+type LanguageFields = Pick<VoiceSetting, 'language' | 'portuguese' | 'voices'>;
+
+/** "I speak"'s fields that are not their defaults (absent is the default: nothing is written). */
+function languageFields(setting: VoiceSetting): LanguageFields {
+  const { language, portuguese, voices = {} } = setting;
+  const kept = PORTUGUESE.flatMap((key) => {
+    const voice = voices[key];
+    return voice ? [[key, settleVoice(voice)] as const] : [];
+  });
+  return {
+    ...(language && language !== 'auto' ? { language } : {}),
+    ...(portuguese === 'pt-BR' ? { portuguese } : {}),
+    ...(kept.length > 0 ? { voices: Object.freeze(Object.fromEntries(kept)) } : {}),
+  };
+}
+
 /**
  * The setting with its speed and pitch inside their sliders' ranges; a blank phone voice is
- * Automatic, a blank server voice the server's default, anything but 'phone' the server's voice.
+ * Automatic, a blank server voice the server's default, anything but 'phone' the server's voice;
+ * "I speak"'s fields only where they are not their defaults.
  */
 export function settleSetting(setting: VoiceSetting): VoiceSetting {
   return Object.freeze({
-    source: setting.source === 'phone' ? 'phone' : 'server',
-    serverVoice: trimmed(setting.serverVoice),
-    voice: trimmed(setting.voice),
+    ...settleVoice(setting),
     rate: settleValue(setting.rate, SPEECH_RATE_LIMITS),
     pitch: settleValue(setting.pitch, SPEECH_PITCH_LIMITS),
+    ...languageFields(setting),
   });
 }
 
 export function serialiseVoiceSetting(setting: VoiceSetting): string {
-  const { source, serverVoice, voice, rate, pitch } = settleSetting(setting);
-  return JSON.stringify({ v: VOICE_SETTING_VERSION, voice, rate, pitch, source, serverVoice });
+  const { source, serverVoice, voice, rate, pitch, ...language } = settleSetting(setting);
+  return JSON.stringify({
+    v: VOICE_SETTING_VERSION,
+    voice,
+    rate,
+    pitch,
+    source,
+    serverVoice,
+    ...language,
+  });
 }
 
 function parseJson(raw: string): unknown {
@@ -103,13 +184,16 @@ export function parseVoiceSetting(raw: unknown): VoiceSetting {
   if (typeof raw !== 'string') return DEFAULT_VOICE_SETTING;
   const parsed = StoredSchema.safeParse(parseJson(raw));
   if (!parsed.success) return DEFAULT_VOICE_SETTING;
-  const { voice, rate, pitch, source, serverVoice } = parsed.data;
+  const { voice, rate, pitch, source, serverVoice, language, portuguese, voices } = parsed.data;
   return settleSetting({
     source: source ?? DEFAULT_VOICE_SETTING.source,
     serverVoice: serverVoice ?? null,
     voice,
     rate,
     pitch,
+    ...(language ? { language } : {}),
+    ...(portuguese ? { portuguese } : {}),
+    ...(voices ? { voices } : {}),
   });
 }
 
