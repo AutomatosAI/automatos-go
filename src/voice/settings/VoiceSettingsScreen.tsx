@@ -50,7 +50,7 @@ export function VoiceSettingsScreen() {
           onChoose={view.chooseLanguage}
         />
         {view.server === null ? null : (
-          <ServerVoiceList rows={view.server} onChoose={view.chooseServer} />
+          <ServerVoiceList rows={view.server} note={view.serverNote} onChoose={view.chooseServer} />
         )}
         {view.phone === null ? null : (
           <VoiceList

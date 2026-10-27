@@ -98,13 +98,16 @@ export function LanguageList({ rows, note, onChoose }: LanguageListProps) {
 
 export type ServerVoiceListProps = {
   readonly rows: readonly ServerVoiceRow[];
+  /** Above the rows: why the language's voice is what it is (Portuguese (Portugal)); or none. */
+  readonly note?: string | null;
   readonly onChoose: (choice: ServerChoice) => void;
 };
 
 /** "Auto's voice" with the server voice: the server's voices, then this phone's. */
-export function ServerVoiceList({ rows, onChoose }: ServerVoiceListProps) {
+export function ServerVoiceList({ rows, note, onChoose }: ServerVoiceListProps) {
   return (
     <Titled title={COPY.voiceSection}>
+      <Note text={note} />
       <Rows rows={rows} onPress={(row) => onChoose(row.choice)} />
     </Titled>
   );

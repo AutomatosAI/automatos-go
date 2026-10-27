@@ -1,5 +1,5 @@
-// Settings → Voice's wiring: the phone's voices for its language (the one quick-ask speaks in), the
-// saved setting (use-voice-setting.ts), and the sample line. Only wiring: the rows and words are
+// Settings → Voice's wiring: the phone's voices for the language quick-ask speaks in ("I speak"),
+// the saved setting (use-voice-setting.ts), and the sample line. Only wiring: the rows and words are
 // view-model.ts's, the sample's sequencing sample-player.ts's.
 //   The list is read afresh when the screen opens and each time the app comes back to the front
 //   (the person may have downloaded a voice in the phone's Settings, as the help line says). A list
@@ -15,17 +15,33 @@
 //   voice saying it when the server cannot. Speaks through the one voice out (voice-out.ts).
 //   "I speak" (27 Oct 2026): the language rows first (language/language-rows.ts), with iOS's note
 //   while the choice is not the iPhone's language; a tap saves the choice (withSpeakChoice) and
-//   plays the sample.
+//   plays the sample in it. The voice part below is the chosen language's (language-voice.ts):
+//   its server voices (Portuguese: only pt ones), its saved choice (as spokenLanguage resolves it),
+//   and a tap saves that language's choice alone (withLanguageVoice). Speed and pitch are shared;
+//   Reset to default resets the language's voice, speed and pitch, and keeps "I speak".
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 
 import { useAppSession } from '../../app-state/session';
 import { logger } from '../../lib/logger';
-import { languageNote, languageRows, type LanguageRow } from '../language/language-rows';
-import { withSpeakChoice } from '../language/speak-language';
 import { SPEECH_PITCH_LIMITS, SPEECH_RATE_LIMITS } from '../config';
-import { phoneLocale } from '../quick-ask/locale';
+import {
+  languageNote,
+  languageRows,
+  serverNote,
+  type LanguageRow,
+} from '../language/language-rows';
+import {
+  defaultsToServer,
+  hasServerDefault,
+  resetLanguage,
+  settingForLanguage,
+  spokenLanguage,
+  withLanguageVoice,
+} from '../language/language-voice';
+import { withSpeakChoice } from '../language/speak-language';
+import { usePhoneLocale } from '../language/use-speak-language';
 import type { RecognitionPlatform } from '../quick-ask/recognition-policy';
 import { serverSpeechFor, type ServerVoicesState } from '../server/server-voices';
 import { useServerVoices } from '../server/use-server-voices';
@@ -44,12 +60,7 @@ import {
   type SoundPart,
 } from './server-view-model';
 import { useVoiceSetting, voiceSetting } from './use-voice-setting';
-import {
-  DEFAULT_VOICE_SETTING,
-  settleValue,
-  type SpeakChoice,
-  type VoiceSetting,
-} from './voice-setting';
+import { settleValue, type SpeakChoice, type VoiceSetting } from './voice-setting';
 import { helpLine, voiceRows, type SoundKey, type VoiceRow } from './view-model';
 
 const PLATFORM: RecognitionPlatform = Platform.OS === 'android' ? 'android' : 'ios';
@@ -66,8 +77,10 @@ export type VoiceSettingsView = Readonly<{
   /** iOS, while the choice is not the iPhone's language: hold to talk works only in that one. */
   languageNote: string | null;
   chooseLanguage: (choice: SpeakChoice) => void;
-  /** "Auto's voice" with the server's voices; null when the server lists no tts. */
+  /** "Auto's voice" with the server's voices for the language; null when the server lists no tts. */
   server: readonly ServerVoiceRow[] | null;
+  /** Above them for Portuguese (Portugal): the server has no European Portuguese voice. */
+  serverNote: string | null;
   chooseServer: (choice: ServerChoice) => void;
   /** The phone's voices; null while Auto's server voice is chosen. */
   phone: PhonePart | null;
@@ -107,10 +120,10 @@ function useVoiceChoices(language: string): readonly VoiceChoice[] {
 }
 
 /**
- * The sample line in a setting's voice (the server's when it offers one and it is chosen); stopped,
- * and the speaker let go, when the screen goes.
+ * The sample line in a setting's voice, in its language (the server's voice when it offers one for
+ * it and it is chosen); stopped, and the speaker let go, when the screen goes.
  */
-function useSample(language: string, voices: ServerVoicesState): (setting: VoiceSetting) => void {
+function useSample(phone: string, all: ServerVoicesState): (saved: VoiceSetting) => void {
   const { discovery, client } = useAppSession();
   const player = useMemo(() => createSamplePlayer(voiceOut, VOICE_SETTINGS_COPY.sample), []);
   useEffect(() => {
@@ -121,11 +134,12 @@ function useSample(language: string, voices: ServerVoicesState): (setting: Voice
     };
   }, [player]);
   return useCallback(
-    (setting: VoiceSetting) => {
+    (saved: VoiceSetting) => {
+      const { language, voices, setting } = spokenLanguage(saved, phone, all);
       const server = serverSpeechFor({ discovery, setting, voices, client });
       void player.play(language, setting, server);
     },
-    [player, language, discovery, voices, client],
+    [player, phone, all, discovery, client],
   );
 }
 
@@ -149,14 +163,9 @@ function without(moving: Moving, key: SoundKey): Moving {
   ) as Moving;
 }
 
-export function useVoiceSettings(): VoiceSettingsView {
-  const phone = useMemo(() => phoneLocale(), []);
-  const language = phone;
-  const setting = useVoiceSetting();
-  const choices = useVoiceChoices(language);
-  const voices = useServerVoices(true);
-  const play = useSample(language, voices);
-  const [moving, setMoving] = useState<Moving>({});
+/** Saves a setting and plays the sample with it; saves a choice for `language`'s voice alone. */
+function useSave(phone: string, all: ServerVoicesState, language: string) {
+  const play = useSample(phone, all);
   const save = useCallback(
     (next: VoiceSetting) => {
       voiceSetting.set(next);
@@ -164,24 +173,40 @@ export function useVoiceSettings(): VoiceSettingsView {
     },
     [play],
   );
+  /** The language's saved choice (not as spoken: a default the list resolves is never written). */
+  const mine = (): VoiceSetting => settingForLanguage(voiceSetting.get(), language);
+  const keep = (chosen: VoiceSetting): void =>
+    save(withLanguageVoice(voiceSetting.get(), language, chosen));
+  return { save, mine, keep };
+}
+
+export function useVoiceSettings(): VoiceSettingsView {
+  const phone = usePhoneLocale();
+  const saved = useVoiceSetting();
+  const all = useServerVoices(true);
+  const { language, voices, setting } = spokenLanguage(saved, phone, all);
+  const choices = useVoiceChoices(language);
+  const { save, mine, keep } = useSave(phone, all, language);
+  const [moving, setMoving] = useState<Moving>({});
   const words = screenWords(voices);
   return {
     lede: words.lede,
-    languages: languageRows(setting, phone),
-    languageNote: languageNote(PLATFORM, setting, phone),
+    languages: languageRows(saved, phone),
+    languageNote: languageNote(PLATFORM, saved, phone),
     chooseLanguage: (choice) => save(withSpeakChoice(voiceSetting.get(), choice)),
-    server: serverVoiceRows(voices, setting),
-    chooseServer: (choice) => save(withServerChoice(voiceSetting.get(), choice)),
+    server: serverVoiceRows(voices, setting, hasServerDefault(language)),
+    serverNote: serverNote(language, voices.kind !== 'off'),
+    chooseServer: (choice) => keep(withServerChoice(mine(), choice)),
     phone: phonePart(voices, setting, choices, language),
-    choose: (voice) => save({ ...voiceSetting.get(), voice }),
+    choose: (voice) => keep({ ...mine(), voice }),
     sound: soundPart(voices, { ...setting, ...moving }),
-    resetHint: words.resetHint,
+    resetHint: defaultsToServer(language) ? words.resetHint : VOICE_SETTINGS_COPY.resetHint,
     slide: (key, value) =>
       setMoving((now) => Object.freeze({ ...now, [key]: settleValue(value, LIMITS[key]) })),
     release: (key, value) => {
       setMoving((now) => without(now, key));
       save({ ...voiceSetting.get(), [key]: value });
     },
-    reset: () => save(DEFAULT_VOICE_SETTING),
+    reset: () => save(resetLanguage(voiceSetting.get(), language)),
   };
 }

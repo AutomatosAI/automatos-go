@@ -18,6 +18,8 @@
 //   pitch go with it. The setting is a store every reader hears (use-voice-setting.ts), so a change
 //   re-renders this hook and the next reply speaks with it. A change of language tells the engine
 //   (languageChanged): a refusal about the old language goes, and the next press checks the new.
+//   Each language has its own voice choice (language/language-voice.ts): the phone voice is the
+//   language's saved one, and the device fallback speaks in that language with it.
 //   Auto's server voice (27 Oct 2026): when the server lists tts and the person keeps Auto's voice,
 //   the speech also carries the server voice (serverSpeechFor: the saved server voice while the
 //   server's list offers it, else its default; the saved speed; the session's client), and the one
@@ -42,7 +44,7 @@ import { useVoiceSetting } from '../settings/use-voice-setting';
 import { speakOptionsFor } from '../settings/voice-setting';
 import { serverSpeechFor } from '../server/server-voices';
 import { useServerVoices } from '../server/use-server-voices';
-import { listeningLocale } from '../language/speak-language';
+import { spokenLanguage, type SpokenLanguage } from '../language/language-voice';
 import { usePhoneLocale } from '../language/use-speak-language';
 import { voiceOut } from '../speech/voice-out';
 import {
@@ -96,6 +98,18 @@ function usePhoneVoice(language: string, saved: string | null): string | undefin
   return voice;
 }
 
+/**
+ * "I speak"'s locale, the server's voices for it and its voice choice as spoken (spokenLanguage):
+ * English as before, Portuguese (Brazil) in a pt-BR server voice, Portuguese (Portugal) in the
+ * phone's pt-PT voice unless a pt-BR server voice was chosen.
+ */
+function useSpokenLanguage(): SpokenLanguage {
+  const phone = usePhoneLocale();
+  const setting = useVoiceSetting();
+  const voices = useServerVoices();
+  return spokenLanguage(setting, phone, voices);
+}
+
 type EngineContext = {
   readonly latest: { readonly current: QuickAskContext };
   /** The language it listens and speaks in. */
@@ -105,11 +119,8 @@ type EngineContext = {
 /** What the engine reads at each event: this render's thread, role, discovery and speech. */
 function useEngineContext(thread: ThreadView): EngineContext {
   const { discovery, workspace, client } = useAppSession();
-  const phone = usePhoneLocale();
-  const setting = useVoiceSetting();
-  const language = listeningLocale(setting, phone);
+  const { language, voices, setting } = useSpokenLanguage();
   const voice = usePhoneVoice(language, setting.voice);
-  const voices = useServerVoices();
   const server = serverSpeechFor({ discovery, setting, voices, client });
   const context: QuickAskContext = {
     thread,

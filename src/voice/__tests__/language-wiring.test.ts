@@ -32,7 +32,7 @@ describe('Settings → Voice: "I speak"', () => {
       /hint=\{LANGUAGE_COPY\.rowHint\} onPress=\{\(row\) => onChoose\(row\.key\)\}/,
     );
     expect(sections).toMatch(/selected=\{row\.selected\}/);
-    expect(hook).toMatch(/languages: languageRows\(setting, phone\)/);
+    expect(hook).toMatch(/languages: languageRows\(saved, phone\)/);
     expect(hook).toMatch(
       /chooseLanguage: \(choice\) => save\(withSpeakChoice\(voiceSetting\.get\(\), choice\)\)/,
     );
@@ -45,7 +45,8 @@ describe('hold to talk in the chosen language (source)', () => {
   const hold = code(read('voice/quick-ask/quick-ask-hold.ts'));
 
   it('listens and speaks in "I speak"’s locale, and tells the engine when it changes', () => {
-    expect(quickAsk).toMatch(/const language = listeningLocale\(setting, phone\);/);
+    expect(quickAsk).toMatch(/return spokenLanguage\(setting, phone, voices\);/);
+    expect(quickAsk).toMatch(/const \{ language, voices, setting \} = useSpokenLanguage\(\);/);
     expect(quickAsk).toMatch(
       /useEffect\(\(\) => engine\.languageChanged\(\), \[engine, language\]\);/,
     );
@@ -66,5 +67,33 @@ describe('hold to talk in the chosen language (source)', () => {
       expect(hook, file).toMatch(/const \{ listening, phone \} = useListening\(\);/);
       expect(hook, file).toMatch(/locale: listening,\s*phoneLocale: phone,/);
     }
+  });
+});
+
+describe('Settings → Voice: the chosen language’s voice (source)', () => {
+  const hook = code(read('voice/settings/use-voice-settings.ts'));
+  const screen = code(read('voice/settings/VoiceSettingsScreen.tsx'));
+
+  it('lists the language’s voices, and saves a tap for that language alone', () => {
+    expect(hook).toMatch(
+      /const \{ language, voices, setting \} = spokenLanguage\(saved, phone, all\);/,
+    );
+    expect(hook).toMatch(
+      /server: serverVoiceRows\(voices, setting, hasServerDefault\(language\)\)/,
+    );
+    expect(hook).toMatch(
+      /chooseServer: \(choice\) => keep\(withServerChoice\(mine\(\), choice\)\)/,
+    );
+    expect(hook).toMatch(/choose: \(voice\) => keep\(\{ \.\.\.mine\(\), voice \}\)/);
+    expect(hook).toMatch(/save\(withLanguageVoice\(voiceSetting\.get\(\), language, chosen\)\)/);
+    expect(hook).toMatch(/reset: \(\) => save\(resetLanguage\(voiceSetting\.get\(\), language\)\)/);
+    expect(screen).toMatch(/<ServerVoiceList rows=\{view\.server\} note=\{view\.serverNote\}/);
+  });
+
+  it('plays the sample in the saved language, as quick-ask would speak it', () => {
+    expect(hook).toMatch(
+      /const \{ language, voices, setting \} = spokenLanguage\(saved, phone, all\);\s*const server = serverSpeechFor/,
+    );
+    expect(hook).toMatch(/void player\.play\(language, setting, server\);/);
   });
 });
