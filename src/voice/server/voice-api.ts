@@ -5,9 +5,10 @@
 //   dropped, unknown fields ignored), in the server's order (English first).
 //   POST /api/voice/speech answers one MP3; anything else is a SpeechFailure of one kind: the
 //   server's refusal codes (tts_off, tts_unavailable, tts_bad_request, tts_too_long, tts_busy), the
-//   taxonomy's kind for any other failure, or invalid_audio for a 200 that is not audio or is empty
-//   or too large. The caller's abort stays an AbortError. A failure carries its kind only: never
-//   the sentence, the bearer or the server's words, so a log of it says nothing more.
+//   taxonomy's kind for any other failure, or invalid_audio for a 200 that is not audio, is empty
+//   or is larger than SERVER_VOICE_MAX_BYTES (the client reads no further than that cap). The
+//   caller's abort stays an AbortError. A failure carries its kind only: never the sentence, the
+//   bearer or the server's words, so a log of it says nothing more.
 
 import { z } from 'zod';
 
@@ -108,7 +109,7 @@ export function speechFailureKind(error: unknown): SpeechFailureKind {
   if (!isApiError(error)) return 'network';
   if (error.code && REFUSALS.has(error.code)) return error.code as SpeechFailureKind;
   if (error.kind === 'network' || error.kind === 'auth') return error.kind;
-  return 'refused';
+  return error.kind === 'invalid_response' ? 'invalid_audio' : 'refused';
 }
 
 const AUDIO = /^audio\//i;
@@ -135,6 +136,7 @@ export async function fetchSpeech(
       body: ask,
       signal,
       timeoutMs: SERVER_SPEECH_TIMEOUT_MS,
+      maxBytes: SERVER_VOICE_MAX_BYTES,
     });
   } catch (error) {
     if (isAbortError(error)) throw error;

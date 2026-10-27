@@ -25,7 +25,8 @@ export type StreamingResponse = TransportResponse & {
 
 /** A response whose body is read whole as bytes (an MP3), with its headers. */
 export type BinaryResponse = TransportResponse & {
-  bytes(): Promise<Uint8Array>;
+  /** The body, refused with body.ts's BodyTooLargeError past `maxBytes` (read no further). */
+  bytes(maxBytes: number): Promise<Uint8Array>;
   /** A response header by name (any case); null when the response has none. */
   header(name: string): string | null;
 };

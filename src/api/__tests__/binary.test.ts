@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createLaunchClient } from '../../app-state/launch-client';
 import { createApiClient, type ApiClientOptions } from '../client';
+import { BINARY_MAX_BYTES } from '../config';
 import { ApiError, isAbortError } from '../errors';
 import type { Route } from '../routes';
 import {
@@ -81,6 +82,24 @@ describe('binary', () => {
     controller.abort();
     const error = await pending.catch((caught: unknown) => caught);
     expect(isAbortError(error)).toBe(true);
+  });
+
+  it('refuses a body over its cap as invalid_response, reading no further', async () => {
+    const big = new Uint8Array(BINARY_MAX_BYTES + 1);
+    const over = await clientWith(fakeTransport(() => bytesReply(200, big)))
+      .binary(SPEECH)
+      .catch((caught: unknown) => caught);
+    expect(over).toMatchObject({ kind: 'invalid_response' });
+    const declared = await clientWith(
+      fakeTransport(() => bytesReply(200, MP3, { 'Content-Length': '999' })),
+    )
+      .binary(SPEECH, { maxBytes: 10 })
+      .catch((caught: unknown) => caught);
+    expect(declared).toMatchObject({ kind: 'invalid_response' });
+    const fits = await clientWith(fakeTransport(() => bytesReply(200, MP3))).binary(SPEECH, {
+      maxBytes: MP3.byteLength,
+    });
+    expect([...fits.bytes]).toEqual([...MP3]);
   });
 
   it('reads a body without bytes of its own as its text, for the fakes', async () => {

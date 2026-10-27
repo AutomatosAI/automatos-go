@@ -9,5 +9,8 @@ export const REQUEST_TIMEOUT_MS = 30_000;
  */
 export const STREAM_CONNECT_TIMEOUT_MS = 30_000;
 
+/** A binary body (binary()) larger than this is refused unless the caller sets its own cap. */
+export const BINARY_MAX_BYTES = 10 * 1024 * 1024;
+
 /** A server message (a 409's detail.message) longer than this is cut before anyone sees it. */
 export const SERVER_MESSAGE_MAX_CHARS = 500;

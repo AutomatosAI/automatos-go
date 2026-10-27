@@ -17,13 +17,15 @@ import {
   type TokenGetter,
   type WorkspaceIdGetter,
 } from './auth-headers';
-import { REQUEST_TIMEOUT_MS, STREAM_CONNECT_TIMEOUT_MS } from './config';
+import { BodyTooLargeError } from './body';
+import { BINARY_MAX_BYTES, REQUEST_TIMEOUT_MS, STREAM_CONNECT_TIMEOUT_MS } from './config';
 import { startDeadline, type Deadline } from './deadline';
 import { abortError, ApiError, errorFromResponse, isAbortError, isApiError } from './errors';
 import { parseJson } from './json';
 import type { Route } from './routes';
 import type { Server } from './server';
 import type {
+  BinaryResponse,
   StreamingResponse,
   Transport,
   TransportRequest,
@@ -64,6 +66,8 @@ export type ParsedCallOptions<S extends z.ZodTypeAny> = CallOptions & { readonly
 export type BinaryCallOptions = CallOptions & {
   /** The whole call, status and body, gives up after this long; the client's own when not given. */
   readonly timeoutMs?: number;
+  /** A body larger than this is an invalid_response, read no further (BINARY_MAX_BYTES if not given). */
+  readonly maxBytes?: number;
 };
 
 /** A body that is not JSON, read whole, and the response's headers. */
@@ -196,6 +200,17 @@ async function send(ctx: Context, route: Route, call: AnyCallOptions): Promise<u
   }
 }
 
+/** The body under its cap; past it, an invalid_response (the server sent more than it may). */
+async function capped(response: BinaryResponse, maxBytes: number): Promise<Uint8Array> {
+  try {
+    return await response.bytes(maxBytes);
+  } catch (error) {
+    if (error instanceof BodyTooLargeError)
+      throw new ApiError('invalid_response', { cause: error });
+    throw error;
+  }
+}
+
 async function fetchBinary(
   ctx: Context,
   route: Route,
@@ -207,7 +222,7 @@ async function fetchBinary(
   try {
     const sent = await ctx.transport.binary({ ...request, signal: deadline.signal });
     const response = await checked(ctx, sent, token);
-    const bytes = await response.bytes();
+    const bytes = await capped(response, call.maxBytes ?? BINARY_MAX_BYTES);
     return Object.freeze({ bytes, header: (name: string) => response.header(name) });
   } catch (error) {
     throw failure(error, deadline, call, timeoutMs);

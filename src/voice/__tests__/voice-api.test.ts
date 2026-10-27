@@ -159,6 +159,14 @@ describe('fetchSpeech', () => {
           'Content-Type': 'audio/mpeg',
         }),
     ],
+    [
+      'declared too large',
+      () =>
+        bytesReply(200, MP3, {
+          'Content-Type': 'audio/mpeg',
+          'Content-Length': String(SERVER_VOICE_MAX_BYTES + 1),
+        }),
+    ],
   ])('a 200 that is %s is invalid_audio', async (_name, answer) => {
     const { client } = clientFor(answer);
     const error = await failureOf(fetchSpeech(client, ASK, new AbortController().signal));

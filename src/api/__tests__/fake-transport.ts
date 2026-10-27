@@ -1,6 +1,7 @@
 // A fake Transport for the client's tests: records every request and answers from a responder, so
 // nothing touches the network or imports expo/fetch.
 
+import { readBytes } from '../body';
 import type { Server } from '../server';
 import type {
   BinaryResponse,
@@ -27,7 +28,10 @@ function asBinary(response: FakeResponse): BinaryResponse {
   return {
     status: response.status,
     text: response.text,
-    bytes: response.bytes ?? (async () => new TextEncoder().encode(await response.text())),
+    bytes:
+      response.bytes ??
+      (async (maxBytes) =>
+        readBytes(streamOf(new TextEncoder().encode(await response.text())), maxBytes)),
     header: response.header ?? (() => null),
   };
 }
@@ -46,6 +50,16 @@ export function fakeTransport(responder: Responder): FakeTransport {
   };
 }
 
+/** The bytes as a body that arrives in one read, as expo/fetch's response.body. */
+export function streamOf(bytes: Uint8Array): ReadableStream<Uint8Array> {
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      if (bytes.byteLength > 0) controller.enqueue(bytes);
+      controller.close();
+    },
+  });
+}
+
 /** A body of bytes with headers (Auto's server voice: an MP3 and its X-Voice-Id). */
 export function bytesReply(
   status: number,
@@ -61,7 +75,7 @@ export function bytesReply(
     chunks: async function* () {
       yield new TextDecoder().decode(bytes);
     },
-    bytes: async () => bytes,
+    bytes: (maxBytes) => readBytes(streamOf(bytes), maxBytes, byName.get('content-length') ?? null),
     header: (name) => byName.get(name.toLowerCase()) ?? null,
   };
 }
