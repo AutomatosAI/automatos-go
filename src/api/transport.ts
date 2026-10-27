@@ -1,19 +1,29 @@
 // The real transport: expo/fetch, the fetch with a streaming response body on React Native (the
 // built-in one has none: digests/chat-api.md, MOBILE GAPS). This is the ONLY file that imports
-// expo/fetch (D-ONE-CLIENT); tests inject a fake Transport and never import this module.
+// expo/fetch (D-ONE-CLIENT); tests inject a fake Transport and never import this module. binary
+// reads a whole body as bytes (arrayBuffer) and keeps the headers: Auto's server voice, one MP3.
 
 import { fetch as expoFetch } from 'expo/fetch';
 
 import { decodeChunks } from './body';
-import type { StreamingResponse, Transport, TransportRequest } from './transport-types';
+import type {
+  BinaryResponse,
+  StreamingResponse,
+  Transport,
+  TransportRequest,
+} from './transport-types';
 
-async function send(request: TransportRequest): Promise<StreamingResponse> {
-  const response = await expoFetch(request.url, {
+function open(request: TransportRequest) {
+  return expoFetch(request.url, {
     method: request.method,
     headers: request.headers,
     body: request.body,
     signal: request.signal,
   });
+}
+
+async function send(request: TransportRequest): Promise<StreamingResponse> {
+  const response = await open(request);
   return {
     status: response.status,
     text: () => response.text(),
@@ -21,4 +31,19 @@ async function send(request: TransportRequest): Promise<StreamingResponse> {
   };
 }
 
-export const expoTransport: Transport = Object.freeze({ request: send, stream: send });
+/** The body as bytes (Auto's server voice: one MP3), with the response's headers. */
+async function sendBinary(request: TransportRequest): Promise<BinaryResponse> {
+  const response = await open(request);
+  return {
+    status: response.status,
+    text: () => response.text(),
+    bytes: async () => new Uint8Array(await response.arrayBuffer()),
+    header: (name) => response.headers.get(name),
+  };
+}
+
+export const expoTransport: Transport = Object.freeze({
+  request: send,
+  stream: send,
+  binary: sendBinary,
+});

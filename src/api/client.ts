@@ -2,8 +2,10 @@
 // route's path parameters, sends the bearer and X-Workspace-ID (auth-headers.ts), JSON-encodes plain
 // bodies and passes FormData through untouched (multipart, POST /api/attachments), maps every
 // failure to the taxonomy (errors.ts) and parses every JSON response with the caller's zod schema:
-// without a schema the body is discarded, so no unparsed data ever leaves the client. The transport
-// is injected; the real one (transport.ts, expo/fetch) is wired by the app shell, never by tests.
+// without a schema the body is discarded, so no unparsed data ever leaves the client. binary() is
+// the one exception, for a body that is not JSON (Auto's server voice: an MP3): it hands back the
+// bytes and the response's headers, for the caller to check. The transport is injected; the real
+// one (transport.ts, expo/fetch) is wired by the app shell, never by tests.
 
 import type { z } from 'zod';
 
@@ -59,6 +61,18 @@ export type CallOptions = {
 
 export type ParsedCallOptions<S extends z.ZodTypeAny> = CallOptions & { readonly schema: S };
 
+export type BinaryCallOptions = CallOptions & {
+  /** The whole call, status and body, gives up after this long; the client's own when not given. */
+  readonly timeoutMs?: number;
+};
+
+/** A body that is not JSON, read whole, and the response's headers. */
+export type BinaryBody = {
+  readonly bytes: Uint8Array;
+  /** A response header by name (any case); null when the response has none. */
+  readonly header: (name: string) => string | null;
+};
+
 export interface ApiClient {
   readonly server: Server;
   /** A JSON call: the response is parsed with `schema` (an invalid_response when it does not fit). */
@@ -70,6 +84,8 @@ export interface ApiClient {
   request(route: Route, options?: CallOptions): Promise<void>;
   /** Opens a streaming body (stream.ts, sse.ts read it); a non-OK status throws first. */
   stream(route: Route, options?: CallOptions): Promise<StreamingResponse>;
+  /** A body read whole as bytes, with its headers; a non-OK status throws first. */
+  binary(route: Route, options?: BinaryCallOptions): Promise<BinaryBody>;
   /** The bearer and workspace headers, for native loads outside the client (auth-headers.ts). */
   authHeaders(): Promise<AuthHeaders>;
 }
@@ -180,6 +196,26 @@ async function send(ctx: Context, route: Route, call: AnyCallOptions): Promise<u
   }
 }
 
+async function fetchBinary(
+  ctx: Context,
+  route: Route,
+  call: BinaryCallOptions,
+): Promise<BinaryBody> {
+  const { request, token } = await prepare(ctx, route, call);
+  const timeoutMs = call.timeoutMs ?? ctx.timeoutMs;
+  const deadline = startDeadline(timeoutMs, call.signal);
+  try {
+    const sent = await ctx.transport.binary({ ...request, signal: deadline.signal });
+    const response = await checked(ctx, sent, token);
+    const bytes = await response.bytes();
+    return Object.freeze({ bytes, header: (name: string) => response.header(name) });
+  } catch (error) {
+    throw failure(error, deadline, call, timeoutMs);
+  } finally {
+    deadline.dispose();
+  }
+}
+
 async function* chunksThen(response: StreamingResponse, done: () => void): AsyncGenerator<string> {
   try {
     yield* response.chunks();
@@ -232,6 +268,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     request: ((route: Route, call: AnyCallOptions = {}) =>
       send(ctx, route, call)) as ApiClient['request'],
     stream: (route: Route, call: CallOptions = {}) => open(ctx, route, call),
+    binary: (route: Route, call: BinaryCallOptions = {}) => fetchBinary(ctx, route, call),
     authHeaders: createAuthHeaders(ctx.getToken, ctx.getWorkspaceId),
   });
 }

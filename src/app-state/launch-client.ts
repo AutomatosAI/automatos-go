@@ -8,7 +8,12 @@
 // shows it, so it can never loop. use-launch.ts builds it over the real transport; tests build it
 // over a fake one.
 
-import { createApiClient, type ApiClient, type CallOptions } from '../api/client';
+import {
+  createApiClient,
+  type ApiClient,
+  type BinaryCallOptions,
+  type CallOptions,
+} from '../api/client';
 import { routes, type Route } from '../api/routes';
 import type { Server } from '../api/server';
 import type { Transport } from '../api/transport-types';
@@ -45,6 +50,8 @@ function reportingRefusals(client: ApiClient, refusals: Pick<Refusals, 'report'>
     request: ((route: Route, call?: CallOptions) =>
       reported(route, () => client.request(route, call))) as ApiClient['request'],
     stream: (route: Route, call?: CallOptions) => reported(route, () => client.stream(route, call)),
+    binary: (route: Route, call?: BinaryCallOptions) =>
+      reported(route, () => client.binary(route, call)),
     authHeaders: client.authHeaders,
   });
 }

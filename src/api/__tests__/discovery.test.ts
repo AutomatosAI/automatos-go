@@ -112,8 +112,16 @@ describe('DiscoverySchema', () => {
     ).toBe(false);
   });
 
-  it('knows exactly the six capabilities of PRD-266 §4.1', () => {
-    expect([...CAPABILITIES]).toEqual(SAAS_DOCUMENT.capabilities);
+  it('knows exactly the six capabilities of PRD-266 §4.1, then tts (the server voice)', () => {
+    expect([...CAPABILITIES]).toEqual([...SAAS_DOCUMENT.capabilities, 'tts']);
+  });
+
+  it('keeps tts when a server lists it', () => {
+    const discovery = DiscoverySchema.parse({
+      ...SAAS_DOCUMENT,
+      capabilities: [...SAAS_DOCUMENT.capabilities, 'tts'],
+    });
+    expect(discovery.capabilities).toContain('tts');
   });
 });
 

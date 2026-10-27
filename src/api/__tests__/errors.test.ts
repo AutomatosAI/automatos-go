@@ -55,6 +55,20 @@ describe('detailOf', () => {
     ).toEqual({ code: 'waitlisted', serverMessage: 'You are on the list.' });
   });
 
+  it("reads a code beside the detail (the server voice's refusals); the detail's own code wins", () => {
+    expect(detailOf(JSON.stringify({ code: 'tts_busy', detail: 'Busy, try again.' }))).toEqual({
+      code: 'tts_busy',
+      serverMessage: 'Busy, try again.',
+    });
+    expect(detailOf(JSON.stringify({ code: 'tts_off' }))).toEqual({ code: 'tts_off' });
+    expect(detailOf(JSON.stringify({ code: 'outer', detail: { code: 'inner' } }))).toEqual({
+      code: 'inner',
+    });
+    expect(detailOf(JSON.stringify({ code: 7, detail: 'Words.' }))).toEqual({
+      serverMessage: 'Words.',
+    });
+  });
+
   it('carries nothing for a 422 list detail, a non-JSON body or an empty body', () => {
     expect(
       detailOf(JSON.stringify({ detail: [{ loc: ['body'], msg: 'field required' }] })),
