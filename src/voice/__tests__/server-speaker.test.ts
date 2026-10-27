@@ -117,6 +117,7 @@ describe('the queue', () => {
     const h = speakerOver();
     h.speaker.speak('One.', SERVER_SPEECH);
     h.speaker.speak('Two.', SERVER_SPEECH);
+    await settle();
     expect(h.prepare).toHaveBeenCalledTimes(1);
     await answer(h, 0);
     h.playerOf(0).handlers.onEnded();
@@ -124,7 +125,9 @@ describe('the queue', () => {
     h.playerOf(1).handlers.onEnded();
     await settle();
     h.speaker.speak('Next run.', SERVER_SPEECH);
+    await settle();
     expect(h.prepare).toHaveBeenCalledTimes(2);
+    expect(h.session).toEqual(['prepare', 'release', 'prepare']);
   });
 
   it('asks in pieces of at most 500 characters, split at a space', async () => {

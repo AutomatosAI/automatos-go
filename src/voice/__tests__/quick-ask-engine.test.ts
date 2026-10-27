@@ -295,7 +295,14 @@ describe('barge-in and STOP', () => {
   it('a press while Auto speaks stops the speech, cancels the streaming turn, then listens', async () => {
     const h = await speakingWhileStreaming();
     await h.quickAsk.press();
-    expect(h.log).toEqual(['permissions.press', 'speaker.stop', 'thread.stop', 'recognizer.start']);
+    // The speech stops by handing the audio session over to the recognizer (no release under it).
+    expect(h.log).toEqual([
+      'permissions.press',
+      'speaker.handOver',
+      'thread.stop',
+      'recognizer.start',
+    ]);
+    expect(h.speaker.stop).not.toHaveBeenCalled();
     expect(h.voice()).toMatchObject({ phase: 'listening', bargedIn: true });
   });
 
@@ -306,7 +313,7 @@ describe('barge-in and STOP', () => {
     h.quickAsk.onSpeaker({ type: 'speak_start' });
     h.log.length = 0;
     await h.quickAsk.press();
-    expect(h.log).toEqual(['permissions.press', 'speaker.stop', 'recognizer.start']);
+    expect(h.log).toEqual(['permissions.press', 'speaker.handOver', 'recognizer.start']);
   });
 
   it('the cancelled turn is no longer spoken', async () => {

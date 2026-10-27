@@ -27,6 +27,7 @@ const SERVER: SpeakOptions = Object.freeze({ ...PHONE, server: SERVER_SPEECH });
 function stubServer() {
   const spoken: { text: string; server: ServerSpeech }[] = [];
   const stop = vi.fn();
+  const handOver = vi.fn();
   let emit: (event: ServerSpeakerEvent) => void = () => undefined;
   const make = (handler: (event: ServerSpeakerEvent) => void) => {
     emit = handler;
@@ -35,10 +36,11 @@ function stubServer() {
         spoken.push({ text, server });
       },
       stop,
+      handOver,
       busy: () => spoken.length > 0,
     };
   };
-  return { make, spoken, stop, emit: (event: ServerSpeakerEvent) => emit(event) };
+  return { make, spoken, stop, handOver, emit: (event: ServerSpeakerEvent) => emit(event) };
 }
 
 function voiceOver() {
@@ -185,6 +187,19 @@ describe('stop', () => {
     expect(h.server.stop).toHaveBeenCalledTimes(1);
     expect(h.speech.port.stop).toHaveBeenCalledTimes(1);
     expect(h.events.map((event) => event.type)).toEqual(['stopped']);
+  });
+
+  it('handOver (a barge-in) hands the server voice over instead of stopping it, and says stopped', () => {
+    const h = voiceOver();
+    h.voice.speak('One.', SERVER);
+    h.server.emit({ type: 'failed', kind: 'tts_busy', rest: ['One.'] });
+    h.voice.handOver();
+    expect(h.server.handOver).toHaveBeenCalledTimes(1);
+    expect(h.server.stop).not.toHaveBeenCalled();
+    expect(h.speech.port.stop).toHaveBeenCalledTimes(1);
+    expect(h.events.map((event) => event.type)).toEqual(['stopped']);
+    h.voice.speak('Next.', SERVER);
+    expect(h.server.spoken.map(({ text }) => text)).toEqual(['One.', 'Next.']);
   });
 
   it('says nothing when idle, and a stopped phone run says stopped once', () => {

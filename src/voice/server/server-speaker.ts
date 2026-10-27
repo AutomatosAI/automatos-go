@@ -14,9 +14,14 @@
 //   phone's voice (reply-voice.ts), and the run is over. Its log names the kind, never the text.
 //   stop() ends the run at once: the player stopped and released, every request aborted, every
 //   file deleted. A new generation, so a late answer, callback or timer of the old run does
-//   nothing. The audio session is set for playback once per run, before its first file plays; a
-//   session that is not set within SERVER_PLAY_START_MS is a play error like a player that does not
-//   start. A file that ends before its player said it was playing still says speak_start first.
+//   nothing. A file that ends before its player said it was playing still says speak_start first.
+//   The audio session: set for playback (ducking other audio) once per run, before its first file
+//   plays, and never touched between its sentences; a session that is not set within
+//   SERVER_PLAY_START_MS is a play error like a player that does not start. Released (other audio
+//   back to full volume) when the run ends: its last sentence played, a failure handed to the
+//   phone's voice, or stop(). handOver() is the one end that leaves it alone: a barge-in, where the
+//   recognizer takes the session at once and releasing it would stop the capture. Every session
+//   change runs in order on one chain, so a release never lands after the next run's set-up.
 
 import { logger } from '../../lib/logger';
 import {
@@ -67,8 +72,8 @@ type Inner = {
   readonly current: Playing | null;
   readonly active: boolean;
   readonly started: boolean;
-  /** This run's audio session, set once before its first file plays. */
-  readonly prepared: Promise<void>;
+  /** The audio session's changes, in order: a run's set-up, then its release. */
+  readonly session: Promise<void>;
 };
 
 type Ctx = {
@@ -112,6 +117,19 @@ function release(ctx: Ctx, playing: Playing): void {
   if (playing.item.uri) ctx.ports.files.remove(playing.item.uri);
 }
 
+/** The session's next change, after every earlier one; a failed change is logged, never thrown. */
+function onSession(ctx: Ctx, change: () => Promise<void>, what: string): void {
+  const next = get(ctx)
+    .session.then(change)
+    .catch((error: unknown) => logger.warn(`[voice] the audio session was not ${what}`, error));
+  set(ctx, { session: next });
+}
+
+/** The run is over: other audio back to full volume. */
+function releaseSession(ctx: Ctx): void {
+  onSession(ctx, () => ctx.ports.audio.release(), 'released');
+}
+
 /** The run is over: every request aborted, every timer cancelled, every file deleted. */
 function teardown(ctx: Ctx): void {
   const { queue, current, generation } = get(ctx);
@@ -128,6 +146,7 @@ function fail(ctx: Ctx, kind: ServerFailureKind): void {
   const { queue, current } = get(ctx);
   const rest = [...(current ? [current.item.text] : []), ...queue.map((item) => item.text)];
   teardown(ctx);
+  releaseSession(ctx);
   logger.warn(`[voice] the server voice failed (${kind}); the phone's voice speaks the rest`);
   ctx.emit(Object.freeze({ type: 'failed', kind, rest: Object.freeze(rest) }));
 }
@@ -135,6 +154,7 @@ function fail(ctx: Ctx, kind: ServerFailureKind): void {
 function finishRun(ctx: Ctx): void {
   if (!get(ctx).active) return;
   set(ctx, { active: false, started: false });
+  releaseSession(ctx);
   ctx.emit(Object.freeze({ type: 'speak_done' }));
 }
 
@@ -237,7 +257,7 @@ function startAudio(ctx: Ctx, gen: number, item: Item): void {
 }
 
 async function playHead(ctx: Ctx, head: Item): Promise<void> {
-  const { generation: gen, queue, prepared } = get(ctx);
+  const { generation: gen, queue, session } = get(ctx);
   head.stopWait?.();
   // Holds the slot while the audio session is set, so nothing else starts meanwhile; a session
   // that never settles is a play error, not a run that hangs.
@@ -246,7 +266,7 @@ async function playHead(ctx: Ctx, head: Item): Promise<void> {
     queue: queue.slice(1),
     current: { item: head, stop: NOOP, stopWatch, started: false },
   });
-  await prepared;
+  await session;
   if (!live(ctx, gen)) return;
   startAudio(ctx, gen, head);
   pump(ctx);
@@ -268,25 +288,16 @@ function pump(ctx: Ctx): void {
   if (head?.status === 'waiting') fetchItem(ctx, head);
 }
 
-function prepare(ctx: Ctx): Promise<void> {
-  return ctx.ports.audio
-    .prepare()
-    .catch((error: unknown) => logger.warn('[voice] the audio session was not set', error));
-}
-
 function speak(ctx: Ctx, text: string, server: ServerSpeech): void {
   const pieces = fitToEngine(text, SERVER_SPEECH_MAX_CHARS);
   if (pieces.length === 0) return;
-  const { active, ids, queue, prepared } = get(ctx);
+  const { active, ids, queue } = get(ctx);
+  // A new run sets the session for playback; its later sentences leave it as it is.
+  if (!active) onSession(ctx, () => ctx.ports.audio.prepare(), 'set');
   const added = pieces.map((piece, index): Item => {
     return { id: ids + index + 1, text: piece, server, status: 'waiting' };
   });
-  set(ctx, {
-    active: true,
-    ids: ids + pieces.length,
-    queue: [...queue, ...added],
-    prepared: active ? prepared : prepare(ctx),
-  });
+  set(ctx, { active: true, ids: ids + pieces.length, queue: [...queue, ...added] });
   pump(ctx);
 }
 
@@ -305,13 +316,18 @@ export function createServerSpeaker(
         current: null,
         active: false,
         started: false,
-        prepared: Promise.resolve(),
+        session: Promise.resolve(),
       },
     },
   };
   return Object.freeze({
     speak: (text: string, server: ServerSpeech) => speak(ctx, text, server),
     stop: () => {
+      if (!get(ctx).active) return;
+      teardown(ctx);
+      releaseSession(ctx);
+    },
+    handOver: () => {
       if (get(ctx).active) teardown(ctx);
     },
     busy: () => get(ctx).active,

@@ -61,7 +61,8 @@ const native = vi.hoisted(() => {
     deleted,
     audio: {
       createAudioPlayer: vi.fn(() => player),
-      setAudioModeAsync: vi.fn(async () => undefined),
+      setAudioModeAsync: vi.fn(async (_mode: unknown) => undefined),
+      setIsAudioActiveAsync: vi.fn(async (_active: boolean) => undefined),
     },
     fs: { Directory, File, Paths: { cache: { uri: 'file:///cache' } } },
     speech: {
@@ -95,6 +96,26 @@ describe('the player (expo-audio)', () => {
       shouldPlayInBackground: false,
       shouldRouteThroughEarpiece: false,
     });
+  });
+
+  it('releases the session at a run end: mixing mode, then deactivated (others told)', async () => {
+    const order: string[] = [];
+    native.audio.setAudioModeAsync.mockImplementationOnce(async () => {
+      order.push('mode');
+    });
+    native.audio.setIsAudioActiveAsync.mockImplementationOnce(async () => {
+      order.push('inactive');
+    });
+    await audioPlayer.release();
+    expect(native.audio.setAudioModeAsync).toHaveBeenCalledWith({
+      playsInSilentMode: true,
+      interruptionMode: 'mixWithOthers',
+      allowsRecording: false,
+      shouldPlayInBackground: false,
+      shouldRouteThroughEarpiece: false,
+    });
+    expect(native.audio.setIsAudioActiveAsync).toHaveBeenCalledWith(false);
+    expect(order).toEqual(['mode', 'inactive']);
   });
 
   it('plays a file with a player that keeps the session active, released on stop', () => {
@@ -183,6 +204,8 @@ describe('the one voice out', () => {
     expect(native.speech.speak).not.toHaveBeenCalled();
     voiceOut.stop();
     expect(native.player.remove).toHaveBeenCalled();
+    for (let i = 0; i < 10; i += 1) await Promise.resolve();
+    expect(native.audio.setIsAudioActiveAsync).toHaveBeenCalledWith(false);
   });
 
   it("speaks through the phone's voice when the speech asks for no server voice", () => {

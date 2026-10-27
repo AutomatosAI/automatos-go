@@ -23,8 +23,10 @@ export type PlayHandlers = {
 };
 
 export type AudioPort = {
-  /** The audio session for playback (iOS: plays with the ringer switch on silent). */
+  /** The audio session for playback (iOS: plays with the ringer switch on silent, ducks others). */
   readonly prepare: () => Promise<void>;
+  /** A run is over: other audio back to full volume (iOS: mixing mode, the session let go). */
+  readonly release: () => Promise<void>;
   /** Plays the file; the handle's stop() stops it and releases the player. */
   readonly play: (uri: string, handlers: PlayHandlers) => { readonly stop: () => void };
 };
@@ -63,7 +65,10 @@ export type ServerSpeakerEvent =
 
 export type ServerSpeaker = {
   readonly speak: (text: string, server: ServerSpeech) => void;
+  /** Ends the run and releases the audio session (other audio back to full volume). */
   readonly stop: () => void;
+  /** Ends the run and leaves the session to the recognizer that takes it now (a barge-in). */
+  readonly handOver: () => void;
   /** A run is under way: queued, fetching or playing. */
   readonly busy: () => boolean;
 };

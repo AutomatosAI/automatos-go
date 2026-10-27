@@ -45,7 +45,8 @@ export type HarnessOptions = {
   /** recognizer-core behind the spies (overModule): start, stop and abort reach it too. */
   readonly core?: Pick<Recognizer, 'start' | 'stop' | 'abort'>;
   /** speaker-core (twoScreens) or the reply voice behind the spies: speak, stop and newTurn reach it. */
-  readonly voiceOut?: Pick<Speaker, 'speak' | 'stop'> & Partial<Pick<ReplyVoice, 'newTurn'>>;
+  readonly voiceOut?: Pick<Speaker, 'speak' | 'stop'> &
+    Partial<Pick<ReplyVoice, 'newTurn' | 'handOver'>>;
   /** What the hook hands the engine to speak with; the phone's language alone when omitted. */
   readonly speech?: SpeakOptions;
 };
@@ -85,6 +86,12 @@ function spies(log: string[], options: HarnessOptions) {
     }),
     // Not logged: the order tests read speak and stop only.
     newTurn: vi.fn(() => voiceOut?.newTurn?.()),
+    // A barge-in's stop: the speech stops, the audio session goes to the recognizer.
+    handOver: vi.fn(() => {
+      log.push('speaker.handOver');
+      if (voiceOut?.handOver) voiceOut.handOver();
+      else voiceOut?.stop();
+    }),
   };
   const permissions = {
     press: vi.fn((_purpose: string) => {

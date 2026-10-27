@@ -176,9 +176,16 @@ the turn uses.
 audio is lowered while Auto speaks); no recording, no background (D33). Each player keeps the
 session active (`keepAudioSessionActive`): expo-audio otherwise deactivates the session 100 ms
 after a pause or the end, which would land on the recognizer's session when a press barges in. The
-recognizer sets its own session each time it starts (`playAndRecord`, `defaultToSpeaker`,
+session is never touched between a run's sentences. When the run ends (its last sentence played,
+STOP, leaving the screen or the background, or a failure handed to the phone's voice), it is
+released: the mode goes back to mixing (`mixWithOthers`, nothing ducked) and the session is
+deactivated with `notifyOthersOnDeactivation` (`setIsAudioActiveAsync(false)`), so music or a
+podcast comes back to full volume. A barge-in is the one end that does not release it
+(`handOver`): the recognizer takes the session at once, and deactivating it would stop the capture.
+The recognizer sets its own session each time it starts (`playAndRecord`, `defaultToSpeaker`,
 `allowBluetooth`), so hold to talk works after a reply; the phone's voice keeps its own session
-(`useApplicationAudioSession: false`).
+(`useApplicationAudioSession: false`). Session changes run in order on one chain, so a run's
+release never lands after the next run's set-up.
 
 **Settings → Voice.** With `tts`, "Auto's voice" lists the server's voices (name and accent, the
 server's default marked and selected unless one was chosen), read afresh when the screen opens,

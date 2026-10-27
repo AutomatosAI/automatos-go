@@ -7,11 +7,14 @@
 //   the phone's voice exactly as before the server voice existed.
 //   Fallback: when the server voice fails, the sentence that failed and every one queued after it
 //   are handed to the phone's voice, and so is every later sentence of the turn. newTurn() (quick-
-//   ask's send) and stop() (STOP, barge-in, leaving the screen, a failed or stopped turn) let the
+//   ask's send), stop() (STOP, leaving the screen, a failed or stopped turn) and handOver()
+//   (barge-in) let the
 //   next turn try the server again; a newTurn() mid-run takes effect once that run is over.
 //   Events, folded into the phone speaker's three: speak_start once per run, whichever voice
 //   starts it; speak_done when the run's last sentence has ended, in whichever voice; stopped when
-//   stop() cut a run short (said here, once: the two speakers' own stops are not passed on).
+//   stop() or handOver() cut a run short (said here, once: the two speakers' own stops are not
+//   passed on). stop() releases the server voice's audio session; handOver() (a barge-in) leaves
+//   it to the recognizer.
 
 import { createListenerStack, type ListenerStack } from '../audio/listener-stack';
 import type { ServerSpeaker, ServerSpeakerEvent } from '../server/server-speaker-ports';
@@ -20,6 +23,11 @@ import type { SpeakOptions, Speaker, SpeakerEvent } from './speaker-core';
 export type ReplyVoice = Speaker & {
   /** A new turn: its sentences try the server voice again (when the speech asks for it). */
   readonly newTurn: () => void;
+  /**
+   * stop() for a barge-in: the recognizer takes the audio session at once, so the server voice
+   * leaves it as it is instead of releasing it (releasing would stop the capture).
+   */
+  readonly handOver: () => void;
 };
 
 type Mode = 'server' | 'phone';
@@ -117,10 +125,10 @@ export function createReplyVoice({ phone, server: makeServer }: ReplyVoiceParts)
     else phone.speak(sentence, options);
   }
 
-  function stop(): void {
+  function end(stopServer: () => void): void {
     const cutShort = ctx.cell.state.busy;
     ctx.cell.state = IDLE;
-    server.stop();
+    stopServer();
     phone.stop();
     if (cutShort) ctx.listeners.emit(STOPPED);
   }
@@ -130,7 +138,8 @@ export function createReplyVoice({ phone, server: makeServer }: ReplyVoiceParts)
     voiceFor: phone.voiceFor,
     choicesFor: phone.choicesFor,
     speak,
-    stop,
+    stop: () => end(server.stop),
+    handOver: () => end(server.handOver),
     newTurn: () => set(ctx, ctx.cell.state.busy ? { resetAfterRun: true } : { mode: 'server' }),
     listen: ctx.listeners.push,
   });

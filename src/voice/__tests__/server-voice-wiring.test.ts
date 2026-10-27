@@ -97,9 +97,11 @@ describe('quick-ask with tts speaks through the server voice', () => {
     await ask(over.h, 'Anything today?');
     over.h.feed(...frames(wire.text('Two meetings.'), wire.finish), { type: 'finished' });
     await playThrough(over, 0);
+    expect(over.server.session).toEqual(['prepare']);
     await playThrough(over, 1);
     expect(over.h.voice().phase).toBe('idle');
     expect(over.said()).toEqual([]);
+    expect(over.server.session).toEqual(['prepare', 'release']);
   });
 });
 
@@ -125,6 +127,7 @@ describe('a server failure', () => {
     over.server.requests[0]?.refuse(new SpeechFailure('tts_busy'));
     await settle();
     expect(over.said()).toEqual([AI_VOICE_GREETING, 'Two meetings.']);
+    expect(over.server.session).toEqual(['prepare', 'release']);
     over.h.feed(...frames(wire.text('ten.'), wire.finish), { type: 'finished' });
     expect(over.said()).toEqual([AI_VOICE_GREETING, 'Two meetings.', 'One at ten.']);
     expect(over.asked()).toEqual([AI_VOICE_GREETING]);
@@ -158,9 +161,11 @@ describe('STOP and leaving the screen', () => {
     return over;
   }
 
-  it('STOP stops the player and cancels the request fetched ahead', async () => {
+  it('STOP stops the player, cancels the request fetched ahead and releases the session', async () => {
     const over = await playing();
     over.h.quickAsk.stop();
+    await settle();
+    expect(over.server.session).toEqual(['prepare', 'release']);
     expect(over.server.playerOf(0).stopped).toBe(true);
     expect(over.server.requests[1]?.signal.aborted).toBe(true);
     expect(over.server.removed).toEqual(['file:///cache/server-voice/1.mp3']);
@@ -173,15 +178,30 @@ describe('STOP and leaving the screen', () => {
     over.h.quickAsk.interrupt({ type: 'app', status: 'background' });
     expect(over.server.playerOf(0).stopped).toBe(true);
     expect(over.server.inFlight()).toEqual([]);
+    await settle();
+    expect(over.server.session).toEqual(['prepare', 'release']);
   });
 
-  it('pressing to talk (barge-in) stops it before the mic opens', async () => {
+  it('leaving the screen stops it and releases the session', async () => {
+    const over = await playing();
+    over.h.quickAsk.unmount();
+    expect(over.server.playerOf(0).stopped).toBe(true);
+    await settle();
+    expect(over.server.session).toEqual(['prepare', 'release']);
+  });
+
+  it('pressing to talk (barge-in) stops it before the mic opens, leaving the session to the mic', async () => {
     const over = await playing();
     over.h.log.length = 0;
     await over.h.quickAsk.press();
     expect(over.server.playerOf(0).stopped).toBe(true);
     expect(over.server.inFlight()).toEqual([]);
-    expect(over.h.log.indexOf('speaker.stop')).toBeLessThan(over.h.log.indexOf('recognizer.start'));
+    expect(over.h.log.indexOf('speaker.handOver')).toBeGreaterThan(-1);
+    expect(over.h.log.indexOf('speaker.handOver')).toBeLessThan(
+      over.h.log.indexOf('recognizer.start'),
+    );
+    await settle();
+    expect(over.server.session).toEqual(['prepare']);
   });
 });
 

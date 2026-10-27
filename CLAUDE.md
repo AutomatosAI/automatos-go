@@ -190,7 +190,8 @@ functions < 50 lines, components < 150; pure logic outside React with tests in
   every player with `keepAudioSessionActive: true` (`src/voice/server/audio-player.ts`): by default
   expo-audio deactivates the session 100 ms after a pause or an end, which lands on the session
   expo-speech-recognition has just activated when a press barges in, and stops the capture. The
-  recognizer sets its own category at each start, so playback never needs to restore it.
+  server speaker releases the session itself (mixing mode, then `setIsAudioActiveAsync(false)`)
+  when a run ends, except at a barge-in (`handOver`), where the recognizer takes it at once.
 - **No `.env.example`.** The workspace's secrets hook blocks Claude Code from writing
   `*.env.*` files, so the repo has none (lead decision, 20 Oct): every `EXPO_PUBLIC_*` name is
   listed under Environment above and in README.md. A new name goes in all three places

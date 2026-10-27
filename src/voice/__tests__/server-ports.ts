@@ -42,7 +42,14 @@ export function fakeServerPorts() {
   const written: string[] = [];
   const removed: string[] = [];
   const timers: Timer[] = [];
-  const prepare = vi.fn(async () => undefined);
+  /** The audio session's changes, in the order they ran. */
+  const session: ('prepare' | 'release')[] = [];
+  const prepare = vi.fn(async () => {
+    session.push('prepare');
+  });
+  const release = vi.fn(async () => {
+    session.push('release');
+  });
   const writeFails = { next: false };
   const ports: ServerSpeakerPorts = {
     fetchSpeech: (server, text, signal) =>
@@ -76,6 +83,7 @@ export function fakeServerPorts() {
     },
     audio: {
       prepare,
+      release,
       play: (uri, handlers) => {
         const player: FakePlayer = { uri, handlers, stopped: false };
         players.push(player);
@@ -119,6 +127,8 @@ export function fakeServerPorts() {
     removed,
     timers,
     prepare,
+    release,
+    session,
     writeFails,
     fire,
     inFlight,

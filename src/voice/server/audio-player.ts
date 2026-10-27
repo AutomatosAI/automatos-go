@@ -8,10 +8,14 @@
 //   play(): one player per file, keepAudioSessionActive so neither its pause nor its end
 //   deactivates the session: expo-audio defers that deactivation by 100 ms, and it would land on
 //   the recognizer's session when a press barges in (deactivating a session that is recording
-//   stops the recognizer). The session is left active, as the recognizer leaves it; iOS ends it
-//   when the app leaves the screen. stop() pauses and releases the player.
+//   stops the recognizer). stop() pauses and releases the player.
+//   release(): the run is over (server-speaker.ts decides when; never between sentences, never at
+//   a barge-in): the mode goes back to mixing (playback with mixWithOthers, so nothing is ducked
+//   even while the session stays up), then the session is deactivated with
+//   notifyOthersOnDeactivation (setIsAudioActiveAsync(false)), which ends the ducking and tells
+//   the person's music or podcast it may resume at full volume.
 
-import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
+import { createAudioPlayer, setAudioModeAsync, setIsAudioActiveAsync } from 'expo-audio';
 
 import type { AudioPort, PlayHandlers } from './server-speaker-ports';
 import { playbackListener } from './playback-status';
@@ -26,6 +30,20 @@ const PLAYBACK_MODE = Object.freeze({
   shouldPlayInBackground: false,
   shouldRouteThroughEarpiece: false,
 } as const);
+
+/** Between runs: other audio mixes at full volume, nothing ducked. */
+const RELEASED_MODE = Object.freeze({
+  playsInSilentMode: true,
+  interruptionMode: 'mixWithOthers',
+  allowsRecording: false,
+  shouldPlayInBackground: false,
+  shouldRouteThroughEarpiece: false,
+} as const);
+
+async function release(): Promise<void> {
+  await setAudioModeAsync(RELEASED_MODE);
+  await setIsAudioActiveAsync(false);
+}
 
 function play(uri: string, handlers: PlayHandlers): { readonly stop: () => void } {
   const player = createAudioPlayer(
@@ -45,5 +63,6 @@ function play(uri: string, handlers: PlayHandlers): { readonly stop: () => void 
 
 export const audioPlayer: AudioPort = Object.freeze({
   prepare: () => setAudioModeAsync(PLAYBACK_MODE),
+  release,
   play,
 });
