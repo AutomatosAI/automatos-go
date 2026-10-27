@@ -14,7 +14,9 @@
 //   phone's voice (reply-voice.ts), and the run is over. Its log names the kind, never the text.
 //   stop() ends the run at once: the player stopped and released, every request aborted, every
 //   file deleted. A new generation, so a late answer, callback or timer of the old run does
-//   nothing. The audio session is set for playback once per run, before its first file plays.
+//   nothing. The audio session is set for playback once per run, before its first file plays; a
+//   session that is not set within SERVER_PLAY_START_MS is a play error like a player that does not
+//   start. A file that ends before its player said it was playing still says speak_start first.
 
 import { logger } from '../../lib/logger';
 import {
@@ -199,6 +201,8 @@ function playing(ctx: Ctx, gen: number, id: number, durationSeconds: number): vo
 }
 
 function ended(ctx: Ctx, gen: number, id: number): void {
+  // A clip too short for a 'playing' update still started: speak_start before its end.
+  if (get(ctx).current?.started === false) playing(ctx, gen, id, 0);
   const { current } = get(ctx);
   if (!playingNow(ctx, gen, id) || !current) return;
   set(ctx, { current: null });
@@ -217,6 +221,7 @@ function handlersFor(ctx: Ctx, gen: number, id: number): PlayHandlers {
 }
 
 function startAudio(ctx: Ctx, gen: number, item: Item): void {
+  get(ctx).current?.stopWatch();
   const stopWatch = watchdog(ctx, gen, item.id, SERVER_PLAY_START_MS, 'play_error');
   set(ctx, { current: { item, stop: NOOP, stopWatch, started: false } });
   try {
@@ -234,10 +239,12 @@ function startAudio(ctx: Ctx, gen: number, item: Item): void {
 async function playHead(ctx: Ctx, head: Item): Promise<void> {
   const { generation: gen, queue, prepared } = get(ctx);
   head.stopWait?.();
-  // Holds the slot while the audio session is set, so nothing else starts meanwhile.
+  // Holds the slot while the audio session is set, so nothing else starts meanwhile; a session
+  // that never settles is a play error, not a run that hangs.
+  const stopWatch = watchdog(ctx, gen, head.id, SERVER_PLAY_START_MS, 'play_error');
   set(ctx, {
     queue: queue.slice(1),
-    current: { item: head, stop: NOOP, stopWatch: NOOP, started: false },
+    current: { item: head, stop: NOOP, stopWatch, started: false },
   });
   await prepared;
   if (!live(ctx, gen)) return;

@@ -103,6 +103,16 @@ describe('the queue', () => {
     expect(h.speaker.busy()).toBe(false);
   });
 
+  it('a clip that ends before its player said it was playing still starts, then ends', async () => {
+    const h = speakerOver();
+    h.speaker.speak('Ok.', SERVER_SPEECH);
+    await answer(h, 0);
+    h.playerOf(0).handlers.onEnded();
+    await settle();
+    expect(h.types()).toEqual(['speak_start', 'speak_done']);
+    expect(h.timers.filter((timer) => !timer.cancelled && !timer.fired)).toEqual([]);
+  });
+
   it('sets the audio session once per run, before the first file plays', async () => {
     const h = speakerOver();
     h.speaker.speak('One.', SERVER_SPEECH);
@@ -329,6 +339,19 @@ describe('failures hand the sentence and the rest over', () => {
     h.playerOf(0).handlers.onPlaying(0);
     h.fire(SERVER_PLAY_MAX_MS);
     expect(h.events.at(-1)).toMatchObject({ type: 'failed', kind: 'play_stalled' });
+  });
+
+  it('an audio session that never settles is a play error, not a run that hangs', async () => {
+    const h = speakerOver();
+    h.prepare.mockImplementationOnce(() => new Promise<undefined>(() => undefined));
+    h.speaker.speak('One.', SERVER_SPEECH);
+    h.speaker.speak('Two.', SERVER_SPEECH);
+    await answer(h, 0);
+    expect(h.players).toEqual([]);
+    h.fire(SERVER_PLAY_START_MS);
+    expect(h.events).toEqual([{ type: 'failed', kind: 'play_error', rest: ['One.', 'Two.'] }]);
+    expect(h.removed).toEqual(['file:///cache/server-voice/1.mp3']);
+    expect(h.speaker.busy()).toBe(false);
   });
 
   it('a player that throws is a play error', async () => {

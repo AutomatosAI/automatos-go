@@ -150,10 +150,11 @@ to the phone's speaker unchanged.
 - Both are `pendingUpstream` in [src/voice/routes.ts](../src/voice/routes.ts) until a re-pin
   carries them.
 
-**From the server to the speaker.** The one API client reads the 200's body whole as bytes
-(`client.binary()`, expo/fetch's `arrayBuffer` in `src/api/transport.ts`), with the same bearer and
-`X-Workspace-ID` headers as every call. `voice-api.ts` checks it is audio and not empty or over
-4 MB; `speech-files.ts` writes it to `<cache>/server-voice/<name>.mp3`; `audio-player.ts` plays the
+**From the server to the speaker.** The one API client reads the 200's body as bytes
+(`client.binary()`: expo/fetch's body stream in `src/api/transport.ts`, read by `src/api/body.ts`
+`readBytes`, which refuses a Content-Length over 4 MB and stops reading as soon as the body passes
+it), with the same bearer and `X-Workspace-ID` headers as every call. `voice-api.ts` checks it is
+audio and not empty; `speech-files.ts` writes it to `<cache>/server-voice/<name>.mp3`; `audio-player.ts` plays the
 `file://` URI with expo-audio, and the file is deleted once played or stopped. No token or text in
 a URL, a file name or a log.
 
@@ -163,7 +164,8 @@ plays before it) has 4 s to be ready; a prefetched sentence starts that wait onl
 due. A sentence over 500 characters goes in pieces split at a space.
 
 **Fallback, never silent.** Any failure (a refusal, the network, the 4 s wait, a file that cannot
-be written, a player that does not start within 3 s or stalls past its length) speaks that sentence
+be written, an audio session or a player that does not start within 3 s, or a file that plays
+past its length) speaks that sentence
 and the rest of the turn with the phone's voice, and logs the kind only. The next turn (each send)
 tries the server again. STOP, "Auto, stop", barge-in, leaving the screen and the background stop
 the player, abort every request and delete every file. The AI notice is spoken in whichever voice
