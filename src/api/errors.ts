@@ -2,8 +2,10 @@
 // kind, and each kind has one user-facing message (strings.ts). FastAPI answers errors as
 // {"detail": "<words>"} or {"detail": {"code", "message", …}}; the 409 pending_invitation body is
 // {"detail": {"code": "pending_invitation", "redirect", "token", "message"}} (automatos-ai
-// core/auth/hybrid.py:852-861) and its code and message are kept exactly as sent. Statuses outside
-// the named ones (400, 422, 429, …) are 'server': the server refused and the app cannot fix it.
+// core/auth/hybrid.py:852-861) and its code and message are kept exactly as sent. A code beside the
+// detail ({"code", "detail"}: the server voice's refusals, tts_busy) is read when the detail has
+// none. Statuses outside the named ones (400, 422, 429, …) are 'server': the server refused and the
+// app cannot fix it.
 
 import { z } from 'zod';
 
@@ -79,6 +81,7 @@ export function kindForStatus(status: number): ApiErrorKind {
 
 const optionalString = z.string().optional().catch(undefined);
 const ErrorBodySchema = z.object({
+  code: optionalString,
   detail: z
     .union([z.string(), z.object({ code: optionalString, message: optionalString })])
     .optional()
@@ -89,14 +92,19 @@ function clip(text: string): string {
   return text.length > SERVER_MESSAGE_MAX_CHARS ? text.slice(0, SERVER_MESSAGE_MAX_CHARS) : text;
 }
 
+function codeOf(code: string | undefined): Pick<ApiErrorDetail, 'code'> {
+  return code ? { code } : {};
+}
+
 /** The code and words a FastAPI error body carries, when it carries any (a non-JSON body: none). */
 export function detailOf(body: string): Pick<ApiErrorDetail, 'code' | 'serverMessage'> {
   const parsed = ErrorBodySchema.safeParse(parseJson(body)?.value);
-  const detail = parsed.success ? parsed.data.detail : undefined;
-  if (typeof detail === 'string') return { serverMessage: clip(detail) };
-  if (!detail) return {};
+  if (!parsed.success) return {};
+  const { code, detail } = parsed.data;
+  if (typeof detail === 'string') return { ...codeOf(code), serverMessage: clip(detail) };
+  if (!detail) return codeOf(code);
   return {
-    ...(detail.code ? { code: detail.code } : {}),
+    ...codeOf(detail.code ?? code),
     ...(detail.message ? { serverMessage: clip(detail.message) } : {}),
   };
 }

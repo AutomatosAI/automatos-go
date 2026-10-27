@@ -262,6 +262,7 @@ If the hosted server answers 404, the app uses built-in defaults with no capabil
 | `report_content` | Report this (**Gated**) | no: Report this stays hidden on every server |
 | `push` (with `push.expo: true`) | Notifications (A4) | yes, since #1300 (W2, 24 Oct); `push.expo` is true on SaaS, and self-hosted once its operator agrees |
 | `digest` | Daily digest time (A4) | yes, since #1300 (W2, 24 Oct) |
+| `tts` | Auto's server voice: quick-ask's replies and Settings → Voice's list ([voice.md](voice.md#autos-server-voice)) | no: built on automatos-ai `feat/voice-tts` (27 Oct), listed only when the server has a voice |
 
 The server side is automatos-ai `orchestrator/services/mobile/discovery.py` (`CAPABILITY_ROUTES`).
 

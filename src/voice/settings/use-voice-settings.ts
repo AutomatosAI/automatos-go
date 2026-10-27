@@ -9,38 +9,56 @@
 //   the default and plays it.
 //   While open, the screen holds the speaker's one listener (a voice screen beneath it hears
 //   nothing of the sample); going away stops the sample, then lets the listener go.
+//   Auto's server voice (27 Oct 2026): when the server lists tts, its voices are read afresh on
+//   open (use-server-voices.ts) and listed first (server-view-model.ts); a tap on one saves it and
+//   plays the sample through the server, as quick-ask would speak (serverSpeechFor), the phone's
+//   voice saying it when the server cannot. Speaks through the one voice out (voice-out.ts).
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 
+import { useAppSession } from '../../app-state/session';
 import { logger } from '../../lib/logger';
 import { SPEECH_PITCH_LIMITS, SPEECH_RATE_LIMITS } from '../config';
 import { phoneLocale } from '../quick-ask/locale';
 import type { RecognitionPlatform } from '../quick-ask/recognition-policy';
-import { speaker } from '../speech/speaker';
+import { serverSpeechFor, type ServerVoicesState } from '../server/server-voices';
+import { useServerVoices } from '../server/use-server-voices';
+import { voiceOut } from '../speech/voice-out';
 import { AUTOMATIC_VOICE, type VoiceChoice } from '../speech/voice-choices';
 import { VOICE_SETTINGS_COPY } from '../strings';
 import { createSamplePlayer } from './sample-player';
+import {
+  screenWords,
+  serverVoiceRows,
+  showsPhoneVoices,
+  soundPart,
+  withServerChoice,
+  type ServerChoice,
+  type ServerVoiceRow,
+  type SoundPart,
+} from './server-view-model';
 import { useVoiceSetting, voiceSetting } from './use-voice-setting';
 import { DEFAULT_VOICE_SETTING, settleValue, type VoiceSetting } from './voice-setting';
-import {
-  helpLine,
-  soundSliders,
-  voiceRows,
-  type SoundKey,
-  type SoundSlider,
-  type VoiceRow,
-} from './view-model';
+import { helpLine, voiceRows, type SoundKey, type VoiceRow } from './view-model';
 
 const PLATFORM: RecognitionPlatform = Platform.OS === 'android' ? 'android' : 'ios';
 const LIMITS = Object.freeze({ rate: SPEECH_RATE_LIMITS, pitch: SPEECH_PITCH_LIMITS });
 const NO_CHOICES: readonly VoiceChoice[] = Object.freeze([AUTOMATIC_VOICE]);
 
+/** The phone's voices: Automatic and the phone's list, with where to get a better one. */
+export type PhonePart = Readonly<{ title: string; rows: readonly VoiceRow[]; help: string }>;
+
 export type VoiceSettingsView = Readonly<{
-  rows: readonly VoiceRow[];
-  sliders: readonly SoundSlider[];
-  help: string;
+  lede: string;
+  /** "Auto's voice" with the server's voices; null when the server lists no tts. */
+  server: readonly ServerVoiceRow[] | null;
+  chooseServer: (choice: ServerChoice) => void;
+  /** The phone's voices; null while Auto's server voice is chosen. */
+  phone: PhonePart | null;
   choose: (voice: string | null) => void;
+  sound: SoundPart;
+  resetHint: string;
   slide: (key: SoundKey, value: number) => void;
   release: (key: SoundKey, value: number) => void;
   reset: () => void;
@@ -54,7 +72,7 @@ function useVoiceChoices(language: string): readonly VoiceChoice[] {
   useEffect(() => {
     let alive = true;
     const load = (): void => {
-      speaker.choicesFor(language).then(
+      voiceOut.choicesFor(language).then(
         (next) => {
           if (alive) setChoices(next);
         },
@@ -73,20 +91,41 @@ function useVoiceChoices(language: string): readonly VoiceChoice[] {
   return choices;
 }
 
-/** The sample line in a setting's voice; stopped, and the speaker let go, when the screen goes. */
-function useSample(language: string): (setting: VoiceSetting) => void {
-  const player = useMemo(() => createSamplePlayer(speaker, VOICE_SETTINGS_COPY.sample), []);
+/**
+ * The sample line in a setting's voice (the server's when it offers one and it is chosen); stopped,
+ * and the speaker let go, when the screen goes.
+ */
+function useSample(language: string, voices: ServerVoicesState): (setting: VoiceSetting) => void {
+  const { discovery, client } = useAppSession();
+  const player = useMemo(() => createSamplePlayer(voiceOut, VOICE_SETTINGS_COPY.sample), []);
   useEffect(() => {
-    const unlisten = speaker.listen(() => undefined);
+    const unlisten = voiceOut.listen(() => undefined);
     return () => {
       player.stop();
       unlisten();
     };
   }, [player]);
   return useCallback(
-    (setting: VoiceSetting) => void player.play(language, setting),
-    [player, language],
+    (setting: VoiceSetting) => {
+      const server = serverSpeechFor({ discovery, setting, voices, client });
+      void player.play(language, setting, server);
+    },
+    [player, language, discovery, voices, client],
   );
+}
+
+function phonePart(
+  voices: ServerVoicesState,
+  setting: VoiceSetting,
+  choices: readonly VoiceChoice[],
+  language: string,
+): PhonePart | null {
+  if (!showsPhoneVoices(voices, setting)) return null;
+  return Object.freeze({
+    title: screenWords(voices).phoneTitle,
+    rows: voiceRows(choices, setting.voice),
+    help: helpLine(PLATFORM, language),
+  });
 }
 
 function without(moving: Moving, key: SoundKey): Moving {
@@ -99,7 +138,8 @@ export function useVoiceSettings(): VoiceSettingsView {
   const language = useMemo(() => phoneLocale(), []);
   const setting = useVoiceSetting();
   const choices = useVoiceChoices(language);
-  const play = useSample(language);
+  const voices = useServerVoices(true);
+  const play = useSample(language, voices);
   const [moving, setMoving] = useState<Moving>({});
   const save = useCallback(
     (next: VoiceSetting) => {
@@ -108,11 +148,15 @@ export function useVoiceSettings(): VoiceSettingsView {
     },
     [play],
   );
+  const words = screenWords(voices);
   return {
-    rows: voiceRows(choices, setting.voice),
-    sliders: soundSliders({ ...setting, ...moving }),
-    help: helpLine(PLATFORM, language),
+    lede: words.lede,
+    server: serverVoiceRows(voices, setting),
+    chooseServer: (choice) => save(withServerChoice(voiceSetting.get(), choice)),
+    phone: phonePart(voices, setting, choices, language),
     choose: (voice) => save({ ...voiceSetting.get(), voice }),
+    sound: soundPart(voices, { ...setting, ...moving }),
+    resetHint: words.resetHint,
     slide: (key, value) =>
       setMoving((now) => Object.freeze({ ...now, [key]: settleValue(value, LIMITS[key]) })),
     release: (key, value) => {

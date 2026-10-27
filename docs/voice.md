@@ -49,7 +49,8 @@ For everyone, on every plan and edition. Never gated on a plan.
    `spokenMode` when the server lists `spoken_mode`. Without it, the turn is a plain one and the
    phone strips the markdown itself.
 6. Auto's reply is spoken by the phone's own text-to-speech (`expo-speech`), sentence by sentence
-   as it streams. Only Auto's text is spoken: no receipts, tool lines or cards. A reply with cards
+   as it streams, or by the server's voice when the server offers one
+   ([Auto's server voice](#autos-server-voice)). Only Auto's text is spoken: no receipts, tool lines or cards. A reply with cards
    or receipts also offers "See it in the chat".
 
 Hold rules (KV5): a hold under 300 ms is a tap ("Hold the button while you talk"); listening stops
@@ -126,8 +127,82 @@ your workspace owner for editor access to talk to Auto", and no Live button.
 `src/voice/**` only, plus named, additive seams into A2's chat request and composer and A5's HUD
 core (KV1, KV2). One file per native module (KV15): only `src/voice/quick-ask/recognizer.ts` and
 `src/voice/permissions/permissions.ts` import `expo-speech-recognition`; only
-`src/voice/speech/speaker.ts` imports `expo-speech`; only `src/voice/interruptions/keep-awake.ts`
+`src/voice/speech/speaker.ts` imports `expo-speech`; only `src/voice/server/audio-player.ts`
+imports `expo-audio`; only `src/voice/interruptions/keep-awake.ts`
 imports `expo-keep-awake`; only `src/voice/live/livekit-session.ts` imports LiveKit.
+
+## Auto's server voice
+
+Added 27 Oct 2026 (Gerard): Auto's spoken replies in the server's natural voice (Kokoro on
+automatos-ai, branch `feat/voice-tts`), with the phone's voice as the automatic fallback. Code:
+`src/voice/server/`, `src/voice/speech/reply-voice.ts`, `voice-out.ts`.
+
+**When.** Only when discovery lists `tts` (`canServerVoice`) and Settings → Voice keeps Auto's voice
+(the default). Without `tts` the app speaks exactly as before: the reply voice hands every sentence
+to the phone's speaker unchanged.
+
+**The contract.**
+
+- `POST /api/voice/speech {text (1–500 chars), voice (id | null), speed (0.8–1.2 | null)}` → 200
+  `audio/mpeg`, one MP3 for that text, with `X-Voice-Id`. Refusals `{code, detail}`: 503 `tts_off`,
+  503 `tts_unavailable`, 422 `tts_bad_request`, 413 `tts_too_long`, 429 `tts_busy`.
+- `GET /api/voice/voices` → `{default, voices: [{id, name, accent, gender}]}`, or 503.
+- Both are `pendingUpstream` in [src/voice/routes.ts](../src/voice/routes.ts) until a re-pin
+  carries them.
+
+**From the server to the speaker.** The one API client reads the 200's body as bytes
+(`client.binary()`: expo/fetch's body stream in `src/api/transport.ts`, read by `src/api/body.ts`
+`readBytes`, which refuses a Content-Length over 4 MB and stops reading as soon as the body passes
+it), with the same bearer and `X-Workspace-ID` headers as every call. `voice-api.ts` checks it is
+audio and not empty; `speech-files.ts` writes it to `<cache>/server-voice/<name>.mp3`; `audio-player.ts` plays the
+`file://` URI with expo-audio, and the file is deleted once played or stopped. No token or text in
+a URL, a file name or a log.
+
+**The queue** (`server-speaker.ts`). One request in flight at a time: while a sentence plays, the
+next one is fetched, so the gap between them is the player's start. A sentence that is due (nothing
+plays before it) has 4 s to be ready; a prefetched sentence starts that wait only when it falls
+due. A sentence over 500 characters goes in pieces split at a space.
+
+**Fallback, never silent.** Any failure (a refusal, the network, the 4 s wait, a file that cannot
+be written, an audio session or a player that does not start within 3 s, or a file that plays
+past its length) speaks that sentence
+and the rest of the turn with the phone's voice, and logs the kind only. The next turn (each send)
+tries the server again. STOP, "Auto, stop", barge-in, leaving the screen and the background stop
+the player, abort every request and delete every file. The AI notice is spoken in whichever voice
+the turn uses.
+
+**The iOS audio session.** Before each run, expo-audio's mode is set to playback with
+`playsInSilentMode` (it plays with the ringer switch on silent) and `duckOthers` (other apps'
+audio is lowered while Auto speaks); no recording, no background (D33). Each player keeps the
+session active (`keepAudioSessionActive`): expo-audio otherwise deactivates the session 100 ms
+after a pause or the end, which would land on the recognizer's session when a press barges in. The
+session is never touched between a run's sentences. When the run ends (its last sentence played,
+STOP, leaving the screen or the background, or a failure handed to the phone's voice), it is
+released: the mode goes back to mixing (`mixWithOthers`, nothing ducked) and the session is
+deactivated with `notifyOthersOnDeactivation` (`setIsAudioActiveAsync(false)`), so music or a
+podcast comes back to full volume. A barge-in is the one end that does not release it
+(`handOver`): the recognizer takes the session at once, and deactivating it would stop the capture.
+The recognizer sets its own session each time it starts (`playAndRecord`, `defaultToSpeaker`,
+`allowBluetooth`), so hold to talk works after a reply; the phone's voice keeps its own session
+(`useApplicationAudioSession: false`). Session changes run in order on one chain, so a run's
+release never lands after the next run's set-up.
+
+**Settings → Voice.** With `tts`, "Auto's voice" lists the server's voices (name and accent, the
+server's default marked and selected unless one was chosen), read afresh when the screen opens,
+then "Use this phone's voice instead", which shows the phone's list and its help line. A tap saves
+the choice and plays the sample through the server (the phone's voice when the server cannot).
+Speed applies to both voices (sent as `speed`); Pitch to the phone's voice only, with a one-line
+reason in its place. The choice is in the same MMKV setting (`source`, `serverVoice`); a value
+saved before them reads with Auto's voice as the default and keeps its phone voice, speed and pitch.
+
+**Native.** `expo-audio` ~1.1.1 (and its peer `expo-asset`) is a new native module: its PR moves
+the fingerprint and builds iOS build 13 ([native-modules.md](native-modules.md#expo-audio)).
+
+**Owner checks (device only).** With build 13 and the core route live: the reply in the server
+voice with the ringer switch on silent; music ducked while Auto speaks; no gap between sentences;
+STOP and "Auto, stop" mid-sentence; a press while Auto speaks, then hold to talk works; Bluetooth
+headphones; airplane mode mid-reply (the phone's voice takes over within about 4 s); Settings →
+Voice samples and the phone-voice switch.
 
 ## Auto Live (phase 2, later)
 
@@ -168,7 +243,8 @@ error or a toast.
 - **PRD-001 §4.9** repeats the AI notice every ten minutes. The kit (D73, Gerard, 23 Oct) shows and
   speaks it once per voice session. Build to the kit.
 - **Voice in Studio, and its settings there,** do not apply to the phone. Quick-ask uses the
-  phone's own recogniser and voices.
+  phone's own recogniser, and the phone's voices or, when the server offers one, Auto's server
+  voice (chosen in the phone's Settings → Voice).
 
 ## Related
 

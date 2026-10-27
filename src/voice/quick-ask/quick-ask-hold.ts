@@ -2,7 +2,8 @@
 // React Native or Expo (the ports are quick-ask-store.ts's).
 //   press → the permission gate (US-019c; a prompt takes the hold) → the recognition policy (US-019b;
 //   on the phone or not at all) → onPress → the recognizer claims the audio (KV13) → the plan's steps
-//   in order: stop the speech (barge-in), cancel a streaming turn through A2's Stop (D-STOP), clear
+//   in order: stop the speech (barge-in: handed over, the recognizer takes the audio session
+//   next), cancel a streaming turn through A2's Stop (D-STOP), clear
 //   an error, open the mic. A viewer's press does nothing at all (D17: the mic never opens). A
 //   release during the checks never opens the mic: it is a tap, or nothing heard.
 //   release → a tap aborts ('Hold the button while you talk'); otherwise recognizer.stop(), and the
@@ -33,9 +34,9 @@ import {
   dispatch,
   endHold,
   get,
+  handOverSpeech,
   set,
   show,
-  silence,
   type Engine,
   type Hold,
 } from './quick-ask-store';
@@ -77,7 +78,7 @@ function listen(engine: Engine, plan: PressStart, hold: Hold): void {
 
 const STEPS: Readonly<Record<PressStep, (engine: Engine, plan: PressStart, hold: Hold) => void>> =
   Object.freeze({
-    'stop-speech': (engine) => silence(engine),
+    'stop-speech': (engine) => handOverSpeech(engine),
     'cancel-turn': (engine) => cancelTurn(engine),
     reset: (engine) => dispatch(engine, { type: 'reset' }),
     listen,

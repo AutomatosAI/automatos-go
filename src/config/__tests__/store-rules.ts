@@ -59,4 +59,6 @@ export const ANDROID_BLOCKED = [
   'ACCESS_BACKGROUND_LOCATION',
   'READ_CONTACTS',
   'WRITE_CONTACTS',
+  // expo-audio's library manifest declares it (its lock-screen controls service); no background audio (D33)
+  'FOREGROUND_SERVICE_MEDIA_PLAYBACK',
 ].map((name) => `android.permission.${name}`);

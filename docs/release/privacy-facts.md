@@ -762,6 +762,11 @@ text-to-speech engine does not use a network voice]".
 - **The reply's voice:** on iPhone, a voice on the phone. On Android, the app picks a voice on the
   phone when the engine names one. When it finds none, the phone's text-to-speech engine speaks
   with its default voice, and the app cannot see whether that voice uses the network.
+- **Auto's server voice (27 Oct 2026):** when the Automatos server the phone is connected to offers
+  it (discovery lists `tts`) and the person keeps it (Settings → Voice), each sentence of Auto's
+  reply is sent as text to that same server, which answers with the audio. Nothing the person said
+  is sent for it: only Auto's own reply, which came from that server. Otherwise, or when the server
+  cannot answer, the phone's voice reads the reply as above.
 
 **What the code does:**
 
@@ -785,7 +790,8 @@ text-to-speech engine does not use a network voice]".
     speech recognition that runs on this phone, and it isn't available for {language}. You can type
     to Auto instead."). There is no network fallback.
 - **What leaves the phone:** the recognised text, sent as a chat message through the app's API
-  client. The audio is never saved or sent.
+  client. The audio is never saved or sent. With Auto's server voice, also each sentence of Auto's
+  reply, sent back to the same server for its audio.
 - **The reply's voice** (`pickVoice` in `src/voice/speech/voice-pick.ts`, spoken through
   expo-speech in `speaker.ts`):
   - **iOS:** Apple's own voices only (`com.apple.voice.*`, `com.apple.ttsbundle.*`). Every one is
@@ -795,12 +801,24 @@ text-to-speech engine does not use a network voice]".
     `…-network`). If no voice for the language has such a name (another engine, or none installed),
     the app passes no voice. The engine then speaks with its default voice for the language, as set
     in the phone's settings.
+- **Auto's server voice** (`src/voice/server/`, spoken through `reply-voice.ts`): only when
+  discovery lists `tts` and Settings → Voice keeps Auto's voice (`serverSpeechFor` in
+  `server-voices.ts`). Each sentence goes as `POST /api/voice/speech {text, voice, speed}` through
+  the app's API client, with the same bearer and workspace headers as every call, never in a URL
+  (`voice-api.ts`). The MP3 it answers is written to the app's cache (`<cache>/server-voice`,
+  `speech-files.ts`), played with expo-audio and deleted once played or stopped; the folder is
+  emptied at every app start (`sweepSpeechFiles` in `app/_layout.tsx`), whether or not the voice
+  is used, so nothing a crash left stays. A failure is logged by its kind only, never the
+  text, and the phone's voice speaks the rest of that turn.
 
 **Evidence:** `src/voice/__tests__/recognition-policy.test.ts` (iOS and Android policies, every
 start option on the phone, no service package), `recognizer-core.test.ts` (start runs only for a
 "ready" policy), `recognizer-binding.test.ts`, `voice-pick.test.ts` (Apple's voices only; on
 Android "local" names only, never "network"; none → the engine's default) and
-`speaker-core.test.ts`.
+`speaker-core.test.ts`. The server voice: `server-voices.test.ts` (only with `tts` and Auto's voice
+kept), `voice-api.test.ts` (the bearer and the text in no URL, error or log),
+`server-speaker.test.ts` (every file deleted after playing or on stop) and
+`server-voice-wiring.test.ts` (without `tts` the phone speaks exactly as before).
 
 **Policy wording:**
 
@@ -810,6 +828,9 @@ Android "local" names only, never "network"; none → the engine's default) and
 - "On iPhone, replies are read aloud by a voice on your phone. On Android, the app uses a voice
   installed on your phone when your text-to-speech engine offers one; otherwise your engine's
   default voice reads them, as set in your phone's settings."
+- "When your Automatos server offers Auto's own voice, the app sends the text of Auto's reply back
+  to that server, which turns it into speech. You can choose your phone's voice instead in
+  Settings → Voice."
 - Before publishing the first sentence for iPhone, Gerard decides on the edge above (last section):
   publish it as it is, or add "on iPhone, in your phone's main language".
 

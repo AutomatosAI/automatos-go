@@ -1,16 +1,20 @@
-// Settings → Voice's sample line, spoken through the speaker (speaker-core.ts). Pure over the
+// Settings → Voice's sample line, spoken through the one voice out (reply-voice.ts). Pure over the
 // speaker's port: no React, React Native or Expo.
 //   play() speaks the line in the setting's voice (the saved one while the phone offers it, else
 //   pickVoice's, as quick-ask resolves it) at its rate and pitch, cutting off a sample still
-//   speaking. Only the latest play speaks: one tapped while an earlier one was still resolving its
-//   voice wins, and stop() (the screen going away) cancels a play that has not spoken yet.
+//   speaking. With Auto's server voice (serverSpeechFor, as quick-ask builds it) the line is the
+//   server's, and the phone's voice says it when the server cannot: the sample is what a reply
+//   would sound like right now. Only the latest play speaks: one tapped while an earlier one was
+//   still resolving its voice wins, and stop() (the screen going away) cancels a play that has not
+//   spoken yet.
 
 import { logger } from '../../lib/logger';
+import type { ServerSpeech } from '../server/server-speaker-ports';
 import type { Speaker } from '../speech/speaker-core';
 import { speakOptionsFor, type VoiceSetting } from './voice-setting';
 
 export type SamplePlayer = Readonly<{
-  play: (language: string, setting: VoiceSetting) => Promise<void>;
+  play: (language: string, setting: VoiceSetting, server?: ServerSpeech) => Promise<void>;
   stop: () => void;
 }>;
 
@@ -30,13 +34,13 @@ export function createSamplePlayer(
   }
 
   return Object.freeze({
-    play: async (language: string, setting: VoiceSetting) => {
+    play: async (language: string, setting: VoiceSetting, server?: ServerSpeech) => {
       plays += 1;
       const mine = plays;
       const voice = await voiceOf(language, setting);
       if (mine !== plays) return;
       speaker.stop();
-      speaker.speak(line, speakOptionsFor(language, voice, setting));
+      speaker.speak(line, speakOptionsFor(language, voice, setting, server));
     },
     stop: () => {
       plays += 1;

@@ -64,3 +64,29 @@ export const ANDROID_ON_DEVICE_API = 33;
 
 /** The recognition and speech language when the phone reports no locale (KV4). */
 export const FALLBACK_LOCALE = 'en-US';
+
+/**
+ * Auto's server voice (POST /api/voice/speech): how long a sentence that is due (nothing playing
+ * before it) may keep the person waiting for its MP3 before this phone's voice speaks it and the
+ * rest of the turn. A sentence fetched ahead while the one before it plays starts its wait only
+ * when it falls due, so a long sentence's playback covers the next one's synthesis.
+ */
+export const SERVER_VOICE_WAIT_MS = 4_000;
+
+/** One speech request, status and body, gives up after this long, wherever it is in the queue. */
+export const SERVER_SPEECH_TIMEOUT_MS = 20_000;
+
+/** The server takes 1 to 500 characters per request: a longer sentence goes in pieces. */
+export const SERVER_SPEECH_MAX_CHARS = 500;
+
+/** An MP3 larger than this is refused (500 characters of speech is well under 1 MB). */
+export const SERVER_VOICE_MAX_BYTES = 4 * 1024 * 1024;
+
+/** A file handed to the player that has not started playing by then is a play error. */
+export const SERVER_PLAY_START_MS = 3_000;
+
+/** A playing file that has not ended this long after its duration has stalled. */
+export const SERVER_PLAY_END_SLACK_MS = 3_000;
+
+/** The end watchdog when the player reports no duration. */
+export const SERVER_PLAY_MAX_MS = 60_000;

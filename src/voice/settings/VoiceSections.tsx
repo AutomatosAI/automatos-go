@@ -1,7 +1,9 @@
-// Settings → Voice's two parts: the voices (Automatic, then the phone's, each a button that says
-// whether it is the chosen one, with a check beside it) and the help line under them; then Speed
-// and Pitch (src/ui's Slider, named, its value read out in words) and Reset to default. The primitives
-// carry the style's dress (Studio, Play, HUD); the rows and words are view-model.ts's.
+// Settings → Voice's parts: with Auto's server voice, its voices first (each a button that says
+// whether it is the chosen one, with a check beside it) and "Use this phone's voice instead"; the
+// phone's voices (Automatic, then the phone's) and the help line under them; then Speed and Pitch
+// (src/ui's Slider, named, its value read out in words; Pitch gives way to a one-line reason with
+// the server voice) and Reset to default. The primitives carry the style's dress (Studio, Play,
+// HUD); the rows and words are view-model.ts's and server-view-model.ts's.
 
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -11,6 +13,7 @@ import { useTokens } from '../../styles/theme';
 import { Button, Card, Divider, ListRow, Slider, Text } from '../../ui';
 import { ICON_STROKE } from '../../ui/paint';
 import { VOICE_SETTINGS_COPY } from '../strings';
+import type { ServerChoice, ServerVoiceRow, SoundPart } from './server-view-model';
 import type { SoundKey, SoundSlider, VoiceRow } from './view-model';
 
 const COPY = VOICE_SETTINGS_COPY;
@@ -37,30 +40,57 @@ function Mark({ selected }: { readonly selected: boolean }) {
   return <Check size={MARK_SIZE} color={colours.primary} strokeWidth={ICON_STROKE} />;
 }
 
+type ChoiceRow = Pick<VoiceRow, 'key' | 'title' | 'summary' | 'selected'>;
+
+/** The rows of a list of voices, one chosen (its check), each a button. */
+function Rows<R extends ChoiceRow>(props: {
+  readonly rows: readonly R[];
+  readonly onPress: (row: R) => void;
+}) {
+  return (
+    <Card>
+      {props.rows.map((row, index) => (
+        <View key={row.key}>
+          {index > 0 ? <Divider /> : null}
+          <ListRow
+            title={row.title}
+            summary={row.summary}
+            selected={row.selected}
+            trailing={<Mark selected={row.selected} />}
+            accessibilityHint={COPY.voiceHint}
+            onPress={() => props.onPress(row)}
+          />
+        </View>
+      ))}
+    </Card>
+  );
+}
+
+export type ServerVoiceListProps = {
+  readonly rows: readonly ServerVoiceRow[];
+  readonly onChoose: (choice: ServerChoice) => void;
+};
+
+/** "Auto's voice" with the server voice: the server's voices, then this phone's. */
+export function ServerVoiceList({ rows, onChoose }: ServerVoiceListProps) {
+  return (
+    <Titled title={COPY.voiceSection}>
+      <Rows rows={rows} onPress={(row) => onChoose(row.choice)} />
+    </Titled>
+  );
+}
+
 export type VoiceListProps = {
+  readonly title: string;
   readonly rows: readonly VoiceRow[];
   readonly help: string;
   readonly onChoose: (voice: string | null) => void;
 };
 
-export function VoiceList({ rows, help, onChoose }: VoiceListProps) {
+export function VoiceList({ title, rows, help, onChoose }: VoiceListProps) {
   return (
-    <Titled title={COPY.voiceSection}>
-      <Card>
-        {rows.map((row, index) => (
-          <View key={row.key}>
-            {index > 0 ? <Divider /> : null}
-            <ListRow
-              title={row.title}
-              summary={row.summary}
-              selected={row.selected}
-              trailing={<Mark selected={row.selected} />}
-              accessibilityHint={COPY.voiceHint}
-              onPress={() => onChoose(row.voice)}
-            />
-          </View>
-        ))}
-      </Card>
+    <Titled title={title}>
+      <Rows rows={rows} onPress={(row) => onChoose(row.voice)} />
       <Text level={NOTE_LEVEL} tone="muted">
         {help}
       </Text>
@@ -104,26 +134,32 @@ function Sound({ slider, onSlide, onRelease }: SoundProps & { readonly slider: S
 }
 
 export type SoundSectionProps = SoundProps & {
-  readonly sliders: readonly SoundSlider[];
+  readonly sound: SoundPart;
+  readonly resetHint: string;
   readonly onReset: () => void;
 };
 
-export function SoundSection({ sliders, onSlide, onRelease, onReset }: SoundSectionProps) {
+export function SoundSection({ sound, resetHint, onSlide, onRelease, onReset }: SoundSectionProps) {
   const { spacing } = useTokens();
   return (
-    <Titled title={COPY.soundSection}>
+    <Titled title={sound.title}>
       <Card>
         <View style={{ gap: spacing.space5 }}>
-          {sliders.map((slider) => (
+          {sound.sliders.map((slider) => (
             <Sound key={slider.key} slider={slider} onSlide={onSlide} onRelease={onRelease} />
           ))}
+          {sound.note === null ? null : (
+            <Text level={NOTE_LEVEL} tone="muted">
+              {sound.note}
+            </Text>
+          )}
         </View>
       </Card>
       <Button
         label={COPY.reset}
         variant="outline"
         onPress={onReset}
-        accessibilityHint={COPY.resetHint}
+        accessibilityHint={resetHint}
       />
     </Titled>
   );

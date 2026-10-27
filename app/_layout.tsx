@@ -8,7 +8,8 @@
 // (src/app-state/query-root.tsx). StyleSyncSlot hands StyleSync to the signed-in layout, which
 // mounts it once inside the gate (src/styles/sync/ShellStyleSync.tsx, US-016j), and EdgeScreenSlot
 // holds GateEdge, the style's edge screens for the gate's error and Not running, for the signed-in
-// layout to give the gate (src/styles/edges/ShellEdgeScreen.tsx).
+// layout to give the gate (src/styles/edges/ShellEdgeScreen.tsx). At start, the server voice's
+// cache folder is swept of any MP3 a crash left (src/voice/server/speech-files.ts; never throws).
 import { Stack } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -24,8 +25,10 @@ import { StyleSyncSlot } from '../src/styles/sync/ShellStyleSync';
 import { StyleSync } from '../src/styles/sync/StyleSync';
 import { ThemeProvider } from '../src/styles/theme';
 import { ToastProvider } from '../src/ui';
+import { sweepSpeechFiles } from '../src/voice/server/speech-files';
 
 initCrashReporting();
+sweepSpeechFiles();
 
 export default function RootLayout() {
   return (

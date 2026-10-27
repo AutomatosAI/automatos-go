@@ -24,6 +24,7 @@ import { logger } from '../../lib/logger';
 import { createListenerStack } from '../audio/listener-stack';
 import { SPEECH_PITCH, SPEECH_RATE } from '../config';
 import type { RecognitionPlatform } from '../quick-ask/recognition-policy';
+import type { ServerSpeech } from '../server/server-speaker-ports';
 import { resolveVoice, voiceChoices, type VoiceChoice } from './voice-choices';
 import type { SpeechVoice } from './voice-pick';
 
@@ -55,13 +56,15 @@ export type SpeechPort = {
 
 /**
  * The phone's language (the one recognition listens in), the voice when one was picked, and the
- * rate and pitch Settings → Voice saved (the voice's own, 1, when not given).
+ * rate and pitch Settings → Voice saved (the voice's own, 1, when not given). server: Auto's server
+ * voice, which reply-voice.ts speaks with instead when it is given; the phone's speaker ignores it.
  */
 export type SpeakOptions = {
   readonly language: string;
   readonly voice?: string;
   readonly rate?: number;
   readonly pitch?: number;
+  readonly server?: ServerSpeech;
 };
 
 export type Speaker = {

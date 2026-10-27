@@ -43,3 +43,11 @@ export function canReportContent(discovery: GateInput): boolean {
 export function canDigest(discovery: GateInput): boolean {
   return has(discovery, 'digest');
 }
+
+/**
+ * Auto's server voice: quick-ask's replies and Settings → Voice's sample spoken by the server
+ * (POST /api/voice/speech). Without it the phone's own voice speaks, as before.
+ */
+export function canServerVoice(discovery: GateInput): boolean {
+  return has(discovery, 'tts');
+}

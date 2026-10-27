@@ -8,7 +8,9 @@
 //   (reply-feed.ts) → the reducer's events, and the new sentences to the speaker with the AI notice
 //   first once per session (US-019e). Only that turn is spoken: a typed turn never is.
 //   The speaker never talks over the open mic (KV13). A reply that finished with nothing left to say
-//   while the speaker is idle ends Auto's turn at once (no speak_done would come).
+//   while the speaker is idle ends Auto's turn at once (no speak_done would come). Each send is a new
+//   turn for the voice out (newTurn): a turn whose server voice failed was spoken on the phone, and
+//   this one tries the server again.
 
 import { canSend, type ThreadState } from '../../chat/controller/thread';
 import { claim, release } from '../audio/audio-owner';
@@ -25,6 +27,7 @@ export function send(engine: Engine, text: string): void {
   set(engine, { tracking: awaitingTurn(thread.state), feed: createReplyFeed(), pending: null });
   // The last turn's reply no longer describes the screen ('See it in the chat', its agent).
   show(engine, { reply: null });
+  engine.deps.speaker.newTurn();
   thread.send(quickAskMessage(text, discovery));
   dispatch(engine, { type: 'sent', notice: noticeFor(get(engine).session) });
 }

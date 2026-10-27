@@ -212,8 +212,9 @@ describe('scrubEvent keeps a crash debuggable', () => {
         timestamp: 1761471205.6,
         type: 'http',
         category: 'fetch',
-        // Auto Live has no route table yet, so none of its words are route words
-        data: { method: 'POST', url: '/api/:id/:id/:id/:id', status_code: 502 },
+        // 'voice' is a route word (the server voice's table, src/voice/routes.ts); Auto Live has
+        // no route table yet, so its other words, and the call id, are not
+        data: { method: 'POST', url: '/api/voice/:id/:id/:id', status_code: 502 },
       },
       {
         timestamp: 1761471205.9,

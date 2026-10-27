@@ -1,8 +1,14 @@
 // A fake Transport for the client's tests: records every request and answers from a responder, so
 // nothing touches the network or imports expo/fetch.
 
+import { readBytes } from '../body';
 import type { Server } from '../server';
-import type { StreamingResponse, Transport, TransportRequest } from '../transport-types';
+import type {
+  BinaryResponse,
+  StreamingResponse,
+  Transport,
+  TransportRequest,
+} from '../transport-types';
 
 export const SERVER: Server = Object.freeze({
   apiUrl: 'https://api.example.test',
@@ -10,9 +16,25 @@ export const SERVER: Server = Object.freeze({
   source: 'hosted',
 });
 
-type Responder = (request: TransportRequest) => StreamingResponse | Promise<StreamingResponse>;
+/** An answer for any of the three calls; bytes and headers only matter to binary(). */
+export type FakeResponse = StreamingResponse & Partial<Pick<BinaryResponse, 'bytes' | 'header'>>;
+
+type Responder = (request: TransportRequest) => FakeResponse | Promise<FakeResponse>;
 
 export type FakeTransport = Transport & { readonly calls: TransportRequest[] };
+
+/** binary()'s view of an answer: its bytes (the text's, when it has none) and no headers. */
+function asBinary(response: FakeResponse): BinaryResponse {
+  return {
+    status: response.status,
+    text: response.text,
+    bytes:
+      response.bytes ??
+      (async (maxBytes) =>
+        readBytes(streamOf(new TextEncoder().encode(await response.text())), maxBytes)),
+    header: response.header ?? (() => null),
+  };
+}
 
 export function fakeTransport(responder: Responder): FakeTransport {
   const calls: TransportRequest[] = [];
@@ -20,7 +42,42 @@ export function fakeTransport(responder: Responder): FakeTransport {
     calls.push(request);
     return responder(request);
   };
-  return { calls, request: handle, stream: handle };
+  return {
+    calls,
+    request: handle,
+    stream: handle,
+    binary: async (request) => asBinary(await handle(request)),
+  };
+}
+
+/** The bytes as a body that arrives in one read, as expo/fetch's response.body. */
+export function streamOf(bytes: Uint8Array): ReadableStream<Uint8Array> {
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      if (bytes.byteLength > 0) controller.enqueue(bytes);
+      controller.close();
+    },
+  });
+}
+
+/** A body of bytes with headers (Auto's server voice: an MP3 and its X-Voice-Id). */
+export function bytesReply(
+  status: number,
+  bytes: Uint8Array,
+  headers: Readonly<Record<string, string>> = {},
+): FakeResponse {
+  const byName = new Map(
+    Object.entries(headers).map(([name, value]) => [name.toLowerCase(), value]),
+  );
+  return {
+    status,
+    text: async () => new TextDecoder().decode(bytes),
+    chunks: async function* () {
+      yield new TextDecoder().decode(bytes);
+    },
+    bytes: (maxBytes) => readBytes(streamOf(bytes), maxBytes, byName.get('content-length') ?? null),
+    header: (name) => byName.get(name.toLowerCase()) ?? null,
+  };
 }
 
 /** A whole-body answer. */

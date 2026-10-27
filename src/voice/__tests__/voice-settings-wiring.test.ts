@@ -12,7 +12,11 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { VOICE_SCREENS } from '../nav';
-import { speakOptionsFor, type VoiceSetting } from '../settings/voice-setting';
+import {
+  DEFAULT_VOICE_SETTING,
+  speakOptionsFor,
+  type VoiceSetting,
+} from '../settings/voice-setting';
 import { createSpeaker } from '../speech/speaker-core';
 import type { SpeechVoice } from '../speech/voice-pick';
 import { AI_VOICE_GREETING } from '../strings';
@@ -40,7 +44,12 @@ async function quickAskWith(setting: VoiceSetting) {
 
 describe('quick-ask speaks with the saved setting', () => {
   it('in the saved voice, at the saved speed and pitch', async () => {
-    const speech = await quickAskWith({ voice: DANIEL, rate: 1.1, pitch: 0.9 });
+    const speech = await quickAskWith({
+      ...DEFAULT_VOICE_SETTING,
+      voice: DANIEL,
+      rate: 1.1,
+      pitch: 0.9,
+    });
     expect(speech.utterances.map(({ text }) => text)).toEqual([AI_VOICE_GREETING, 'Two meetings.']);
     for (const { request } of speech.utterances) {
       expect(request).toMatchObject({ language: 'en-GB', voice: DANIEL, rate: 1.1, pitch: 0.9 });
@@ -49,12 +58,12 @@ describe('quick-ask speaks with the saved setting', () => {
 
   it("in pickVoice's voice once the saved one is gone from the phone", async () => {
     const gone = 'com.apple.voice.premium.en-GB.Serena';
-    const speech = await quickAskWith({ voice: gone, rate: 0.85, pitch: 1 });
+    const speech = await quickAskWith({ ...DEFAULT_VOICE_SETTING, voice: gone, rate: 0.85 });
     expect(speech.at(0)).toMatchObject({ voice: MALCOLM, rate: 0.85, pitch: 1 });
   });
 
   it("in pickVoice's voice at the voice's own speed and pitch when nothing was changed", async () => {
-    const speech = await quickAskWith({ voice: null, rate: 1, pitch: 1 });
+    const speech = await quickAskWith(DEFAULT_VOICE_SETTING);
     expect(speech.at(0)).toMatchObject({ voice: MALCOLM, rate: 1, pitch: 1 });
   });
 });
@@ -73,14 +82,17 @@ describe('the quick-ask hook (source)', () => {
     expect(hook).toMatch(/const setting = useVoiceSetting\(\);/);
   });
 
-  it('asks the speaker for the saved voice, and again when it changes', () => {
+  it('asks the voice out for the saved voice, and again when it changes', () => {
     expect(hook).toMatch(/usePhoneVoice\(language, setting\.voice\)/);
-    expect(hook).toMatch(/speaker\.voiceFor\(language, saved\)/);
+    expect(hook).toMatch(/voiceOut\.voiceFor\(language, saved\)/);
     expect(hook).toMatch(/\}, \[language, saved\]\);/);
   });
 
-  it('speaks with the voice, rate and pitch speakOptionsFor builds', () => {
-    expect(hook).toMatch(/speech: speakOptionsFor\(language, voice, setting\),/);
+  it("speaks with the voice, rate and pitch speakOptionsFor builds, and Auto's server voice", () => {
+    expect(hook).toMatch(/speech: speakOptionsFor\(language, voice, setting, server\),/);
+    expect(hook).toMatch(
+      /const server = serverSpeechFor\(\{ discovery, setting, voices, client \}\);/,
+    );
   });
 });
 

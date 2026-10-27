@@ -97,7 +97,7 @@ describe('voiceName', () => {
 
 describe('the sliders', () => {
   it('are Speed then Pitch, 0.8 to 1.2 in steps of 0.05, at the setting’s values', () => {
-    const sliders = soundSliders({ voice: null, rate: 0.9, pitch: 1.15 });
+    const sliders = soundSliders({ ...DEFAULT_VOICE_SETTING, rate: 0.9, pitch: 1.15 });
     expect(
       sliders.map(({ key, label, min, max, step, value, shown }) => ({
         key,
@@ -184,7 +184,12 @@ describe('the sample line', () => {
   it("speaks in the setting's voice at its speed and pitch, cutting off a sample still speaking", async () => {
     const { speaker, log, spoken } = spySpeaker();
     const player = createSamplePlayer(speaker, LINE);
-    const setting: VoiceSetting = { voice: DANIEL, rate: 1.1, pitch: 0.85 };
+    const setting: VoiceSetting = {
+      ...DEFAULT_VOICE_SETTING,
+      voice: DANIEL,
+      rate: 1.1,
+      pitch: 0.85,
+    };
     await player.play('en-GB', setting);
     expect(speaker.voiceFor).toHaveBeenCalledWith('en-GB', DANIEL);
     expect(log).toEqual(['stop', 'speak']);
