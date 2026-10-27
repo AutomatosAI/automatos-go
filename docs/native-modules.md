@@ -5,6 +5,10 @@ later wave adds no native module, config plugin or `app.json` change, because ea
 native change moves the fingerprint and costs an iOS build from the 15 a month shared
 with the academy app.
 
+One exception so far: `expo-audio`, for Auto's server voice (Gerard, 27 Oct 2026). Its PR is
+native (a new fingerprint, so build 13) and is merged when Gerard decides; see
+[expo-audio](#expo-audio).
+
 How a version is chosen (kit decision K8):
 
 - **expo install** — `npx expo install <pkg>` for every package Expo SDK 54 knows; it
@@ -38,6 +42,8 @@ into `app.json` ([Config plugins](#config-plugins)). The last column maps each i
 | Files: system document viewer                  | `react-native-file-viewer-turbo`      | 0.8.0 (exact)                             | K8, see [Document viewer](#document-viewer)                                                                                                                                                                                             | `react-native-file-viewer-turbo` (Android `<queries>` for `showOpenWithDialog` only); not wired                                    | none (QuickLook)                                                                                                                                                         |
 | Voice: speech to text                          | `expo-speech-recognition`             | 3.1.3 (exact)                             | US-001; npm dist-tag `sdk-54` = 3.1.3; peers `expo`, `react`, `react-native` `"*"`                                                                                                                                                      | `expo-speech-recognition`, `androidSpeechServicePackages`                                                                          | `SFSpeechRecognizer` → `NSSpeechRecognitionUsageDescription`; `requestRecordPermission` → `NSMicrophoneUsageDescription`                                                 |
 | Voice: text to speech                          | `expo-speech`                         | 14.0.8 (`~14.0.8`)                        | US-001                                                                                                                                                                                                                                  | none                                                                                                                               | none                                                                                                                                                                     |
+| Voice: Auto's server voice (MP3 playback)      | `expo-audio`                          | 1.1.1 (`~1.1.1`)                          | expo install (27 Oct 2026, Gerard); peers `expo`, `expo-asset`, `react`, `react-native` `"*"`                                                                                                                                         | ships one; not wired, see [expo-audio](#expo-audio)                                                                                | `AVAudioSession.recordPermission` (its recorder, unused) → `NSMicrophoneUsageDescription`; MediaPlayer for now-playing only (no `MPMediaLibrary`)                      |
+| Voice: `expo-audio`'s peer                     | `expo-asset`                          | 12.0.14 (`~12.0.14`)                      | expo install (27 Oct 2026): it came with `expo` (12.0.13); expo-doctor asks for a native module's peer as a direct dependency                                                                                                         | ships one (embeds the assets its options list); not wired: no options, so it does nothing                                          | none (already in the build through `expo`)                                                                                                                               |
 | Voice: Auto Live                               | `@livekit/react-native`               | 3.1.0 (exact)                             | K8: newest; peers `react "*"`, `react-native "*"`, `livekit-client "^2.20.0"`, `@livekit/react-native-webrtc "^150.1.0"`; engines `node >=20`                                                                                           | none (through `@livekit/react-native-expo-plugin`)                                                                                 | none (through `@livekit/react-native-webrtc`)                                                                                                                            |
 | Voice: Auto Live                               | `@livekit/react-native-webrtc`        | 150.1.0 (exact)                           | K8: newest, and the line `@livekit/react-native` 3.1.0 peers; peers `react-native ">=0.60.0"`; podspec `ios 12.0`                                                                                                                       | none (through `@config-plugins/react-native-webrtc`)                                                                               | `AVCaptureDevice` (video, audio) → `NSCameraUsageDescription`, `NSMicrophoneUsageDescription`                                                                            |
 | Voice: Auto Live                               | `@livekit/react-native-expo-plugin`   | 1.1.0 (exact)                             | K8: newest; peers `expo "*"`, `react "*"`, `react-native "*"`, `@livekit/react-native "^2.1.0 \|\| ^3.0.0"`. 1.1.0 is the first to add the livekit/podspecs source at prebuild (LiveKitWebRTC leaves the CocoaPods trunk on 2 Dec 2026) | `@livekit/react-native-expo-plugin`, `android.audioType: communication`                                                            | none                                                                                                                                                                     |
@@ -126,6 +132,38 @@ no code imports it until A4.
   `boost`, so `ios.privacyManifests` is unchanged ([Privacy manifest](#privacy-manifest)).
 - **Dependencies:** `ua-parser-js` 0.7.41, used by its web implementation only.
 
+## expo-audio
+
+Added on 27 Oct 2026 (Gerard) so Auto's spoken replies can use the server's voice: the app asks the
+server for one MP3 per sentence (`POST /api/voice/speech`), writes it to the cache with
+`expo-file-system` and plays it with `expo-audio` (`src/voice/server/`, [voice.md](voice.md)). It
+is the only native change in its PR, so the PR's merge builds one native iOS build.
+
+- **Version:** `npx expo install expo-audio -- --ignore-scripts` wrote `~1.1.1` (SDK 54's
+  `bundledNativeModules.json`); the lock resolves 1.1.1. Its peer `expo-asset` came with `expo`,
+  but expo-doctor fails a native module's peer that is not a direct dependency ("Missing peer
+  dependency: expo-asset"), so `npx expo install expo-asset -- --ignore-scripts` added it: `~12.0.14`
+  (Expo's SDK 54 list; the lock moves 12.0.13 → 12.0.14, its dependency `expo-constants ~18.0.14`
+  is the 18.0.14 already locked). Both installs ran under Node 22 with `.npmrc`'s
+  `legacy-peer-deps`; the lock gained only these two entries.
+- **Config plugin:** not wired. `app.plugin.js` writes `NSMicrophoneUsageDescription` only when it
+  is unset (`createPermissionsPlugin`; app.json has the app's own string), adds Android
+  `RECORD_AUDIO` and `MODIFY_AUDIO_SETTINGS` (both already declared), and adds the `audio`
+  background mode and the microphone foreground-service permission only with
+  `enableBackgroundRecording`, which the app never sets. Prebuild does not apply it without an
+  entry (it is not in `withLegacyExpoPlugins`). `npx expo install` added a bare entry and reformatted
+  `app.json` (and one for `expo-asset`); that was reverted, as in US-002g.
+- **iOS:** `ExpoAudio.podspec` asks for iOS 15.1 (the app has 17.0). No `PrivacyInfo.xcprivacy`, so
+  the accessed-API union is unchanged. It references `AVAudioSession.recordPermission` and asks for
+  the record permission through a selector built at run time (its recorder; the app records nothing
+  with it): covered by `NSMicrophoneUsageDescription`. MediaPlayer is imported for
+  `MPNowPlayingInfoCenter` and `MPRemoteCommandCenter` (lock-screen controls, never turned on), not
+  `MPMediaLibrary`. No background mode: the voice plays only while the app is open (D33).
+- **Android:** its library manifest declares `RECORD_AUDIO`, `MODIFY_AUDIO_SETTINGS` (kept),
+  `FOREGROUND_SERVICE` (already blocked) and `FOREGROUND_SERVICE_MEDIA_PLAYBACK`, now blocked in
+  `app.json` ([Android permissions](#android-permissions)), with two services
+  (`AudioControlsService`, `AudioRecordingService`) the app never starts.
+
 ## What is not installed
 
 - `react-native-webview` — never, not even transitively (D-NO-WEBVIEW): the lockfile has
@@ -163,7 +201,8 @@ Prebuild applies some plugins without an entry (`@expo/prebuild-config`'s
 `_internal.pluginHistory`): `expo-dev-client` (with `expo-dev-menu` and `expo-dev-launcher`),
 `expo-file-system`, `expo-task-manager`, `expo-updates` and `expo-splash-screen`.
 
-Not wired, on purpose: `@clerk/expo` (CLAUDE.md traps); `expo-web-browser` (its plugin acts
+Not wired, on purpose: `@clerk/expo` (CLAUDE.md traps); `expo-audio` (its plugin adds nothing the
+app does not already have, [expo-audio](#expo-audio)); `expo-web-browser` (its plugin acts
 only on Android `experimentalLauncherActivity`); `react-native-file-viewer-turbo` (its plugin
 adds Android `<queries>` for `showOpenWithDialog` only; the app calls `open`). `expo-font`
 gets its font list in US-002d and `expo-splash-screen` its image in US-002e.
@@ -187,7 +226,7 @@ never asks for access."
 | Framework: class                                                                                    | Referenced by                                                                                                                                                                                  | Key                                   | The app                                                 |
 | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- | ------------------------------------------------------- |
 | AVFoundation: `AVCaptureDevice` (video)                                                             | `expo-camera`, `expo-image-picker`, `@livekit/react-native-webrtc` (and the LiveKitWebRTC pod)                                                                                                 | `NSCameraUsageDescription`            | uses it: the pairing QR code, photos for Auto           |
-| AVFoundation: `AVCaptureDevice` (audio), `AVAudioSession.requestRecordPermission`                   | `expo-camera` (video recording), `@livekit/react-native-webrtc` and the LiveKitWebRTC pod, `expo-speech-recognition`; the `expo-image-picker` plugin also sets it (camera video records sound) | `NSMicrophoneUsageDescription`        | uses it: talking to Auto                                |
+| AVFoundation: `AVCaptureDevice` (audio), `AVAudioSession.requestRecordPermission`                   | `expo-camera` (video recording), `@livekit/react-native-webrtc` and the LiveKitWebRTC pod, `expo-speech-recognition`, `expo-audio` (its recorder); the `expo-image-picker` plugin also sets it (camera video records sound) | `NSMicrophoneUsageDescription`        | uses it: talking to Auto                                |
 | Speech: `SFSpeechRecognizer`                                                                        | `expo-speech-recognition`                                                                                                                                                                      | `NSSpeechRecognitionUsageDescription` | uses it: quick-ask speech to text                       |
 | Photos: `PHAsset`, `PHPhotoLibrary`                                                                 | `expo-image-picker`, `expo-file-system`, `expo-image-manipulator`, `expo-video`                                                                                                                | `NSPhotoLibraryUsageDescription`      | uses it: attaching photos                               |
 | Photos: `PHAccessLevel.addOnly`                                                                     | `expo-image-picker` (`MediaLibraryWriteOnlyPermissionRequester`)                                                                                                                               | `NSPhotoLibraryAddUsageDescription`   | does not: notice                                        |
@@ -205,8 +244,8 @@ Checked and referenced by no bundled module, so there is no key (a notice would 
 - `CNContactStore` (`NSContactsUsageDescription`), `EKEventStore` (`NSCalendars…`,
   `NSRemindersUsageDescription`), `CBCentralManager` / `CBPeripheralManager`
   (`NSBluetoothAlwaysUsageDescription`): no reference at all.
-- `MPMediaLibrary` (`NSAppleMusicUsageDescription`): `expo-video` imports MediaPlayer for
-  `MPNowPlayingInfoCenter` and `MPRemoteCommandCenter` only; the academy build carries
+- `MPMediaLibrary` (`NSAppleMusicUsageDescription`): `expo-video` and `expo-audio` import
+  MediaPlayer for `MPNowPlayingInfoCenter` and `MPRemoteCommandCenter` only; the academy build carries
   `expo-video` 3.0.16 with no Apple Music key.
 - `ATTrackingManager` (`NSUserTrackingUsageDescription`): `expo-speech-recognition`'s permission
   requester has `import AppTrackingTransparency` but uses no symbol from it; the academy build
@@ -313,8 +352,8 @@ the Expo template's manifest, and each wired plugin's `withPermissions` call (20
 | `INTERNET`                         | Expo template, `expo-file-system`, `expo-video`, Sentry, LiveKit                              | the API, Clerk, LiveKit, Sentry                                                                                                                                |
 | `ACCESS_NETWORK_STATE`             | `expo-updates`, Sentry, LiveKit, the WebRTC plugin                                            | connectivity checks in those modules                                                                                                                           |
 | `CAMERA`                           | `expo-camera`, `expo-image-picker`, LiveKit, the WebRTC plugin                                | the pairing QR code, photos for Auto                                                                                                                           |
-| `RECORD_AUDIO`                     | `expo-camera`, LiveKit; the `expo-speech-recognition`, `expo-image-picker` and WebRTC plugins | quick-ask, Auto Live                                                                                                                                           |
-| `MODIFY_AUDIO_SETTINGS`            | LiveKit, the WebRTC plugin                                                                    | Auto Live audio routing (speaker, headset)                                                                                                                     |
+| `RECORD_AUDIO`                     | `expo-camera`, LiveKit, `expo-audio`; the `expo-speech-recognition`, `expo-image-picker` and WebRTC plugins | quick-ask, Auto Live                                                                                                                                           |
+| `MODIFY_AUDIO_SETTINGS`            | LiveKit, the WebRTC plugin, `expo-audio`                                                      | Auto Live audio routing (speaker, headset)                                                                                                                     |
 | `BLUETOOTH`, `BLUETOOTH_ADMIN`     | LiveKit (`BLUETOOTH` also the WebRTC plugin)                                                  | Auto Live through a Bluetooth headset (LiveKit's audioswitch); normal permissions, no prompt                                                                   |
 | `POST_NOTIFICATIONS`               | `expo-notifications`                                                                          | push (Android 13 asks)                                                                                                                                         |
 | `RECEIVE_BOOT_COMPLETED`           | `expo-notifications`                                                                          | its boot receiver re-arms scheduled notifications after a restart                                                                                              |
@@ -326,7 +365,8 @@ the Expo template's manifest, and each wired plugin's `withPermissions` call (20
 | Blocked                                                                        | Added by                                               | Why                                                                                                                                                                                                                              |
 | ------------------------------------------------------------------------------ | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `SYSTEM_ALERT_WINDOW`                                                          | Expo template, the WebRTC plugin                       | the app draws over no other app                                                                                                                                                                                                  |
-| `FOREGROUND_SERVICE`                                                           | LiveKit                                                | its only foreground service is WebRTC's `MediaProjectionService` for screen sharing, which the app never starts; Auto Live runs with the screen on and the app open (D33)                                                        |
+| `FOREGROUND_SERVICE_MEDIA_PLAYBACK`                                            | `expo-audio`                                           | its lock-screen controls service, which the app never starts: Auto's server voice plays only with the app open (D33). Added 27 Oct 2026 with `expo-audio`                                                                       |
+| `FOREGROUND_SERVICE`                                                           | LiveKit, `expo-audio`                                  | its only foreground service is WebRTC's `MediaProjectionService` for screen sharing, which the app never starts; Auto Live runs with the screen on and the app open (D33)                                                        |
 | `READ_EXTERNAL_STORAGE`                                                        | Expo template, `expo-file-system`, `expo-image-picker` | `launchImageLibraryAsync` uses the system photo picker and asks for no permission; documents come through the system document picker                                                                                             |
 | `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`, `READ_MEDIA_AUDIO`                    | no module                                              | Android 13's successors of `READ_EXTERNAL_STORAGE`, blocked so no library adds them (Google Play's photo and video permissions policy)                                                                                           |
 | `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`, `ACCESS_BACKGROUND_LOCATION` | no module                                              | blocked because Gradle dependencies (LiveKit's audioswitch and WebRTC, Firebase messaging, ML Kit barcode scanning, clerk-android, sentry-android) bring manifests this repository cannot inspect before the first Android build |
@@ -432,7 +472,8 @@ declares. `expo config --type introspect`, 20 Oct: `["remote-notification","fetc
 
 `npx expo-doctor` 1.21.5: 18/18 checks pass, including "Validate packages against React
 Native Directory package metadata". No `expo.doctor.reactNativeDirectoryCheck.exclude`
-entry exists, so there is no exclusion to justify.
+entry exists, so there is no exclusion to justify. Re-run on 27 Oct 2026 with `expo-audio` and
+`expo-asset`: 18/18.
 
 ## Installing
 

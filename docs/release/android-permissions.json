@@ -1,6 +1,6 @@
 {
   "about": "The Android permissions of Automatos Go, as data (R08, KR12). allowed is exactly the uses-permission set the evaluated Android manifest keeps (npx expo config --type introspect on the merged base 24a8fa6, 26 Oct 2026): app.json android.permissions plus what each wired config plugin adds, each with why the app needs it and the module that asks for it. denied is what the build must never keep: the ones app.json android.blockedPermissions removes (tools:node=\"remove\", which also strips them from a library's manifest at merge time) and the ones no module declares. src/release/__tests__/permissions.test.ts holds the evaluated manifest and every installed library's AndroidManifest.xml to this file, so a plugin or library that adds a permission fails CI. Gradle dependencies (LiveKit's audioswitch and WebRTC, Firebase messaging, ML Kit barcode scanning, clerk-android, sentry-android) bring manifests that are not in node_modules: only the built APK shows their merged result (OT-R5). docs/native-modules.md 'Android permissions' is the foundation's record of the same list.",
-  "reviewed": "2026-10-26",
+  "reviewed": "2026-10-27",
   "allowed": [
     {
       "name": "android.permission.INTERNET",
@@ -132,7 +132,7 @@
     },
     {
       "name": "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
-      "why": "No background audio (D33). expo-video's config plugin adds it only with supportsBackgroundPlayback, which app.json sets false."
+      "why": "No background audio (D33): Auto's server voice (expo-audio) plays only with the app open and on the screen. expo-audio's library manifest declares it for its lock-screen controls service (AudioControlsService), which the app never starts; expo-video's config plugin adds it only with supportsBackgroundPlayback, which app.json sets false. Blocked in app.json."
     }
   ]
 }
