@@ -13,15 +13,16 @@
 //   open (use-server-voices.ts) and listed first (server-view-model.ts); a tap on one saves it and
 //   plays the sample through the server, as quick-ask would speak (serverSpeechFor), the phone's
 //   voice saying it when the server cannot. Speaks through the one voice out (voice-out.ts).
-//   "I speak" (27 Oct 2026): the language rows first (language/language-rows.ts); a tap saves the
-//   choice (withSpeakChoice) and plays the sample.
+//   "I speak" (27 Oct 2026): the language rows first (language/language-rows.ts), with iOS's note
+//   while the choice is not the iPhone's language; a tap saves the choice (withSpeakChoice) and
+//   plays the sample.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 
 import { useAppSession } from '../../app-state/session';
 import { logger } from '../../lib/logger';
-import { languageRows, type LanguageRow } from '../language/language-rows';
+import { languageNote, languageRows, type LanguageRow } from '../language/language-rows';
 import { withSpeakChoice } from '../language/speak-language';
 import { SPEECH_PITCH_LIMITS, SPEECH_RATE_LIMITS } from '../config';
 import { phoneLocale } from '../quick-ask/locale';
@@ -62,6 +63,8 @@ export type VoiceSettingsView = Readonly<{
   lede: string;
   /** "I speak": Automatic, English, Português (Portugal), Português (Brasil). */
   languages: readonly LanguageRow[];
+  /** iOS, while the choice is not the iPhone's language: hold to talk works only in that one. */
+  languageNote: string | null;
   chooseLanguage: (choice: SpeakChoice) => void;
   /** "Auto's voice" with the server's voices; null when the server lists no tts. */
   server: readonly ServerVoiceRow[] | null;
@@ -165,6 +168,7 @@ export function useVoiceSettings(): VoiceSettingsView {
   return {
     lede: words.lede,
     languages: languageRows(setting, phone),
+    languageNote: languageNote(PLATFORM, setting, phone),
     chooseLanguage: (choice) => save(withSpeakChoice(voiceSetting.get(), choice)),
     server: serverVoiceRows(voices, setting),
     chooseServer: (choice) => save(withServerChoice(voiceSetting.get(), choice)),

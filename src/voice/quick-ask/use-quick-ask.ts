@@ -12,11 +12,12 @@
 //   /cc or look page over it takes nothing, and its speech goes on (US-019j). Attaching starts an
 //   AI-notice session (KV7); detaching stops the mic and the speech, and the turn runs on with
 //   nothing more spoken (A2 lets go of the read without a cancel).
-//   The speech is in the phone's language (the one recognition listens in) with the voice picked
-//   for it (US-019d): the one Settings → Voice saved while the phone offers it, else the phone's
+//   The speech is in the language recognition listens in ("I speak", language/speak-language.ts:
+//   the phone's when Automatic) with the voice picked for it (US-019d): the one Settings → Voice saved while the phone offers it, else the phone's
 //   best; until that voice is known, the engine's default for the language. The saved rate and
 //   pitch go with it. The setting is a store every reader hears (use-voice-setting.ts), so a change
-//   re-renders this hook and the next reply speaks with it.
+//   re-renders this hook and the next reply speaks with it. A change of language tells the engine
+//   (languageChanged): a refusal about the old language goes, and the next press checks the new.
 //   Auto's server voice (27 Oct 2026): when the server lists tts and the person keeps Auto's voice,
 //   the speech also carries the server voice (serverSpeechFor: the saved server voice while the
 //   server's list offers it, else its default; the saved speed; the session's client), and the one
@@ -41,8 +42,9 @@ import { useVoiceSetting } from '../settings/use-voice-setting';
 import { speakOptionsFor } from '../settings/voice-setting';
 import { serverSpeechFor } from '../server/server-voices';
 import { useServerVoices } from '../server/use-server-voices';
+import { listeningLocale } from '../language/speak-language';
+import { usePhoneLocale } from '../language/use-speak-language';
 import { voiceOut } from '../speech/voice-out';
-import { phoneLocale } from './locale';
 import {
   createQuickAsk,
   type QuickAsk,
@@ -94,11 +96,18 @@ function usePhoneVoice(language: string, saved: string | null): string | undefin
   return voice;
 }
 
+type EngineContext = {
+  readonly latest: { readonly current: QuickAskContext };
+  /** The language it listens and speaks in. */
+  readonly language: string;
+};
+
 /** What the engine reads at each event: this render's thread, role, discovery and speech. */
-function useEngineContext(thread: ThreadView): { readonly current: QuickAskContext } {
+function useEngineContext(thread: ThreadView): EngineContext {
   const { discovery, workspace, client } = useAppSession();
-  const language = useMemo(() => phoneLocale(), []);
+  const phone = usePhoneLocale();
   const setting = useVoiceSetting();
+  const language = listeningLocale(setting, phone);
   const voice = usePhoneVoice(language, setting.voice);
   const voices = useServerVoices();
   const server = serverSpeechFor({ discovery, setting, voices, client });
@@ -112,7 +121,7 @@ function useEngineContext(thread: ThreadView): { readonly current: QuickAskConte
   useEffect(() => {
     latest.current = context;
   });
-  return latest;
+  return { latest, language };
 }
 
 /** One engine per screen, listening to the recognizer and the speaker while its scope holds. */
@@ -146,9 +155,10 @@ function useEngine(context: { readonly current: QuickAskContext }, scope: QuickA
 
 /** Quick-ask over `thread`, the conversation the screen shows (A2's useThread). */
 export function useQuickAsk(thread: ThreadView, scope: QuickAskScope = 'mounted'): QuickAskView {
-  const context = useEngineContext(thread);
-  const engine = useEngine(context, scope);
+  const { latest, language } = useEngineContext(thread);
+  const engine = useEngine(latest, scope);
   useEffect(() => engine.onThread(thread.state), [engine, thread.state]);
+  useEffect(() => engine.languageChanged(), [engine, language]);
   useInterruptions(engine.interrupt);
   const snapshot = useSyncExternalStore(engine.subscribe, engine.snapshot);
   useVoiceKeepAwake(snapshot.voice);

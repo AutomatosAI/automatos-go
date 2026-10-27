@@ -29,7 +29,7 @@ import { useStyle } from '../../styles/theme';
 import { voiceLookPath } from '../nav';
 import type { PermissionVerdict } from '../permissions/permission-flow';
 import { permissions } from '../permissions/permissions';
-import { phoneLocale } from '../quick-ask/locale';
+import { useListening } from '../language/use-speak-language';
 import { useQuickAsk, type QuickAskView } from '../quick-ask/use-quick-ask';
 import {
   phaseMascot,
@@ -122,7 +122,7 @@ export function useVoiceScreen(chatId: string | null): VoiceScreenModel {
   const style = useStyle();
   const screenReader = useScreenReader();
   const mounted = useMountPermission();
-  const locale = useMemo(() => phoneLocale(), []);
+  const { listening, phone } = useListening();
   const levels = useLevels(quick.level);
   const hold = useHold(quick);
   const [typing, setTyping] = useState(false);
@@ -136,7 +136,8 @@ export function useVoiceScreen(chatId: string | null): VoiceScreenModel {
     roleCanChat: roleCan(workspace.role, 'chat'),
     screenReader,
     mascotState: phaseMascot(voice),
-    locale,
+    locale: listening,
+    phoneLocale: phone,
     reply: quick.reply,
     failure: thread.state.failure,
   });

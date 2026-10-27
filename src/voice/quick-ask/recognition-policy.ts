@@ -7,6 +7,11 @@
 //   language) while start() listens in the phone's first preferred language; where the two differ
 //   the check may vouch for the wrong recognizer. Closing that needs a per-locale native check
 //   (a FOUNDATION GAP in the kit's US-019b notes); the airplane-mode device checks prove it.
+//   "I speak" (27 Oct 2026) may choose another language than the phone's. On iOS the module's
+//   check says nothing about it, and start() would use Apple's servers for a language without an
+//   on-device recognizer (Apple lists none for Portuguese (Portugal)), so on iOS only the phone's
+//   own locale may start: any other is 'other-language', unavailable, with its copy. Android checks
+//   the chosen locale itself, as below.
 //   Android: ready only on API 33+ (the module's on-device recognizer, ExpoSpeechService.kt:93-109)
 //   with on-device recognition supported and the locale (or its language: 'en' for 'en-GB') among
 //   the on-device recognizer's installed languages; supported but not installed → 'download'.
@@ -27,8 +32,13 @@ export type RecognitionProbe = {
   readonly androidApiLevel?: number;
   readonly supportsOnDevice: boolean;
   readonly recognitionAvailable: boolean;
-  /** The phone's first locale (locale.ts), the language recognition listens for. */
+  /** The language recognition listens for: "I speak"'s (language/speak-language.ts). */
   readonly locale: string;
+  /**
+   * The phone's first locale (locale.ts): on iOS the one language the module's check covers.
+   * Absent: the same as `locale`.
+   */
+  readonly phoneLocale?: string;
   /** Android: getSupportedLocales' locales (supported, installed or not). */
   readonly supportedLocales?: readonly string[];
   /** Android: getSupportedLocales' installedLocales (ready for on-device use). */
@@ -125,9 +135,17 @@ function androidPolicy(probe: RecognitionProbe): RecognitionPolicy {
   return unavailable('language-missing');
 }
 
+/** iOS: the module's on-device check covers the phone's own locale and no other. */
+function checkedOnIos(probe: RecognitionProbe): boolean {
+  return (
+    probe.phoneLocale === undefined || normalise(probe.phoneLocale) === normalise(probe.locale)
+  );
+}
+
 export function recognitionPolicy(probe: RecognitionProbe): RecognitionPolicy {
   if (probe.platform === 'android' && !((probe.androidApiLevel ?? 0) >= ANDROID_ON_DEVICE_API))
     return unavailable('android-too-old');
+  if (probe.platform === 'ios' && !checkedOnIos(probe)) return unavailable('other-language');
   if (!probe.supportsOnDevice)
     return unavailable(probe.recognitionAvailable ? 'no-on-device' : 'no-recognizer');
   if (probe.platform === 'android') return androidPolicy(probe);
@@ -140,5 +158,6 @@ export function refusalCopyKey(
   policy: Exclude<RecognitionPolicy, { kind: 'ready' }>,
 ): RecognitionCopyKey {
   if (policy.kind === 'download') return 'download';
+  if (policy.reason === 'other-language') return 'otherLanguage';
   return policy.reason === 'android-too-old' ? 'androidTooOld' : 'notOnPhone';
 }

@@ -18,7 +18,7 @@ import type { HudTurn } from '../../styles/hud/core/model';
 import type { HomeThread } from '../../styles/homes/use-home-thread';
 import type { MascotController } from '../../styles/mascot/use-mascot';
 import { permissions } from '../permissions/permissions';
-import { phoneLocale } from '../quick-ask/locale';
+import { useListening } from '../language/use-speak-language';
 import { useQuickAsk, type QuickAskView } from '../quick-ask/use-quick-ask';
 import { voiceReportId, type HoldHandlers, type VoiceLine } from '../screen/core-props';
 import { useHold, useLevels, useScreenReader } from '../screen/use-voice-parts';
@@ -84,7 +84,7 @@ export function useHudHomeVoice(home: HomeThread, threadTurn: HudTurn): HudHomeV
   const quick = useQuickAsk(thread, 'focused');
   const [shows, setShows] = useState<HomeShows>('thread');
   const screenReader = useScreenReader();
-  const locale = useMemo(() => phoneLocale(), []);
+  const { listening, phone } = useListening();
   const levels = useLevels(quick.level);
   const hold = useHomeHold(quick, setShows);
   const { stop, lineAction } = useHomeActions(quick, home);
@@ -100,7 +100,8 @@ export function useHudHomeVoice(home: HomeThread, threadTurn: HudTurn): HudHomeV
     roleCanChat: roleCan(home.role, 'chat'),
     screenReader,
     mascotState: mascot.driver.mascot.mascot,
-    locale,
+    locale: listening,
+    phoneLocale: phone,
     reply: quick.reply,
     failure: thread.state.failure,
   });

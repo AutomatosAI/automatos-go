@@ -4,7 +4,9 @@
 // functions, Platform and the phone's locale, nothing decided here.
 //   probe() reads supportsOnDeviceRecognition(), isRecognitionAvailable(), Platform.Version and, on
 //   Android, getSupportedLocales({}): no service package, so the on-device recognizer answers
-//   (ExpoSpeechRecognitionModule.kt:373-450). policy() is recognitionPolicy over that probe.
+//   (ExpoSpeechRecognitionModule.kt:373-450). policy() is recognitionPolicy over that probe, for
+//   the language quick-ask listens in ("I speak"; the phone's first locale when none is given), with
+//   the phone's own locale beside it (on iOS the module checks that one only).
 
 import {
   ExpoSpeechRecognitionModule,
@@ -56,10 +58,15 @@ function device(): DeviceInfo {
     : { platform: 'android' };
 }
 
+/** The probe for `locale`, with the phone's own locale beside it. */
+async function probeFor(locale: string): Promise<RecognitionProbe> {
+  return { ...(await core.probe(device(), locale)), phoneLocale: phoneLocale() };
+}
+
 export const recognizer = Object.freeze({
-  probe: (): Promise<RecognitionProbe> => core.probe(device(), phoneLocale()),
-  policy: async (): Promise<RecognitionPolicy> =>
-    recognitionPolicy(await core.probe(device(), phoneLocale())),
+  probe: (locale: string = phoneLocale()): Promise<RecognitionProbe> => probeFor(locale),
+  policy: async (locale: string = phoneLocale()): Promise<RecognitionPolicy> =>
+    recognitionPolicy(await probeFor(locale)),
   start: core.start,
   stop: core.stop,
   abort: core.abort,

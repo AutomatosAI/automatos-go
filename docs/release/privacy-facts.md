@@ -759,6 +759,11 @@ text-to-speech engine does not use a network voice]".
   default language, while quick-ask listens in the phone's first preferred language. Where the two
   differ, and the first preferred language has no on-device recognizer, iOS may send the speech to
   Apple's servers.
+- **"I speak" (27 Oct 2026):** Settings → Voice and the EN/PT switch may choose English or
+  Portuguese instead of the phone's language. On Android the chosen language gets the same
+  on-device check. On iPhone the app can check only the iPhone's own language, so hold to talk
+  starts only in that one: for any other it says so and does not start. Nothing new is collected:
+  the choice is stored on the phone, in the voice setting.
 - **The reply's voice:** on iPhone, a voice on the phone. On Android, the app picks a voice on the
   phone when the engine names one. When it finds none, the phone's text-to-speech engine speaks
   with its default voice, and the app cannot see whether that voice uses the network.
@@ -783,6 +788,10 @@ text-to-speech engine does not use a network voice]".
     preferred locale (`src/voice/quick-ask/locale.ts`). That is the edge above: closing it needs a
     native check per language (a lead decision in the voice wave's US-019b notes; device check
     OT-V1 with a second preferred language).
+    With "I speak", `start()` listens in the chosen language; on iOS `recognitionPolicy` refuses
+    any locale other than the phone's own (`other-language`) before the module is called, since
+    the module would send a language without an on-device recognizer to Apple's servers (Apple
+    lists on-device dictation for Portuguese (Brazil), not Portuguese (Portugal)).
   - **Android:** only on Android 13 (API 33) or later, with on-device recognition supported and
     the phone's language installed for it. A language that is supported but not installed offers
     a download (`androidTriggerOfflineModelDownload`). The phone then fetches the language model;

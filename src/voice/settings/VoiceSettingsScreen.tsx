@@ -44,7 +44,11 @@ export function VoiceSettingsScreen() {
       <View style={[styles.column, { gap: spacing.space6 }]}>
         <IconButton icon={ChevronLeft} accessibilityLabel={COPY.back} onPress={goBack} />
         <Head lede={view.lede} />
-        <LanguageList rows={view.languages} onChoose={view.chooseLanguage} />
+        <LanguageList
+          rows={view.languages}
+          note={view.languageNote}
+          onChoose={view.chooseLanguage}
+        />
         {view.server === null ? null : (
           <ServerVoiceList rows={view.server} onChoose={view.chooseServer} />
         )}

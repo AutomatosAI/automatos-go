@@ -14,10 +14,14 @@
 //   aborted with nothing sent, the speech silenced, the AI-notice session ended); when it lets go,
 //   this one hears again, with no new attach (P001V-RVW-2: the voice screen under a conversation's
 //   HUD home that was pushed over it and popped).
+//   languageChanged() ("I speak" or the EN/PT switch): a refusal or download offer that was about
+//   the old language no longer stands; the next press checks the new one. A hold under way is left
+//   alone, and so is a phone too old for any language.
 
 import type { ThreadState } from '../../chat/controller/thread';
 import { claim } from '../audio/audio-owner';
 import { COVERED, type InterruptionEvent } from '../interruptions/interruption-policy';
+import type { VoiceErrorKind } from '../machine/voice-state';
 import { newSession } from '../notice/ai-notice';
 import type { Speaker, SpeakerEvent } from '../speech/speaker-core';
 import { onRecognizer, press, releaseHold } from './quick-ask-hold';
@@ -66,6 +70,8 @@ export type QuickAsk = {
   readonly onThread: (state: ThreadState) => void;
   /** A new AI-notice session (the next spoken reply greets again). */
   readonly newSession: () => void;
+  /** The language it listens in changed: a refusal about the old one is cleared. */
+  readonly languageChanged: () => void;
   /** The app's state changed (use-interruptions.ts): the interruption policy decides (US-019h). */
   readonly interrupt: (event: InterruptionEvent) => void;
   /** The voice screen mounted: a new AI-notice session (KV7). */
@@ -108,11 +114,35 @@ function attach(engine: Engine, sources: QuickAskSources): () => void {
   };
 }
 
+/** The language the engine listens in: the speech's (the hook's "I speak"). */
+function listening(engine: Engine): string {
+  return engine.deps.context().speech.language;
+}
+
 async function download(engine: Engine): Promise<void> {
   const { policy } = get(engine).snapshot;
   if (policy?.kind !== 'download') return;
   const outcome = await engine.deps.recognizer.downloadModel(policy.locale);
-  if (outcome === 'downloaded') show(engine, { policy: await engine.deps.recognizer.policy() });
+  if (outcome === 'downloaded')
+    show(engine, { policy: await engine.deps.recognizer.policy(listening(engine)) });
+}
+
+/** Refusals that are about the language: another may start (not a phone too old for any). */
+const LANGUAGE_REFUSALS: ReadonlySet<VoiceErrorKind> = new Set<VoiceErrorKind>([
+  'no-on-device',
+  'language-missing',
+  'no-recognizer',
+  'other-language',
+]);
+
+function languageChanged(engine: Engine): void {
+  const { hold, snapshot } = get(engine);
+  if (hold !== null) return;
+  const { policy, voice } = snapshot;
+  const tooOld = policy?.kind === 'unavailable' && policy.reason === 'android-too-old';
+  if (policy !== null && policy.kind !== 'ready' && !tooOld) show(engine, { policy: null });
+  if (voice.errorKind !== null && LANGUAGE_REFUSALS.has(voice.errorKind))
+    dispatch(engine, { type: 'reset' });
 }
 
 function subscribe(engine: Engine, listener: () => void): () => void {
@@ -133,6 +163,7 @@ export function createQuickAsk(deps: QuickAskDeps): QuickAsk {
     onSpeaker: (event: SpeakerEvent) => onSpeaker(engine, event),
     onThread: (state: ThreadState) => onThread(engine, state),
     newSession: () => set(engine, { session: newSession() }),
+    languageChanged: () => languageChanged(engine),
     interrupt: (event: InterruptionEvent) => interrupt(engine, event),
     mount: () => set(engine, { session: newSession(), mounted: true }),
     unmount: () => unmount(engine),
