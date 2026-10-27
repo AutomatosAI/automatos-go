@@ -25,6 +25,16 @@ The technical docs are in [docs/](docs/README.md): how the app is built, how a p
 a hosted or self-hosted server, styles and themes, notifications, voice, and how releases ship.
 Each page says what is on `main` and what is still on a branch.
 
+## Voice
+
+Hold to talk to Auto and hear the answer. Auto listens and speaks English and Portuguese (Portugal
+and Brazil), chosen in Settings → Voice, with a one-tap EN/PT switch beside hold to talk. Speech is
+recognised on the phone; on iPhone that works only in the iPhone's own language. Auto's natural
+server voice (self-hosted Kokoro) has nine languages: English (US and UK), Spanish, French,
+Italian, Portuguese (Brazil), Hindi, Japanese and Mandarin; European Portuguese uses the phone's own
+voice. Automatic language detection across about 100 languages is planned (speech recognition on
+the server, which needs a GPU server), not built. Details: [docs/voice.md](docs/voice.md).
+
 ## Stack
 
 Expo SDK 54 · React Native 0.81.5 · React 19.1 · TypeScript 5.9 (strict) ·
