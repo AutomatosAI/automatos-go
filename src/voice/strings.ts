@@ -213,6 +213,21 @@ export const VOICE_SETTINGS_COPY = Object.freeze({
   higher: (times: string) => `Higher, ${times} times`,
   reset: 'Reset to default',
   resetHint: 'Automatic voice at normal speed and pitch',
+  /** Auto's server voice (the server lists tts, 27 Oct 2026). */
+  server: Object.freeze({
+    lede: 'How Auto sounds when it answers you out loud: its own voice from your Automatos server, or a voice on this phone.',
+    /** The one row while the server's list loads or did not load: its default voice. */
+    defaultVoice: "Auto's voice",
+    defaultSummary: "Your server's default voice",
+    loading: 'Loading the voices…',
+    defaultTag: 'Default',
+    usePhone: "Use this phone's voice instead",
+    usePhoneSummary: 'Choose a voice on this phone',
+    phoneSection: "This phone's voices",
+    speedSection: 'Speed',
+    pitchPhoneOnly: "Pitch changes this phone's voice only.",
+    resetHint: "Auto's default voice at normal speed",
+  }),
   help: {
     /** iOS 26 renamed Spoken Content to Read & Speak; the app runs from iOS 17, so both are named. */
     ios: (language: string) =>
