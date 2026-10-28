@@ -2,7 +2,10 @@
 // React, React Native or Expo (use-server-voices.ts reads the list on a screen).
 //   The list (GET /api/voice/voices) is read once per server per launch and kept; a read that
 //   fails (a 503 when the server has no voice, the network) is not kept, so the next one tries
-//   again. Settings → Voice reads it afresh when it opens.
+//   again. Settings → Voice reads it afresh when it opens. A screen watches it (watchServerVoices):
+//   while its read fails it reads again every SERVER_VOICES_RETRY_MS until the list loads, because
+//   Portuguese (Brazil) needs the list to name its voice (language-voice.ts) and would otherwise
+//   stay on the phone's voice for the life of the screen.
 //   serverSpeechFor: Auto's server voice only when the server lists tts and the person has not
 //   chosen this phone's voice; otherwise undefined, and the phone's voice speaks exactly as before.
 //   The voice asked for is the saved one while the list offers it, else null (the server's
@@ -12,6 +15,7 @@
 import type { ApiClient } from '../../api/client';
 import { canServerVoice, type GateInput } from '../../api/capabilities';
 import { logger } from '../../lib/logger';
+import { SERVER_VOICES_RETRY_MS } from '../config';
 import type { VoiceSetting } from '../settings/voice-setting';
 import type { ServerSpeech } from './server-speaker-ports';
 import { fetchServerVoices, type ServerVoiceList } from './voice-api';
@@ -69,6 +73,44 @@ export function createVoicesCache(load: Loader = fetchServerVoices): VoicesCache
       return read;
     },
   });
+}
+
+/** A read's outcome as a screen holds it: the list, or unavailable (null: it did not load). */
+export function voicesStateOf(list: ServerVoiceList | null): ServerVoicesState {
+  return list === null ? VOICES_UNAVAILABLE : voicesReady(list);
+}
+
+export type VoicesWatch = {
+  readonly cache: VoicesCache;
+  readonly client: VoicesClient;
+  /** Read afresh the first time (Settings → Voice); a retry reads through the cache. */
+  readonly fresh: boolean;
+  readonly onState: (state: ServerVoicesState) => void;
+  /** Runs `run` after `ms`; returns the cancel. */
+  readonly later: (run: () => void, ms: number) => () => void;
+};
+
+/**
+ * The server's list for a screen: read now, and while it does not load, read again every
+ * SERVER_VOICES_RETRY_MS until it does. `onState` hears each outcome; the returned stop ends the
+ * watch (the screen went), and nothing is heard after it.
+ */
+export function watchServerVoices(watch: VoicesWatch): () => void {
+  let alive = true;
+  let cancelRetry: () => void = () => undefined;
+  const read = (fresh: boolean): void => {
+    void watch.cache.get(watch.client, fresh).then((list) => {
+      if (!alive) return;
+      watch.onState(voicesStateOf(list));
+      // The cache forgot the failed read, so this reads again (or shares another screen's read).
+      if (list === null) cancelRetry = watch.later(() => read(false), SERVER_VOICES_RETRY_MS);
+    });
+  };
+  read(watch.fresh);
+  return () => {
+    alive = false;
+    cancelRetry();
+  };
 }
 
 /** The saved voice while the server's list offers it, else null (the server's default). */

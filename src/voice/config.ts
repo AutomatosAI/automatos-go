@@ -76,6 +76,14 @@ export const ENGLISH_FALLBACK_LOCALE = 'en-GB';
  */
 export const SERVER_VOICE_WAIT_MS = 4_000;
 
+/**
+ * A screen whose read of the server's voices (GET /api/voice/voices) failed reads it again after
+ * this long, and again until it loads: Portuguese (Brazil) is spoken in Auto's server voice only
+ * once the list names its pt-BR voice, so one failed read must not leave it on the phone's voice for
+ * as long as the screen stays (HUD's home stays all session).
+ */
+export const SERVER_VOICES_RETRY_MS = 15_000;
+
 /** One speech request, status and body, gives up after this long, wherever it is in the queue. */
 export const SERVER_SPEECH_TIMEOUT_MS = 20_000;
 
