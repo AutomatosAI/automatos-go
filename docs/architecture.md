@@ -273,8 +273,9 @@ sends that from then on ([src/api/workspace.ts](../src/api/workspace.ts)). The s
 what the app reads; plan limits and prices are dropped at parse time.
 
 **Leaving a server.** Switching servers clears the query cache and its saved copy, the stored
-workspace id, the active provider and the consent memory, in that order, before the next server is
-used ([src/connect/switch.ts](../src/connect/switch.ts)).
+workspace id, the active provider, the consent memory and the session's other memory (today's
+brief's wait), in that order, before the next server is used
+([src/connect/switch.ts](../src/connect/switch.ts)).
 
 ## Rules that hold everywhere
 

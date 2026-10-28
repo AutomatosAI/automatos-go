@@ -83,8 +83,8 @@ const minutesWord = (minutes: number) => (minutes === 1 ? '1 minute' : `${minute
 
 /**
  * Settings → Notifications → Daily digest: today's brief on request (digest_now). The 202's words
- * are a toast; a refusal or a failure is one plain line under the button; the wait after a 202 is
- * that line and part of the button's VoiceOver label.
+ * are a toast; a refusal or a failure is one plain line under the button; a wait (after a 202, or
+ * a 429's) is that line and part of the button's VoiceOver label.
  */
 export const PUSH_DIGEST_NOW_COPY = Object.freeze({
   button: "Send today's brief now",
@@ -95,6 +95,7 @@ export const PUSH_DIGEST_NOW_COPY = Object.freeze({
   sentWait: (minutes: number) => `Sent. You can send another in ${minutesWord(minutes)}.`,
   waitLabel: (minutes: number) =>
     `Send today's brief now. You can send another in ${minutesWord(minutes)}.`,
+  retryLabel: (minutes: number) => `Send today's brief now. Try again in ${minutesWord(minutes)}.`,
 });
 
 /** The three push types' switches (D-TYPES): what each one covers, in the person's words. */

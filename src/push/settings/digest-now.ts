@@ -1,10 +1,11 @@
 // Today's brief on request (Settings → Notifications → Daily digest), pure: the gate, what the
 // server's answer means, the button's state after it, and its words. The button shows only where
 // the digest does and the server lists digest_now (D-CAPABILITIES). One tap sends one POST: never
-// while one is out, never in the 5 minutes after a 202 (the server's own limit), never retried
-// (D-WRITES). A 202 is a toast (the hook's); a 429 says when to try again, rounded up to whole
-// minutes; a 503 digest_unavailable and every other failure are one plain line. Every answer here is
-// a new, frozen value.
+// while one is out, never in the 5 minutes after a 202 (the server's own limit) or the
+// retry_after_seconds of a 429, never retried (D-WRITES). A 202 is a toast (the hook's); a 429 says
+// when to try again, rounded up to whole minutes, and counts down like the 202's wait; a 503
+// digest_unavailable and every other failure are one plain line. Every answer here is a new, frozen
+// value.
 
 import { canDigestNow, type GateInput } from '../../api/capabilities';
 import { isApiError, userMessage } from '../../api/errors';
@@ -58,7 +59,7 @@ export async function answerOf(send: () => Promise<unknown>): Promise<DigestNowO
 export type DigestNowState = Readonly<{
   /** The POST is out: the button is busy and takes no tap. */
   sending: boolean;
-  /** When the wait after the last 202 ends (epoch ms); null before any 202. */
+  /** When the wait after the last 202, or a 429's retry_after_seconds, ends (epoch ms); null before. */
   waitUntil: number | null;
   /** The last refusal, shown until the next tap; null after a 202. */
   refusal: DigestNowRefusal | null;
@@ -70,7 +71,7 @@ export const DIGEST_NOW_IDLE: DigestNowState = Object.freeze({
   refusal: null,
 });
 
-/** The ms left of the wait after a 202; 0 when there is none. */
+/** The ms left of the wait (after a 202, or a 429's); 0 when there is none. */
 export function waitLeft(state: DigestNowState, now: number): number {
   return state.waitUntil === null ? 0 : Math.max(0, state.waitUntil - now);
 }
@@ -85,7 +86,10 @@ export function startSending(state: DigestNowState): DigestNowState {
   return Object.freeze({ ...state, sending: true, refusal: null });
 }
 
-/** The answer lands: a 202 starts the 5-minute wait; a refusal leaves the button as it was. */
+/**
+ * The answer lands: a 202 starts the 5-minute wait, a 429 with retry_after_seconds a wait of that
+ * long; any other refusal leaves the wait as it was.
+ */
 export function afterAnswer(
   state: DigestNowState,
   outcome: DigestNowOutcome,
@@ -94,7 +98,9 @@ export function afterAnswer(
   if (outcome.kind === 'queued') {
     return Object.freeze({ sending: false, waitUntil: now + DIGEST_NOW_WAIT_MS, refusal: null });
   }
-  return Object.freeze({ ...state, sending: false, refusal: outcome });
+  const retryAfter = outcome.kind === 'rate_limited' ? outcome.retryAfterSeconds : null;
+  const waitUntil = retryAfter === null ? state.waitUntil : now + retryAfter * MS_PER_SECOND;
+  return Object.freeze({ sending: false, waitUntil, refusal: outcome });
 }
 
 /** Whole minutes, rounded up, never under one. */
@@ -113,7 +119,7 @@ export function refusalLine(refusal: DigestNowRefusal): string {
 export type DigestNowView = Readonly<{
   label: string;
   busy: boolean;
-  /** The wait after a 202 runs. */
+  /** A wait runs (after a 202, or a 429's). */
   disabled: boolean;
   /** The label, with the wait's minutes while it runs (VoiceOver reads it on the button). */
   accessibilityLabel: string;
@@ -123,25 +129,40 @@ export type DigestNowView = Readonly<{
   lineHidden: boolean;
 }>;
 
+/** A wait runs: a 429's says when to try again, a 202's when another can be sent. */
+function waitingView(state: DigestNowState, minutes: number): DigestNowView {
+  const limited = state.refusal?.kind === 'rate_limited';
+  return Object.freeze({
+    label: PUSH_DIGEST_NOW_COPY.button,
+    busy: state.sending,
+    disabled: true,
+    accessibilityLabel: limited
+      ? PUSH_DIGEST_NOW_COPY.retryLabel(minutes)
+      : PUSH_DIGEST_NOW_COPY.waitLabel(minutes),
+    line: limited
+      ? PUSH_DIGEST_NOW_COPY.tryAgainIn(minutes)
+      : PUSH_DIGEST_NOW_COPY.sentWait(minutes),
+    lineHidden: true,
+  });
+}
+
+/** No wait runs: the last refusal's line, except a 429 whose wait has run out (nothing to say). */
+function idleLine(refusal: DigestNowRefusal | null): string | null {
+  if (!refusal) return null;
+  if (refusal.kind === 'rate_limited' && refusal.retryAfterSeconds !== null) return null;
+  return refusalLine(refusal);
+}
+
 export function digestNowView(state: DigestNowState, now: number): DigestNowView {
   const left = waitLeft(state, now);
+  if (left > 0) return waitingView(state, minutesUp(left));
   const label = PUSH_DIGEST_NOW_COPY.button;
-  const base = { label, busy: state.sending };
-  if (left > 0) {
-    const minutes = minutesUp(left);
-    return Object.freeze({
-      ...base,
-      disabled: true,
-      accessibilityLabel: PUSH_DIGEST_NOW_COPY.waitLabel(minutes),
-      line: PUSH_DIGEST_NOW_COPY.sentWait(minutes),
-      lineHidden: true,
-    });
-  }
   return Object.freeze({
-    ...base,
+    label,
+    busy: state.sending,
     disabled: false,
     accessibilityLabel: label,
-    line: state.refusal ? refusalLine(state.refusal) : null,
+    line: idleLine(state.refusal),
     lineHidden: false,
   });
 }

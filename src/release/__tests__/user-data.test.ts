@@ -168,6 +168,7 @@ async function switchOver(
     workspaceIds: createWorkspaceIdRegistry(),
     provider,
     consent: { resetMemory: () => undefined, forgetServer: consent.forgetServer },
+    sessionMemory: () => undefined,
     keys: phone.registry,
     storage,
     storagePersistent,
@@ -305,5 +306,6 @@ describe('(b) leaving: one clearUserData', () => {
     expect(wiring).toContain('keys: secureKeys,');
     expect(wiring).toContain('storage: appStorage,');
     expect(wiring).toContain('files: clearViewerFiles,');
+    expect(wiring).toContain('sessionMemory: digestNow.reset,');
   });
 });

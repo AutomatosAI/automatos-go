@@ -273,8 +273,9 @@ describe('the wait after a 202', () => {
     expect(send).toHaveBeenCalledTimes(2);
   });
 
-  it('a 429 starts no wait: the line says when, and the button stays enabled', async () => {
-    const store = createDigestNowStore(() => T0);
+  it("a 429 with retry_after_seconds waits that long, counting down like the 202's", async () => {
+    const { clock, advance } = clockAt(T0);
+    const store = createDigestNowStore(clock);
     const send = vi.fn(async () => {
       throw new ApiError('server', { status: 429, retryAfterSeconds: 200 });
     });
@@ -282,11 +283,51 @@ describe('the wait after a 202', () => {
       kind: 'rate_limited',
       retryAfterSeconds: 200,
     });
+    expect(store.current().waitUntil).toBe(T0 + 200_000);
+    expect(digestNowView(store.current(), clock())).toEqual({
+      label: "Send today's brief now",
+      busy: false,
+      disabled: true,
+      accessibilityLabel: "Send today's brief now. Try again in 4 minutes.",
+      line: 'Try again in 4 minutes.',
+      lineHidden: true,
+    });
+    expect(nextChangeIn(store.current(), clock())).toBe(20_000);
+    advance(150_000);
+    expect(digestNowView(store.current(), clock())).toMatchObject({
+      disabled: true,
+      accessibilityLabel: "Send today's brief now. Try again in 1 minute.",
+      line: 'Try again in 1 minute.',
+    });
+    await expect(store.press(send)).resolves.toBeNull();
+    expect(send).toHaveBeenCalledTimes(1);
+    advance(50_000);
+    expect(digestNowView(store.current(), clock())).toMatchObject({
+      disabled: false,
+      accessibilityLabel: "Send today's brief now",
+      line: null,
+    });
+    await store.press(send);
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+
+  it('a 429 without retry_after_seconds starts no wait: its line, and the button stays enabled', async () => {
+    const store = createDigestNowStore(() => T0);
+    await store.press(async () => {
+      throw new ApiError('server', { status: 429 });
+    });
+    expect(store.current().waitUntil).toBeNull();
     expect(digestNowView(store.current(), T0)).toMatchObject({
       disabled: false,
-      line: 'Try again in 4 minutes.',
+      line: PUSH_DIGEST_NOW_COPY.tryAgainSoon,
       lineHidden: false,
     });
+  });
+
+  it('a 503 or another failure keeps the wait as it was (none here)', () => {
+    const failed = afterAnswer(startSending(DIGEST_NOW_IDLE), { kind: 'unavailable' }, T0);
+    expect(failed.waitUntil).toBeNull();
+    expect(digestNowView(failed, T0).disabled).toBe(false);
   });
 
   it("the next tap clears the last refusal's line while it is out", () => {
@@ -310,5 +351,31 @@ describe('the wait after a 202', () => {
     expect(Object.isFrozen(sending)).toBe(true);
     expect(DIGEST_NOW_IDLE).toEqual({ sending: false, waitUntil: null, refusal: null });
     expect(Object.isFrozen(afterAnswer(sending, { kind: 'queued' }, T0))).toBe(true);
+  });
+});
+
+describe('reset (the leaving: sign-out, an account or server switch, an ended session)', () => {
+  it('clears the wait and the line, and tells the screen', async () => {
+    const store = createDigestNowStore(() => T0);
+    await store.press(async () => undefined);
+    const heard = vi.fn();
+    store.subscribe(heard);
+    store.reset();
+    expect(store.current()).toEqual(DIGEST_NOW_IDLE);
+    expect(digestNowView(store.current(), T0)).toMatchObject({ disabled: false, line: null });
+    expect(heard).toHaveBeenCalledTimes(1);
+  });
+
+  it("drops an answer that lands after it: the next person's button is not held by it", async () => {
+    const store = createDigestNowStore(() => T0);
+    const { send, settle } = deferredSend();
+    const sentByA = store.press(send);
+    store.reset();
+    settle();
+    await expect(sentByA).resolves.toBeNull();
+    expect(store.current()).toEqual(DIGEST_NOW_IDLE);
+    const next = vi.fn(async () => undefined);
+    await expect(store.press(next)).resolves.toEqual({ kind: 'queued' });
+    expect(next).toHaveBeenCalledTimes(1);
   });
 });

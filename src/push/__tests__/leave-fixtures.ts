@@ -111,6 +111,7 @@ export async function serverSwitchOver(
     keys: { keys: async () => [], remove: async () => undefined },
     storage: memoryStorage,
     storagePersistent: () => true,
+    sessionMemory: () => undefined,
     files: () => undefined,
     deviceStore: {
       save: async () => void order.push('save'),
