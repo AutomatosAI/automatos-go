@@ -149,10 +149,17 @@ describe('the EN/PT switch beside HOLD TO TALK (source)', () => {
 
   it('HUD’s buttons draw it right of HOLD TO TALK, a twin room left so the circle stays centred', () => {
     expect(buttons).toMatch(
-      /<View style=\{\{ width: switchSize\.size \}\} \/>\s*\{button\}\s*<LanguageButton core=\{core\} language=\{language\} \/>/,
+      /<View style=\{\{ width: switchSize\.size \}\} \/>\s*\{button\}\s*<LanguageButton core=\{core\} language=\{language\} switchSize=\{switchSize\} \/>/,
     );
     expect(buttons).toMatch(/accessibilityLabel=\{language\.label\}/);
     expect(buttons).toMatch(/minWidth: switchSize\.size,\s*minHeight: switchSize\.size,/);
+  });
+
+  it('sizes it by the window’s width, with its slop as the touch target', () => {
+    expect(buttons).toMatch(
+      /const switchSize = hudLanguageLayout\(useWindowDimensions\(\)\.width\);/,
+    );
+    expect(buttons).toMatch(/hitSlop=\{switchSize\.slop\}/);
   });
 
   it('on Play’s home, just before the voice button, for someone who may talk', () => {

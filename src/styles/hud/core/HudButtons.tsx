@@ -11,12 +11,15 @@
 // may also turn TYPE off (a viewer). Without them the row is exactly HUD's home's.
 //   A6's EN/PT switch (27 Oct 2026, `language`): a 44 pt square with a 1 pt line and the
 // language's letters, 6 to the right of HOLD TO TALK, with the same room left empty on its other
-// side so the circle stays in the middle of the row. Without it the row is as above.
+// side so the circle stays in the middle of the row. On a phone narrower than 390 pt the square and
+// its room are 32 pt and the switch keeps 44 pt to touch through its hitSlop (language-layout.ts),
+// so the row keeps room between its groups. Without it the row is as above.
 
 import {
   Pressable,
   StyleSheet,
   View,
+  useWindowDimensions,
   type AccessibilityActionEvent,
   type PressableProps,
 } from 'react-native';
@@ -30,10 +33,11 @@ import {
   type HudLanguage,
   type HudTalk,
 } from './model';
+import { hudLanguageLayout, type HudLanguageLayout } from './language-layout';
 import { useVoiceCore, type VoiceCore } from './use-voice-core';
 
 const { buttons, tracking } = HUD_CORE;
-const { side, talk, language: switchSize } = buttons;
+const { side, talk, language: switchLine } = buttons;
 
 type SideProps = {
   readonly core: VoiceCore;
@@ -130,15 +134,20 @@ function TalkButton({ core, view, voice }: TalkProps) {
   );
 }
 
-type LanguageProps = { readonly core: VoiceCore; readonly language: HudLanguage };
+type LanguageProps = {
+  readonly core: VoiceCore;
+  readonly language: HudLanguage;
+  readonly switchSize: HudLanguageLayout;
+};
 
-/** The EN/PT switch: the language's letters in a 44 pt square, a tap switching it. */
-function LanguageButton({ core, language }: LanguageProps) {
+/** The EN/PT switch: the language's letters in its square, 44 pt to touch, a tap switching it. */
+function LanguageButton({ core, language, switchSize }: LanguageProps) {
   const { paint, style } = core;
   const face = style.type.mono(HUD_CORE.monoSize, 600, { trackingEm: tracking.mono });
   return (
     <Pressable
       onPress={language.onPress}
+      hitSlop={switchSize.slop}
       accessibilityRole="button"
       accessibilityLabel={language.label}
       accessibilityHint={language.hint}
@@ -147,7 +156,7 @@ function LanguageButton({ core, language }: LanguageProps) {
         {
           minWidth: switchSize.size,
           minHeight: switchSize.size,
-          borderWidth: switchSize.border,
+          borderWidth: switchLine.border,
           borderColor: paint.line,
           backgroundColor: pressed ? paint.accentFill : undefined,
         },
@@ -160,13 +169,14 @@ function LanguageButton({ core, language }: LanguageProps) {
 
 /** HOLD TO TALK, with the EN/PT switch to its right when given (and its twin room to its left). */
 function Centre({ core, view, voice, language }: TalkProps & { readonly language?: HudLanguage }) {
+  const switchSize = hudLanguageLayout(useWindowDimensions().width);
   const button = <TalkButton core={core} view={view} voice={voice} />;
   if (!language) return button;
   return (
     <View style={[styles.centre, { gap: switchSize.gap }]}>
       <View style={{ width: switchSize.size }} />
       {button}
-      <LanguageButton core={core} language={language} />
+      <LanguageButton core={core} language={language} switchSize={switchSize} />
     </View>
   );
 }
