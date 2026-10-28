@@ -156,3 +156,13 @@ export const INBOX_REFETCH_INTERVAL_MS = 60_000;
  */
 export const TAP_LOG_ITEM = 'push.tap-log.v1';
 export const TAP_LOG_MAX = 10;
+
+/**
+ * Today's brief on request (POST /api/v1/mobile/digest/now): the server takes one every 5 minutes,
+ * so after its 202 the button waits this long; a 429 says digest_rate_limited with
+ * retry_after_seconds, a 503 digest_unavailable.
+ */
+export const MS_PER_MINUTE = 60 * MS_PER_SECOND;
+export const DIGEST_NOW_WAIT_MS = 5 * MS_PER_MINUTE;
+export const TOO_MANY_REQUESTS_STATUS = 429;
+export const DIGEST_UNAVAILABLE_CODE = 'digest_unavailable';

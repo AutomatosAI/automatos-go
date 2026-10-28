@@ -6,7 +6,8 @@
 // revoked, the push record and what the phone shows cleared: src/push/bind/before-leaving.ts;
 // endSession leaves that to push's own onSessionExpired), the query cache and its persisted copy
 // (the foundation's clearQueryCache), the stored X-Workspace-ID, the active provider, the consent
-// step's memory and the left own server's consent records, every entry of the encrypted store but
+// step's memory, the session's other memory (sessionMemory: today's brief's wait) and the left own
+// server's consent records, every entry of the encrypted store but
 // the phone's own choices (PHONE_CHOICES: Light / Dark / System and the style), the person's files
 // in the app's cache (the Deliverable viewer's copies), then every keychain item that is the
 // person's (src/storage/secure-registry.ts clearUserKeys: Clerk's, the paired record, the push
@@ -65,6 +66,11 @@ export type ClearUserDataDeps = {
   /** The provider of the session being left: Clerk, or this phone's pairing. */
   readonly provider: Pick<AuthProvider, 'kind' | 'signOut'>;
   readonly consent: ConsentPort;
+  /**
+   * Drops what the person's session holds in memory outside the query cache: today's brief's wait
+   * (src/push/settings/digest-now-store.ts), so the next person's button is never held by it.
+   */
+  readonly sessionMemory: () => void;
   /** The app's key registry (src/lib/secure-store.ts secureKeys). */
   readonly keys: Pick<SecureKeyRegistry, 'keys' | 'remove'>;
   /** The app's encrypted store, opened on first use (src/storage/mmkv.ts appStorage). */
@@ -157,6 +163,7 @@ export async function clearUserData(
   deps.workspaceIds.clear();
   await deps.provider.signOut();
   deps.consent.resetMemory();
+  deps.sessionMemory();
   if (leftOrigin !== null) await deps.consent.forgetServer(leftOrigin);
   const storeLeft = await shredUnlessEmptied(deps, clearStore(deps.storage));
   deps.files();

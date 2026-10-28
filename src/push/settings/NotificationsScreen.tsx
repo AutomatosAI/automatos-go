@@ -63,6 +63,7 @@ export function NotificationsScreen() {
           <PreferenceSections
             workspaceName={workspace.name}
             digest={shown.digest}
+            digestNow={shown.digestNow}
             row={phone.row}
             timeZone={phone.timeZone}
           />

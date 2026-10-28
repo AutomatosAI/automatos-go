@@ -23,6 +23,7 @@ import {
 import type { Device, Preferences, WorkspacePush } from '../schemas/server';
 import { PUSH_PHONE_COPY, PUSH_PREFS_COPY, PUSH_SETTINGS_COPY, PUSH_TYPE_COPY } from '../strings';
 import { DIGEST_TIMES, digestOn, digestShown, digestTimeOf } from './digest';
+import { digestNowShown } from './digest-now';
 import type { RegistrarAction } from './phone-link';
 import { PUSH_TYPE_SWITCHES, pushTypesOf, switchState } from './prefs';
 import { canRedact, redactNote, redactState } from './redact';
@@ -126,6 +127,8 @@ export function phoneStatusOf(input: PhoneStatusInput): PushStatus | null {
 export type SectionsShown = Readonly<{
   pushTypes: boolean;
   digest: boolean;
+  /** "Send today's brief now" under the digest time: the digest's gates and digest_now. */
+  digestNow: boolean;
   redact: boolean;
   faceId: true;
 }>;
@@ -135,6 +138,7 @@ export function sectionsShown(discovery: GateInput): SectionsShown {
   return Object.freeze({
     pushTypes: push,
     digest: digestShown(discovery),
+    digestNow: digestNowShown(discovery),
     redact: push,
     faceId: true,
   });

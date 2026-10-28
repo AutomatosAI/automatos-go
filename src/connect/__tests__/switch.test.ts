@@ -22,6 +22,8 @@ import { createWorkspaceIdRegistry } from '../../session/workspace-ids';
 import { memoryStorage } from '../../storage/encrypted-storage';
 import { STYLE_CHOICE_KEY } from '../../styles/registry/choice-store';
 import { THEME_CHOICE_STORAGE_KEY } from '../../styles/theme-choice';
+import { digestNowView } from '../../push/settings/digest-now';
+import { createDigestNowStore } from '../../push/settings/digest-now-store';
 import { createCurrentServerStore, ownServerOf } from '../current-server';
 import type { PairedRecord } from '../device-store';
 import { createServerSwitch, type ServerSwitchDeps } from '../switch';
@@ -97,6 +99,7 @@ async function setup({ kind = 'clerk', paired = null as PairedRecord | null } = 
       return storage;
     },
     storagePersistent: () => true,
+    sessionMemory: () => undefined,
     files: () => log.push('files'),
     keys: {
       keys: async () => {
@@ -265,5 +268,63 @@ describe('forgetServer()', () => {
       own: ownServerOf(RECORD),
       ended: null,
     });
+  });
+});
+
+describe("the session's memory: today's brief's wait never reaches the next person", () => {
+  const T0 = 1_792_540_800_000;
+
+  /** Account A sent today's brief (a 202): the button waits 5 minutes. */
+  async function sentOnA() {
+    const digest = createDigestNowStore(() => T0);
+    await digest.press(async () => undefined);
+    expect(digestNowView(digest.current(), T0).disabled).toBe(true);
+    return digest;
+  }
+
+  it.each([
+    ['Sign out (hosted)', 'clerk', null],
+    ['Forget this server', 'device', RECORD],
+    ['an ended session', 'clerk', null],
+  ] as const)('%s clears it: B signs in to an enabled button', async (way, kind, paired) => {
+    const { log, deps } = await setup({ kind, paired });
+    const digest = await sentOnA();
+    const serverSwitch = createServerSwitch({
+      ...deps,
+      sessionMemory: () => {
+        log.push('session-memory');
+        digest.reset();
+      },
+    });
+    if (way === 'Forget this server') await serverSwitch.forgetServer();
+    else if (way === 'an ended session') await serverSwitch.endSession();
+    else await serverSwitch.signOut();
+    expect(log.indexOf('session-memory')).toBe(log.indexOf('consent-memory') + 1);
+    expect(digestNowView(digest.current(), T0)).toMatchObject({ disabled: false, line: null });
+    const send = vi.fn(async () => undefined);
+    await expect(digest.press(send)).resolves.toEqual({ kind: 'queued' });
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it('switching account to another server (a new pairing) clears it too', async () => {
+    const { deps } = await setup();
+    const digest = await sentOnA();
+    await createServerSwitch({ ...deps, sessionMemory: digest.reset }).connectTo(RECORD);
+    expect(digest.current()).toEqual({ sending: false, waitUntil: null, refusal: null });
+  });
+
+  it('stays while the provider cannot sign out (the person is still signed in)', async () => {
+    const { deps } = await setup();
+    const digest = await sentOnA();
+    const offline = {
+      ...deps,
+      sessionMemory: digest.reset,
+      provider: {
+        kind: 'clerk' as const,
+        signOut: vi.fn(async () => Promise.reject(new Error('offline'))),
+      },
+    };
+    await expect(createServerSwitch(offline).signOut()).rejects.toThrow('offline');
+    expect(digestNowView(digest.current(), T0).disabled).toBe(true);
   });
 });

@@ -263,6 +263,7 @@ If the hosted server answers 404, the app uses built-in defaults with no capabil
 | `push` (with `push.expo: true`) | Notifications (A4) | yes, since #1300 (W2, 24 Oct); `push.expo` is true on SaaS, and self-hosted once its operator agrees |
 | `digest` | Daily digest time (A4) | yes, since #1300 (W2, 24 Oct) |
 | `tts` | Auto's server voice: quick-ask's replies and Settings → Voice's list ([voice.md](voice.md#autos-server-voice)) | no: built on automatos-ai `feat/voice-tts` (27 Oct), listed only when the server has a voice |
+| `digest_now` | **Send today's brief now** under the digest time (A4, `POST /api/v1/mobile/digest/now`) | no: built on automatos-ai `feat/digest-now` (28 Oct) |
 
 The server side is automatos-ai `orchestrator/services/mobile/discovery.py` (`CAPABILITY_ROUTES`).
 
@@ -272,8 +273,9 @@ sends that from then on ([src/api/workspace.ts](../src/api/workspace.ts)). The s
 what the app reads; plan limits and prices are dropped at parse time.
 
 **Leaving a server.** Switching servers clears the query cache and its saved copy, the stored
-workspace id, the active provider and the consent memory, in that order, before the next server is
-used ([src/connect/switch.ts](../src/connect/switch.ts)).
+workspace id, the active provider, the consent memory and the session's other memory (today's
+brief's wait), in that order, before the next server is used
+([src/connect/switch.ts](../src/connect/switch.ts)).
 
 ## Rules that hold everywhere
 

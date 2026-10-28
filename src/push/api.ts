@@ -13,6 +13,7 @@ import { PUSH_ROUTES } from './routes';
 import {
   answerSchema,
   chatCheckSchema,
+  digestQueuedSchema,
   devicesSchema,
   deviceSchema,
   pendingQuestionsSchema,
@@ -25,6 +26,7 @@ import {
   workspacePushSchema,
   type AnswerResult,
   type ChatCheck,
+  type DigestQueued,
   type Device,
   type Devices,
   type PreferenceRow,
@@ -149,6 +151,14 @@ export function putPushSettings(client: ApiClient, redact: boolean): Promise<Pus
     body: { redact_questions: redact },
     schema: pushSettingsSchema,
   });
+}
+
+/**
+ * Asks for today's brief now (no body): a 202 is {status: 'queued'}; a 429 or 503 is the client's
+ * ApiError with its code and retry_after_seconds (src/api/errors.ts). Sent once, never retried.
+ */
+export function sendDigestNow(client: ApiClient): Promise<DigestQueued> {
+  return client.request(PUSH_ROUTES.digestNow, { schema: digestQueuedSchema });
 }
 
 /** The role and the redact switch, from the foundation's route (src/api/routes.ts). */

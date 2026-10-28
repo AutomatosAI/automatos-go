@@ -51,3 +51,8 @@ export function canDigest(discovery: GateInput): boolean {
 export function canServerVoice(discovery: GateInput): boolean {
   return has(discovery, 'tts');
 }
+
+/** "Send today's brief now" under the digest time (POST /api/v1/mobile/digest/now). */
+export function canDigestNow(discovery: GateInput): boolean {
+  return has(discovery, 'digest_now');
+}

@@ -7,6 +7,9 @@
 
 import type { Route } from '../api/routes';
 
+/** Where today's brief on request comes from while the pinned manifest does not have it. */
+const DIGEST_NOW_UPSTREAM = "automatos-ai feat/digest-now (today's brief on request, 28 Oct 2026)";
+
 export const PUSH_ROUTES = Object.freeze({
   devices: Object.freeze({
     /** Register this phone or update its row: {device_id, push_key}, the key only when minted. */
@@ -18,6 +21,17 @@ export const PUSH_ROUTES = Object.freeze({
     /** Revokes this phone's own row (sign-out, Remove this phone); it deletes no account (D63). */
     revoke: { method: 'DELETE', path: '/api/v1/mobile/devices/{device_id}' },
   } as const),
+  /**
+   * Today's brief now, no body: 202 {status: 'queued'} (it arrives as Auto's message in the Auto
+   * thread within about a minute, with an "Auto messaged you" push), 429 {code:
+   * 'digest_rate_limited', retry_after_seconds}, 503 {code: 'digest_unavailable'}. Listed only with
+   * the discovery capability digest_now.
+   */
+  digestNow: {
+    method: 'POST',
+    path: '/api/v1/mobile/digest/now',
+    pendingUpstream: DIGEST_NOW_UPSTREAM,
+  },
   /** {redact_questions}: owners and admins make question pushes generic (W2 US-014b). */
   pushSettings: { method: 'PUT', path: '/api/v1/mobile/push-settings' },
   preferences: Object.freeze({

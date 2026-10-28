@@ -176,7 +176,7 @@ describe('the server answers (unknown fields ignored)', () => {
 });
 
 describe('the route table (KP4)', () => {
-  it("marks no route pendingUpstream: the pin serves W1's device routes and W2's push settings", () => {
+  it("marks only today's brief on request pendingUpstream: the pin serves W1's and W2's routes", () => {
     const leaves = (table: object): object[] =>
       Object.values(table).flatMap((entry: object) =>
         'method' in entry ? [entry] : leaves(entry),
@@ -184,7 +184,12 @@ describe('the route table (KP4)', () => {
     const routes = leaves(PUSH_ROUTES);
     expect(routes).toContain(PUSH_ROUTES.devices.register);
     expect(routes).toContain(PUSH_ROUTES.pushSettings);
-    expect(routes.filter((route) => 'pendingUpstream' in route)).toEqual([]);
+    expect(routes.filter((route) => 'pendingUpstream' in route)).toEqual([PUSH_ROUTES.digestNow]);
+    expect(PUSH_ROUTES.digestNow).toMatchObject({
+      method: 'POST',
+      path: '/api/v1/mobile/digest/now',
+      pendingUpstream: expect.stringMatching(/feat\/digest-now/),
+    });
   });
 });
 

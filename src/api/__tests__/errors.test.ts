@@ -69,6 +69,37 @@ describe('detailOf', () => {
     });
   });
 
+  it("reads a 429's retry_after_seconds beside the detail or in it; the detail's own wins", () => {
+    const limited = { code: 'digest_rate_limited', retry_after_seconds: 240 };
+    expect(detailOf(JSON.stringify(limited))).toEqual({
+      code: 'digest_rate_limited',
+      retryAfterSeconds: 240,
+    });
+    expect(detailOf(JSON.stringify({ detail: limited }))).toEqual({
+      code: 'digest_rate_limited',
+      retryAfterSeconds: 240,
+    });
+    expect(
+      detailOf(JSON.stringify({ retry_after_seconds: 9, detail: { retry_after_seconds: 30 } })),
+    ).toEqual({ retryAfterSeconds: 30 });
+    expect(detailOf(JSON.stringify({ retry_after_seconds: 12.5, detail: 'Slow down.' }))).toEqual({
+      retryAfterSeconds: 12.5,
+      serverMessage: 'Slow down.',
+    });
+    expect(detailOf(JSON.stringify({ retry_after_seconds: 0 }))).toEqual({ retryAfterSeconds: 0 });
+  });
+
+  it('drops a retry_after_seconds that is not a wait: a string, negative, null or missing', () => {
+    for (const seconds of ['60', -1, null, true, {}]) {
+      expect(
+        detailOf(JSON.stringify({ code: 'digest_rate_limited', retry_after_seconds: seconds })),
+      ).toEqual({ code: 'digest_rate_limited' });
+    }
+    expect(detailOf(JSON.stringify({ code: 'digest_rate_limited' }))).toEqual({
+      code: 'digest_rate_limited',
+    });
+  });
+
   it('carries nothing for a 422 list detail, a non-JSON body or an empty body', () => {
     expect(
       detailOf(JSON.stringify({ detail: [{ loc: ['body'], msg: 'field required' }] })),
@@ -96,6 +127,21 @@ describe('ApiError', () => {
     expect(isApiError(error)).toBe(true);
     expect(error).toMatchObject({ kind: 'conflict', status: 409, code: 'pending_invitation' });
     expect(error.message).toBe('ApiError conflict 409 pending_invitation');
+  });
+
+  it("keeps a 429's wait, and names none when the body gives none", () => {
+    const limited = errorFromResponse(
+      429,
+      JSON.stringify({ code: 'digest_rate_limited', retry_after_seconds: 61 }),
+    );
+    expect(limited).toMatchObject({
+      kind: 'server',
+      status: 429,
+      code: 'digest_rate_limited',
+      retryAfterSeconds: 61,
+    });
+    expect(limited.message).toBe('ApiError server 429 digest_rate_limited');
+    expect(errorFromResponse(429, '').retryAfterSeconds).toBeUndefined();
   });
 
   it('keeps the cause for the logs', () => {
