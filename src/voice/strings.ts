@@ -1,30 +1,27 @@
 // The voice wave's copy (one strings module per feature, §4.11). Quick-ask's words may say the
-// voice is recognised on this phone (true by KV4: recognition runs on the phone or not at all); they
-// never claim more than that (KV18), and say nothing commercial (D8).
+// voice is recognised on this phone for the phone's own language (KV4); for another language chosen
+// on an iPhone they say Apple may recognise it (LANGUAGE_COPY.iosNote). They never claim more than
+// that (KV18), and say nothing commercial (D8).
 
 import type { RecognizerFailure, VoiceMessage } from './machine/voice-state';
 
 /** Which words say why hold to talk cannot start (recognition-policy.ts refusalCopyKey). */
-export type RecognitionCopyKey = 'androidTooOld' | 'notOnPhone' | 'download' | 'otherLanguage';
+export type RecognitionCopyKey = 'androidTooOld' | 'notOnPhone' | 'download';
 
 /**
  * Hold to talk cannot start on this phone (KV4), by the policy's copy key. {language} is the
- * language hold to talk would listen in, by name (spokenName in language/speak-language.ts);
- * {phoneLanguage} the phone's own. otherLanguage is iOS's: the module's on-device check covers the
- * phone's language only (recognition-policy.ts). Typing always stays.
+ * language hold to talk would listen in, by name (spokenName in language/speak-language.ts).
+ * Typing always stays.
  */
-export const RECOGNITION_COPY: Readonly<
-  Record<RecognitionCopyKey, (language: string, phoneLanguage?: string) => string>
-> = Object.freeze({
-  androidTooOld: () =>
-    'Hold to talk needs Android 13 or later, so your voice is recognised on this phone. You can type to Auto instead.',
-  notOnPhone: (language: string) =>
-    `Hold to talk needs speech recognition that runs on this phone, and it isn't available for ${language}. You can type to Auto instead.`,
-  download: (language: string) =>
-    `Download the ${language} speech model to talk to Auto. It stays on your phone.`,
-  otherLanguage: (language: string, phoneLanguage?: string) =>
-    `Hold to talk can't listen in ${language} on this iPhone. It works only in your iPhone's language${phoneLanguage ? `, ${phoneLanguage},` : ','} so your voice is recognised on the phone. You can type to Auto instead.`,
-});
+export const RECOGNITION_COPY: Readonly<Record<RecognitionCopyKey, (language: string) => string>> =
+  Object.freeze({
+    androidTooOld: () =>
+      'Hold to talk needs Android 13 or later, so your voice is recognised on this phone. You can type to Auto instead.',
+    notOnPhone: (language: string) =>
+      `Hold to talk needs speech recognition that runs on this phone, and it isn't available for ${language}. You can type to Auto instead.`,
+    download: (language: string) =>
+      `Download the ${language} speech model to talk to Auto. It stays on your phone.`,
+  });
 
 /** The button under the download offer: androidTriggerOfflineModelDownload. */
 export const DOWNLOAD_ACTION = 'Download';
@@ -253,25 +250,25 @@ export const LANGUAGE_COPY = Object.freeze({
   choices: Object.freeze({
     auto: 'Automatic',
     en: 'English',
-    'pt-PT': 'Português (Portugal)',
     'pt-BR': 'Português (Brasil)',
   }),
   automaticSummary: (name: string) => `This phone's language: ${name}`,
-  /** The two Portuguese by name in the app's words (the refusal, the rows' summaries). */
-  names: Object.freeze({ 'pt-PT': 'Portuguese (Portugal)', 'pt-BR': 'Portuguese (Brazil)' }),
-  /** Under "I speak" on an iPhone, when the choice is not the iPhone's own language. */
-  iosNote: (phoneLanguage: string) =>
-    `On iPhone, hold to talk works only in your iPhone's language, ${phoneLanguage}: it's the one language the app can check is recognised on the phone.`,
+  /** Brazil's Portuguese by name in the app's words (the refusals, the row's summary, the note). */
+  names: Object.freeze({ 'pt-BR': 'Portuguese (Brazil)' }),
+  /**
+   * Under "I speak" on an iPhone, when the choice is not the iPhone's own language: iOS recognises
+   * it on the iPhone when its dictation model is installed, else Apple's servers do
+   * (recognition-policy.ts). {language} by language ('Portuguese'), {dictation} as iOS lists it
+   * ('Portuguese (Brazil)').
+   */
+  iosNote: (language: string, dictation: string) =>
+    `${language} is recognised on this iPhone when ${dictation} dictation is installed (Settings → General → Keyboard → Dictation). Otherwise Apple recognises it.`,
   /** The EN/PT switch, as VoiceOver and TalkBack read it: 'Speaking English. Switch to Portuguese'. */
   switchLabel: (now: string, next: string) => `Speaking ${now}. Switch to ${next}`,
   switchHint: 'Changes the language hold to talk listens in and Auto answers in',
-  /** Above the server's voices for Portuguese (Portugal): it has none of its own. */
-  portugalServerNote:
-    "Auto's server voice has no European Portuguese, so this phone's voice speaks it. You can choose a Brazilian Portuguese voice instead.",
 });
 
-/** The sample line in each Portuguese (Settings → Voice); any other language: VOICE_SETTINGS_COPY.sample. */
+/** The sample line in Portuguese (Settings → Voice); any other language: VOICE_SETTINGS_COPY.sample. */
 export const SAMPLE_LINES = Object.freeze({
-  'pt-PT': 'Olá, sou o Auto. É assim que vou soar quando te responder.',
   'pt-BR': 'Oi, eu sou o Auto. É assim que vou soar quando eu te responder.',
 });

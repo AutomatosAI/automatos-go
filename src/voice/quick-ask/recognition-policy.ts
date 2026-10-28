@@ -1,21 +1,26 @@
-// On the phone or not at all (KV4, US-019b): whether hold to talk may start recognition on this
-// phone, from what recognizer.ts probed. Pure: no React, React Native or Expo.
-//   iOS: ready only when the recognizer supports on-device recognition (and is available). The module
-//   sets requiresOnDeviceRecognition only when supported and otherwise silently uses Apple's servers
-//   (ios/ExpoSpeechRecognizer.swift:579-580), so the app checks first and never starts otherwise.
-//   Limit: the module's iOS check takes no locale (SFSpeechRecognizer(), the user's default
-//   language) while start() listens in the phone's first preferred language; where the two differ
-//   the check may vouch for the wrong recognizer. Closing that needs a per-locale native check
-//   (a FOUNDATION GAP in the kit's US-019b notes); the airplane-mode device checks prove it.
-//   "I speak" (27 Oct 2026) may choose another language than the phone's. On iOS the module's
-//   check says nothing about it, and start() would use Apple's servers for a language without an
-//   on-device recognizer (Apple lists none for Portuguese (Portugal)), so on iOS only the phone's
-//   own locale may start: any other is 'other-language', unavailable, with its copy. Android checks
-//   the chosen locale itself, as below.
+// Whether hold to talk may start recognition on this phone (KV4, US-019b), from what recognizer.ts
+// probed. Pure: no React, React Native or Expo.
+//   iOS, the iPhone's own language: ready only when the recognizer supports on-device recognition
+//   (and is available). The module sets requiresOnDeviceRecognition only when supported and
+//   otherwise silently uses Apple's servers (ios/ExpoSpeechRecognizer.swift:579-580), so the app
+//   checks first and never starts otherwise. Limit: the module's iOS check takes no locale
+//   (SFSpeechRecognizer(), the user's default language) while start() listens in the phone's first
+//   preferred language; where the two differ the check may vouch for the wrong recognizer. Closing
+//   that needs a per-locale native check (a FOUNDATION GAP in the kit's US-019b notes); the
+//   airplane-mode device checks prove it.
+//   iOS, another language chosen in "I speak" (Gerard, 27 Oct 2026: Portuguese (Brazil) on an
+//   English iPhone): ready, listening in the chosen locale with requiresOnDeviceRecognition true.
+//   The module's check covers the default language only, so the app cannot ask about this one;
+//   start() builds the recognizer for the chosen locale (ExpoSpeechRecognizer.swift:60) and
+//   recognises on the iPhone when that language's dictation model is installed, else on Apple's
+//   servers (Apple processes the audio; the app receives only the text). Settings says so under
+//   I speak (language-rows.ts languageNote). A recognizer the module finds unavailable refuses
+//   itself ('service-not-allowed', recognizer-events.ts).
 //   Android: ready only on API 33+ (the module's on-device recognizer, ExpoSpeechService.kt:93-109)
 //   with on-device recognition supported and the locale (or its language: 'en' for 'en-GB') among
 //   the on-device recognizer's installed languages; supported but not installed → 'download'.
-//   Anything else is unavailable with its reason: there is no network fallback.
+//   Anything else is unavailable with its reason: there is no network fallback. The chosen language
+//   gets the same check.
 // The 'ready' options are frozen and always carry requiresOnDeviceRecognition true; they name no
 // service package, no recording and no audio source (audio is never saved).
 
@@ -35,8 +40,8 @@ export type RecognitionProbe = {
   /** The language recognition listens for: "I speak"'s (language/speak-language.ts). */
   readonly locale: string;
   /**
-   * The phone's first locale (locale.ts): on iOS the one language the module's check covers.
-   * Absent: the same as `locale`.
+   * The phone's first locale (locale.ts): on iOS the one language the module's check covers; any
+   * other is recognised as the module does (above). Absent: the same as `locale`.
    */
   readonly phoneLocale?: string;
   /** Android: getSupportedLocales' locales (supported, installed or not). */
@@ -77,7 +82,7 @@ const IOS_CATEGORY = Object.freeze({
 
 const VOLUME_EVENTS = Object.freeze({ enabled: true, intervalMillis: VOLUME_INTERVAL_MS } as const);
 
-/** The one way to build start options: on the phone, every time. */
+/** The one way to build start options: requiresOnDeviceRecognition true, every time. */
 export function onDeviceOptions(locale: string): OnDeviceOptions {
   return Object.freeze({
     lang: locale,
@@ -136,7 +141,7 @@ function androidPolicy(probe: RecognitionProbe): RecognitionPolicy {
 }
 
 /** iOS: the module's on-device check covers the phone's own locale and no other. */
-function checkedOnIos(probe: RecognitionProbe): boolean {
+function isPhoneLocale(probe: RecognitionProbe): boolean {
   return (
     probe.phoneLocale === undefined || normalise(probe.phoneLocale) === normalise(probe.locale)
   );
@@ -145,7 +150,8 @@ function checkedOnIos(probe: RecognitionProbe): boolean {
 export function recognitionPolicy(probe: RecognitionProbe): RecognitionPolicy {
   if (probe.platform === 'android' && !((probe.androidApiLevel ?? 0) >= ANDROID_ON_DEVICE_API))
     return unavailable('android-too-old');
-  if (probe.platform === 'ios' && !checkedOnIos(probe)) return unavailable('other-language');
+  // iOS, a chosen language other than the iPhone's: on the iPhone when installed, else Apple's.
+  if (probe.platform === 'ios' && !isPhoneLocale(probe)) return ready(probe.locale);
   if (!probe.supportsOnDevice)
     return unavailable(probe.recognitionAvailable ? 'no-on-device' : 'no-recognizer');
   if (probe.platform === 'android') return androidPolicy(probe);
@@ -158,6 +164,5 @@ export function refusalCopyKey(
   policy: Exclude<RecognitionPolicy, { kind: 'ready' }>,
 ): RecognitionCopyKey {
   if (policy.kind === 'download') return 'download';
-  if (policy.reason === 'other-language') return 'otherLanguage';
   return policy.reason === 'android-too-old' ? 'androidTooOld' : 'notOnPhone';
 }

@@ -1,7 +1,7 @@
 // The EN/PT switch beside HOLD TO TALK (27 Oct 2026): always there for someone who may talk, so
 // one tap flips it from the default state (Automatic); it shows the listening language's letters,
 // says what it does to VoiceOver ('Speaking English. Switch to Portuguese'), toggles between
-// English and the chosen Portuguese (Portugal's until Brazil's is picked), and is 44 pt to touch.
+// English and Portuguese (Brazil), and is 44 pt to touch.
 
 import { describe, expect, it, vi } from 'vitest';
 
@@ -45,22 +45,25 @@ describe('what the switch shows and says', () => {
       text: 'EN',
       label: 'Speaking English. Switch to Portuguese',
       hint: 'Changes the language hold to talk listens in and Auto answers in',
-      next: 'pt-PT',
+      next: 'pt-BR',
     });
   });
 
   it('in Portuguese: PT, switching to English', () => {
-    const portugal: VoiceSetting = { ...DEFAULT_VOICE_SETTING, language: 'pt-PT' };
-    expect(languageSwitch(portugal, ENGLISH_PHONE)).toMatchObject({
+    const brazil: VoiceSetting = { ...DEFAULT_VOICE_SETTING, language: 'pt-BR' };
+    expect(languageSwitch(brazil, ENGLISH_PHONE)).toMatchObject({
       text: 'PT',
       label: 'Speaking Portuguese. Switch to English',
       next: 'en',
     });
   });
 
-  it('goes to the Portuguese last chosen: Brazil’s once picked', () => {
-    const brazil = withSpeakChoice(withSpeakChoice(DEFAULT_VOICE_SETTING, 'pt-BR'), 'en');
-    expect(languageSwitch(brazil, ENGLISH_PHONE).next).toBe('pt-BR');
+  it('always goes to Brazil’s Portuguese from English', () => {
+    const english = withSpeakChoice(withSpeakChoice(DEFAULT_VOICE_SETTING, 'pt-BR'), 'en');
+    expect(languageSwitch(english, ENGLISH_PHONE).next).toBe('pt-BR');
+    expect(languageSwitch(withSpeakChoice(DEFAULT_VOICE_SETTING, 'en'), 'pt-BR').next).toBe(
+      'pt-BR',
+    );
   });
 
   it('Automatic on a Portuguese phone shows PT and switches to English', () => {
@@ -85,11 +88,11 @@ describe('a tap', () => {
     const heard = vi.fn();
     store.subscribe(heard);
     tap(store);
-    expect(listeningLocale(store.get(), ENGLISH_PHONE)).toBe('pt-PT');
+    expect(listeningLocale(store.get(), ENGLISH_PHONE)).toBe('pt-BR');
     tap(store);
     expect(listeningLocale(store.get(), ENGLISH_PHONE)).toBe('en-GB');
     tap(store);
-    expect(listeningLocale(store.get(), ENGLISH_PHONE)).toBe('pt-PT');
+    expect(listeningLocale(store.get(), ENGLISH_PHONE)).toBe('pt-BR');
     expect(heard).toHaveBeenCalledTimes(3);
   });
 
@@ -97,7 +100,7 @@ describe('a tap', () => {
     const store = memoryStore();
     store.set({ ...DEFAULT_VOICE_SETTING, serverVoice: 'bm_george', rate: 1.1 });
     tap(store);
-    expect(store.get()).toMatchObject({ serverVoice: 'bm_george', rate: 1.1, language: 'pt-PT' });
+    expect(store.get()).toMatchObject({ serverVoice: 'bm_george', rate: 1.1, language: 'pt-BR' });
   });
 });
 

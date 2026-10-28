@@ -1,19 +1,17 @@
 // Hold to talk in the language "I speak" chooses (27 Oct 2026). The policy listens in the chosen
-// locale, on the phone or not at all (KV4): on iOS only the iPhone's own locale may start, since the
-// module's on-device check covers that one only and start() would use Apple's servers for a
-// language without an on-device recognizer; Android checks the chosen locale itself (installed:
-// ready; supported: the download offer; else unavailable). The engine asks the policy for the
-// speech's language at each press and after a download, and a change of language clears a refusal
-// about the old one. The voice screen and Settings say why, naming both languages.
+// locale with requiresOnDeviceRecognition true. On iOS the iPhone's own language keeps the module's
+// on-device check, exactly as before; another chosen language (Portuguese (Brazil) on an English
+// iPhone, Gerard's call) is ready: the module recognises it on the iPhone when its dictation model
+// is installed and otherwise on Apple's servers. Android checks the chosen locale itself
+// (installed: ready; supported: the download offer; else unavailable), as before. The engine asks
+// the policy for the speech's language at each press and after a download, and a change of
+// language clears a refusal about the old one. Settings → Voice says, under I speak, where another
+// language is recognised on an iPhone.
 
 import { describe, expect, it } from 'vitest';
 
 import { languageNote } from '../language/language-rows';
-import {
-  recognitionPolicy,
-  refusalCopyKey,
-  type RecognitionProbe,
-} from '../quick-ask/recognition-policy';
+import { recognitionPolicy, type RecognitionProbe } from '../quick-ask/recognition-policy';
 import { voiceView } from '../screen/voice-view-model';
 import { DEFAULT_VOICE_SETTING } from '../settings/voice-setting';
 import { RECOGNITION_COPY } from '../strings';
@@ -33,75 +31,110 @@ const ANDROID: RecognitionProbe = {
   androidApiLevel: 34,
   supportsOnDevice: true,
   recognitionAvailable: true,
-  locale: 'pt-PT',
+  locale: 'pt-BR',
   phoneLocale: 'en-GB',
-  supportedLocales: ['en-GB', 'pt-BR', 'pt-PT'],
-  installedLocales: ['en-GB', 'pt-PT'],
+  supportedLocales: ['en-GB', 'pt-BR'],
+  installedLocales: ['en-GB', 'pt-BR'],
 };
 
-const OTHER_LANGUAGE = { kind: 'unavailable', reason: 'other-language' } as const;
+/** The policy's start options, or a failure naming what it was instead. */
+function readyOptions(probe: RecognitionProbe) {
+  const policy = recognitionPolicy(probe);
+  if (policy.kind !== 'ready') throw new Error(`not ready: ${JSON.stringify(policy)}`);
+  return policy.options;
+}
 
-describe('the recognition language per choice', () => {
-  it('iOS: the iPhone’s own locale listens on the phone, as before', () => {
-    const policy = recognitionPolicy(IOS);
-    expect(policy.kind).toBe('ready');
-    if (policy.kind === 'ready') {
-      expect(policy.options.lang).toBe('en-GB');
-      expect(policy.options.requiresOnDeviceRecognition).toBe(true);
-    }
+describe('iOS: the iPhone’s own language, exactly as before', () => {
+  it('English on an English iPhone listens with requiresOnDeviceRecognition', () => {
+    const options = readyOptions(IOS);
+    expect(options.lang).toBe('en-GB');
+    expect(options.requiresOnDeviceRecognition).toBe(true);
   });
 
-  it('iOS: Portuguese on an English iPhone never starts (the module cannot check it)', () => {
-    expect(recognitionPolicy({ ...IOS, locale: 'pt-PT' })).toEqual(OTHER_LANGUAGE);
-    expect(recognitionPolicy({ ...IOS, locale: 'pt-BR' })).toEqual(OTHER_LANGUAGE);
-    expect(recognitionPolicy({ ...IOS, phoneLocale: 'pt-PT', locale: 'en-GB' })).toEqual(
-      OTHER_LANGUAGE,
-    );
-  });
-
-  it('iOS: the same locale in another spelling is the iPhone’s own', () => {
+  it('the same locale in another spelling is the iPhone’s own', () => {
     expect(recognitionPolicy({ ...IOS, locale: 'en_gb' }).kind).toBe('ready');
   });
 
-  it('iOS: Portuguese (Portugal) on a Portuguese iPhone is the existing check (on-device or not)', () => {
-    const phone = { ...IOS, locale: 'pt-PT', phoneLocale: 'pt-PT' };
-    expect(recognitionPolicy(phone).kind).toBe('ready');
-    expect(recognitionPolicy({ ...phone, supportsOnDevice: false })).toEqual({
+  it('keeps the module’s on-device check: no on-device recognizer or none at all refuses', () => {
+    expect(recognitionPolicy({ ...IOS, supportsOnDevice: false })).toEqual({
+      kind: 'unavailable',
+      reason: 'no-on-device',
+    });
+    expect(
+      recognitionPolicy({ ...IOS, supportsOnDevice: false, recognitionAvailable: false }),
+    ).toEqual({ kind: 'unavailable', reason: 'no-recognizer' });
+    expect(recognitionPolicy({ ...IOS, recognitionAvailable: false })).toEqual({
+      kind: 'unavailable',
+      reason: 'no-recognizer',
+    });
+  });
+
+  it('a Brazilian iPhone in Brazil’s Portuguese is its own language, the same check', () => {
+    const brazil = { ...IOS, locale: 'pt-BR', phoneLocale: 'pt-BR' };
+    expect(readyOptions(brazil).lang).toBe('pt-BR');
+    expect(recognitionPolicy({ ...brazil, supportsOnDevice: false })).toEqual({
       kind: 'unavailable',
       reason: 'no-on-device',
     });
   });
+});
 
-  it('Android: listens in the chosen locale when installed on the phone', () => {
-    const policy = recognitionPolicy(ANDROID);
-    expect(policy.kind).toBe('ready');
-    if (policy.kind === 'ready') expect(policy.options.lang).toBe('pt-PT');
+describe('iOS: a chosen language other than the iPhone’s', () => {
+  it('Portuguese (Brazil) on an English iPhone is ready, in pt-BR, requiresOnDeviceRecognition true', () => {
+    const options = readyOptions({ ...IOS, locale: 'pt-BR' });
+    expect(options.lang).toBe('pt-BR');
+    expect(options.requiresOnDeviceRecognition).toBe(true);
+    expect(Object.isFrozen(options)).toBe(true);
   });
 
-  it('Android: offers the chosen locale’s download when supported and not installed', () => {
-    expect(recognitionPolicy({ ...ANDROID, locale: 'pt-BR' })).toEqual({
+  it('does not lean on the module’s check, which covers the iPhone’s language only', () => {
+    // The default language's answers say nothing about pt-BR: the module itself uses pt-BR's
+    // on-device model when installed and Apple's servers otherwise, and refuses an unavailable one.
+    expect(readyOptions({ ...IOS, locale: 'pt-BR', supportsOnDevice: false }).lang).toBe('pt-BR');
+    expect(readyOptions({ ...IOS, locale: 'pt-BR', recognitionAvailable: false }).lang).toBe(
+      'pt-BR',
+    );
+  });
+
+  it('English on a Portuguese iPhone, likewise', () => {
+    expect(readyOptions({ ...IOS, locale: 'en-GB', phoneLocale: 'pt-BR' }).lang).toBe('en-GB');
+  });
+
+  it('names no service package, recording or audio source', () => {
+    const options = readyOptions({ ...IOS, locale: 'pt-BR' }) as Record<string, unknown>;
+    for (const key of ['androidRecognitionServicePackage', 'recordingOptions', 'audioSource'])
+      expect(options).not.toHaveProperty(key);
+  });
+});
+
+describe('Android: the chosen language checked on the phone, as before', () => {
+  it('listens in the chosen locale when installed on the phone', () => {
+    expect(readyOptions(ANDROID).lang).toBe('pt-BR');
+  });
+
+  it('offers the chosen locale’s download when supported and not installed', () => {
+    expect(recognitionPolicy({ ...ANDROID, installedLocales: ['en-GB'] })).toEqual({
       kind: 'download',
       locale: 'pt-BR',
     });
-    expect(recognitionPolicy({ ...ANDROID, locale: 'pt-BR', supportedLocales: [] })).toEqual({
-      kind: 'unavailable',
-      reason: 'language-missing',
-    });
+    expect(
+      recognitionPolicy({ ...ANDROID, installedLocales: ['en-GB'], supportedLocales: ['en-GB'] }),
+    ).toEqual({ kind: 'unavailable', reason: 'language-missing' });
   });
 
-  it('the iOS refusal has its own words, naming both languages', () => {
-    expect(refusalCopyKey(OTHER_LANGUAGE)).toBe('otherLanguage');
-    expect(RECOGNITION_COPY.otherLanguage('Portuguese (Portugal)', 'English')).toBe(
-      "Hold to talk can't listen in Portuguese (Portugal) on this iPhone. It works only in your iPhone's language, English, so your voice is recognised on the phone. You can type to Auto instead.",
-    );
+  it('never starts without the on-device recognizer, whatever the language', () => {
+    expect(recognitionPolicy({ ...ANDROID, supportsOnDevice: false })).toEqual({
+      kind: 'unavailable',
+      reason: 'no-on-device',
+    });
   });
 });
 
 describe('the engine asks for the language it speaks in', () => {
   it('at each press, the speech’s language', async () => {
-    const h = harness({ speech: { language: 'pt-PT' } });
+    const h = harness({ speech: { language: 'pt-BR' } });
     await h.quickAsk.press();
-    expect(h.recognizer.policy).toHaveBeenCalledWith('pt-PT');
+    expect(h.recognizer.policy).toHaveBeenCalledWith('pt-BR');
   });
 
   it('after a download, again for that language', async () => {
@@ -116,10 +149,11 @@ describe('the engine asks for the language it speaks in', () => {
   });
 
   it('refuses the press with nothing started; a change of language clears the refusal', async () => {
-    const h = harness({ policy: OTHER_LANGUAGE, speech: { language: 'pt-PT' } });
+    const missing = { kind: 'unavailable', reason: 'language-missing' } as const;
+    const h = harness({ policy: missing, speech: { language: 'pt-BR' } });
     await h.quickAsk.press();
     expect(h.recognizer.start).not.toHaveBeenCalled();
-    expect(h.voice()).toMatchObject({ phase: 'error', errorKind: 'other-language' });
+    expect(h.voice()).toMatchObject({ phase: 'error', errorKind: 'language-missing' });
     h.quickAsk.languageChanged();
     expect(h.voice()).toMatchObject({ phase: 'idle', errorKind: null });
     expect(h.quickAsk.snapshot().policy).toBeNull();
@@ -136,28 +170,44 @@ describe('the engine asks for the language it speaks in', () => {
 });
 
 describe('what the person sees', () => {
-  it('the voice screen: VOICE UNAVAILABLE and the line naming both languages', () => {
-    const base = input();
-    const view = voiceView({
-      ...base,
-      state: { ...base.state, phase: 'error', errorKind: 'other-language' },
-      locale: 'pt-PT',
-      phoneLocale: 'en-GB',
-    });
-    expect(view.chipWords).toBe('VOICE UNAVAILABLE');
-    expect(view.message?.text).toBe(
-      RECOGNITION_COPY.otherLanguage('Portuguese (Portugal)', 'English'),
-    );
+  it('the voice screen in Portuguese (Brazil): ready, nothing refused', () => {
+    const view = voiceView(input({ locale: 'pt-BR' }));
+    expect(view.chipWords).toBe('READY');
     expect(view.centre.enabled).toBe(true);
   });
 
-  it('Settings on an iPhone: a note while the choice is not the iPhone’s language', () => {
-    const portugal = { ...DEFAULT_VOICE_SETTING, language: 'pt-PT' } as const;
-    expect(languageNote('ios', portugal, 'en-GB')).toBe(
-      "On iPhone, hold to talk works only in your iPhone's language, English: it's the one language the app can check is recognised on the phone.",
+  it('a refusal names the language hold to talk listens in', () => {
+    const base = input();
+    const view = voiceView({
+      ...base,
+      state: { ...base.state, phase: 'error', errorKind: 'no-on-device' },
+      locale: 'pt-BR',
+    });
+    expect(view.chipWords).toBe('VOICE UNAVAILABLE');
+    expect(view.message?.text).toBe(RECOGNITION_COPY.notOnPhone('Portuguese (Brazil)'));
+  });
+
+  it('Settings on an iPhone: Portuguese on an English iPhone says where it is recognised', () => {
+    const brazil = { ...DEFAULT_VOICE_SETTING, language: 'pt-BR' } as const;
+    expect(languageNote('ios', brazil, 'en-GB')).toBe(
+      'Portuguese is recognised on this iPhone when Portuguese (Brazil) dictation is installed (Settings → General → Keyboard → Dictation). Otherwise Apple recognises it.',
     );
+    expect(languageNote('ios', brazil, 'en-US')).toBe(languageNote('ios', brazil, 'en-GB'));
+  });
+
+  it('Settings on an iPhone: English on a Portuguese iPhone, likewise', () => {
+    const english = { ...DEFAULT_VOICE_SETTING, language: 'en' } as const;
+    expect(languageNote('ios', english, 'pt-BR')).toBe(
+      'English is recognised on this iPhone when English dictation is installed (Settings → General → Keyboard → Dictation). Otherwise Apple recognises it.',
+    );
+  });
+
+  it('no note in the iPhone’s own language, or on Android', () => {
+    const brazil = { ...DEFAULT_VOICE_SETTING, language: 'pt-BR' } as const;
     expect(languageNote('ios', DEFAULT_VOICE_SETTING, 'en-GB')).toBeNull();
     expect(languageNote('ios', { ...DEFAULT_VOICE_SETTING, language: 'en' }, 'en-GB')).toBeNull();
-    expect(languageNote('android', portugal, 'en-GB')).toBeNull();
+    expect(languageNote('ios', brazil, 'pt-BR')).toBeNull();
+    expect(languageNote('ios', brazil, 'pt_br')).toBeNull();
+    expect(languageNote('android', brazil, 'en-GB')).toBeNull();
   });
 });

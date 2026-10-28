@@ -132,7 +132,6 @@ const LANGUAGE_REFUSALS: ReadonlySet<VoiceErrorKind> = new Set<VoiceErrorKind>([
   'no-on-device',
   'language-missing',
   'no-recognizer',
-  'other-language',
 ]);
 
 function languageChanged(engine: Engine): void {

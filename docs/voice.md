@@ -4,9 +4,9 @@ Talking to Auto from the phone: quick-ask (hold to talk) first, Auto Live later.
 
 ## Status (27 Oct 2026)
 
-Quick-ask (hold to talk), Auto's server voice and the languages (English and Portuguese) are in the
-code on `main` (`src/voice/`); where this page and the code differ, the code is the truth. Auto Live
-is not built. The sections below were first written from the wave A6 kit
+Quick-ask (hold to talk), Auto's server voice and the languages (English and Portuguese (Brazil))
+are in the code on `main` (`src/voice/`); where this page and the code differ, the code is the
+truth. Auto Live is not built. The sections below were first written from the wave A6 kit
 `scripts/ralph/prd-001-voice.json` and PRD-001 §4.7 and §4.9.
 
 KV1–KV19 are the A6 kit's own decisions. Dnn are PRD-001's decision table; names such as
@@ -40,8 +40,9 @@ For everyone, on every plan and edition. Never gated on a plan.
 1. The person presses and holds **HOLD TO TALK** on the voice screen.
 2. On the first press only, the phone asks for the microphone and, on iOS, speech recognition.
    Never at launch or on opening a screen.
-3. The phone checks it can recognise speech **on the device** (below). If not, it says so and
-   typing stays.
+3. The phone checks it can recognise speech **on the device** in its own language (below). If
+   not, it says so and typing stays. Another language chosen on an iPhone is recognised as iOS
+   does it: on the device when installed, otherwise by Apple.
 4. While held, the microphone is open and **MIC LIVE** shows. The words appear as they are heard.
    MIC LIVE follows the recogniser's real audio start and end, not the button.
 5. On release, the words go to Auto through the normal chat (A2's chat controller), with
@@ -66,10 +67,10 @@ Stopping (KV5):
 Only turns started by quick-ask are spoken, and only while the voice screen is open. A typed turn
 is never spoken (KV6).
 
-### Recognition stays on the phone
+### Where speech is recognised
 
-KV4. Speech recognition runs on the phone or not at all, so the audio never goes to Apple or
-Google:
+KV4. In the phone's own language, speech recognition runs on the phone or not at all, so the audio
+never goes to Apple or Google:
 
 - **iOS:** start only when the recogniser supports on-device recognition. Otherwise the module
   would silently use Apple's servers, so the app checks first.
@@ -78,7 +79,10 @@ Google:
 
 - **The language:** recognition listens in the language chosen in Settings → Voice
   ([Languages](#languages)). Android checks that language on the phone as above. On iPhone the
-  module can check only the iPhone's own language, so hold to talk starts only in that one.
+  module can check only the iPhone's own language, so another chosen language (Portuguese (Brazil)
+  on an English iPhone) is recognised on the iPhone when its dictation model is installed and
+  otherwise by Apple's speech recognition: Apple processes the audio and the app receives only the
+  text (Gerard's decision, 27 Oct 2026). Settings → Voice says so under I speak.
 
 The words still go to Auto's AI providers, as any chat does. The consent sheet names them. No copy
 may say that nothing leaves the server (KV18).
@@ -209,50 +213,51 @@ Voice samples and the phone-voice switch.
 
 ## Languages
 
-Added 27 Oct 2026. Auto listens and speaks in **English** and **Portuguese** (Portugal and Brazil).
-Code: `src/voice/language/`.
+Added 27 Oct 2026. Auto listens and speaks in **English** and **Portuguese (Brazil)**. European
+Portuguese was dropped the same day (Gerard). Code: `src/voice/language/`.
 
 **Choosing.** Settings → Voice → **I speak**: Automatic (the phone's language, as before),
-English, Português (Portugal), Português (Brasil). English means the phone's own English when the
-phone is in English, else British English (`en-GB`). The choice is kept in the voice setting on the
-phone (MMKV, parsed with zod); a setting saved before reads as Automatic.
+English, Português (Brasil). English means the phone's own English when the phone is in English,
+else British English (`en-GB`). The choice is kept in the voice setting on the phone (MMKV, parsed
+with zod); a setting saved before reads as Automatic, and a saved Português (Portugal) reads as
+Português (Brasil), with Brazil's default voice.
 
 **The EN/PT switch.** One tap beside HOLD TO TALK on the voice screen and on HUD's home, and just
 before the voice button on Play's home. It shows the language's two letters (EN, PT) and VoiceOver
 hears "Speaking English. Switch to Portuguese". A tap goes to English from any other language, and
-from English to the Portuguese last chosen (Portugal's until Brazil's is picked). It is always
-there for anyone who may talk, Automatic included, so one tap flips it from the default. Viewers do
-not see it. It is 44 pt to touch.
+from English to Portuguese (Brazil). It is always there for anyone who may talk, Automatic
+included, so one tap flips it from the default. Viewers do not see it. It is 44 pt to touch; on
+HUD, on a phone narrower than 390 pt, it is drawn at 32 pt with 6 pt of slop around it, so the
+button row keeps room between its groups (`src/styles/hud/core/language-layout.ts`).
 
-**Recognition.** Hold to talk listens in the chosen language, still on the phone or not at all
-(KV4):
+**Recognition.** Hold to talk listens in the chosen language:
 
 - **Android:** the chosen language is checked on the phone: installed, it starts; supported but not
-  installed, the download offer; otherwise it says the language is not available.
-- **iPhone:** only the iPhone's own language starts. expo-speech-recognition checks on-device
-  support for the iPhone's language only, and for a language whose recognizer is not on the phone
-  it would silently use Apple's servers. So for any other language the app does not start, the
-  voice screen shows VOICE UNAVAILABLE with "Hold to talk can't listen in Portuguese (Portugal) on
-  this iPhone. It works only in your iPhone's language, English, so your voice is recognised on the
-  phone. You can type to Auto instead.", and Settings shows a note under I speak. Apple lists
-  on-device dictation for Portuguese (Brazil) but not for Portuguese (Portugal). Talking in
-  Portuguese on an English iPhone needs a per-language native check (a native build) or a decision
-  to allow Apple's servers for that language; neither is in this change.
+  installed, the download offer; otherwise it says the language is not available. On the phone or
+  not at all (KV4).
+- **iPhone, its own language:** as before, the module's on-device check (KV4).
+- **iPhone, another language** (Portuguese (Brazil) on an English iPhone): it starts, listening in
+  that language with `requiresOnDeviceRecognition: true`. expo-speech-recognition builds the
+  recogniser for the chosen language and recognises on the iPhone when that language's dictation
+  model is installed (Settings → General → Keyboard → Dictation); otherwise Apple's speech
+  recognition does it on Apple's servers. Apple processes the audio; the app receives only the
+  text. Gerard accepted this on 27 Oct 2026; a per-language native check (a native build) would
+  let the app tell the two apart. Settings shows, under I speak: "Portuguese is recognised on this
+  iPhone when Portuguese (Brazil) dictation is installed (Settings → General → Keyboard →
+  Dictation). Otherwise Apple recognises it."
 
 **The voice.** Each language keeps its own voice choice; speed and pitch are shared.
 
 - **English:** Auto's server voice when the server offers one (its default until another is chosen,
   from the server's whole list), as before.
-- **Português (Brasil):** the server's first Brazilian Portuguese voice by default, or the one
-  chosen.
-- **Português (Portugal):** the phone's own European Portuguese voice (a Premium or Enhanced voice
-  first, when one is installed), or a Brazilian Portuguese server voice if chosen.
+- **Português (Brasil):** the server's first Brazilian Portuguese voice by default (`pf_dora` on
+  Kokoro), or the one chosen; the phone's Brazilian Portuguese voice when the server has none or
+  the phone's voice is chosen. Automatic on a phone in another Portuguese speaks with this voice too.
 - When the server voice fails, the phone's voice for the chosen language speaks the rest of the
   turn. The sample in Settings → Voice is spoken in the chosen language.
 
 Auto's natural server voice (self-hosted Kokoro, `voice-tts` on automatos-ai) has nine languages:
 English (US and UK), Spanish, French, Italian, Portuguese (Brazil), Hindi, Japanese and Mandarin.
-It has no European Portuguese, which is why Portugal's Portuguese uses the phone's own voice.
 
 **What Auto is told.** The spoken turn (`POST /api/chat` with `spokenMode`) carries no language: the
 server's `ChatRequest` has no language field and its page context keeps only its own keys. Auto

@@ -88,7 +88,7 @@ export function useHudHomeVoice(home: HomeThread, threadTurn: HudTurn): HudHomeV
   const quick = useQuickAsk(thread, 'focused');
   const [shows, setShows] = useState<HomeShows>('thread');
   const screenReader = useScreenReader();
-  const { listening, phone } = useListening();
+  const { listening } = useListening();
   const language = useLanguageSwitch(roleCan(home.role, 'chat'));
   const levels = useLevels(quick.level);
   const hold = useHomeHold(quick, setShows);
@@ -106,7 +106,6 @@ export function useHudHomeVoice(home: HomeThread, threadTurn: HudTurn): HudHomeV
     screenReader,
     mascotState: mascot.driver.mascot.mascot,
     locale: listening,
-    phoneLocale: phone,
     reply: quick.reply,
     failure: thread.state.failure,
   });

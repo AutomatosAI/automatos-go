@@ -18,11 +18,11 @@ export type VoiceMode = 'quick';
 export type VoiceNotice = 'greeting' | null;
 
 /**
- * Why hold to talk cannot work on this phone (KV4): recognition runs on the phone or not at all.
- * 'other-language' (iOS): the chosen language is not the iPhone's own, the one the module checks.
+ * Why hold to talk cannot work on this phone (KV4, recognition-policy.ts): no on-device recognizer
+ * for the iPhone's own language, an Android phone too old or without the language, no recognizer.
  */
 export type UnavailableReason =
-  'no-on-device' | 'android-too-old' | 'language-missing' | 'no-recognizer' | 'other-language';
+  'no-on-device' | 'android-too-old' | 'language-missing' | 'no-recognizer';
 
 /** Where the microphone (and, on iOS, speech recognition) permission stands at a press (US-019c). */
 export type PermissionStep = 'granted' | 'ask' | 'settings' | 'restricted';

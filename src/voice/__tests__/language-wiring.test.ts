@@ -37,6 +37,18 @@ describe('Settings → Voice: "I speak"', () => {
       /chooseLanguage: \(choice\) => save\(withSpeakChoice\(voiceSetting\.get\(\), choice\)\)/,
     );
   });
+
+  it('shows iOS’s note (where another language is recognised) under the rows', () => {
+    expect(hook).toMatch(
+      /const PLATFORM: RecognitionPlatform = Platform\.OS === 'android' \? 'android' : 'ios';/,
+    );
+    expect(hook).toMatch(/languageNote: languageNote\(PLATFORM, saved, phone\)/);
+    expect(screen).toMatch(
+      /<LanguageList\s+rows=\{view\.languages\}\s+note=\{view\.languageNote\}/,
+    );
+    const list = sections.slice(sections.indexOf('export function LanguageList'));
+    expect(list.indexOf('<Note text={note} />')).toBeGreaterThan(list.indexOf('<Rows'));
+  });
 });
 
 describe('hold to talk in the chosen language (source)', () => {
@@ -61,11 +73,11 @@ describe('hold to talk in the chosen language (source)', () => {
     );
   });
 
-  it('names the chosen and the phone’s language on the voice screen and HUD’s home', () => {
+  it('names the chosen language on the voice screen and HUD’s home', () => {
     for (const file of ['voice/screen/use-voice-screen.ts', 'voice/home/use-hud-home-voice.ts']) {
       const hook = code(read(file));
-      expect(hook, file).toMatch(/const \{ listening, phone \} = useListening\(\);/);
-      expect(hook, file).toMatch(/locale: listening,\s*phoneLocale: phone,/);
+      expect(hook, file).toMatch(/const \{ listening \} = useListening\(\);/);
+      expect(hook, file).toMatch(/locale: listening,/);
     }
   });
 });
@@ -87,7 +99,9 @@ describe('Settings → Voice: the chosen language’s voice (source)', () => {
     expect(hook).toMatch(/choose: \(voice\) => keep\(\{ \.\.\.mine\(\), voice \}\)/);
     expect(hook).toMatch(/save\(withLanguageVoice\(voiceSetting\.get\(\), language, chosen\)\)/);
     expect(hook).toMatch(/reset: \(\) => save\(resetLanguage\(voiceSetting\.get\(\), language\)\)/);
-    expect(screen).toMatch(/<ServerVoiceList rows=\{view\.server\} note=\{view\.serverNote\}/);
+    expect(screen).toMatch(
+      /<ServerVoiceList rows=\{view\.server\} onChoose=\{view\.chooseServer\}/,
+    );
   });
 
   it('plays the sample in the saved language, as quick-ask would speak it', () => {
@@ -135,10 +149,17 @@ describe('the EN/PT switch beside HOLD TO TALK (source)', () => {
 
   it('HUD’s buttons draw it right of HOLD TO TALK, a twin room left so the circle stays centred', () => {
     expect(buttons).toMatch(
-      /<View style=\{\{ width: switchSize\.size \}\} \/>\s*\{button\}\s*<LanguageButton core=\{core\} language=\{language\} \/>/,
+      /<View style=\{\{ width: switchSize\.size \}\} \/>\s*\{button\}\s*<LanguageButton core=\{core\} language=\{language\} switchSize=\{switchSize\} \/>/,
     );
     expect(buttons).toMatch(/accessibilityLabel=\{language\.label\}/);
     expect(buttons).toMatch(/minWidth: switchSize\.size,\s*minHeight: switchSize\.size,/);
+  });
+
+  it('sizes it by the window’s width, with its slop as the touch target', () => {
+    expect(buttons).toMatch(
+      /const switchSize = hudLanguageLayout\(useWindowDimensions\(\)\.width\);/,
+    );
+    expect(buttons).toMatch(/hitSlop=\{switchSize\.slop\}/);
   });
 
   it('on Play’s home, just before the voice button, for someone who may talk', () => {

@@ -100,8 +100,8 @@ function usePhoneVoice(language: string, saved: string | null): string | undefin
 
 /**
  * "I speak"'s locale, the server's voices for it and its voice choice as spoken (spokenLanguage):
- * English as before, Portuguese (Brazil) in a pt-BR server voice, Portuguese (Portugal) in the
- * phone's pt-PT voice unless a pt-BR server voice was chosen.
+ * English as before, Portuguese (Brazil) in a pt-BR server voice (the phone's pt-BR voice when the
+ * server has none).
  */
 function useSpokenLanguage(): SpokenLanguage {
   const phone = usePhoneLocale();

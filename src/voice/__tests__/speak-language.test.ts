@@ -1,7 +1,7 @@
-// "I speak" (27 Oct 2026): the setting's language fields on the phone's store (absent → Automatic,
-// Portugal's Portuguese, each Portuguese's default voice; a value saved before them reads exactly
-// as it did; a bad value in one reads as its default alone; defaults are never written), the
-// locale each choice listens and speaks in, and Settings → Voice's language rows.
+// "I speak" (27 Oct 2026): the setting's language fields on the phone's store (absent → Automatic
+// and Portuguese's default voice; a value saved before them reads exactly as it did; #25's European
+// Portuguese reads as Brazil's; a bad value in one reads as its default alone; defaults are never
+// written), the locale each choice listens and speaks in, and Settings → Voice's language rows.
 
 import { describe, expect, it, vi } from 'vitest';
 
@@ -11,7 +11,6 @@ import {
   choiceLocale,
   listeningLocale,
   portugueseFor,
-  portugueseOf,
   speakChoiceOf,
   spokenName,
   withSpeakChoice,
@@ -41,9 +40,8 @@ function memoryStorage(initial: Record<string, string> = {}) {
 }
 
 describe('the language fields on the store', () => {
-  it('are absent by default: Automatic, Portugal’s Portuguese, each Portuguese’s default voice', () => {
+  it('are absent by default: Automatic, Portuguese’s default voice', () => {
     expect(speakChoiceOf(DEFAULT_VOICE_SETTING)).toBe('auto');
-    expect(portugueseOf(DEFAULT_VOICE_SETTING)).toBe('pt-PT');
     expect(DEFAULT_VOICE_SETTING.voices).toBeUndefined();
   });
 
@@ -65,21 +63,19 @@ describe('the language fields on the store', () => {
     const setting: VoiceSetting = {
       ...DEFAULT_VOICE_SETTING,
       language: 'pt-BR',
-      portuguese: 'pt-BR',
-      voices: { 'pt-PT': { source: 'server', serverVoice: 'pm_alex', voice: null } },
+      voices: { 'pt-BR': { source: 'server', serverVoice: 'pm_alex', voice: null } },
     };
     createVoiceSettingStore(() => storage).set(setting);
     expect(JSON.parse(items.get(VOICE_SETTING_KEY) ?? '')).toMatchObject({
       language: 'pt-BR',
-      portuguese: 'pt-BR',
-      voices: { 'pt-PT': { source: 'server', serverVoice: 'pm_alex', voice: null } },
+      voices: { 'pt-BR': { source: 'server', serverVoice: 'pm_alex', voice: null } },
     });
     expect(createVoiceSettingStore(() => storage).get()).toEqual(setting);
   });
 
-  it('never write a default: Automatic and Portugal’s Portuguese leave the stored value as before', () => {
+  it('never write a default: Automatic leaves the stored value as before', () => {
     const written = JSON.parse(
-      serialiseVoiceSetting({ ...DEFAULT_VOICE_SETTING, language: 'auto', portuguese: 'pt-PT' }),
+      serialiseVoiceSetting({ ...DEFAULT_VOICE_SETTING, language: 'auto' }),
     );
     expect(Object.keys(written).sort()).toEqual(
       ['pitch', 'rate', 'serverVoice', 'source', 'v', 'voice'].sort(),
@@ -90,22 +86,75 @@ describe('the language fields on the store', () => {
     const setting = parseVoiceSetting(
       stored({
         language: 'fr-FR',
-        portuguese: 42,
         voices: {
-          'pt-PT': { source: 'loud' },
           'pt-BR': { source: 'phone', serverVoice: null, voice: 'x' },
         },
         rate: 1.1,
       }),
     );
     expect(speakChoiceOf(setting)).toBe('auto');
-    expect(portugueseOf(setting)).toBe('pt-PT');
     expect(setting.voices).toEqual({ 'pt-BR': { source: 'phone', serverVoice: null, voice: 'x' } });
     expect(setting.rate).toBe(1.1);
   });
 
   it('read garbage in voices as no saved Portuguese voice', () => {
     expect(parseVoiceSetting(stored({ voices: 'nope' })).voices).toBeUndefined();
+    expect(
+      parseVoiceSetting(stored({ voices: { 'pt-BR': { source: 'loud' } } })).voices,
+    ).toBeUndefined();
+  });
+});
+
+describe('#25’s European Portuguese, saved on the phone', () => {
+  const saved = stored({
+    voice: 'com.apple.voice.premium.en-GB.Malcolm',
+    source: 'phone',
+    language: 'pt-PT',
+    portuguese: 'pt-PT',
+    voices: {
+      'pt-PT': {
+        source: 'phone',
+        serverVoice: null,
+        voice: 'com.apple.voice.enhanced.pt-PT.Joana',
+      },
+    },
+  });
+
+  it('reads as Brazil’s Portuguese, with Brazil’s own (default) voice', () => {
+    const setting = parseVoiceSetting(saved);
+    expect(speakChoiceOf(setting)).toBe('pt-BR');
+    expect(listeningLocale(setting, 'en-GB')).toBe('pt-BR');
+    expect(setting.voices).toBeUndefined();
+    expect(setting).not.toHaveProperty('portuguese');
+  });
+
+  it('keeps the rest of the setting exactly as it was', () => {
+    expect(parseVoiceSetting(saved)).toMatchObject({
+      source: 'phone',
+      voice: 'com.apple.voice.premium.en-GB.Malcolm',
+      rate: 1,
+      pitch: 1,
+    });
+  });
+
+  it('keeps a Brazilian voice saved beside it', () => {
+    const both = stored({
+      language: 'pt-PT',
+      voices: {
+        'pt-PT': { source: 'phone', serverVoice: null, voice: null },
+        'pt-BR': { source: 'server', serverVoice: 'pm_alex', voice: null },
+      },
+    });
+    expect(parseVoiceSetting(both).voices).toEqual({
+      'pt-BR': { source: 'server', serverVoice: 'pm_alex', voice: null },
+    });
+  });
+
+  it('is written back as Brazil’s on the next save, with no European field', () => {
+    const written = JSON.parse(serialiseVoiceSetting(parseVoiceSetting(saved)));
+    expect(written.language).toBe('pt-BR');
+    expect(Object.keys(written)).not.toContain('portuguese');
+    expect(Object.keys(written)).not.toContain('voices');
   });
 });
 
@@ -113,6 +162,7 @@ describe('the locale each choice listens and speaks in', () => {
   it('Automatic is the phone’s first locale, as before the setting', () => {
     expect(choiceLocale('auto', 'en-US')).toBe('en-US');
     expect(choiceLocale('auto', 'pt-PT')).toBe('pt-PT');
+    expect(choiceLocale('auto', 'pt-BR')).toBe('pt-BR');
   });
 
   it('English is the phone’s own English, else British English', () => {
@@ -122,47 +172,50 @@ describe('the locale each choice listens and speaks in', () => {
     expect(choiceLocale('en', 'fr-FR')).toBe('en-GB');
   });
 
-  it('each Portuguese is its own locale', () => {
-    expect(choiceLocale('pt-PT', 'en-GB')).toBe('pt-PT');
+  it('Portuguese is Brazil’s, whatever the phone', () => {
     expect(choiceLocale('pt-BR', 'en-GB')).toBe('pt-BR');
+    expect(choiceLocale('pt-BR', 'pt-PT')).toBe('pt-BR');
   });
 
   it('reads the saved choice', () => {
     expect(listeningLocale(DEFAULT_VOICE_SETTING, 'en-GB')).toBe('en-GB');
-    expect(listeningLocale({ ...DEFAULT_VOICE_SETTING, language: 'pt-PT' }, 'en-GB')).toBe('pt-PT');
+    expect(listeningLocale({ ...DEFAULT_VOICE_SETTING, language: 'pt-BR' }, 'en-GB')).toBe('pt-BR');
   });
 
-  it('a Portuguese choice is also the one the switch goes to; English keeps it', () => {
+  it('saves the choice and nothing else', () => {
     const brazil = withSpeakChoice(DEFAULT_VOICE_SETTING, 'pt-BR');
-    expect([brazil.language, brazil.portuguese]).toEqual(['pt-BR', 'pt-BR']);
-    const english = withSpeakChoice(brazil, 'en');
-    expect([english.language, english.portuguese]).toEqual(['en', 'pt-BR']);
+    expect(brazil).toEqual({ ...DEFAULT_VOICE_SETTING, language: 'pt-BR' });
+    expect(withSpeakChoice(brazil, 'en').language).toBe('en');
   });
 
-  it('names each Portuguese, and any other language by languageName', () => {
-    expect(spokenName('pt-PT')).toBe('Portuguese (Portugal)');
+  it('names Brazil’s Portuguese, and any other language by languageName', () => {
     expect(spokenName('pt_br')).toBe('Portuguese (Brazil)');
+    expect(spokenName('pt-PT')).toBe('Portuguese');
     expect(spokenName('en-GB')).toBe('English');
+  });
+
+  it('speaks any Portuguese with Brazil’s voice and sample', () => {
     expect(portugueseFor('pt-BR')).toBe('pt-BR');
-    expect(portugueseFor('pt-AO')).toBe('pt-PT');
+    expect(portugueseFor('pt-PT')).toBe('pt-BR');
+    expect(portugueseFor('pt')).toBe('pt-BR');
     expect(portugueseFor('en-PT')).toBeNull();
   });
 });
 
 describe('the language rows', () => {
-  it('are Automatic, English and the two Portuguese, named in their own language', () => {
+  it('are Automatic, English and Português (Brasil), named in their own language', () => {
     const rows = languageRows(DEFAULT_VOICE_SETTING, 'en-GB');
     expect(rows.map((row) => [row.title, row.summary])).toEqual([
       ['Automatic', "This phone's language: English (GB)"],
       ['English', 'English (GB)'],
-      ['Português (Portugal)', 'Portuguese (Portugal)'],
       ['Português (Brasil)', 'Portuguese (Brazil)'],
     ]);
+    expect(rows.map((row) => row.title)).not.toContain('Português (Portugal)');
   });
 
   it('select exactly the saved choice', () => {
-    const rows = languageRows({ ...DEFAULT_VOICE_SETTING, language: 'pt-PT' }, 'en-GB');
-    expect(rows.filter((row) => row.selected).map((row) => row.key)).toEqual(['pt-PT']);
+    const rows = languageRows({ ...DEFAULT_VOICE_SETTING, language: 'pt-BR' }, 'en-GB');
+    expect(rows.filter((row) => row.selected).map((row) => row.key)).toEqual(['pt-BR']);
     expect(languageRows(DEFAULT_VOICE_SETTING, 'en-GB')[0]?.selected).toBe(true);
   });
 

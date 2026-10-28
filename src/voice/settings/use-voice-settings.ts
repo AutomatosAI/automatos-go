@@ -14,7 +14,7 @@
 //   plays the sample through the server, as quick-ask would speak (serverSpeechFor), the phone's
 //   voice saying it when the server cannot. Speaks through the one voice out (voice-out.ts).
 //   "I speak" (27 Oct 2026): the language rows first (language/language-rows.ts), with iOS's note
-//   while the choice is not the iPhone's language; a tap saves the choice (withSpeakChoice) and
+//   (where that language is recognised) while the choice is not the iPhone's language; a tap saves the choice (withSpeakChoice) and
 //   plays the sample in it. The voice part below is the chosen language's (language-voice.ts):
 //   its server voices (Portuguese: only pt ones), its saved choice (as spokenLanguage resolves it),
 //   and a tap saves that language's choice alone (withLanguageVoice). Speed and pitch are shared;
@@ -26,12 +26,7 @@ import { AppState, Platform } from 'react-native';
 import { useAppSession } from '../../app-state/session';
 import { logger } from '../../lib/logger';
 import { SPEECH_PITCH_LIMITS, SPEECH_RATE_LIMITS } from '../config';
-import {
-  languageNote,
-  languageRows,
-  serverNote,
-  type LanguageRow,
-} from '../language/language-rows';
+import { languageNote, languageRows, type LanguageRow } from '../language/language-rows';
 import {
   defaultsToServer,
   hasServerDefault,
@@ -72,15 +67,13 @@ export type PhonePart = Readonly<{ title: string; rows: readonly VoiceRow[]; hel
 
 export type VoiceSettingsView = Readonly<{
   lede: string;
-  /** "I speak": Automatic, English, Português (Portugal), Português (Brasil). */
+  /** "I speak": Automatic, English, Português (Brasil). */
   languages: readonly LanguageRow[];
-  /** iOS, while the choice is not the iPhone's language: hold to talk works only in that one. */
+  /** iOS, while the choice is not the iPhone's language: on the iPhone when installed, else Apple. */
   languageNote: string | null;
   chooseLanguage: (choice: SpeakChoice) => void;
   /** "Auto's voice" with the server's voices for the language; null when the server lists no tts. */
   server: readonly ServerVoiceRow[] | null;
-  /** Above them for Portuguese (Portugal): the server has no European Portuguese voice. */
-  serverNote: string | null;
   chooseServer: (choice: ServerChoice) => void;
   /** The phone's voices; null while Auto's server voice is chosen. */
   phone: PhonePart | null;
@@ -195,7 +188,6 @@ export function useVoiceSettings(): VoiceSettingsView {
     languageNote: languageNote(PLATFORM, saved, phone),
     chooseLanguage: (choice) => save(withSpeakChoice(voiceSetting.get(), choice)),
     server: serverVoiceRows(voices, setting, hasServerDefault(language)),
-    serverNote: serverNote(language, voices.kind !== 'off'),
     chooseServer: (choice) => keep(withServerChoice(mine(), choice)),
     phone: phonePart(voices, setting, choices, language),
     choose: (voice) => keep({ ...mine(), voice }),

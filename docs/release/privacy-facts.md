@@ -754,16 +754,22 @@ text-to-speech engine does not use a network voice]".
 
 - **Android recognition:** true. Recognition runs only on the phone's own recognizer, and
   quick-ask refuses rather than falling back.
-- **iPhone recognition:** true, with one open edge, recorded by the voice wave. The app checks
+- **iPhone recognition:** true for the iPhone's own language, with one open edge, recorded by the
+  voice wave. Not always for another language chosen in "I speak" (below), so "or to anyone else"
+  does not hold on iPhone. The app checks
   that the phone's recognizer works on the device before it starts. That check reads the phone's
   default language, while quick-ask listens in the phone's first preferred language. Where the two
   differ, and the first preferred language has no on-device recognizer, iOS may send the speech to
   Apple's servers.
 - **"I speak" (27 Oct 2026):** Settings → Voice and the EN/PT switch may choose English or
-  Portuguese instead of the phone's language. On Android the chosen language gets the same
-  on-device check. On iPhone the app can check only the iPhone's own language, so hold to talk
-  starts only in that one: for any other it says so and does not start. Nothing new is collected:
-  the choice is stored on the phone, in the voice setting.
+  Portuguese (Brazil) instead of the phone's language. On Android the chosen language gets the
+  same on-device check, as above. On iPhone, a chosen language other than the iPhone's own is
+  recognised on the iPhone when its dictation model is installed, and otherwise by Apple's speech
+  recognition: Apple processes the audio, and the app receives only the text (Gerard's decision,
+  27 Oct 2026). Settings → Voice says so under I speak while such a language is chosen: "Portuguese
+  is recognised on this iPhone when Portuguese (Brazil) dictation is installed (Settings → General
+  → Keyboard → Dictation). Otherwise Apple recognises it." Nothing new is collected by Automatos:
+  the choice is stored on the phone, in the voice setting, and only the text is sent to Auto.
 - **The reply's voice:** on iPhone, a voice on the phone. On Android, the app picks a voice on the
   phone when the engine names one. When it finds none, the phone's text-to-speech engine speaks
   with its default voice, and the app cannot see whether that voice uses the network.
@@ -788,10 +794,14 @@ text-to-speech engine does not use a network voice]".
     preferred locale (`src/voice/quick-ask/locale.ts`). That is the edge above: closing it needs a
     native check per language (a lead decision in the voice wave's US-019b notes; device check
     OT-V1 with a second preferred language).
-    With "I speak", `start()` listens in the chosen language; on iOS `recognitionPolicy` refuses
-    any locale other than the phone's own (`other-language`) before the module is called, since
-    the module would send a language without an on-device recognizer to Apple's servers (Apple
-    lists on-device dictation for Portuguese (Brazil), not Portuguese (Portugal)).
+    With "I speak", `start()` listens in the chosen language. For a locale other than the
+    iPhone's own, `recognitionPolicy` is ready with `lang` the chosen locale and
+    `requiresOnDeviceRecognition: true`, without the module's check (which covers the default
+    language only). `start()` builds `SFSpeechRecognizer(locale:)` for the chosen locale
+    (`ExpoSpeechRecognizer.swift`): when that language's on-device model is installed, the request
+    requires on-device recognition; when it is not, the module leaves the flag off and Apple's
+    servers recognise the speech. An unavailable recognizer refuses itself
+    (`service-not-allowed`), and hold to talk says so.
   - **Android:** only on Android 13 (API 33) or later, with on-device recognition supported and
     the phone's language installed for it. A language that is supported but not installed offers
     a download (`androidTriggerOfflineModelDownload`). The phone then fetches the language model;
@@ -799,8 +809,10 @@ text-to-speech engine does not use a network voice]".
     speech recognition that runs on this phone, and it isn't available for {language}. You can type
     to Auto instead."). There is no network fallback.
 - **What leaves the phone:** the recognised text, sent as a chat message through the app's API
-  client. The audio is never saved or sent. With Auto's server voice, also each sentence of Auto's
-  reply, sent back to the same server for its audio.
+  client. The audio is never saved, and never sent to Automatos or anyone the app sends to; on
+  iPhone, for a chosen language other than the iPhone's own whose dictation model is not installed,
+  iOS sends it to Apple's speech recognition (above). With Auto's server voice, also each sentence
+  of Auto's reply, sent back to the same server for its audio.
 - **The reply's voice** (`pickVoice` in `src/voice/speech/voice-pick.ts`, spoken through
   expo-speech in `speaker.ts`):
   - **iOS:** Apple's own voices only (`com.apple.voice.*`, `com.apple.ttsbundle.*`). Every one is
@@ -831,9 +843,11 @@ kept), `voice-api.test.ts` (the bearer and the text in no URL, error or log),
 
 **Policy wording:**
 
-- "Speech is recognised on your phone. If your phone cannot recognise your language on the device,
-  quick-ask says so and does not start. The audio is not saved or sent. Only the text is sent, as a
-  chat message."
+- "Speech in your phone's own language is recognised on your phone. If your phone cannot recognise
+  it on the device, quick-ask says so and does not start. On iPhone, if you choose another language
+  in Settings → Voice, it is recognised on your iPhone when that language's dictation is installed;
+  otherwise Apple's speech recognition recognises it, under Apple's privacy policy. The app does not
+  save the audio or send it to us. Only the text is sent, as a chat message."
 - "On iPhone, replies are read aloud by a voice on your phone. On Android, the app uses a voice
   installed on your phone when your text-to-speech engine offers one; otherwise your engine's
   default voice reads them, as set in your phone's settings."
@@ -1000,7 +1014,7 @@ server. "Gerard" means a decision or a dashboard Gerard holds; "counsel" means l
 | §09 | The providers' own training terms; for OpenRouter, that providers that train on prompts are excluded | Gerard, counsel |
 | §11 | Whether crash reports stay on, ask first or switch off on an own server (they stay on, under the person's switch) | Gerard (a change to the app if not) |
 | §11 | Whether to keep loading Clerk on Welcome before a phone pairs ("Clerk on a phone paired with its own server") | Gerard (the connect wave's option, if not) |
-| §07 | Whether to publish the iPhone on-device recognition sentence before the per-language check exists ("Quick-ask") | Gerard |
+| §07 | Whether to publish the iPhone on-device recognition sentence before the per-language check exists ("Quick-ask"); its wording now names Apple's speech recognition for a chosen language other than the iPhone's own (27 Oct 2026) | Gerard |
 | §12 | How long the moderation inbox keeps reports, and who answers it within what time | Gerard (PRD-266 open question 2) |
 | §13 | Studio's Settings → Phones & devices shipped (PRD-266 US-019): it is on automatos-ai `main` at `10c59c259` (`frontend/components/settings/SettingsPanel.tsx`); check it on production | Gerard (production) |
 | §13 | Only owners delete a workspace (D63), but the erase route also accepts admins: say which is true, or fix the route | automatos-ai, Gerard |

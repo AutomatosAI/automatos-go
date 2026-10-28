@@ -74,7 +74,7 @@
     },
     {
       "key": "NSSpeechRecognitionUsageDescription",
-      "difference": "Word order only: both say the speech becomes text on the iPhone, which the code holds to (quick-ask always starts with requiresOnDeviceRecognition true: src/voice/quick-ask/recognition-policy.ts)."
+      "difference": "Word order only: both say the speech becomes text on the iPhone. The code holds to that for the iPhone's own language (quick-ask always starts with requiresOnDeviceRecognition true: src/voice/quick-ask/recognition-policy.ts). Since 27 Oct 2026 (Gerard) a language chosen in Settings → Voice other than the iPhone's own is recognised on the iPhone when its dictation model is installed and otherwise by Apple's speech recognition, which both strings leave out; Settings says so under I speak. Saying it in the shipped string is an app.json edit (a native build), for Gerard."
     },
     {
       "key": "NSPhotoLibraryUsageDescription",
