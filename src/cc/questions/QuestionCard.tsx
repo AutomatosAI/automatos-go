@@ -1,7 +1,8 @@
 // One open question (handoff §2 'Questions', the web's question-card.tsx): the bot icon, who asked
 // and the ticket as a link (the ticket sheet, opened at this question), the question as plain
 // paragraphs, the blocked cascade, and the controls a role that may answer gets (QuestionControls).
-// Words are view-model.ts's, controls controls.ts's, sizes and token keys chrome.ts's.
+// Words are view-model.ts's, controls controls.ts's, sizes and token keys chrome.ts's. PRD-268
+// (US-G05): under the head, the server's state as glyph and word, its next step and Try again.
 
 import { useRouter } from 'expo-router';
 import Bot from 'lucide-react-native/icons/bot';
@@ -11,6 +12,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useTokens } from '../../styles/theme';
 import { Card, Text } from '../../ui';
 import { ICON_STROKE, hitSlopFor, joinLabel, tint } from '../../ui/paint';
+import { StatusBlock } from '../status/StatusLine';
+import { useRetry } from '../status/use-retry';
 import { BOARD_COPY, QUESTIONS_COPY } from '../strings';
 import { CASCADE_BOX, QUESTION_CARD, QUESTION_HEAD, QUESTION_TEXT } from './chrome';
 import { QuestionControlsPanel } from './QuestionControls';
@@ -120,6 +123,7 @@ export type QuestionCardProps = {
 export function QuestionCard({ view, mayAnswer }: QuestionCardProps) {
   const { spacing } = useTokens();
   const card = useQuestionCard(view, mayAnswer);
+  const retry = useRetry(view.rowStatus?.retry ?? null);
   return (
     <Card
       radius={QUESTION_CARD.radius}
@@ -130,6 +134,7 @@ export function QuestionCard({ view, mayAnswer }: QuestionCardProps) {
       }}
     >
       <QuestionHead view={view} />
+      {view.rowStatus ? <StatusBlock status={view.rowStatus} retry={retry} withMark /> : null}
       <View style={{ gap: spacing[QUESTION_TEXT.gap] }}>
         {view.paragraphs.map((paragraph, index) => (
           <Text key={index} level={QUESTION_TEXT.level} selectable>

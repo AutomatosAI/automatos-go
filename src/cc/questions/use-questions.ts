@@ -4,11 +4,13 @@
 // the card leaves the list and its toast says what the server said; a refusal says why in the toast
 // and the list, needs-you and the Board are read again either way (the stream would follow). An
 // answer asks for Face ID first (gated.ts, A4): a refused check sends and reads nothing, and the card
-// stays as it was. Dismiss never asks (KP13).
+// stays as it was. Dismiss never asks (KP13). Each card's status (PRD-268) is its needs-you row's:
+// the foundation's one cached answer, never a second fetch.
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
+import { useNeedsYou } from '../../api/needs-you';
 import { queryKeys } from '../../api/query-keys';
 import { useAppSession } from '../../app-state/session';
 import { useStepUp } from '../../step-up/use-step-up';
@@ -27,14 +29,18 @@ import { dismissQuestion, QUESTIONS_KEY, questionsQuery } from './api';
 import { questionControls, sendingOf } from './controls';
 import { answerGated } from './gated';
 import type { Questions } from './schemas';
-import { questionCardView, type QuestionCardView } from './view-model';
+import { questionCardView, questionStatuses, type QuestionCardView } from './view-model';
 
 export function useQuestionsTab() {
   const { client, workspace } = useAppSession();
   const query = useQuery(questionsQuery(client));
   const pull = usePullRefresh(query.refetch);
   const grants = query.data?.grants;
-  const cards = useMemo(() => (grants ? grants.map(questionCardView) : null), [grants]);
+  const asked = useNeedsYou().rows.question;
+  const cards = useMemo(() => {
+    const statuses = questionStatuses(asked);
+    return grants ? grants.map((grant) => questionCardView(grant, statuses)) : null;
+  }, [grants, asked]);
   return {
     query,
     cards,

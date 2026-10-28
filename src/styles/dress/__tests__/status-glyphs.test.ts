@@ -2,20 +2,25 @@
 // foundation's StatusPip knows (read from src/ui/variants.ts, not copied) has a glyph and a word;
 // each glyph and role is the README's table; an unknown status is '—' in text2 and says itself;
 // the board's words are its own; HUD writes the word in capitals; each role paints in a token
-// every style has (HUD: its accent, text2 and the error).
+// every style has (HUD: its accent, text2 and the error). PRD-268 §6.11.1's states (read from
+// STATE_WORDS, not copied) each have the table's glyph and say the vocabulary's word outside HUD.
 
 import { describe, expect, it } from 'vitest';
 
 import { PIP_TOKENS, statusPip } from '../../../ui/variants';
-import { STATUS_WORDS } from '../../strings';
+import { STATE_WORDS, STATUS_WORDS } from '../../strings';
 import {
   GLYPHS,
   GLYPH_ROLE_TOKENS,
   PIP_STATUSES,
+  STATUS_STATES,
   glyphLine,
   isGlyphStatus,
+  isStatusState,
+  stateGlyph,
   statusGlyph,
   type GlyphRole,
+  type StatusState,
 } from '../status-glyphs';
 import { ALL_STYLES, HUD_STYLES } from './fixtures';
 
@@ -39,6 +44,21 @@ const TABLE: readonly (readonly [string, string, GlyphRole])[] = [
   ['idle', '—', 'text2'],
   ['offline', '—', 'text2'],
   ['running', '▸', 'accent'],
+  // PRD-268 §6.11.1 and §6.12.2
+  ['ready', '✓', 'accent'],
+  ['needs_setup', '◆', 'accent'],
+  ['not_checked', '○', 'text2'],
+];
+
+/** §6.11.1's table: each state's glyph, its word outside HUD, and HUD's word. */
+const STATES: readonly (readonly [StatusState, string, string, string])[] = [
+  ['needs_you', '◆', 'Needs you', 'Needs you'],
+  ['working', '●', 'Working', 'Working'],
+  ['ready', '✓', 'Ready to look at', 'Ready'],
+  ['done', '✓', 'Done', 'Done'],
+  ['failed', '✕', "Couldn't finish", 'Failed'],
+  ['needs_setup', '◆', 'Needs setup', 'Needs setup'],
+  ['not_checked', '○', 'Not checked', 'Not checked'],
 ];
 
 describe('statusGlyph', () => {
@@ -84,6 +104,39 @@ describe('statusGlyph', () => {
   it('never reads a prototype key as a status', () => {
     expect(isGlyphStatus('toString')).toBe(false);
     expect(statusGlyph('toString').glyph).toBe('—');
+  });
+});
+
+describe('the PRD-268 states', () => {
+  it('are the ones STATE_WORDS lists, each a status with a glyph', () => {
+    expect([...STATUS_STATES]).toEqual(Object.keys(STATE_WORDS));
+    expect(STATES.map(([state]) => state)).toEqual([...STATUS_STATES]);
+    for (const state of STATUS_STATES) {
+      expect(isGlyphStatus(state), state).toBe(true);
+      expect(isStatusState(state), state).toBe(true);
+    }
+    expect(isStatusState('review')).toBe(false);
+    expect(isStatusState('toString')).toBe(false);
+  });
+
+  it("draw §6.11.1's glyph, the vocabulary's word outside HUD and HUD's own in it", () => {
+    for (const [state, glyph, word, hudWord] of STATES) {
+      expect(stateGlyph(state), state).toMatchObject({ glyph, word });
+      expect(statusGlyph(state), state).toMatchObject({ glyph, word: hudWord });
+    }
+    expect(glyphLine('failed')).toBe('✕ FAILED');
+    expect(glyphLine('ready')).toBe('✓ READY');
+  });
+
+  it("keep the glyph's role whichever word is said", () => {
+    for (const state of STATUS_STATES) {
+      expect(stateGlyph(state).role, state).toBe(statusGlyph(state).role);
+    }
+  });
+
+  it('give ready the accent on HUD and leave done quiet (§6.12.2)', () => {
+    expect(statusGlyph('ready').role).toBe('accent');
+    expect(statusGlyph('done').role).toBe('text2');
   });
 });
 

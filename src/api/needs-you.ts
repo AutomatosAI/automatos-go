@@ -6,7 +6,8 @@
 // Centre share one cached response and cannot disagree. A board_changed live event
 // refetches it at once (live-events.ts); the 60 s poll is the web's, for changes no event carries.
 // Rows carry question text, so the family is never persisted (query-keys.ts). A row this version
-// cannot read is left out; the number stays the server's.
+// cannot read is left out; the number stays the server's. PRD-268 US-C17 adds display_state,
+// next_step and retry to every row (row-status.ts): optional, so today's server parses as before.
 
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { z } from 'zod';
@@ -16,6 +17,7 @@ import { logger } from '../lib/logger';
 import type { ApiClient } from './client';
 import { queryKeys } from './query-keys';
 import { routes } from './routes';
+import { ROW_STATUS_FIELDS } from './row-status';
 
 /** The web's refetchInterval for needs-you (use-needs-you.ts). */
 export const NEEDS_YOU_REFETCH_INTERVAL_MS = 60_000;
@@ -49,6 +51,7 @@ export const NeedsYouTicketRowSchema = z.object({
   opens: z.enum(['ticket', 'mission']).catch('ticket'),
   at: Text,
   why: z.enum(STUCK_REASONS).nullable().catch(null),
+  ...ROW_STATUS_FIELDS,
 });
 
 /** An open question, an approval grant, or a mission waiting for its plan's approval. */
@@ -64,6 +67,7 @@ export const NeedsYouAskRowSchema = z.object({
   mission_number: Text,
   mission_title: Text,
   at: Text,
+  ...ROW_STATUS_FIELDS,
 });
 
 export type NeedsYouTicketRow = Readonly<z.output<typeof NeedsYouTicketRowSchema>>;

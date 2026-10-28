@@ -3,6 +3,9 @@
 // (src/session/workspace-ids.ts) and the gate's bootstrap (session-cache.ts launchBootstrap). Two
 // servers, a fake transport: the hosted server with a Clerk JWT, then a paired own server.
 
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { createQueryClient } from '../../api/query-client';
@@ -118,5 +121,34 @@ describe('two servers: nothing of one is ever sent to the other', () => {
     await launchBootstrap(own, createQueryClient(), { store: ownIds });
     expect(headersTo(transport.calls, OWN)[0]).toEqual({ Authorization: `Bearer ${RECORD.token}` });
     expect(ownIds.get()).toBe(OWN_WORKSPACE);
+  });
+});
+
+describe('the launch client says the language "I speak" chose (PRD-268 §6.11)', () => {
+  it('as Accept-Language on every call, read at call time; Automatic sends none', async () => {
+    let choice = 'pt-BR';
+    const transport = serversTransport();
+    const ids = createWorkspaceIdRegistry().forServer(HOSTED);
+    const client = createLaunchClient({
+      server: HOSTED,
+      clientAuth: authWith(HOSTED_JWT),
+      workspaceIds: ids,
+      transport,
+      getLanguage: () => choice,
+    });
+    await client.request(routes.workspaceCurrent);
+    choice = 'auto';
+    await client.request(routes.workspaceCurrent);
+    expect(headersTo(transport.calls, HOSTED)).toEqual([
+      { Authorization: `Bearer ${HOSTED_JWT}`, 'Accept-Language': 'pt-BR' },
+      { Authorization: `Bearer ${HOSTED_JWT}` },
+    ]);
+  });
+
+  it("is wired in the shell to the voice setting's saved choice, read only", () => {
+    const source = readFileSync(path.resolve(__dirname, '../use-launch.ts'), 'utf8');
+    expect(source).toContain('const spokenChoice = () => speakChoiceOf(voiceSetting.get());');
+    expect(source).toContain('getLanguage: spokenChoice');
+    expect(source).not.toMatch(/voiceSetting\.set\(/);
   });
 });

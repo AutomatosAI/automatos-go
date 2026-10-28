@@ -6,7 +6,8 @@
 // workspace header the user can no longer use; a later re-read the server refuses (paused, or no
 // longer a member) takes the app away (gate.ts workspaceStepOf, US-007a). The client is rebuilt
 // whenever the server or the session changes, each server with its own workspace-id holder
-// (US-006d).
+// (US-006d). Its calls say the person's "I speak" (Settings → Voice) as Accept-Language, read on
+// every call, so a change reaches the next request with no rebuild (PRD-268 §6.11).
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
@@ -18,6 +19,8 @@ import type { Server } from '../api/server';
 import { expoTransport } from '../api/transport';
 import type { ClientAuth } from '../auth/providers/binding';
 import { workspaceIds } from '../session/workspace-ids';
+import { speakChoiceOf } from '../voice/language/speak-language';
+import { voiceSetting } from '../voice/settings/use-voice-setting';
 import {
   launchView,
   serverSupported,
@@ -28,6 +31,9 @@ import {
 } from './gate';
 import { createLaunchClient } from './launch-client';
 import { launchBootstrap } from './session-cache';
+
+/** "I speak" as saved: 'auto', 'en' or 'pt-BR' (read only; the voice kit owns the setting). */
+const spokenChoice = () => speakChoiceOf(voiceSetting.get());
 
 /** Every launch reads the workspace again, however recent the restored copy is. */
 const WORKSPACE_STALE_TIME_MS = 0;
@@ -43,7 +49,14 @@ export function useLaunch(server: Server, clientAuth: ClientAuth): Launch {
   const [launchedAt] = useState(Date.now);
   const ids = useMemo(() => workspaceIds.forServer(server), [server]);
   const client = useMemo(
-    () => createLaunchClient({ server, clientAuth, workspaceIds: ids, transport: expoTransport }),
+    () =>
+      createLaunchClient({
+        server,
+        clientAuth,
+        workspaceIds: ids,
+        transport: expoTransport,
+        getLanguage: spokenChoice,
+      }),
     [server, clientAuth, ids],
   );
 

@@ -1,5 +1,5 @@
-// The five writes that ask for Face ID first (D19, KP13; US-015e), each as its gated sender (A4's
-// gated.ts beside A2's and A3's code) and the sender A2 or A3 called before, so a test can prove a
+// The writes that ask for Face ID first (D19, KP13; US-015e; PRD-268's Try again), each as its
+// gated sender (A4's gated.ts beside A2's and A3's code) and the sender called without it, so a test can prove a
 // refused check sends nothing and a passed one sends exactly what the write sent before. The real
 // gate is createGuard over createStepUp over the step-up kit's fake LocalAuthentication.
 
@@ -15,6 +15,9 @@ import { answerGated } from '../../cc/questions/gated';
 import { approveShown } from '../../cc/social/api';
 import { approvePostGated } from '../../cc/social/gated';
 import { SocialPostSchema } from '../../cc/social/schemas';
+import { sendRetry } from '../../cc/status/api';
+import { retryGated } from '../../cc/status/gated';
+import { retryAction, type RetryAction } from '../../cc/status/row-status';
 import { approveTicketGated } from '../../cc/ticket/gated';
 import { approveMission } from '../../chat/cards/api';
 import { approvePlanGated, grantToolGated } from '../../chat/cards/gated';
@@ -38,6 +41,13 @@ const WORDS: AnswerChoice = { kind: 'words', text: ' Ship it on Monday. ' };
 const SHOWN = SocialPostSchema.parse({ id: POST_ID, status: 'needs_approval', content_hash: HASH });
 /** A pass never reaches the reload: the fake server answers 200. */
 const reload = async () => undefined;
+
+/** A failed ticket's Try again (PRD-268 retry_ticket → Run Now). */
+const RETRY = retryAction({ kind: 'retry_ticket' }, { ticketId: TASK_ID, missionId: null });
+function retryOf(): RetryAction {
+  if (!RETRY) throw new Error('retry_ticket has no route');
+  return RETRY;
+}
 
 export type GatedCase = Readonly<{
   label: string;
@@ -104,6 +114,14 @@ export const GATED_CASES: readonly GatedCase[] = Object.freeze([
     answer: { status: 'approved' },
     gated: async (guard, client) => (await approvePostGated(guard, client, SHOWN, reload)).ran,
     plain: (client) => approveShown(client, SHOWN, reload),
+  },
+  {
+    label: "PRD-268's Try again on a failed ticket",
+    action: 'retry',
+    route: api(`/api/v1/tasks/${TASK_ID}/run-now`),
+    answer: { success: true, task_id: TASK_ID, status: 'assigned', message: 'Running again.' },
+    gated: async (guard, client) => (await retryGated(guard, client, retryOf())).ran,
+    plain: (client) => sendRetry(client, retryOf()),
   },
 ]);
 

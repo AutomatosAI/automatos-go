@@ -2,12 +2,17 @@
 // ticket it was asked on as a link (the vendored grant-owner.ts and ticket-links.ts), the question as
 // plain paragraphs, the blocked cascade and the offered options. A question about something other
 // than a ticket names its subject without a link. Unknown task statuses keep their own word.
+// PRD-268 (US-G05): the server states a question's status on its needs-you row (the one needs-you
+// answer, PRD-252 R5), so a card takes its glyph, word, next step and Try again from the row with
+// its grant id (questionStatuses); a question without one draws nothing new.
 
+import type { NeedsYouAskRow } from '../../api/needs-you';
 import { routes, isTaskId } from '../../navigation/routes';
 import { agentLabel, ticketLabel } from '../../core/web/lib/grant-owner';
 import { questionTicketId } from '../../core/web/lib/ticket-links';
 import { countPhrase } from '../../ui/variants';
 import { humanised, statusWord } from '../board/board';
+import { rowStatusView, type RowStatusView } from '../status/row-status';
 import { QUESTIONS_COPY } from '../strings';
 import { dismissEffect } from './answer';
 import { plainParagraphs } from './plain';
@@ -43,7 +48,28 @@ export type QuestionCardView = {
   readonly stoppedRun: boolean;
   /** What dismissing will do, said before it is sent. */
   readonly dismissEffect: string;
+  /** The server's state, next step and Try again (PRD-268), from its needs-you row; or null. */
+  readonly rowStatus: RowStatusView | null;
 };
+
+/** The source needs-you gives a question's row (services/needs_you.py _grant_row). */
+const GRANT_SOURCE = 'grant';
+
+/** needs-you's question rows by grant id: where a question's status comes from. */
+export function questionStatuses(
+  rows: readonly NeedsYouAskRow[],
+): ReadonlyMap<string, NeedsYouAskRow> {
+  return new Map(rows.filter((row) => row.source === GRANT_SOURCE).map((row) => [row.id, row]));
+}
+
+function statusOf(question: Question, row: NeedsYouAskRow | undefined): RowStatusView | null {
+  if (!row) return null;
+  const title = row.title?.trim() || plainParagraphs(question.question_md)[0] || '';
+  return rowStatusView(row, title, {
+    ticketId: row.ticket_id ?? question.owner?.ticket?.id,
+    missionId: row.mission_id,
+  });
+}
 
 /** The agent's name; else the web's 'Agent #12' or 'An agent'. */
 function askedBy(question: Question): string {
@@ -85,7 +111,10 @@ export function cascadeView(cascade: QuestionCascade): CascadeView | null {
   };
 }
 
-export function questionCardView(question: Question): QuestionCardView {
+export function questionCardView(
+  question: Question,
+  statuses: ReadonlyMap<string, NeedsYouAskRow> = new Map(),
+): QuestionCardView {
   return {
     id: question.id,
     agent: askedBy(question),
@@ -95,5 +124,6 @@ export function questionCardView(question: Question): QuestionCardView {
     options: question.options,
     stoppedRun: question.stoppedRun,
     dismissEffect: dismissEffect(question.stoppedRun),
+    rowStatus: statusOf(question, statuses.get(String(question.id))),
   };
 }

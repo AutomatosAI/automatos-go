@@ -4,11 +4,14 @@
 // failure to the taxonomy (errors.ts) and parses every JSON response with the caller's zod schema:
 // without a schema the body is discarded, so no unparsed data ever leaves the client. binary() is
 // the one exception, for a body that is not JSON (Auto's server voice: an MP3): it hands back the
-// bytes and the response's headers, for the caller to check. The transport is injected; the real
-// one (transport.ts, expo/fetch) is wired by the app shell, never by tests.
+// bytes and the response's headers, for the caller to check. Every call also says the language the
+// person chose ("I speak") as Accept-Language, so the server writes its copy in it
+// (accept-language.ts); Automatic sends none. The transport is injected; the real one (transport.ts,
+// expo/fetch) is wired by the app shell, never by tests.
 
 import type { z } from 'zod';
 
+import { acceptLanguageHeaders, readLanguage, type LanguageGetter } from './accept-language';
 import {
   buildAuthHeaders,
   createAuthHeaders,
@@ -44,6 +47,8 @@ export type ApiClientOptions = {
   /** The workspace id read back from GET /api/workspaces/current (null until known). */
   readonly getWorkspaceId: WorkspaceIdGetter;
   readonly transport: Transport;
+  /** "I speak" ('en', 'pt-BR', 'auto'), read on every call; none or Automatic sends no header. */
+  readonly getLanguage?: LanguageGetter;
   /**
    * Called on a 401 with its ApiError (the code says why: a paired phone's device_revoked), once per
    * token: concurrent 401s on the same token call it once.
@@ -104,6 +109,7 @@ type Context = {
   readonly getToken: TokenGetter;
   readonly getWorkspaceId: WorkspaceIdGetter;
   readonly transport: Transport;
+  readonly getLanguage?: LanguageGetter;
   readonly timeoutMs: number;
   readonly connectTimeoutMs: number;
   readonly expired: (token: string | null, error: ApiError) => void;
@@ -143,7 +149,11 @@ async function prepare(ctx: Context, route: Route, call: CallOptions): Promise<P
   const url = buildUrl(ctx.server.apiUrl, route.path, call.params, call.query);
   const encoded = encodeBody(call.body);
   const token = await resolveToken(ctx.getToken);
-  const headers = { ...encoded.headers, ...buildAuthHeaders(token, ctx.getWorkspaceId()) };
+  const headers = {
+    ...encoded.headers,
+    ...acceptLanguageHeaders(readLanguage(ctx.getLanguage)),
+    ...buildAuthHeaders(token, ctx.getWorkspaceId()),
+  };
   const body = encoded.body === undefined ? {} : { body: encoded.body };
   return { token, request: { url, method: route.method, headers, ...body } };
 }
@@ -284,6 +294,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     getToken: options.getToken,
     getWorkspaceId: options.getWorkspaceId,
     transport: options.transport,
+    getLanguage: options.getLanguage,
     timeoutMs: options.timeoutMs ?? REQUEST_TIMEOUT_MS,
     connectTimeoutMs: options.connectTimeoutMs ?? STREAM_CONNECT_TIMEOUT_MS,
     expired: expiryLatch(options.onAuthExpired),

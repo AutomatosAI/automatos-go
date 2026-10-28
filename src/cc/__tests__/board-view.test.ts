@@ -15,6 +15,7 @@ import {
   filterPills,
   ticketCard,
 } from '../board/view-model';
+import { CC_ROUTES } from '../routes';
 import { BOARD_COPY } from '../strings';
 
 let nextId = 100;
@@ -162,6 +163,63 @@ describe('ticketCard', () => {
     expect(card.accessibilityLabel).toBe(
       '#0419, Task, Urgent, Blocked, Reconcile invoices, Question, Ledger',
     );
+  });
+
+  it('has no row status without a server state, and its label is the board one (PRD-268)', () => {
+    const card = ticketCard(ticket({ status: 'in_progress', next_step: 'Writing the intro.' }));
+    expect(card.rowStatus).toBeNull();
+    expect(card.accessibilityLabel).toContain('In Progress');
+    const unknown = ticketCard(ticket({ display_state: 'snoozed' }));
+    expect(unknown.rowStatus).toBeNull();
+  });
+
+  it("takes the server's state, next step and Try again, and says them first", () => {
+    const card = ticketCard(
+      ticket({
+        id: 2680,
+        number: '#0419',
+        status: 'failed',
+        priority: 'urgent',
+        title: 'Reconcile invoices',
+        display_state: 'failed',
+        next_step: 'The bank feed timed out',
+        retry: { kind: 'retry_ticket' },
+      }),
+    );
+    expect(card.rowStatus).toEqual({
+      state: 'failed',
+      next: 'The bank feed timed out',
+      retry: {
+        kind: 'retry_ticket',
+        route: CC_ROUTES.board.runNow,
+        params: { task_id: '2680' },
+      },
+      accessibilityLabel: "Couldn't finish: Reconcile invoices. The bank feed timed out.",
+    });
+    expect(card.accessibilityLabel).toBe(
+      "Couldn't finish: Reconcile invoices. The bank feed timed out. #0419, Task, Urgent, Ledger",
+    );
+  });
+
+  it("sends a mission card's Try again to its Mission", () => {
+    const run = 'a2b4c6d8-0000-4000-8000-000000000003';
+    const card = ticketCard(
+      ticket({
+        source_type: 'orchestration',
+        orchestration_run_id: run,
+        display_state: 'failed',
+        retry: { kind: 'replan_mission' },
+      }),
+    );
+    expect(card.rowStatus?.retry).toEqual({
+      kind: 'replan_mission',
+      route: CC_ROUTES.missions.replan,
+      params: { mission_id: run },
+    });
+    const orphan = ticketCard(
+      ticket({ display_state: 'failed', retry: { kind: 'rerun_mission' } }),
+    );
+    expect(orphan.rowStatus).toMatchObject({ state: 'failed', retry: null });
   });
 
   it('does not touch the ticket it maps', () => {

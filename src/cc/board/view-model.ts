@@ -4,12 +4,17 @@
 // raised priority, the status as dot and word), the title, the reason chip, the tags and the agent.
 // Like the web's board (use-board-tasks.ts), the list and its counts are the top-level tickets: a
 // mission step nests under its mission's card. The words are board.ts's (the vendored web modules).
+// PRD-268 (US-G05): a ticket the server gives a display_state says it with the vocabulary's glyph
+// and word where the board's dot and word were, its next step under the title, and Try again when
+// it offers one (cc/status/row-status.ts); VoiceOver hears '<word>: <title>. <next step>.' first.
+// A ticket without one is the card it always was.
 
 import type { TicketKind } from '../../core/web/components/activity/board/ticket-kind';
 import { routes } from '../../navigation/routes';
 import type { ColourName } from '../../styles/tokens';
 import { joinLabel } from '../../ui/paint';
 import { isPipStatus, statusPip } from '../../ui/variants';
+import { rowStatusView, type RowStatusView } from '../status/row-status';
 import { BOARD_COPY } from '../strings';
 import {
   boardColumn,
@@ -52,6 +57,8 @@ export type TicketCardView = {
   readonly reason: string | null;
   readonly tags: readonly string[];
   readonly agent: { readonly name: string; readonly swatch: ColourName };
+  /** The server's state, next step and Try again (PRD-268); null when it sent no state. */
+  readonly rowStatus: RowStatusView | null;
   /** The whole card in one sentence: VoiceOver reads a pressable card as one button. */
   readonly accessibilityLabel: string;
 };
@@ -86,6 +93,21 @@ function raisedPriority(priority: string): string | null {
   return RAISED_PRIORITIES.has(priority) ? priorityWord(priority) : null;
 }
 
+type LabelParts = {
+  /** #number, kind, a raised priority. */
+  readonly lead: readonly (string | null)[];
+  readonly word: string;
+  readonly title: string;
+  /** The reason chip, the agent. */
+  readonly tail: readonly (string | null)[];
+};
+
+/** The card in one sentence; with a server state, its own sentence (it names the title) first. */
+function cardLabel(rowStatus: RowStatusView | null, { lead, word, title, tail }: LabelParts) {
+  if (!rowStatus) return joinLabel(...lead, word, title, ...tail);
+  return `${rowStatus.accessibilityLabel} ${joinLabel(...lead, ...tail)}`;
+}
+
 export function ticketCard(ticket: BoardTicket): TicketCardView {
   const { kind } = kindOf(ticket);
   const number = ticketNumberOf(ticket);
@@ -94,6 +116,10 @@ export function ticketCard(ticket: BoardTicket): TicketCardView {
   const title = ticketTitle(ticket);
   const reason = reasonChip(ticket);
   const agentName = ticket.agent?.name.trim() || BOARD_COPY.unassigned;
+  const rowStatus = rowStatusView(ticket, title, {
+    ticketId: ticket.id,
+    missionId: ticket.orchestration_run_id,
+  });
   return {
     id: ticket.id,
     href: routes.cc.ticket(ticket.id),
@@ -106,7 +132,13 @@ export function ticketCard(ticket: BoardTicket): TicketCardView {
     reason,
     tags: visibleTags(ticket).slice(0, MAX_CARD_TAGS),
     agent: { name: agentName, swatch: agentSwatch(ticket.agent?.name) },
-    accessibilityLabel: joinLabel(number, kind, priority, word, title, reason, agentName),
+    rowStatus,
+    accessibilityLabel: cardLabel(rowStatus, {
+      lead: [number, kind, priority],
+      word,
+      title,
+      tail: [reason, agentName],
+    }),
   };
 }
 

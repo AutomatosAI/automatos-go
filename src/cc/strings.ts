@@ -217,6 +217,27 @@ export const TICKET_COPY = Object.freeze({
     `Sent back ${times} times. Talking it through with Auto may be quicker.`,
 });
 
+/**
+ * A row's status (PRD-268 §6.12.3 'Status row'): the state's word is the vocabulary's
+ * (src/styles/strings.ts STATE_WORDS) and the next step the server's, in the person's language;
+ * this is Try again's copy.
+ */
+export const STATUS_ROW_COPY = Object.freeze({
+  tryAgain: 'Try again',
+  /** What Try again does, said after its label (and on the card, as its action). */
+  tryAgainHint: Object.freeze({
+    retry_ticket: 'Runs the ticket again',
+    rerun_mission: 'Runs the Mission’s failed steps again',
+    replan_mission: 'Makes a new plan for the Mission’s failed steps',
+  }),
+  /** The toast when the server sent no words of its own. */
+  retried: Object.freeze({
+    retry_ticket: 'Running it again.',
+    rerun_mission: 'Running the failed steps again.',
+    replan_mission: 'Making a new plan.',
+  }),
+});
+
 /** Questions (handoff §2 'Questions', D-QUESTIONS, D16, D17). */
 export const QUESTIONS_COPY = Object.freeze({
   loading: 'Loading the questions…',

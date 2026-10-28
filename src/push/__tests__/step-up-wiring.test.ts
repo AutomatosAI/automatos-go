@@ -1,5 +1,6 @@
-// Face ID before approve or answer in A2's and A3's buttons (D19, KP13; US-015e). Through the real
-// gate (createStepUp over a fake LocalAuthentication, the switch on), each of the five gated writes
+// Face ID before approve or answer in A2's and A3's buttons (D19, KP13; US-015e), and before a
+// row's Try again (PRD-268). Through the real
+// gate (createStepUp over a fake LocalAuthentication, the switch on), each of the gated writes
 // sends nothing on a cancelled, missed, locked-out or failed check, and on a pass sends one request,
 // exactly what A2's or A3's sender sent before. Read from the source: each gated route is named by
 // one sender only, and every module in src/chat and src/cc that calls a sender (other than the
@@ -139,6 +140,25 @@ const GATED_ROUTES = [
     '/api/socials/posts/{post_id}/approve',
     'src/cc/routes.ts',
   ],
+  // PRD-268's Try again: row-status.ts picks the route, api.ts sendRetry sends it
+  [
+    'CC_ROUTES.board.runNow',
+    'src/cc/status/row-status.ts',
+    '/api/v1/tasks/{task_id}/run-now',
+    'src/cc/routes.ts',
+  ],
+  [
+    'CC_ROUTES.missions.resume',
+    'src/cc/status/row-status.ts',
+    '/api/missions/{mission_id}/resume',
+    'src/cc/routes.ts',
+  ],
+  [
+    'CC_ROUTES.missions.replan',
+    'src/cc/status/row-status.ts',
+    '/api/missions/{mission_id}/replan',
+    'src/cc/routes.ts',
+  ],
 ] as const;
 /** The route tables: they declare the routes (a sender's name may be a key there). */
 const ROUTE_TABLES = ['src/chat/routes.ts', 'src/cc/routes.ts'];
@@ -151,12 +171,14 @@ const SENDERS = [
   'approveTicket',
   'approvePost',
   'approveShown',
+  'sendRetry',
 ];
 /** The modules that declare the senders: A2's and A3's, their tests pin their signatures. */
 const SENDER_MODULES = [
   'src/cc/board/api.ts',
   'src/cc/questions/api.ts',
   'src/cc/social/api.ts',
+  'src/cc/status/api.ts',
   'src/chat/cards/api.ts',
   'src/chat/cards/grants.ts',
 ];
@@ -164,6 +186,7 @@ const SENDER_MODULES = [
 const GATED_MODULES: Readonly<Record<string, readonly string[]>> = {
   'src/cc/questions/gated.ts': ['answer'],
   'src/cc/social/gated.ts': ['approve_social'],
+  'src/cc/status/gated.ts': ['retry'],
   'src/cc/ticket/gated.ts': ['approve_ticket'],
   'src/chat/cards/gated.ts': ['approve_plan', 'grant_tool'],
 };
@@ -173,6 +196,7 @@ const GATED_FUNCTIONS = [
   'answerGated',
   'approveTicketGated',
   'approvePostGated',
+  'retryGated',
 ];
 /** KP13: the safe direction never asks. */
 const UNGATED_SENDERS = [
@@ -258,6 +282,7 @@ describe('every gated write goes through src/step-up (read from the source)', ()
     expect(users.sort()).toEqual([
       'src/cc/questions/use-questions.ts',
       'src/cc/social/use-social.ts',
+      'src/cc/status/use-retry.ts',
       'src/cc/ticket/use-ticket.ts',
       'src/chat/cards/PlanApprovalCard.tsx',
       'src/chat/cards/ToolApprovalCard.tsx',
