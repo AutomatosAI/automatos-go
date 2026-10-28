@@ -1,8 +1,8 @@
 // The push families' TanStack Query keys, kept here because src/api/query-keys.ts is the foundation's
 // and has no push family (KP2: never edited by a wave). None is persisted: the foundation's persister
 // keeps only the families KEY_FAMILIES lists (src/api/query-keys.ts isPersistableKey), and no family
-// there starts with 'push', so these stay in memory (a device row, the preference rows and the
-// redact switch are read fresh on each launch).
+// there starts with 'push', so these stay in memory (a device row, the preference rows, the redact
+// switch and the inbox's notifications, whose text is never written to the phone, are read fresh).
 
 const PUSH = 'push';
 
@@ -15,4 +15,8 @@ export const pushQueryKeys = Object.freeze({
   preferences: () => [PUSH, 'preferences'] as const,
   /** GET /api/workspaces/current read for push: the role and settings.push.redact_questions. */
   workspacePush: () => [PUSH, 'workspace'] as const,
+  /** The notifications inbox: GET /api/notifications (and, under it, the unread number). */
+  inbox: () => [PUSH, 'inbox'] as const,
+  /** GET /api/notifications/unread-count: the menu's number. */
+  unread: () => [PUSH, 'inbox', 'unread'] as const,
 });

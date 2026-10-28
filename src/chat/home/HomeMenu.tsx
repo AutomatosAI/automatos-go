@@ -1,11 +1,14 @@
 // The header's menu (D73): the foundation's bottom Sheet (the [+] menu's, so the grabber, the
 // backdrop tap, VoiceOver's escape and Reduce Motion are the same), mounted by the header with no
 // route. On top, the workspace's full name and the role in words; then one ListRow per item in
-// menu.ts MENU_ITEMS, the Command Centre's with the needs-you number in place of its chevron. A row
+// menu.ts MENU_ITEMS, the Command Centre's with the needs-you number in place of its chevron and
+// Notifications' with the inbox's unread number (useUnreadCount, read here so Studio's header and
+// HUD's home, which both mount this menu, carry it without passing it). A row
 // slides the sheet away, then opens its screen (useHomeMenu). No workspace switcher: the pinned API
 // lists no user's workspaces, and PRD §7 keeps a switcher out of v1.
 
 import type { LucideIcon } from 'lucide-react-native';
+import Bell from 'lucide-react-native/icons/bell';
 import LayoutDashboard from 'lucide-react-native/icons/layout-dashboard';
 import MessagesSquare from 'lucide-react-native/icons/messages-square';
 import SettingsIcon from 'lucide-react-native/icons/settings';
@@ -13,6 +16,7 @@ import SquarePen from 'lucide-react-native/icons/square-pen';
 import { View } from 'react-native';
 
 import { useAppSession } from '../../app-state/session';
+import { useUnreadCount } from '../../push/inbox/use-inbox';
 import { useTokens } from '../../styles/theme';
 import { CountBadge, Divider, ListRow, Sheet, Text } from '../../ui';
 import { MENU_ITEMS, menuHeading, menuRows, type MenuIcon } from './menu';
@@ -24,6 +28,7 @@ const SUMMARY_LEVEL = 3;
 const MENU_ICONS: Readonly<Record<MenuIcon, LucideIcon>> = Object.freeze({
   'square-pen': SquarePen,
   'messages-square': MessagesSquare,
+  bell: Bell,
   'layout-dashboard': LayoutDashboard,
   settings: SettingsIcon,
 });
@@ -50,11 +55,12 @@ function Heading() {
 }
 
 export function HomeMenu({ menu, needsYou }: HomeMenuProps) {
+  const unread = useUnreadCount();
   return (
     <Sheet visible={menu.visible} onClose={menu.close}>
       <Heading />
       <Divider />
-      {menuRows(MENU_ITEMS, { needsYou }).map((row) => (
+      {menuRows(MENU_ITEMS, { needsYou, unread }).map((row) => (
         <ListRow
           key={row.id}
           icon={MENU_ICONS[row.icon]}

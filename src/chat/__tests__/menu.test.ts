@@ -32,6 +32,7 @@ import {
 const ICONS: readonly MenuIcon[] = [
   'square-pen',
   'messages-square',
+  'bell',
   'layout-dashboard',
   'settings',
 ];
@@ -42,10 +43,11 @@ const rowOf = (needsYou: number, id: string) =>
 const HELP: MenuItem = { id: 'help', label: 'Help', icon: 'settings', route: '/settings' };
 
 describe('the menu’s items (one list)', () => {
-  it('is New chat, Chats, Command Centre and Settings, each with its route', () => {
+  it('is New chat, Chats, Notifications, Command Centre and Settings, each with its route', () => {
     expect(MENU_ITEMS.map((item) => [item.id, item.label, item.route])).toEqual([
       ['newChat', 'New chat', '/chat/new'],
       ['chats', 'Chats', '/chats'],
+      ['notifications', 'Notifications', '/notifications'],
       ['commandCentre', 'Command Centre', '/cc'],
       ['settings', 'Settings', '/settings'],
     ]);
@@ -70,6 +72,18 @@ describe('menuRows', () => {
     }
   });
 
+  it('puts the unread number on the Notifications row, and says it', () => {
+    const rows = menuRows(MENU_ITEMS, { needsYou: 2, unread: 5 });
+    expect(rows.find((row) => row.id === 'notifications')).toMatchObject({
+      badge: 5,
+      accessibilityLabel: 'Notifications, 5 unread',
+    });
+    expect(rows.find((row) => row.id === 'commandCentre')?.badge).toBe(2);
+    expect(menuRows(MENU_ITEMS, { unread: 0 }).find((r) => r.id === 'notifications')).toMatchObject(
+      { badge: null, accessibilityLabel: 'Notifications' },
+    );
+  });
+
   it('shows no number for nothing, a negative or not a number; a whole one otherwise', () => {
     for (const none of [0, -1, Number.NaN]) {
       expect(rowOf(none, 'commandCentre')).toMatchObject({
@@ -83,7 +97,7 @@ describe('menuRows', () => {
 
   it('takes a new row as one line', () => {
     const rows = menuRows([...MENU_ITEMS, HELP], { needsYou: 0 });
-    expect(rows).toHaveLength(5);
+    expect(rows).toHaveLength(6);
     expect(rows.at(-1)).toEqual({
       id: 'help',
       label: 'Help',
@@ -100,7 +114,7 @@ describe('menuRows', () => {
     const rows = menuRows(frozen, { needsYou: 4 });
     rows.forEach((row, index) => expect(row).not.toBe(frozen[index]));
     expect(JSON.stringify(MENU_ITEMS)).toBe(before);
-    expect(frozen[2]).toHaveProperty('badge', 'needsYou');
+    expect(frozen[3]).toHaveProperty('badge', 'needsYou');
   });
 });
 
@@ -121,13 +135,13 @@ describe('menuButtonView', () => {
 
 describe('menuHint (what the menu button says it opens)', () => {
   it('names every row, from the rows’ own labels', () => {
-    expect(MENU_HINT).toBe('Opens New chat, Chats, Command Centre and Settings');
+    expect(MENU_HINT).toBe('Opens New chat, Chats, Notifications, Command Centre and Settings');
     expect(MENU_HINT).toBe(menuHint(MENU_ITEMS));
   });
 
   it('names a new row too, so the hint never goes stale', () => {
     expect(menuHint([...MENU_ITEMS, HELP])).toBe(
-      'Opens New chat, Chats, Command Centre, Settings and Help',
+      'Opens New chat, Chats, Notifications, Command Centre, Settings and Help',
     );
     expect(menuHint([HELP])).toBe('Opens Help');
   });

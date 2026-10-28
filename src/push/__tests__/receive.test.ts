@@ -15,6 +15,7 @@ import {
   type IncomingDeps,
 } from '../inbound/receive';
 import { SHOW_NOTHING } from '../platform/foreground';
+import { pushQueryKeys } from '../query-keys';
 import type { PushRecord } from '../registration/record';
 import {
   NOW_S,
@@ -141,17 +142,22 @@ describe('anything that does not verify shows nothing and refreshes nothing', ()
 });
 
 describe('refreshAfterPush', () => {
-  it("marks exactly the foundation's needsYou and questions families stale", async () => {
+  it("marks exactly the foundation's needsYou and questions families stale, and the inbox", async () => {
     let predicate: ((query: { queryKey: readonly unknown[] }) => boolean) | undefined;
     const queryClient = {
-      invalidateQueries: vi.fn(async (filters: { predicate?: typeof predicate }) => {
-        predicate = filters.predicate;
-      }),
+      invalidateQueries: vi.fn(
+        async (filters: { predicate?: typeof predicate; queryKey?: readonly unknown[] }) => {
+          if (filters.predicate) predicate = filters.predicate;
+        },
+      ),
     };
     refreshAfterPush(queryClient as never);
     await Promise.resolve();
     expect(PUSH_REFRESH_FAMILIES).toEqual(['needsYou', 'questions']);
-    expect(queryClient.invalidateQueries).toHaveBeenCalledTimes(1);
+    expect(queryClient.invalidateQueries).toHaveBeenCalledTimes(2);
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: pushQueryKeys.inbox(),
+    });
     const hits = (queryKey: readonly unknown[]) => predicate?.({ queryKey }) ?? false;
     expect(hits(queryKeys.needsYou())).toBe(true);
     expect(hits(queryKeys.questions('pending', 'question'))).toBe(true);

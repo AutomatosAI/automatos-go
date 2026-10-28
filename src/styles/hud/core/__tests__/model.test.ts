@@ -216,7 +216,7 @@ describe('the top bar', () => {
 
   it("names the menu square as Studio's menu button on home, and as a screen names it", () => {
     expect(menuSquareView()).toEqual({ label: 'Menu', hint: MENU_HINT });
-    expect(MENU_HINT).toBe('Opens New chat, Chats, Command Centre and Settings');
+    expect(MENU_HINT).toBe('Opens New chat, Chats, Notifications, Command Centre and Settings');
     expect(menuSquareView('Close voice')).toEqual({ label: 'Close voice', hint: undefined });
   });
 });

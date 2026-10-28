@@ -3,11 +3,14 @@
 // row goes. A new row is one line in MENU_ITEMS (a new icon also needs its entry in HomeMenu.tsx
 // MENU_ICONS; TypeScript enforces it), and the button's hint names it too. The number is the
 // server's one needs-you number (D26, useNeedsYou): the menu button carries it, and so does the
-// row it belongs to.
+// row it belongs to. Notifications (the push wave's inbox, so no notification is lost once its push
+// is gone) carries the server's unread number the same way.
 
 import type { Workspace } from '../../api/workspace';
 import { ROLE_LABELS } from '../../app-state/strings';
 import { routes } from '../../navigation/routes';
+import { pushScreens } from '../../push/nav';
+import { PUSH_INBOX_COPY } from '../../push/strings';
 import type { SpaceName } from '../../styles/tokens';
 import { MIN_TOUCH, joinLabel } from '../../ui/paint';
 import { UI_COPY } from '../../ui/strings';
@@ -49,9 +52,9 @@ export const HEADER = Object.freeze({
   }),
 });
 
-export type MenuIcon = 'square-pen' | 'messages-square' | 'layout-dashboard' | 'settings';
-/** A number a row can carry, by name: today only the needs-you number. */
-export type MenuBadge = 'needsYou';
+export type MenuIcon = 'square-pen' | 'messages-square' | 'bell' | 'layout-dashboard' | 'settings';
+/** A number a row can carry, by name: the needs-you number and the inbox's unread number. */
+export type MenuBadge = 'needsYou' | 'unread';
 
 export type MenuItem = {
   readonly id: string;
@@ -65,6 +68,13 @@ export const MENU_ITEMS: readonly MenuItem[] = Object.freeze([
   { id: 'newChat', label: MENU_COPY.newChat, icon: 'square-pen', route: routes.chat(NEW_CHAT_ID) },
   { id: 'chats', label: MENU_COPY.chats, icon: 'messages-square', route: routes.chats },
   {
+    id: 'notifications',
+    label: PUSH_INBOX_COPY.menu,
+    icon: 'bell',
+    route: pushScreens.inbox,
+    badge: 'unread',
+  },
+  {
     id: 'commandCentre',
     label: MENU_COPY.commandCentre,
     icon: 'layout-dashboard',
@@ -74,11 +84,13 @@ export const MENU_ITEMS: readonly MenuItem[] = Object.freeze([
   { id: 'settings', label: MENU_COPY.settings, icon: 'settings', route: routes.settings },
 ]);
 
-export type MenuCounts = Readonly<Record<MenuBadge, number>>;
+/** The numbers the rows carry; one not given is none (no badge). */
+export type MenuCounts = Readonly<Partial<Record<MenuBadge, number>>>;
 
-/** What each number counts, for VoiceOver: '13 need you'. */
+/** What each number counts, for VoiceOver: '13 need you', '3 unread'. */
 const BADGE_NOUNS: Readonly<Record<MenuBadge, PluralForms>> = Object.freeze({
   needsYou: UI_COPY.needYou,
+  unread: PUSH_INBOX_COPY.unreadCount,
 });
 
 export type MenuRow = Omit<MenuItem, 'badge'> & {
@@ -96,7 +108,7 @@ const counted = (label: string, count: number | null, noun: PluralForms): string
 /** The menu's rows: each item with its number resolved and the words VoiceOver hears. */
 export function menuRows(items: readonly MenuItem[], counts: MenuCounts): readonly MenuRow[] {
   return items.map(({ badge, ...item }) => {
-    const count = badge ? shown(counts[badge]) : null;
+    const count = badge ? shown(counts[badge] ?? 0) : null;
     const accessibilityLabel = badge ? counted(item.label, count, BADGE_NOUNS[badge]) : item.label;
     return { ...item, badge: count, accessibilityLabel };
   });
@@ -118,7 +130,7 @@ export function menuHint(items: readonly MenuItem[]): string {
   return HOME_COPY.menuHint(rest === '' ? last : `${rest}${HOME_COPY.listAnd}${last}`);
 }
 
-/** 'Opens New chat, Chats, Command Centre and Settings'. */
+/** 'Opens New chat, Chats, Notifications, Command Centre and Settings'. */
 export const MENU_HINT = menuHint(MENU_ITEMS);
 
 /**
