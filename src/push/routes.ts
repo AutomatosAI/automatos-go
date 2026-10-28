@@ -28,6 +28,16 @@ export const PUSH_ROUTES = Object.freeze({
   } as const),
   /** Mark one bell notification read (no-op when it already is). */
   notificationRead: { method: 'POST', path: '/api/notifications/{notification_id}/read' },
+  notifications: Object.freeze({
+    /** The bell's rows, newest first: ?limit&offset&unread_only (api/notifications.py). */
+    list: { method: 'GET', path: '/api/notifications' },
+    /** {success, count}: the unread rows not dismissed. */
+    unreadCount: { method: 'GET', path: '/api/notifications/unread-count' },
+    /** {success, marked_count}: every unread row read. */
+    readAll: { method: 'POST', path: '/api/notifications/read-all' },
+  } as const),
+  /** One Mission run: its config names the chat it was launched from (origin_chat_id). */
+  mission: { method: 'GET', path: '/api/missions/{mission_id}' },
   questions: Object.freeze({
     /** ?status=pending&kind=question: the stale check before a question link opens (KP9). */
     list: { method: 'GET', path: '/api/v1/approval-grants' },

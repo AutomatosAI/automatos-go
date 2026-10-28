@@ -1,16 +1,20 @@
 // A push's signed link → the screen it opens (PRD-001 §4.8, KP9, KP17), pure. link_type picks the
 // screen and link_id the record: 'question' → the Questions list (there is no route to one
 // question), 'task' → the ticket, 'social_post' → the post as it will publish, 'chat' → the
-// conversation; 'approval_grant', 'mission', anything else or nothing → home, where the needs strip
-// is (the phone has no approvals or Missions screen, D3). A signed link is authentic, not
-// necessarily well formed: a link_id reaches a route builder only once it has its record's shape (a
-// grant: a positive row id; a ticket: the board's row id, digits; a post and a chat: a UUID), else
-// home. Every route comes from the foundation's builders (src/navigation/routes.ts), never a path
-// written here; whether the record is still there is src/push/links/stale.ts's question.
+// conversation. 'approval_grant' and 'mission' name a record with no fixed screen on the phone (D3):
+// its card sits in the chat it was raised in (D30), so where it opens is looked up first
+// (links/stale.ts); anything else or nothing is 'none', which opens the notifications inbox. A
+// signed link is authentic, not necessarily well formed: a link_id reaches a route builder only
+// once it has its record's shape (a grant: a positive row id; a ticket: the board's row id, digits;
+// a post, a chat and a Mission: a UUID), else 'none'. Every route comes from the foundation's
+// builders (src/navigation/routes.ts), never a path written here; whether the record is still there
+// is src/push/links/stale.ts's question.
 
 import { isTaskId, routes } from '../../navigation/routes';
 import {
+  APPROVAL_LINK_TYPE,
   CHAT_LINK_TYPE,
+  MISSION_LINK_TYPE,
   QUESTION_LINK_TYPE,
   ROW_ID_PATTERN,
   SOCIAL_POST_LINK_TYPE,
@@ -20,7 +24,7 @@ import {
 import type { PushLink } from '../inbound/intent';
 
 /** A record a push can open. */
-export type RecordKind = 'question' | 'ticket' | 'social' | 'chat';
+export type RecordKind = 'question' | 'ticket' | 'social' | 'chat' | 'approval' | 'mission';
 
 export type LinkTarget = Readonly<{ kind: RecordKind; id: string }> | Readonly<{ kind: 'home' }>;
 
@@ -34,11 +38,14 @@ const RULES: ReadonlyMap<string, LinkRule> = new Map<string, LinkRule>([
   [TASK_LINK_TYPE, { kind: 'ticket', fits: isTaskId }],
   [SOCIAL_POST_LINK_TYPE, { kind: 'social', fits: isUuid }],
   [CHAT_LINK_TYPE, { kind: 'chat', fits: isUuid }],
+  [APPROVAL_LINK_TYPE, { kind: 'approval', fits: isRowId }],
+  [MISSION_LINK_TYPE, { kind: 'mission', fits: isUuid }],
 ]);
 
+/** No record the phone can open: no link, a type with no screen, or an id of the wrong shape. */
 export const HOME_TARGET: LinkTarget = Object.freeze({ kind: 'home' });
 
-/** The record a link names, or home (no link, a type the phone has no screen for, a bad id). */
+/** The record a link names, or HOME_TARGET (no link, a type the phone has no screen for, a bad id). */
 export function targetFor(link: PushLink): LinkTarget {
   const rule = link.link_type ? RULES.get(link.link_type) : undefined;
   const id = link.link_id;
@@ -46,8 +53,11 @@ export function targetFor(link: PushLink): LinkTarget {
   return Object.freeze({ kind: rule.kind, id });
 }
 
-/** The target's own screen, through the foundation's builders only. */
-export function routeFor(target: LinkTarget): string {
+/**
+ * The target's own fixed screen, through the foundation's builders only; null when it has none
+ * (an approval and a Mission plan are looked up first, HOME_TARGET has nothing to open).
+ */
+export function routeFor(target: LinkTarget): string | null {
   switch (target.kind) {
     case 'question':
       return routes.cc.questions;
@@ -57,7 +67,9 @@ export function routeFor(target: LinkTarget): string {
       return routes.cc.social(target.id);
     case 'chat':
       return routes.chat(target.id);
+    case 'approval':
+    case 'mission':
     case 'home':
-      return routes.home;
+      return null;
   }
 }

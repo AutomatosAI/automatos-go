@@ -10,6 +10,8 @@ export const PUSH_LINK_COPY = Object.freeze({
   ticketGone: 'That ticket is gone or in another workspace.',
   postGone: 'That post no longer needs you.',
   chatGone: 'That conversation is not available.',
+  approvalGone: 'That approval was already decided.',
+  missionGone: 'That Mission is gone or in another workspace.',
 });
 
 /**
@@ -133,6 +135,30 @@ export const PUSH_ACTION_COPY = Object.freeze({
   unverified: "This notification couldn't be checked, so nothing was sent.",
   otherWorkspace: 'That notification is from another workspace.',
   answerHere: 'Answer it here.',
+  /** A tap the phone could not check: its link is not followed, the inbox opens instead. */
+  uncheckedTap:
+    "This notification couldn't be checked on this phone, so here are your notifications.",
+});
+
+/**
+ * The notifications inbox (Menu → Notifications): every bell notification, newest first, so none
+ * is lost when its push is gone. Rows are buttons; the unread dot is said, never only drawn.
+ */
+export const PUSH_INBOX_COPY = Object.freeze({
+  title: 'Notifications',
+  back: 'Back',
+  markAllRead: 'Mark all read',
+  allRead: 'All marked read.',
+  emptyTitle: 'Nothing yet',
+  emptyMessage: 'When Auto has a message for you or needs you, it shows here.',
+  unread: 'Unread',
+  openHint: 'Opens what it is about',
+  studioHint: 'Opens in Studio, in your browser',
+  nothingToOpen: 'There is nothing more to open for this one.',
+  studioFailed: "Studio couldn't be opened on this phone.",
+  /** What the menu row and the button say, with the number VoiceOver hears. */
+  menu: 'Notifications',
+  unreadCount: Object.freeze({ one: 'unread', other: 'unread' }),
 });
 
 /**

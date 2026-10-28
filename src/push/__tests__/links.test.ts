@@ -35,6 +35,8 @@ function checks(overrides: Partial<StaleChecks> = {}): StaleChecks {
     getTicket: vi.fn(async () => ({ id: Number(TASK_ID), status: 'review' })),
     getSocialPost: vi.fn(async () => ({ status: 'needs_approval' })),
     getChat: vi.fn(async () => ({ id: CHAT_ID })),
+    grantPlaces: vi.fn(async () => []),
+    missionPlace: vi.fn(async (id: string) => ({ id, config: null })),
     ...overrides,
   };
 }
@@ -57,15 +59,22 @@ describe('targetFor and routeFor: every link_type → its screen', () => {
   });
 
   it.each([
-    ['approval_grant', GRANT_ID],
     ['mission', '9001'],
+    ['approval_grant', POST_ID],
     ['playbook', '5'],
     ['__proto__', '1'],
     ['constructor', '1'],
     ['', GRANT_ID],
-  ])('%s → home (no screen for it on the phone)', (type, id) => {
+  ])('%s %j → no target and no route (no screen for it on the phone)', (type, id) => {
     expect(targetFor(link(type, id))).toBe(HOME_TARGET);
-    expect(routeFor(targetFor(link(type, id)))).toBe(routes.home);
+    expect(routeFor(targetFor(link(type, id)))).toBeNull();
+  });
+
+  it('an approval (a grant row id) and a Mission (a UUID) are targets with no fixed route', () => {
+    expect(targetFor(link('approval_grant', GRANT_ID))).toEqual({ kind: 'approval', id: GRANT_ID });
+    expect(targetFor(link('mission', POST_ID))).toEqual({ kind: 'mission', id: POST_ID });
+    expect(routeFor(targetFor(link('approval_grant', GRANT_ID)))).toBeNull();
+    expect(routeFor(targetFor(link('mission', POST_ID)))).toBeNull();
   });
 
   it('no link at all → home', () => {
@@ -107,9 +116,9 @@ describe('targetFor and routeFor: every link_type → its screen', () => {
 });
 
 describe('resolveTarget: each record checked before its screen opens (KP9)', () => {
-  it('home opens home and asks nothing', async () => {
+  it('no target resolves to no route (the push opens the inbox) and asks nothing', async () => {
     const fake = checks();
-    await expect(resolveTarget(HOME_TARGET, fake)).resolves.toEqual({ route: routes.home });
+    await expect(resolveTarget(HOME_TARGET, fake)).resolves.toEqual({ route: null });
     expect(fake.pendingQuestionIds).not.toHaveBeenCalled();
     expect(fake.getTicket).not.toHaveBeenCalled();
     expect(fake.getSocialPost).not.toHaveBeenCalled();
@@ -140,11 +149,11 @@ describe('resolveTarget: each record checked before its screen opens (KP9)', () 
     });
   });
 
-  it('a post waiting for approval → the post; any other status or 404 → home with the notice', async () => {
+  it('a post waiting for approval → the post; any other status or 404 → no route, the notice', async () => {
     await expect(resolveTarget(SOCIAL, checks())).resolves.toEqual({
       route: routes.cc.social(POST_ID),
     });
-    const postGone = { route: routes.home, notice: PUSH_LINK_COPY.postGone };
+    const postGone = { route: null, notice: PUSH_LINK_COPY.postGone };
     for (const status of ['approved', 'published', 'changes_requested', null]) {
       const moved = checks({ getSocialPost: async () => ({ status }) });
       await expect(resolveTarget(SOCIAL, moved)).resolves.toEqual(postGone);
@@ -153,9 +162,9 @@ describe('resolveTarget: each record checked before its screen opens (KP9)', () 
     await expect(resolveTarget(SOCIAL, gone)).resolves.toEqual(postGone);
   });
 
-  it('a chat found → the chat; 404 or 403 → home with the notice (D-STALE-CHAT)', async () => {
+  it('a chat found → the chat; 404 or 403 → no route, the notice (D-STALE-CHAT)', async () => {
     await expect(resolveTarget(CHAT, checks())).resolves.toEqual({ route: routes.chat(CHAT_ID) });
-    const chatGone = { route: routes.home, notice: PUSH_LINK_COPY.chatGone };
+    const chatGone = { route: null, notice: PUSH_LINK_COPY.chatGone };
     const gone = checks({ getChat: failing('not_found', 404) });
     const theirs = checks({ getChat: failing('forbidden', 403) });
     await expect(resolveTarget(CHAT, gone)).resolves.toEqual(chatGone);
@@ -299,10 +308,10 @@ describe('staleChecksFor: the checks over the one client', () => {
     expect(sent(calls[0]).path).toBe(`/api/socials/posts/${POST_ID}`);
   });
 
-  it("another person's chat (403) → home with the notice", async () => {
+  it("another person's chat (403) → no route, the notice", async () => {
     const { client, calls } = harness(() => reply(403, '{"detail":"Forbidden"}'));
     await expect(resolveTarget(CHAT, staleChecksFor(client))).resolves.toEqual({
-      route: routes.home,
+      route: null,
       notice: PUSH_LINK_COPY.chatGone,
     });
     expect(sent(calls[0]).path).toBe(`/api/chat/${CHAT_ID}`);

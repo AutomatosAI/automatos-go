@@ -3,10 +3,11 @@
 // (handled-store.ts) → the push record's key (registration/key-store.ts) → verifyPushSignature →
 // intentFor → act. A reply posts its answer once (answer.ts) and lands on Questions with the
 // server's result; Open and a tap open the link's screen after its stale check (links/stale.ts);
-// anything else opens home, or the question, with nothing done. Only a verified push of the current
-// workspace posts, follows its link or marks its bell notification read. The outcome is shown
-// first (the screen, then its line); marking read and dismissing follow, and a failure of either is
-// ignored. The key is the record's when the record is this server's: a push from another workspace
+// anything else opens the notifications inbox (the push's own row first), or the question, with
+// nothing done (outcomes.ts): a tap never lands on home with nothing to show. Only a verified push
+// of the current workspace posts, follows its link or marks its bell notification read. The outcome
+// is shown first (the screen, then its line); marking read and dismissing follow, and a failure of
+// either is ignored. The key is the record's when the record is this server's: a push from another workspace
 // on it still verifies and says so, and acts on nothing. Returns where it went and what it said;
 // null for a response already handled. Never throws. Logs carry kinds only: never the
 // notification's text, the reply, the sig, the key or the token.
@@ -14,27 +15,33 @@
 import type { ApiClient } from '../../api/client';
 import { isApiError } from '../../api/errors';
 import type { WorkspaceRole } from '../../api/workspace';
-import { ROLE_COPY } from '../../auth/strings';
 import { logger } from '../../lib/logger';
 import { routes } from '../../navigation/routes';
 import { markNotificationRead } from '../api';
+import { REPLY_ACTION_ID } from '../config';
 import { resolveTarget, type StaleChecks } from '../links/stale';
-import { routeFor, targetFor } from '../links/targets';
+import { targetFor } from '../links/targets';
 import type { NotificationsPort } from '../platform/expo';
 import type { PushKeyStore } from '../registration/key-store';
 import type { PushRecord } from '../registration/record';
 import { parsePushData, type PushPayload } from '../schemas/payload';
 import type { Sha256 } from '../signature/hmac';
 import { checkPushSignature, type SignatureCheck } from '../signature/verify';
-import { PUSH_ACTION_COPY } from '../strings';
 import { sendAnswer, settlesQuestion } from './answer';
 import { responseKey } from './dedupe';
 import type { HandledStore } from './handled-store';
-import { intentFor, type PushIntent, type PushLink } from './intent';
+import { intentFor, type PushIntent } from './intent';
+import {
+  FAILED_OUTCOME,
+  UNREADABLE_OUTCOME,
+  neutralOutcome,
+  outcome,
+  unroutedRoute,
+  type HandledOutcome,
+} from './outcomes';
 import { fromResponse, type InboundEvent } from './parse';
 
-/** Where the response took the person, and the line shown there. */
-export type HandledOutcome = Readonly<{ route: string; toast?: string }>;
+export type { HandledOutcome } from './outcomes';
 
 /** The session a response is handled in, read when it arrives. */
 export type ResponseSession = Readonly<{
@@ -76,8 +83,6 @@ type Intent<K extends PushIntent['kind']> = Extract<PushIntent, { kind: K }>;
 
 type ReadableEvent = Extract<InboundEvent, { kind: 'readable' }>;
 
-const HOME: HandledOutcome = Object.freeze({ route: routes.home });
-
 function kindOf(error: unknown): string {
   return isApiError(error) ? error.kind : 'unknown';
 }
@@ -95,10 +100,6 @@ function show(deps: HandlerDeps, outcome: HandledOutcome): HandledOutcome {
     logger.warn('[push] could not show the line of a notification');
   }
   return Object.freeze({ ...outcome });
-}
-
-function outcome(route: string, toast?: string): HandledOutcome {
-  return Object.freeze(toast ? { route, toast } : { route });
 }
 
 /** Marked once now; false when it was handled before. A store that throws lets it through. */
@@ -193,37 +194,10 @@ function refreshAfterReply(deps: HandlerDeps): void {
 
 async function open(intent: Intent<'open'>, deps: HandlerDeps): Promise<HandledOutcome> {
   const resolved = await resolveTarget(targetFor(intent.link), deps.checks);
-  const shown = show(deps, outcome(resolved.route, resolved.notice));
+  const route = resolved.route ?? unroutedRoute(intent.notificationId);
+  const shown = show(deps, outcome(route, resolved.notice));
   await markRead(deps, intent.notificationId);
   return shown;
-}
-
-/** The question's own screen (the Questions list), or home when the link names none. */
-function questionRoute(link: PushLink | undefined): string {
-  return link ? routeFor(targetFor(link)) : routes.cc.questions;
-}
-
-/** Nothing is sent: home, or the question with where to answer it, and a line that says why. */
-export function neutralOutcome(
-  intent: Intent<'neutral'>,
-  role: WorkspaceRole | null,
-): HandledOutcome {
-  switch (intent.reason) {
-    case 'unverified':
-      return outcome(routes.home, PUSH_ACTION_COPY.unverified);
-    case 'other_workspace':
-      return outcome(routes.home, PUSH_ACTION_COPY.otherWorkspace);
-    case 'cannot_answer':
-      // a known role that may not answer is a viewer's; an unknown one may still answer there
-      return outcome(
-        questionRoute(intent.link),
-        role ? ROLE_COPY.viewerReadOnly : PUSH_ACTION_COPY.answerHere,
-      );
-    case 'blank_reply':
-      return outcome(questionRoute(intent.link), PUSH_ACTION_COPY.answerHere);
-    case 'unknown':
-      return HOME;
-  }
 }
 
 async function act(event: ReadableEvent, deps: HandlerDeps): Promise<HandledOutcome> {
@@ -247,7 +221,14 @@ async function act(event: ReadableEvent, deps: HandlerDeps): Promise<HandledOutc
     case 'open':
       return open(intent, deps);
     case 'neutral':
-      return show(deps, neutralOutcome(intent, role));
+      return show(
+        deps,
+        neutralOutcome(intent, {
+          role,
+          focus: payload?.notification_id ?? null,
+          replied: event.action === REPLY_ACTION_ID,
+        }),
+      );
   }
 }
 
@@ -262,11 +243,11 @@ export async function handleResponse(
   try {
     if (event.kind !== 'readable') {
       logger.debug('[push] notification action', 'unreadable');
-      return show(deps, outcome(routes.home, PUSH_ACTION_COPY.unverified));
+      return show(deps, UNREADABLE_OUTCOME);
     }
     return await act(event, deps);
   } catch (error) {
     logger.warn('[push] a notification action failed', kindOf(error));
-    return show(deps, HOME);
+    return show(deps, FAILED_OUTCOME);
   }
 }

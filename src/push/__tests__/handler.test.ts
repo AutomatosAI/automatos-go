@@ -14,6 +14,7 @@ import { DEFAULT_ACTION_ID, HANDLED_KEYS_ITEM } from '../config';
 import { handleResponse } from '../inbound/handler';
 import { startResponses } from '../inbound/responses';
 import { staleChecksFor } from '../links/stale';
+import { inboxRoute } from '../nav';
 import { PUSH_ACTION_COPY, PUSH_LINK_COPY } from '../strings';
 import {
   ANSWER_PATH,
@@ -36,6 +37,7 @@ import {
   type Script,
   type WorldOptions,
 } from './handler-fixtures';
+import { NOTIFICATION_ID } from './data-fixtures';
 import { IOS_ID } from './inbound-fixtures';
 
 const QUESTION = signed(QUESTION_FIELDS);
@@ -178,30 +180,32 @@ describe('handleResponse: nothing is sent for a push that does not verify (KP6)'
       { push: QUESTION, record: phoneRecord({ serverOrigin: 'https://own.example' }) },
     ],
     ['a keychain that refuses the read', { push: QUESTION, loadFails: true }],
-  ])('%s → no request, home, the unverified copy', async (_name, setup) => {
+  ])('%s → no request, the inbox, the unverified copy', async (_name, setup) => {
     const run = world({ ...setup, script: ANSWERED });
     const outcome = await handleResponse(
       response(setup.push, 'reply', { userText: REPLY_TEXT }),
       run.deps,
     );
-    expect(outcome).toEqual({ route: routes.home, toast: PUSH_ACTION_COPY.unverified });
+    // a v2 payload's notification_id (as received, unverified) only picks the inbox row shown first
+    const first = (setup.push as { v: number }).v === 2 ? NOTIFICATION_ID : null;
+    expect(outcome).toEqual({ route: inboxRoute(first), toast: PUSH_ACTION_COPY.unverified });
     expect(run.requests()).toEqual([]);
     expect(run.seen.dismissed).toEqual([]);
   });
 
-  it('an unreadable response opens home with the unverified copy and never throws', async () => {
+  it('an unreadable response opens the inbox with its line and never throws', async () => {
     const run = world();
     expect(await handleResponse({ notification: null }, run.deps)).toEqual({
-      route: routes.home,
-      toast: PUSH_ACTION_COPY.unverified,
+      route: inboxRoute(),
+      toast: PUSH_ACTION_COPY.uncheckedTap,
     });
     expect(run.requests()).toEqual([]);
   });
 
-  it('another workspace’s verified push → home and its copy; nothing sent or marked read', async () => {
+  it('another workspace’s verified push → the inbox and its copy; nothing sent or marked read', async () => {
     const run = world({ script: ANSWERED, workspaceId: '2a3b4c5d-6e7f-4a8b-9c0d-1e2f3a4b5c6d' });
     expect(await handleResponse(REPLY, run.deps)).toEqual({
-      route: routes.home,
+      route: inboxRoute(),
       toast: PUSH_ACTION_COPY.otherWorkspace,
     });
     expect(run.requests()).toEqual([]);

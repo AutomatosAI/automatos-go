@@ -61,6 +61,14 @@ export const TASK_LINK_TYPE = 'task';
 export const SOCIAL_POST_LINK_TYPE = 'social_post';
 export const CHAT_LINK_TYPE = 'chat';
 
+/**
+ * The link types whose record has no fixed screen on the phone: a tool or board approval (the
+ * grant's row id: tool_grants.py, board_approval.py) and a Mission plan (the run's UUID:
+ * coordinator_service.py _dispatch_mission_event). Where each opens is looked up (links/stale.ts).
+ */
+export const APPROVAL_LINK_TYPE = 'approval_grant';
+export const MISSION_LINK_TYPE = 'mission';
+
 /** The one status a social post waits on a person in (modules/socials/service.py NEEDS_APPROVAL). */
 export const SOCIAL_NEEDS_APPROVAL_STATUS = 'needs_approval';
 
@@ -137,3 +145,6 @@ export const PROMPT_COUNTS_ITEM = 'push.prompt.v1';
 
 /** The phone's clock is read in milliseconds; the signature's window is in seconds. */
 export const MS_PER_SECOND = 1000;
+
+/** How often the menu's unread number is read again while it shows (the needs-you number's pace). */
+export const INBOX_REFETCH_INTERVAL_MS = 60_000;
