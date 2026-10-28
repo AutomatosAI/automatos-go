@@ -1,7 +1,8 @@
 // spokenMode (US-019f): quick-ask's turn carries spokenMode true only when the server lists
 // 'spoken_mode'; false or absent leaves the key out, so a typed turn's body is byte-identical to
 // A2's; plan and mission mode are still never sent; the message passes through the thread's send
-// (use-thread.ts spreads it into buildChatRequest) unchanged.
+// (use-thread.ts spreads it into buildChatRequest) unchanged. Every quick-ask turn carries the
+// locale it was heard in ("I speak"), and quick-ask's send hands the engine's speech language.
 
 import { describe, expect, it } from 'vitest';
 
@@ -10,9 +11,11 @@ import { CAPABILITIES, type Capability } from '../../api/discovery';
 import type { ThreadSendInput } from '../../chat/controller/use-thread';
 import { ChatRequestSchema, buildChatRequest } from '../../chat/request';
 import { quickAskMessage, spokenModeFor } from '../quick-ask/spoken-mode';
+import { ask, harness } from './quick-ask-harness';
 
 const CHAT_ID = '0c5a9e1e-0000-4000-8000-00000000c019';
 const HEARD = 'What needs me today?';
+const BRAZIL = 'pt-BR';
 
 function withCapabilities(capabilities: readonly Capability[]): GateInput {
   return { capabilities, push: { expo: true } };
@@ -90,21 +93,43 @@ describe('spokenModeFor', () => {
 
 describe('quickAskMessage through the thread send', () => {
   it('flags the turn spoken when the capability is on', () => {
-    const message = quickAskMessage(HEARD, SPOKEN);
-    expect(message).toEqual({ text: HEARD, spokenMode: true });
+    const message = quickAskMessage(HEARD, SPOKEN, BRAZIL);
+    expect(message).toEqual({ text: HEARD, spokenMode: true, locale: BRAZIL });
     expect(Object.isFrozen(message)).toBe(true);
     expect(sent(message)).toHaveProperty('spokenMode', true);
   });
 
-  it('sends a plain turn when the capability is off: byte-identical to a typed one', () => {
-    const message = quickAskMessage(HEARD, PLAIN);
-    expect(message).toEqual({ text: HEARD });
+  it('sends a plain turn when the capability is off: a typed one with its locale', () => {
+    const message = quickAskMessage(HEARD, PLAIN, 'en-GB');
+    expect(message).toEqual({ text: HEARD, locale: 'en-GB' });
     expect(message).not.toHaveProperty('spokenMode');
-    expect(JSON.stringify(sent(message))).toBe(JSON.stringify(sent({ text: HEARD })));
-    expect(JSON.stringify(sent(message, null))).toBe(JSON.stringify(sent({ text: HEARD }, null)));
+    const typed = { text: HEARD, locale: 'en-GB' };
+    expect(JSON.stringify(sent(message))).toBe(JSON.stringify(sent(typed)));
+    expect(JSON.stringify(sent(message, null))).toBe(JSON.stringify(sent(typed, null)));
   });
 
   it('sends a plain turn before discovery has loaded', () => {
-    expect(sent(quickAskMessage(HEARD, undefined))).not.toHaveProperty('spokenMode');
+    expect(sent(quickAskMessage(HEARD, undefined, BRAZIL))).not.toHaveProperty('spokenMode');
+  });
+
+  it('carries the locale on the wire', () => {
+    expect(sent(quickAskMessage(HEARD, SPOKEN, BRAZIL))).toHaveProperty('locale', BRAZIL);
+  });
+});
+
+describe('quick-ask sends the locale it listens in', () => {
+  it('"I speak" Portuguese (Brazil): the turn says pt-BR', async () => {
+    const h = harness({ speech: { language: BRAZIL } });
+    await ask(h, 'Me dá três ideias de posts');
+    expect(h.sends).toEqual([
+      { text: 'Me dá três ideias de posts', spokenMode: true, locale: BRAZIL },
+    ]);
+    expect(sent(h.sends[0] ?? { text: '' })).toHaveProperty('locale', BRAZIL);
+  });
+
+  it('English or Automatic: the turn says the speech language (the phone’s on Automatic)', async () => {
+    const h = harness({ speech: { language: 'en-GB' } });
+    await ask(h, HEARD);
+    expect(h.sends[0]).toHaveProperty('locale', 'en-GB');
   });
 });

@@ -141,6 +141,11 @@ export function canStop(state: ThreadState): boolean {
   return STOPPABLE.has(state.status);
 }
 
+/** A failure of the read only (the network, the stream): the turn itself may run on (D-STOP). */
+export function readBroke(kind: ThreadFailure['kind']): boolean {
+  return DETACHABLE.has(kind);
+}
+
 /**
  * The read of a named chat's turn broke (the network, the stream) and the turn is a detached
  * producer (D-STOP): until GET /api/chat/{id} answers, it may still be running on the server.
@@ -150,7 +155,7 @@ export function awaitsDetachedCheck(state: ThreadState): boolean {
     state.status === 'failed' &&
     state.chatId !== null &&
     state.failure !== null &&
-    DETACHABLE.has(state.failure.kind)
+    readBroke(state.failure.kind)
   );
 }
 

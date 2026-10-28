@@ -10,7 +10,8 @@
 //   turn_text and turn_tool update the reply and the tool caption in thinking or speaking;
 //   thinking → speaking on speak_start; speaking → idle on speak_done once the turn finished (back
 //   to thinking while it still streams: Auto is working, not speaking); thinking → idle when the turn
-//   finished with no words to speak; a failed turn → error 'turn';
+//   finished with no words to speak; a failed turn → error 'turn'; error 'turn' → thinking on
+//   turn_resumed (the read broke but the turn ran on: A2's detached check, its saved reply);
 //   stop and interrupted from any phase → idle with the words kept on screen (interrupted with its
 //   message); unavailable, a denied permission and a recognizer failure → error with its kind.
 // micOpen opens only on mic_open (the recognizer's audiostart) and closes on mic_closed, or when STOP
@@ -51,6 +52,8 @@ export type VoiceEvent =
   | { readonly type: 'turn_tool'; readonly caption: string | null }
   | { readonly type: 'turn_finished' }
   | { readonly type: 'turn_failed'; readonly kind: TurnFailureKind }
+  /** The turn whose read broke runs on (A2's detached check), or its saved reply came: Auto has it. */
+  | { readonly type: 'turn_resumed' }
   | { readonly type: 'speak_start' }
   | { readonly type: 'speak_done' }
   | { readonly type: 'stop' }
@@ -163,6 +166,19 @@ function turnFailed(state: VoiceState, event: EventOf<'turn_failed'>): VoiceStat
   return patch(state, { ...AT_REST, phase: 'error', errorKind: 'turn', turnFailure: event.kind });
 }
 
+/** The failed turn's read had only broken: Auto has the turn again, its words still to come. */
+function turnResumed(state: VoiceState): VoiceState {
+  if (state.phase !== 'error' || state.errorKind !== 'turn') return state;
+  return patch(state, {
+    phase: 'thinking',
+    replyStreaming: true,
+    replyFinished: false,
+    errorKind: null,
+    turnFailure: null,
+    message: null,
+  });
+}
+
 function speakStart(state: VoiceState): VoiceState {
   return REPLYING.has(state.phase) ? patch(state, { phase: 'speaking' }) : state;
 }
@@ -229,6 +245,7 @@ const HANDLERS: Handlers = {
   turn_tool: turnTool,
   turn_finished: turnFinished,
   turn_failed: turnFailed,
+  turn_resumed: turnResumed,
   speak_start: speakStart,
   speak_done: speakDone,
   stop,

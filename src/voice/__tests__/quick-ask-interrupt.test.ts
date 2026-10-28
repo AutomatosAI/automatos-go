@@ -248,7 +248,7 @@ describe('a capture open with no hold', () => {
     expect(h.module.port.stop).toHaveBeenCalledTimes(2);
     h.module.emit('result', { isFinal: true, results: [{ transcript: ASKED }] });
     h.module.emit('end');
-    expect(h.sends).toEqual([{ text: ASKED, spokenMode: true }]);
+    expect(h.sends).toEqual([{ text: ASKED, spokenMode: true, locale: 'en-GB' }]);
     expect(h.voice()).toMatchObject({ phase: 'thinking', micOpen: false });
     expect(h.later()).toEqual([]);
   });

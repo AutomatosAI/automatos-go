@@ -9,6 +9,11 @@
 //                 error land on a turn already ended, which the reducer takes as nothing new.
 //   stop          Stop: the vendored {type: 'stop'} before the turn's end, so its done receipt no
 //                 longer celebrates (the web's stop, hooks.ts)
+//   ended well    a turn that finished with no failure and no cap: the vendored {type: 'request-ok'}
+//                 after its end, so a snag along the way (a tool that failed, a step refused) does
+//                 not outlast the reply. Oops outranks every pose and only the next send cleared it,
+//                 so HUD's home read SOMETHING WENT WRONG / AUTO · SNAG under Auto's whole answer
+//                 (28 Oct 2026). A turn that failed (an e: line, a broken read) or hit its cap keeps it.
 //   newest reply  mascotEventsFromReply over the live turn's progress, only while no frames are
 //                 read (a reopened turn the server still runs): one source per turn
 //   approvals     a plan, tool or withdraw card waiting on the user: approval-waiting, and
@@ -38,6 +43,7 @@ const APPROVAL_WAITING: MascotEvent = Object.freeze({ type: 'approval-waiting' }
 const APPROVAL_SETTLED: MascotEvent = Object.freeze({ type: 'approval-settled' });
 const APPROVAL_KINDS: ReadonlySet<string> = new Set(['plan', 'tool', 'withdraw']);
 const DELIVERABLE_ADDED: MascotEvent = Object.freeze({ type: 'deliverable-added' });
+const REQUEST_OK: MascotEvent = Object.freeze({ type: 'request-ok' });
 
 /** The web chat's status for the thread's (lib/chat/chat-status.ts). */
 export function chatStatusOf(state: Pick<ThreadState, 'status'>): ChatStatus {
@@ -71,12 +77,23 @@ export function approvalWaiting(state: Pick<ThreadState, 'cards'>): boolean {
   );
 }
 
+/** The turn ran and finished as it should: no failure, no cap (the live turn, or the one retired). */
+function endedWell(previous: FeedFacts, next: FeedFacts): boolean {
+  if (chatStatusOf(previous) !== 'streaming' || next.status !== 'idle') return false;
+  const turn = (next.live ?? previous.live)?.turn;
+  return next.failure === null && !turn?.error && !turn?.limitReached;
+}
+
 function statusEvents(previous: FeedFacts, next: FeedFacts): MascotEvent[] {
   const before = chatStatusOf(previous);
   const after = chatStatusOf(next);
   const code = after === 'error' ? (next.failure?.code ?? null) : null;
   const stopped = next.status === 'stopped' && previous.status !== 'stopped';
-  return [...(stopped ? [STOP] : []), ...mascotEventsFromStatus(before, after, code)];
+  return [
+    ...(stopped ? [STOP] : []),
+    ...mascotEventsFromStatus(before, after, code),
+    ...(endedWell(previous, next) ? [REQUEST_OK] : []),
+  ];
 }
 
 function replyEvents(previous: FeedFacts, next: FeedFacts): MascotEvent[] {

@@ -36,7 +36,7 @@ describe('a quick-ask, end to end', () => {
     const h = harness();
     await ask(h, ASKED);
     expect(h.recognizer.stop).toHaveBeenCalledTimes(1);
-    expect(h.sends).toEqual([{ text: ASKED, spokenMode: true }]);
+    expect(h.sends).toEqual([{ text: ASKED, spokenMode: true, locale: 'en-GB' }]);
     expect(h.voice()).toMatchObject({
       phase: 'thinking',
       heard: ASKED,
@@ -172,7 +172,7 @@ describe('a hold that sends nothing', () => {
   it('a request that mentions stopping is sent as heard', async () => {
     const h = harness();
     await ask(h, 'Stop the deploy');
-    expect(h.sends).toEqual([{ text: 'Stop the deploy', spokenMode: true }]);
+    expect(h.sends).toEqual([{ text: 'Stop the deploy', spokenMode: true, locale: 'en-GB' }]);
   });
 
   it('HOLD_MAX_MS releases the hold by itself', async () => {
@@ -184,7 +184,7 @@ describe('a hold that sends nothing', () => {
     timer?.run();
     expect(h.recognizer.stop).toHaveBeenCalledTimes(1);
     h.hear({ type: 'final', text: 'A long question' });
-    expect(h.sends).toEqual([{ text: 'A long question', spokenMode: true }]);
+    expect(h.sends).toEqual([{ text: 'A long question', spokenMode: true, locale: 'en-GB' }]);
   });
 
   it('a release cancels the HOLD_MAX_MS timer', async () => {

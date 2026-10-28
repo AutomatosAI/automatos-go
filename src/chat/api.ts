@@ -5,6 +5,7 @@
 
 import type { Frame } from '../core/ai-sdk-stream';
 import type { ApiClient } from '../api/client';
+import { CHAT_TURN_CONNECT_TIMEOUT_MS } from '../api/config';
 import { streamTurn, type StreamOutcome } from '../api/stream';
 import type { ChatRequestBody } from './request';
 import { CHAT_ROUTES } from './routes';
@@ -24,14 +25,18 @@ import {
 /** Older chats are listed 50 at a time (PRD-001 open question 3). */
 export const HISTORY_PAGE_SIZE = 50;
 
-/** One turn: each line of the body as a Frame, in order, until it ends or `signal` aborts. */
+/**
+ * One turn: each line of the body as a Frame, in order, until it ends or `signal` aborts. Its status
+ * may take up to CHAT_TURN_CONNECT_TIMEOUT_MS (the server picks who answers first); the body as long
+ * as chunks come.
+ */
 export function sendTurn(
   client: Pick<ApiClient, 'stream'>,
   body: ChatRequestBody,
   onFrame: (frame: Frame) => void,
   signal?: AbortSignal,
 ): Promise<StreamOutcome> {
-  return streamTurn(client, CHAT_ROUTES.send, body, onFrame, signal);
+  return streamTurn(client, CHAT_ROUTES.send, body, onFrame, signal, CHAT_TURN_CONNECT_TIMEOUT_MS);
 }
 
 /** Stop on the server; {cancelled: false} when no turn was running. */

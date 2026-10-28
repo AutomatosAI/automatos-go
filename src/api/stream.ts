@@ -7,7 +7,7 @@
 
 import { parseLine, pushChunk, type Frame } from '../core/ai-sdk-stream';
 import { logger } from '../lib/logger';
-import type { ApiClient, CallOptions } from './client';
+import type { ApiClient, StreamCallOptions } from './client';
 import { ApiError, isAbortError } from './errors';
 import type { Route } from './routes';
 import type { StreamingResponse } from './transport-types';
@@ -21,7 +21,7 @@ type Next = IteratorResult<string> | typeof ABORTED;
 export async function openStream(
   client: Pick<ApiClient, 'stream'>,
   route: Route,
-  call: CallOptions,
+  call: StreamCallOptions,
 ): Promise<StreamingResponse | null> {
   try {
     return await client.stream(route, call);
@@ -77,7 +77,8 @@ export async function readChunks(
 
 /**
  * One chat turn: every line of the body as a Frame, in order, including the last line when the body
- * ends without a newline. Unknown lines arrive as {kind: 'unknown'}; parseLine never throws.
+ * ends without a newline. Unknown lines arrive as {kind: 'unknown'}; parseLine never throws. The
+ * status must come within `connectTimeoutMs` (the client's own when not given); the body has no cap.
  */
 export async function streamTurn(
   client: Pick<ApiClient, 'stream'>,
@@ -85,8 +86,11 @@ export async function streamTurn(
   body: unknown,
   onFrame: (frame: Frame) => void,
   signal?: AbortSignal,
+  connectTimeoutMs?: number,
 ): Promise<StreamOutcome> {
-  const response = await openStream(client, route, { body, signal });
+  const call =
+    connectTimeoutMs === undefined ? { body, signal } : { body, signal, connectTimeoutMs };
+  const response = await openStream(client, route, call);
   if (!response) return 'aborted';
   let buffer = '';
   const outcome = await readChunks(

@@ -165,6 +165,33 @@ describe('streamTurn', () => {
     expect((error as ApiError).kind).toBe('network');
   });
 
+  it("a call's own connect timeout replaces the client's", async () => {
+    const late = fakeTransport(
+      () => new Promise((resolve) => setTimeout(() => resolve(chunked(['0:"late"\n'])), 20)),
+    );
+    const frames: Frame[] = [];
+    const outcome = await streamTurn(
+      clientWith(late, 5),
+      CHAT,
+      BODY,
+      (f) => frames.push(f),
+      undefined,
+      1_000,
+    );
+    expect(outcome).toBe('complete');
+    expect(frames).toEqual([{ kind: 'text', text: 'late' }]);
+    const hung = fakeTransport(hangUntilAborted);
+    const error = await streamTurn(
+      clientWith(hung),
+      CHAT,
+      BODY,
+      () => undefined,
+      undefined,
+      5,
+    ).catch((caught: unknown) => caught);
+    expect((error as ApiError).kind).toBe('network');
+  });
+
   it("forwards the caller's abort to the transport after the status arrived", async () => {
     const controller = new AbortController();
     const transport = fakeTransport(() => chunked(['0:"one"\n', PENDING]));
