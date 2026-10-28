@@ -4,9 +4,9 @@ Talking to Auto from the phone: quick-ask (hold to talk) first, Auto Live later.
 
 ## Status (27 Oct 2026)
 
-Quick-ask (hold to talk), Auto's server voice and the languages (English and Portuguese) are in the
-code on `main` (`src/voice/`); where this page and the code differ, the code is the truth. Auto Live
-is not built. The sections below were first written from the wave A6 kit
+Quick-ask (hold to talk), Auto's server voice and the languages (English and Portuguese (Brazil))
+are in the code on `main` (`src/voice/`); where this page and the code differ, the code is the
+truth. Auto Live is not built. The sections below were first written from the wave A6 kit
 `scripts/ralph/prd-001-voice.json` and PRD-001 §4.7 and §4.9.
 
 KV1–KV19 are the A6 kit's own decisions. Dnn are PRD-001's decision table; names such as
@@ -213,20 +213,22 @@ Voice samples and the phone-voice switch.
 
 ## Languages
 
-Added 27 Oct 2026. Auto listens and speaks in **English** and **Portuguese** (Portugal and Brazil).
-Code: `src/voice/language/`.
+Added 27 Oct 2026. Auto listens and speaks in **English** and **Portuguese (Brazil)**. European
+Portuguese was dropped the same day (Gerard). Code: `src/voice/language/`.
 
 **Choosing.** Settings → Voice → **I speak**: Automatic (the phone's language, as before),
-English, Português (Portugal), Português (Brasil). English means the phone's own English when the
-phone is in English, else British English (`en-GB`). The choice is kept in the voice setting on the
-phone (MMKV, parsed with zod); a setting saved before reads as Automatic.
+English, Português (Brasil). English means the phone's own English when the phone is in English,
+else British English (`en-GB`). The choice is kept in the voice setting on the phone (MMKV, parsed
+with zod); a setting saved before reads as Automatic, and a saved Português (Portugal) reads as
+Português (Brasil), with Brazil's default voice.
 
 **The EN/PT switch.** One tap beside HOLD TO TALK on the voice screen and on HUD's home, and just
 before the voice button on Play's home. It shows the language's two letters (EN, PT) and VoiceOver
 hears "Speaking English. Switch to Portuguese". A tap goes to English from any other language, and
-from English to the Portuguese last chosen (Portugal's until Brazil's is picked). It is always
-there for anyone who may talk, Automatic included, so one tap flips it from the default. Viewers do
-not see it. It is 44 pt to touch.
+from English to Portuguese (Brazil). It is always there for anyone who may talk, Automatic
+included, so one tap flips it from the default. Viewers do not see it. It is 44 pt to touch; on
+HUD, on a phone narrower than 390 pt, it is drawn at 32 pt with 6 pt of slop around it, so the
+button row keeps room between its groups (`src/styles/hud/core/language-layout.ts`).
 
 **Recognition.** Hold to talk listens in the chosen language:
 
@@ -248,16 +250,14 @@ not see it. It is 44 pt to touch.
 
 - **English:** Auto's server voice when the server offers one (its default until another is chosen,
   from the server's whole list), as before.
-- **Português (Brasil):** the server's first Brazilian Portuguese voice by default, or the one
-  chosen.
-- **Português (Portugal):** the phone's own European Portuguese voice (a Premium or Enhanced voice
-  first, when one is installed), or a Brazilian Portuguese server voice if chosen.
+- **Português (Brasil):** the server's first Brazilian Portuguese voice by default (`pf_dora` on
+  Kokoro), or the one chosen; the phone's Brazilian Portuguese voice when the server has none or
+  the phone's voice is chosen. Automatic on a phone in another Portuguese speaks with this voice too.
 - When the server voice fails, the phone's voice for the chosen language speaks the rest of the
   turn. The sample in Settings → Voice is spoken in the chosen language.
 
 Auto's natural server voice (self-hosted Kokoro, `voice-tts` on automatos-ai) has nine languages:
 English (US and UK), Spanish, French, Italian, Portuguese (Brazil), Hindi, Japanese and Mandarin.
-It has no European Portuguese, which is why Portugal's Portuguese uses the phone's own voice.
 
 **What Auto is told.** The spoken turn (`POST /api/chat` with `spokenMode`) carries no language: the
 server's `ChatRequest` has no language field and its page context keeps only its own keys. Auto
