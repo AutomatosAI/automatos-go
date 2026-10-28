@@ -3,7 +3,8 @@
 // unless sig is the lowercase hex HMAC-SHA256, keyed with this phone's push_key as UTF-8 (never
 // base64-decoded), over the canonical v2 message, and iat lies in the window. The answer is a
 // boolean and this never throws: a payload of the wrong shape, a v other than 2, a stale or
-// future iat, a malformed sig, a missing key or a failing digest are all false. It logs nothing
+// future iat, a malformed sig, a missing key or a failing digest are all false; checkPushSignature
+// gives the same answer as a word that says which (the tap diagnostics keep it). It logs nothing
 // (the caller logs the kind); the sha256 port is the device's native digest or, in tests,
 // node:crypto.
 
@@ -59,6 +60,33 @@ async function signatureMatches(
 }
 
 /**
+ * What the check found, as a word the tap diagnostics keep (never the key, the sig or the
+ * payload): 'verified', or why not — not a v2 payload, no key, an iat outside the window, a sig
+ * that does not match the key, or a digest that failed.
+ */
+export type SignatureCheck =
+  'verified' | 'not_v2' | 'no_key' | 'stale' | 'mismatch' | 'digest_failed';
+
+/** Like verifyPushSignature, but says why a push did not verify. Never throws. */
+export async function checkPushSignature(
+  payload: unknown,
+  pushKey: string | null | undefined,
+  sha256: Sha256,
+  nowSeconds: number,
+): Promise<SignatureCheck> {
+  const parsed = pushPayloadSchema.safeParse(payload);
+  if (!parsed.success || parsed.data.v !== PUSH_PAYLOAD_VERSION) return 'not_v2';
+  if (!pushKey) return 'no_key';
+  if (!isFresh(parsed.data.iat, nowSeconds)) return 'stale';
+  try {
+    return (await signatureMatches(parsed.data, pushKey, sha256)) ? 'verified' : 'mismatch';
+  } catch {
+    // A digest that fails is an unverified push, never a crash; the caller logs the kind (KP6).
+    return 'digest_failed';
+  }
+}
+
+/**
  * true only when payload is a v2 push payload (as received or as parsed), its iat is fresh at
  * nowSeconds (epoch seconds, the phone's clock) and its sig verifies with pushKey.
  */
@@ -69,14 +97,8 @@ export async function verifyPushSignature(
   nowSeconds: number,
 ): Promise<boolean> {
   try {
-    const parsed = pushPayloadSchema.safeParse(payload);
-    if (!parsed.success || !pushKey) return false;
-    if (parsed.data.v !== PUSH_PAYLOAD_VERSION || !isFresh(parsed.data.iat, nowSeconds)) {
-      return false;
-    }
-    return await signatureMatches(parsed.data, pushKey, sha256);
+    return (await checkPushSignature(payload, pushKey, sha256, nowSeconds)) === 'verified';
   } catch {
-    // A digest that fails is an unverified push, never a crash; the caller logs the kind (KP6).
     return false;
   }
 }

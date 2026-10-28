@@ -65,7 +65,7 @@ describe("A6's voice screen keeps its square: 'Close voice'", () => {
 
 describe('the menu it opens', () => {
   it('is MENU_ITEMS, New chat first, the Command Centre carrying the needs-you number', () => {
-    expect(read('chat/home/HomeMenu.tsx')).toContain('menuRows(MENU_ITEMS, { needsYou })');
+    expect(read('chat/home/HomeMenu.tsx')).toContain('menuRows(MENU_ITEMS, { needsYou, unread })');
     expect(MENU_ITEMS[0]).toMatchObject({
       id: 'newChat',
       label: 'New chat',
@@ -74,6 +74,7 @@ describe('the menu it opens', () => {
     expect(MENU_ITEMS.map((item) => item.id)).toEqual([
       'newChat',
       'chats',
+      'notifications',
       'commandCentre',
       'settings',
     ]);

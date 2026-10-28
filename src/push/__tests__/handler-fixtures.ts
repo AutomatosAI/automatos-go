@@ -181,11 +181,16 @@ export function memoryStorage(initial: Record<string, string> = {}): KeyValueSto
   };
 }
 
+/** The chat a fake approval's card and a fake Mission sit in. */
+export const CARD_CHAT_ID = '6c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f';
+
 export const OPEN_CHECKS: StaleChecks = Object.freeze({
   pendingQuestionIds: async () => ['42'],
   getTicket: async () => ({ id: 8812, status: 'review' }),
   getSocialPost: async () => ({ status: 'needs_approval' }),
   getChat: async () => ({ id: 'chat' }),
+  grantPlaces: async () => [{ id: 77, details: { conversation_id: CARD_CHAT_ID } }],
+  missionPlace: async (id: string) => ({ id, config: { origin_chat_id: CARD_CHAT_ID } }),
 });
 
 export type WorldOptions = {

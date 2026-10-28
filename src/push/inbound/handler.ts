@@ -3,10 +3,11 @@
 // (handled-store.ts) → the push record's key (registration/key-store.ts) → verifyPushSignature →
 // intentFor → act. A reply posts its answer once (answer.ts) and lands on Questions with the
 // server's result; Open and a tap open the link's screen after its stale check (links/stale.ts);
-// anything else opens home, or the question, with nothing done. Only a verified push of the current
-// workspace posts, follows its link or marks its bell notification read. The outcome is shown
-// first (the screen, then its line); marking read and dismissing follow, and a failure of either is
-// ignored. The key is the record's when the record is this server's: a push from another workspace
+// anything else opens the notifications inbox (the push's own row first), or the question, with
+// nothing done (outcomes.ts): a tap never lands on home with nothing to show. Only a verified push
+// of the current workspace posts, follows its link or marks its bell notification read. The outcome
+// is shown first (the screen, then its line); marking read and dismissing follow, and a failure of
+// either is ignored. The key is the record's when the record is this server's: a push from another workspace
 // on it still verifies and says so, and acts on nothing. Returns where it went and what it said;
 // null for a response already handled. Never throws. Logs carry kinds only: never the
 // notification's text, the reply, the sig, the key or the token.
@@ -14,27 +15,34 @@
 import type { ApiClient } from '../../api/client';
 import { isApiError } from '../../api/errors';
 import type { WorkspaceRole } from '../../api/workspace';
-import { ROLE_COPY } from '../../auth/strings';
 import { logger } from '../../lib/logger';
 import { routes } from '../../navigation/routes';
 import { markNotificationRead } from '../api';
+import { QUESTION_LINK_TYPE, REPLY_ACTION_ID } from '../config';
 import { resolveTarget, type StaleChecks } from '../links/stale';
-import { routeFor, targetFor } from '../links/targets';
+import { targetFor } from '../links/targets';
 import type { NotificationsPort } from '../platform/expo';
 import type { PushKeyStore } from '../registration/key-store';
 import type { PushRecord } from '../registration/record';
 import { parsePushData, type PushPayload } from '../schemas/payload';
 import type { Sha256 } from '../signature/hmac';
-import { verifyPushSignature } from '../signature/verify';
-import { PUSH_ACTION_COPY } from '../strings';
+import { checkPushSignature, type SignatureCheck } from '../signature/verify';
 import { sendAnswer, settlesQuestion } from './answer';
 import { responseKey } from './dedupe';
 import type { HandledStore } from './handled-store';
-import { intentFor, type PushIntent, type PushLink } from './intent';
+import { intentFor, type PushIntent } from './intent';
+import {
+  FAILED_OUTCOME,
+  UNREADABLE_OUTCOME,
+  neutralOutcome,
+  outcome,
+  unroutedRoute,
+  type HandledOutcome,
+} from './outcomes';
 import { fromResponse, type InboundEvent } from './parse';
+import type { TapLog, TapReport } from './tap-log';
 
-/** Where the response took the person, and the line shown there. */
-export type HandledOutcome = Readonly<{ route: string; toast?: string }>;
+export type { HandledOutcome } from './outcomes';
 
 /** The session a response is handled in, read when it arrives. */
 export type ResponseSession = Readonly<{
@@ -62,6 +70,8 @@ export type HandlerDeps = Readonly<{
   notify: (message: string) => void;
   /** After a reply settles its question: the caller refreshes needs-you and Questions. */
   refresh?: () => void;
+  /** The tap diagnostics (tap-log.ts): one entry per response, kinds and words only. */
+  taps?: Pick<TapLog, 'record'>;
 }>;
 
 /** What a signature check reads: this server's push record, the hash and the clock. */
@@ -76,17 +86,20 @@ type Intent<K extends PushIntent['kind']> = Extract<PushIntent, { kind: K }>;
 
 type ReadableEvent = Extract<InboundEvent, { kind: 'readable' }>;
 
-const HOME: HandledOutcome = Object.freeze({ route: routes.home });
-
 function kindOf(error: unknown): string {
   return isApiError(error) ? error.kind : 'unknown';
 }
 
+/** One response's end: where it went, whether the router took it, and the diagnostics' words. */
+type Handled = Readonly<{ outcome: HandledOutcome; navigated: boolean; tap: TapReport }>;
+
 /** Navigates, then shows the line; neither failing stops the other or throws. */
-function show(deps: HandlerDeps, outcome: HandledOutcome): HandledOutcome {
+function show(deps: HandlerDeps, outcome: HandledOutcome, tap: TapReport): Handled {
+  let navigated = true;
   try {
     deps.navigate(outcome.route);
   } catch {
+    navigated = false;
     logger.warn('[push] could not open the screen of a notification');
   }
   try {
@@ -94,11 +107,22 @@ function show(deps: HandlerDeps, outcome: HandledOutcome): HandledOutcome {
   } catch {
     logger.warn('[push] could not show the line of a notification');
   }
-  return Object.freeze({ ...outcome });
+  return Object.freeze({ outcome: Object.freeze({ ...outcome }), navigated, tap });
 }
 
-function outcome(route: string, toast?: string): HandledOutcome {
-  return Object.freeze(toast ? { route, toast } : { route });
+/** The entry for one response: a screen the router refused is an error, whatever was decided. */
+function record(deps: HandlerDeps, handled: Handled | null, repeat: TapReport | null): void {
+  const tap = handled
+    ? handled.navigated
+      ? handled.tap
+      : { ...handled.tap, kind: 'error' as const, reason: 'navigate', detail: handled.tap.kind }
+    : repeat;
+  if (!tap) return;
+  try {
+    deps.taps?.record(tap);
+  } catch {
+    logger.warn('[push] could not note a notification tap');
+  }
 }
 
 /** Marked once now; false when it was handled before. A store that throws lets it through. */
@@ -111,23 +135,43 @@ function firstTime(handled: HandlerDeps['handled'], key: string): boolean {
   }
 }
 
-/** The record's key when the record is this server's, else null (nothing verifies). */
-async function pushKeyFor(deps: VerifyDeps): Promise<string | null> {
+/**
+ * What a signature check found (the tap diagnostics' word for it): the signature's own answer, or
+ * why there was no key to check with — no push record, a record of another server, or a keychain
+ * that refused the read.
+ */
+export type Verification = SignatureCheck | 'no_record' | 'other_server' | 'keychain';
+
+type KeyRead = Readonly<{ key: string }> | Readonly<{ missing: Verification }>;
+
+/** The record's key when the record is this server's, else why there is none (nothing verifies). */
+async function pushKeyFor(deps: VerifyDeps): Promise<KeyRead> {
   let record: PushRecord | null;
   try {
     record = await deps.store.load();
   } catch {
     logger.warn('[push] the keychain refused the push record; the notification is unverified');
-    return null;
+    return { missing: 'keychain' };
   }
-  return record && record.serverOrigin === deps.session.serverOrigin ? record.pushKey : null;
+  if (!record) return { missing: 'no_record' };
+  if (record.serverOrigin !== deps.session.serverOrigin) return { missing: 'other_server' };
+  return { key: record.pushKey };
+}
+
+/** Whether the payload's sig checks out with this server's push key and is fresh, and if not why. */
+export async function verificationOf(
+  payload: PushPayload | null,
+  deps: VerifyDeps,
+): Promise<Verification> {
+  if (!payload) return 'not_v2';
+  const read = await pushKeyFor(deps);
+  if ('missing' in read) return read.missing;
+  return checkPushSignature(payload, read.key, deps.sha256, deps.nowSeconds());
 }
 
 /** The payload's sig checks out with this server's push key, and it is fresh (also receive.ts's). */
 export async function isVerified(payload: PushPayload | null, deps: VerifyDeps): Promise<boolean> {
-  if (!payload) return false;
-  const pushKey = await pushKeyFor(deps);
-  return verifyPushSignature(payload, pushKey, deps.sha256, deps.nowSeconds());
+  return (await verificationOf(payload, deps)) === 'verified';
 }
 
 async function markRead(deps: HandlerDeps, notificationId: string | undefined): Promise<void> {
@@ -151,11 +195,12 @@ async function answer(
   intent: Intent<'answer'>,
   event: ReadableEvent,
   deps: HandlerDeps,
-): Promise<HandledOutcome> {
+): Promise<Handled> {
   const verdict = await sendAnswer(deps.client, intent);
   const settled = settlesQuestion(verdict);
   if (settled) refreshAfterReply(deps);
-  const shown = show(deps, outcome(routes.cc.questions, verdict.toast));
+  const tap: TapReport = { kind: 'answer', reason: verdict.kind, linkType: QUESTION_LINK_TYPE };
+  const shown = show(deps, outcome(routes.cc.questions, verdict.toast), tap);
   if (settled) {
     await markRead(deps, intent.notificationId);
     await dismiss(deps, event.id);
@@ -171,48 +216,27 @@ function refreshAfterReply(deps: HandlerDeps): void {
   }
 }
 
-async function open(intent: Intent<'open'>, deps: HandlerDeps): Promise<HandledOutcome> {
+async function open(intent: Intent<'open'>, deps: HandlerDeps): Promise<Handled> {
   const resolved = await resolveTarget(targetFor(intent.link), deps.checks);
-  const shown = show(deps, outcome(resolved.route, resolved.notice));
+  const route = resolved.route ?? unroutedRoute(intent.notificationId);
+  const tap: TapReport = {
+    kind: 'open',
+    reason: resolved.route === null ? 'inbox' : 'screen',
+    detail: resolved.notice ? 'moved' : null,
+    linkType: intent.link.link_type,
+  };
+  const shown = show(deps, outcome(route, resolved.notice), tap);
   await markRead(deps, intent.notificationId);
   return shown;
 }
 
-/** The question's own screen (the Questions list), or home when the link names none. */
-function questionRoute(link: PushLink | undefined): string {
-  return link ? routeFor(targetFor(link)) : routes.cc.questions;
-}
-
-/** Nothing is sent: home, or the question with where to answer it, and a line that says why. */
-export function neutralOutcome(
-  intent: Intent<'neutral'>,
-  role: WorkspaceRole | null,
-): HandledOutcome {
-  switch (intent.reason) {
-    case 'unverified':
-      return outcome(routes.home, PUSH_ACTION_COPY.unverified);
-    case 'other_workspace':
-      return outcome(routes.home, PUSH_ACTION_COPY.otherWorkspace);
-    case 'cannot_answer':
-      // a known role that may not answer is a viewer's; an unknown one may still answer there
-      return outcome(
-        questionRoute(intent.link),
-        role ? ROLE_COPY.viewerReadOnly : PUSH_ACTION_COPY.answerHere,
-      );
-    case 'blank_reply':
-      return outcome(questionRoute(intent.link), PUSH_ACTION_COPY.answerHere);
-    case 'unknown':
-      return HOME;
-  }
-}
-
-async function act(event: ReadableEvent, deps: HandlerDeps): Promise<HandledOutcome> {
+async function act(event: ReadableEvent, deps: HandlerDeps): Promise<Handled> {
   const payload = parsePushData(event.data);
-  const verified = await isVerified(payload, deps);
+  const verification = await verificationOf(payload, deps);
   const role = deps.session.role();
   const intent = intentFor({
     event,
-    verified,
+    verified: verification === 'verified',
     payload,
     currentWorkspaceId: deps.session.workspaceId(),
     role,
@@ -227,8 +251,30 @@ async function act(event: ReadableEvent, deps: HandlerDeps): Promise<HandledOutc
     case 'open':
       return open(intent, deps);
     case 'neutral':
-      return show(deps, neutralOutcome(intent, role));
+      return show(
+        deps,
+        neutralOutcome(intent, {
+          role,
+          focus: payload?.notification_id ?? null,
+          replied: event.action === REPLY_ACTION_ID,
+        }),
+        {
+          kind: 'neutral',
+          reason: intent.reason,
+          detail: intent.reason === 'unverified' ? verification : null,
+          linkType: payload?.link_type,
+        },
+      );
   }
+}
+
+/** The response read and handled; null when seen before. Throws only what act() throws. */
+async function handle(event: ReturnType<typeof fromResponse>, deps: HandlerDeps) {
+  if (event.kind !== 'readable') {
+    logger.debug('[push] notification action', 'unreadable');
+    return show(deps, UNREADABLE_OUTCOME, { kind: 'neutral', reason: 'unreadable' });
+  }
+  return act(event, deps);
 }
 
 /** One response (a tap or an action on a notification) → its one outcome; null when seen before. */
@@ -238,15 +284,21 @@ export async function handleResponse(
 ): Promise<HandledOutcome | null> {
   // read and claimed before the first await: a second delivery of it, however soon, finds the claim
   const event = fromResponse(response);
-  if (event.kind === 'readable' && !firstTime(deps.handled, responseKey(event))) return null;
+  if (event.kind === 'readable' && !firstTime(deps.handled, responseKey(event))) {
+    record(deps, null, { kind: 'unhandled', reason: 'repeat' });
+    return null;
+  }
+  let handled: Handled;
   try {
-    if (event.kind !== 'readable') {
-      logger.debug('[push] notification action', 'unreadable');
-      return show(deps, outcome(routes.home, PUSH_ACTION_COPY.unverified));
-    }
-    return await act(event, deps);
+    handled = await handle(event, deps);
   } catch (error) {
     logger.warn('[push] a notification action failed', kindOf(error));
-    return show(deps, HOME);
+    handled = show(deps, FAILED_OUTCOME, {
+      kind: 'error',
+      reason: 'failed',
+      detail: kindOf(error),
+    });
   }
+  record(deps, handled, null);
+  return handled.outcome;
 }

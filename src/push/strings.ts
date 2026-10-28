@@ -10,6 +10,8 @@ export const PUSH_LINK_COPY = Object.freeze({
   ticketGone: 'That ticket is gone or in another workspace.',
   postGone: 'That post no longer needs you.',
   chatGone: 'That conversation is not available.',
+  approvalGone: 'That approval was already decided.',
+  missionGone: 'That Mission is gone or in another workspace.',
 });
 
 /**
@@ -133,6 +135,30 @@ export const PUSH_ACTION_COPY = Object.freeze({
   unverified: "This notification couldn't be checked, so nothing was sent.",
   otherWorkspace: 'That notification is from another workspace.',
   answerHere: 'Answer it here.',
+  /** A tap the phone could not check: its link is not followed, the inbox opens instead. */
+  uncheckedTap:
+    "This notification couldn't be checked on this phone, so here are your notifications.",
+});
+
+/**
+ * The notifications inbox (Menu → Notifications): every bell notification, newest first, so none
+ * is lost when its push is gone. Rows are buttons; the unread dot is said, never only drawn.
+ */
+export const PUSH_INBOX_COPY = Object.freeze({
+  title: 'Notifications',
+  back: 'Back',
+  markAllRead: 'Mark all read',
+  allRead: 'All marked read.',
+  emptyTitle: 'Nothing yet',
+  emptyMessage: 'When Auto has a message for you or needs you, it shows here.',
+  unread: 'Unread',
+  openHint: 'Opens what it is about',
+  studioHint: 'Opens in Studio, in your browser',
+  nothingToOpen: 'There is nothing more to open for this one.',
+  studioFailed: "Studio couldn't be opened on this phone.",
+  /** What the menu row and the button say, with the number VoiceOver hears. */
+  menu: 'Notifications',
+  unreadCount: Object.freeze({ one: 'unread', other: 'unread' }),
 });
 
 /**
@@ -162,4 +188,57 @@ export const PUSH_ACCOUNT_COPY = Object.freeze({
   removed: "This phone was removed from your workspace's devices.",
   removeFailed:
     "This phone couldn't be removed from your workspace's devices. Studio may still list this phone.",
+});
+
+/**
+ * Settings → Notifications → Recent notification taps: what became of the last taps, in plain
+ * words, so a tap that did not open what it should can be told apart from one that never arrived.
+ */
+export const PUSH_TAPS_COPY = Object.freeze({
+  section: 'Recent notification taps',
+  empty: 'No taps yet. Tap a notification and what happened shows here.',
+  note: 'Kept on this phone only: what happened and when, never what a notification said.',
+  outcome: Object.freeze({
+    screen: 'Opened its screen',
+    inbox: 'Opened Notifications',
+    moved: 'It had moved on',
+    answer: 'Answered from the notification',
+    unverified: "Couldn't be checked",
+    other_workspace: 'From another workspace',
+    cannot_answer: 'Your role cannot answer here',
+    blank_reply: 'The reply was empty',
+    unknown: 'Opened Notifications',
+    unreadable: "Couldn't be read",
+    repeat: 'Already handled',
+    navigate: "The screen didn't open",
+    failed: 'Something went wrong',
+  } as Readonly<Record<string, string>>),
+  /** Why a notification could not be checked (the signature check's word). */
+  check: Object.freeze({
+    no_record: 'this phone holds no notification key',
+    other_server: "the phone's key is another server's",
+    keychain: "the phone's keychain was locked",
+    no_key: 'this phone holds no notification key',
+    stale: "it is over 7 days old, or the phone's clock is off",
+    mismatch: "the phone's key does not match the server's",
+    digest_failed: 'the check failed on this phone',
+    not_v2: 'it is not an Automatos notification',
+  } as Readonly<Record<string, string>>),
+  /** The answer route's verdicts (answer.ts AnswerVerdictKind). */
+  answer: Object.freeze({
+    answered: 'Answer sent',
+    already_answered: 'Already answered',
+    refused: 'Answer refused',
+    not_sent: 'Answer not sent',
+  } as Readonly<Record<string, string>>),
+  link: Object.freeze({
+    question: 'Question',
+    task: 'Ticket',
+    chat: 'Chat',
+    social_post: 'Social post',
+    approval_grant: 'Approval',
+    mission: 'Mission plan',
+    other: 'Other link',
+  } as Readonly<Record<string, string>>),
+  noLink: 'No link',
 });

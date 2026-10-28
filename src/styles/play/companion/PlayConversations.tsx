@@ -1,5 +1,7 @@
 // Play's Conversations (Ember 03): 'Chats' in the screen slot with 'New chat' (44 high, the cream
-// secondary) and an avatar chip to Settings beside it (KS10); the sections Today, This week and
+// secondary), a bell chip to the notifications inbox with the server's unread number (Play has no
+// header menu, so this is its way in: fix/notification-taps), and an avatar chip to Settings beside
+// them (KS10); the sections Today, This week and
 // Earlier in the label style; each row the title on one line (header slot), the time (Geist Mono
 // 11 text2), the preview (Geist 14 text2, one line) and the report badge (the label style in the
 // accent text), over 1 pt dividers of the ground's text at 0.07; the bottom bar under it all. No
@@ -10,10 +12,14 @@
 import { useRouter } from 'expo-router';
 import { useMemo, type ReactElement } from 'react';
 import { Pressable, SectionList, StyleSheet, View } from 'react-native';
+import Bell from 'lucide-react-native/icons/bell';
 import UserRound from 'lucide-react-native/icons/user-round';
 
 import { routes } from '../../../navigation/routes';
-import { Button, Screen, Text } from '../../../ui';
+import { inboxButtonLabel } from '../../../push/inbox/model';
+import { useUnreadCount } from '../../../push/inbox/use-inbox';
+import { pushScreens } from '../../../push/nav';
+import { Button, CountBadge, Screen, Text } from '../../../ui';
 import { ICON_STROKE } from '../../../ui/paint';
 import { PLAY_CONVERSATIONS_COPY } from '../../strings';
 import {
@@ -74,6 +80,35 @@ function AvatarChip({ initial, paint }: AvatarProps) {
       ) : (
         <UserRound size={AVATAR_ICON} color={vars.groundText2} strokeWidth={ICON_STROKE} />
       )}
+    </Pressable>
+  );
+}
+
+function InboxChip({ paint }: { readonly paint: CompanionPaint }) {
+  const router = useRouter();
+  const unread = useUnreadCount();
+  const { vars, style } = paint;
+  const { spacing } = style.tokens;
+  return (
+    <Pressable
+      onPress={() => router.push(pushScreens.inbox)}
+      accessibilityRole="button"
+      accessibilityLabel={inboxButtonLabel(unread)}
+      style={[
+        styles.avatar,
+        styles.inbox,
+        {
+          gap: spacing.space1,
+          paddingHorizontal: spacing.space3,
+          minWidth: avatar,
+          height: avatar,
+          borderRadius: avatar / 2,
+          backgroundColor: vars.groundChip,
+        },
+      ]}
+    >
+      <Bell size={AVATAR_ICON} color={vars.groundText2} strokeWidth={ICON_STROKE} />
+      <CountBadge count={unread} />
     </Pressable>
   );
 }
@@ -157,6 +192,7 @@ export function PlayConversations(props: PlayConversationsProps) {
           {PLAY_CONVERSATIONS_COPY.title}
         </Text>
         <Button label={PLAY_CONVERSATIONS_COPY.newChat} variant="secondary" onPress={onNewChat} />
+        <InboxChip paint={paint} />
         <AvatarChip initial={initial} paint={paint} />
       </View>
       <SectionList
@@ -196,6 +232,8 @@ export function PlayConversations(props: PlayConversationsProps) {
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'flex-end' },
   avatar: { alignItems: 'center', justifyContent: 'center' },
+  /** The bell and its number side by side; the chip grows with the number. */
+  inbox: { flexDirection: 'row' },
   titleRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   title: { flex: 1 },
   list: { flex: 1 },

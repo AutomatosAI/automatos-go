@@ -17,6 +17,7 @@ import {
   sessionKeyOf,
   type PushSession,
 } from '../session';
+import { pushQueryKeys } from '../query-keys';
 import { pushWiringFor, reportingRegistrar, type PushNatives } from '../wiring';
 import { DEVICE_ID, WS } from './data-fixtures';
 import { memoryStorage, nodeSha256 } from './handler-fixtures';
@@ -194,11 +195,13 @@ describe('pushWiringFor', () => {
     expect(wiring.incoming.currentRoute()).toBe('/');
   });
 
-  it('a refresh invalidates the needs-you and questions families', async () => {
+  it('a refresh invalidates the needs-you and questions families, and the inbox', async () => {
     const { wiring, invalidateQueries } = wired();
     wiring.incoming.refresh();
     wiring.responses.refresh?.();
-    expect(invalidateQueries).toHaveBeenCalledTimes(2);
+    // each refresh: the two families (one predicate) and the inbox (its key)
+    expect(invalidateQueries).toHaveBeenCalledTimes(4);
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: pushQueryKeys.inbox() });
     const [[filters]] = invalidateQueries.mock.calls as unknown as [
       [{ predicate: (query: { queryKey: readonly unknown[] }) => boolean }],
     ];

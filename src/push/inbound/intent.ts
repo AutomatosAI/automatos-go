@@ -94,10 +94,20 @@ function replyIntent(input: IntentInput, payload: PushPayload): PushIntent {
   });
 }
 
+/**
+ * Both name the same workspace. A workspace id is a UUID, whose hex digits mean the same in either
+ * case (RFC 9562): the server writes str(uuid) lowercase, but an id is compared as an id, never as
+ * text, so a differently cased copy is never read as another workspace.
+ */
+export function sameWorkspace(first: string | null, second: string | null): boolean {
+  if (!first || !second) return false;
+  return first.trim().toLowerCase() === second.trim().toLowerCase();
+}
+
 export function intentFor(input: IntentInput): PushIntent {
   const { payload } = input;
   if (!input.verified || !payload) return neutral('unverified');
-  if (!input.currentWorkspaceId || payload.workspace_id !== input.currentWorkspaceId) {
+  if (!sameWorkspace(payload.workspace_id, input.currentWorkspaceId)) {
     return neutral('other_workspace');
   }
   const { action } = input.event;

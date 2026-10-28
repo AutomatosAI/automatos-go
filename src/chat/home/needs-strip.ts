@@ -19,7 +19,7 @@ import type { PipStatus } from '../../ui/variants';
 import { NEEDS_COPY } from '../strings';
 
 /** Studio's governance tab, where an approval with no ticket waits (auto-now-rail.tsx). */
-const GOVERNANCE_HREF = '/command-center?tab=governance';
+export const GOVERNANCE_HREF = '/command-center?tab=governance';
 const META_SEPARATOR = ' · ';
 
 export type NeedKind = keyof typeof NEEDS_COPY.kinds;

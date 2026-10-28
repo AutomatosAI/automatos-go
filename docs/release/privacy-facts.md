@@ -723,6 +723,19 @@ app.
   typed answer, on an unlocked phone only) and "Open". Everything else offers "Open". There is no
   Approve button and no option button: a question's own options are answered in the app. Every
   action opens the app.
+- **Where a tap goes** (`src/push/inbound/handler.ts`, `outcomes.ts`): a verified notification
+  opens what it is about. One the phone cannot follow (it could not be checked, it is another
+  workspace's, its record has no screen on the phone or is gone) opens Notifications
+  (`/notifications`, `src/push/inbox/`), the list of the workspace's notifications that Studio's
+  bell shows, read from the server with the person's own sign-in (`GET /api/notifications`) and
+  kept in memory only, never on the phone. An unchecked notification only chooses which of those
+  rows is shown first; nothing is sent, followed or marked read for it.
+- **Recent notification taps** (`src/push/inbound/tap-log.ts`, Settings → Notifications): the
+  phone keeps what became of its last 10 taps in the encrypted store (`push.tap-log.v1`): the kind
+  of outcome, a reason word, the kind of link and the time. Never the notification's title, text,
+  key or ids, or a typed reply. It is not sent anywhere, and sign-out deletes it with the rest of
+  the encrypted store (step 6 of `clearUserData`, see "On the phone: after sign-out and after
+  uninstall").
 
 **Evidence:** `src/push/__tests__/registration-state.test.ts` ("the wave asks for the permission in
 one place (KP11)": only `registration/permission.ts` and `platform/expo.ts` name the request),

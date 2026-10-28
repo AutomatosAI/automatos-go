@@ -1,6 +1,7 @@
 // One signed-in session's push, wired (PRD-001 §4.8): PushRoot builds it once per session and
 // workspace (memoised), so there is ONE registrar, ONE handled-response store and ONE set of ask
-// counters per session (two live handled stores could both pass a claim). Every registrar run —
+// counters per session (two live handled stores could both pass a claim), and ONE tap log (each
+// response's outcome, for Settings → Notifications). Every registrar run —
 // launch, resume, a new token, the in-context ask, Settings → Notifications — reports its outcome
 // to PushRoot through reportingRegistrar, so the ask sees the status the screen just changed. Remove
 // this phone (KP16) runs over that same registrar, the session's client and its teardown, with the
@@ -19,6 +20,7 @@ import { clearLeftover, onSessionExpired, pushLeaveFor, type PushLeave } from '.
 import { phoneRemovalFor, type PhoneRemoval } from './bind/remove-phone';
 import { MS_PER_SECOND } from './config';
 import { handledStoreOver, type HandledStore } from './inbound/handled-store';
+import { tapLogOver, type TapLog } from './inbound/tap-log';
 import { refreshAfterPush, type IncomingDeps } from './inbound/receive';
 import type { NotificationResponsesDeps } from './inbound/use-notification-responses';
 import { staleChecksFor } from './links/stale';
@@ -120,7 +122,7 @@ function registrarFor(
   return reportingRegistrar(registrar, input.onOutcome);
 }
 
-type Shared = Readonly<{ handled: HandledStore; refresh: () => void }>;
+type Shared = Readonly<{ handled: HandledStore; refresh: () => void; taps: TapLog }>;
 
 function responsesFor(
   input: WiringInput,
@@ -137,6 +139,7 @@ function responsesFor(
     sha256: natives.sha256,
     nowSeconds: () => Math.floor(natives.now() / MS_PER_SECOND),
     refresh: shared.refresh,
+    taps: shared.taps,
   });
 }
 
@@ -183,7 +186,8 @@ export function pushWiringFor(input: WiringInput, natives: PushNatives): PushWir
   const storage = natives.storage();
   const handled = handledStoreOver(storage);
   const refresh = () => refreshAfterPush(input.queryClient);
-  const responses = responsesFor(input, natives, { handled, refresh });
+  const taps = tapLogOver(storage, natives.now);
+  const responses = responsesFor(input, natives, { handled, refresh, taps });
   const prompt = promptMemoryOver(storage);
   const hold = removalHoldOver(storage);
   const registrar = registrarFor(input, natives, storage, hold);

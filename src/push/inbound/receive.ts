@@ -4,7 +4,7 @@
 // presentationFor: an unverified, timed-out or unreadable push shows nothing; a verified one shows
 // its banner and list entry, without the banner when the person is already on its target, and
 // refreshes the needs-you number and the open questions (the foundation's needsYou and questions
-// families, src/api/query-keys.ts). Pure over its deps; never throws. Logs carry the kind only:
+// families, src/api/query-keys.ts) and the notifications inbox (src/push/query-keys.ts). Pure over its deps; never throws. Logs carry the kind only:
 // never the notification's title, body, question, options or sig.
 
 import type { QueryClient } from '@tanstack/react-query';
@@ -13,6 +13,7 @@ import { invalidateFamilies } from '../../api/live-events';
 import type { KeyFamilyName } from '../../api/query-keys';
 import { logger } from '../../lib/logger';
 import { routeFor, targetFor } from '../links/targets';
+import { pushQueryKeys } from '../query-keys';
 import { SHOW_NOTHING, presentationFor, verifiedWithin } from '../platform/foreground';
 import type { Presentation } from '../platform/port';
 import { parsePushData, type PushPayload } from '../schemas/payload';
@@ -35,14 +36,23 @@ export type IncomingDeps = VerifyDeps &
 
 type Shown = Readonly<{ kind: 'verified' | 'unverified' | 'unreadable'; shown: Presentation }>;
 
-/** Marks the needs-you and questions families stale; the ones on screen refetch. */
+/**
+ * Marks the needs-you and questions families stale, and the notifications inbox (its rows and the
+ * menu's unread number); the ones on screen refetch.
+ */
 export function refreshAfterPush(queryClient: Pick<QueryClient, 'invalidateQueries'>): void {
   void invalidateFamilies(queryClient, PUSH_REFRESH_FAMILIES);
+  void queryClient.invalidateQueries({ queryKey: pushQueryKeys.inbox() });
 }
 
-/** The person is on the screen the push's signed link opens. */
+/**
+ * The person is on the screen of the record the push's signed link names. A push that names no
+ * record the phone has a screen for (an approval, a Mission plan, no link at all) is never "on
+ * screen": home is where it would have fallen back to, not its screen, so it keeps its banner there.
+ */
 function onTarget(payload: PushPayload, currentRoute: string | null): boolean {
-  return currentRoute !== null && routeFor(targetFor(payload)) === currentRoute;
+  const target = targetFor(payload);
+  return currentRoute !== null && target.kind !== 'home' && routeFor(target) === currentRoute;
 }
 
 function refreshed(deps: IncomingDeps): void {
