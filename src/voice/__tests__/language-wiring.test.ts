@@ -61,11 +61,11 @@ describe('hold to talk in the chosen language (source)', () => {
     );
   });
 
-  it('names the chosen and the phone’s language on the voice screen and HUD’s home', () => {
+  it('names the chosen language on the voice screen and HUD’s home', () => {
     for (const file of ['voice/screen/use-voice-screen.ts', 'voice/home/use-hud-home-voice.ts']) {
       const hook = code(read(file));
-      expect(hook, file).toMatch(/const \{ listening, phone \} = useListening\(\);/);
-      expect(hook, file).toMatch(/locale: listening,\s*phoneLocale: phone,/);
+      expect(hook, file).toMatch(/const \{ listening \} = useListening\(\);/);
+      expect(hook, file).toMatch(/locale: listening,/);
     }
   });
 });

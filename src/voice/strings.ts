@@ -5,26 +5,22 @@
 import type { RecognizerFailure, VoiceMessage } from './machine/voice-state';
 
 /** Which words say why hold to talk cannot start (recognition-policy.ts refusalCopyKey). */
-export type RecognitionCopyKey = 'androidTooOld' | 'notOnPhone' | 'download' | 'otherLanguage';
+export type RecognitionCopyKey = 'androidTooOld' | 'notOnPhone' | 'download';
 
 /**
  * Hold to talk cannot start on this phone (KV4), by the policy's copy key. {language} is the
- * language hold to talk would listen in, by name (spokenName in language/speak-language.ts);
- * {phoneLanguage} the phone's own. otherLanguage is iOS's: the module's on-device check covers the
- * phone's language only (recognition-policy.ts). Typing always stays.
+ * language hold to talk would listen in, by name (spokenName in language/speak-language.ts).
+ * Typing always stays.
  */
-export const RECOGNITION_COPY: Readonly<
-  Record<RecognitionCopyKey, (language: string, phoneLanguage?: string) => string>
-> = Object.freeze({
-  androidTooOld: () =>
-    'Hold to talk needs Android 13 or later, so your voice is recognised on this phone. You can type to Auto instead.',
-  notOnPhone: (language: string) =>
-    `Hold to talk needs speech recognition that runs on this phone, and it isn't available for ${language}. You can type to Auto instead.`,
-  download: (language: string) =>
-    `Download the ${language} speech model to talk to Auto. It stays on your phone.`,
-  otherLanguage: (language: string, phoneLanguage?: string) =>
-    `Hold to talk can't listen in ${language} on this iPhone. It works only in your iPhone's language${phoneLanguage ? `, ${phoneLanguage},` : ','} so your voice is recognised on the phone. You can type to Auto instead.`,
-});
+export const RECOGNITION_COPY: Readonly<Record<RecognitionCopyKey, (language: string) => string>> =
+  Object.freeze({
+    androidTooOld: () =>
+      'Hold to talk needs Android 13 or later, so your voice is recognised on this phone. You can type to Auto instead.',
+    notOnPhone: (language: string) =>
+      `Hold to talk needs speech recognition that runs on this phone, and it isn't available for ${language}. You can type to Auto instead.`,
+    download: (language: string) =>
+      `Download the ${language} speech model to talk to Auto. It stays on your phone.`,
+  });
 
 /** The button under the download offer: androidTriggerOfflineModelDownload. */
 export const DOWNLOAD_ACTION = 'Download';

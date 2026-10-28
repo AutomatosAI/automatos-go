@@ -125,7 +125,7 @@ export function useVoiceScreen(chatId: string | null): VoiceScreenModel {
   const style = useStyle();
   const screenReader = useScreenReader();
   const mounted = useMountPermission();
-  const { listening, phone } = useListening();
+  const { listening } = useListening();
   const roleCanChat = roleCan(workspace.role, 'chat');
   const language = useLanguageSwitch(roleCanChat);
   const levels = useLevels(quick.level);
@@ -142,7 +142,6 @@ export function useVoiceScreen(chatId: string | null): VoiceScreenModel {
     screenReader,
     mascotState: phaseMascot(voice),
     locale: listening,
-    phoneLocale: phone,
     reply: quick.reply,
     failure: thread.state.failure,
   });
