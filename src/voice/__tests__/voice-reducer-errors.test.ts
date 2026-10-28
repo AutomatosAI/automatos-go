@@ -98,6 +98,25 @@ describe('retryable or not', () => {
   });
 });
 
+describe('a turn whose read broke runs on (28 Oct 2026)', () => {
+  it('error turn → thinking on turn_resumed, the words to come; nothing else resumes', () => {
+    const broke = voiceReducer(AT.thinking, { type: 'turn_failed', kind: 'network' });
+    expect(broke).toMatchObject({ phase: 'error', errorKind: 'turn', turnFailure: 'network' });
+    expect(voiceReducer(broke, { type: 'turn_resumed' })).toMatchObject({
+      phase: 'thinking',
+      replyStreaming: true,
+      replyFinished: false,
+      errorKind: null,
+      turnFailure: null,
+    });
+    for (const phase of PHASES.filter((name) => name !== 'error')) {
+      expect(voiceReducer(AT[phase], { type: 'turn_resumed' })).toBe(AT[phase]);
+    }
+    const refused = voiceReducer(AT.idle, { type: 'unavailable', reason: 'no-recognizer' });
+    expect(voiceReducer(refused, { type: 'turn_resumed' })).toBe(refused);
+  });
+});
+
 describe('reset and immutability', () => {
   it('reset returns the initial state, and never closes a mic still open', () => {
     expect(voiceReducer(AT.speaking, { type: 'reset' })).toBe(INITIAL_VOICE_STATE);
@@ -119,6 +138,7 @@ describe('reset and immutability', () => {
     { type: 'turn_tool', caption: 'c' },
     { type: 'turn_finished' },
     { type: 'turn_failed', kind: 'server' },
+    { type: 'turn_resumed' },
     { type: 'speak_start' },
     { type: 'speak_done' },
     { type: 'stop' },

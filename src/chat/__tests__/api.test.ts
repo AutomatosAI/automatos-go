@@ -9,7 +9,8 @@ import {
   reply,
   type FakeTransport,
 } from '../../api/__tests__/fake-transport';
-import { createApiClient } from '../../api/client';
+import { createApiClient, type ApiClient, type StreamCallOptions } from '../../api/client';
+import { CHAT_TURN_CONNECT_TIMEOUT_MS, STREAM_CONNECT_TIMEOUT_MS } from '../../api/config';
 import { ApiError } from '../../api/errors';
 import type { StreamingResponse, TransportRequest } from '../../api/transport-types';
 import type { Frame } from '../../core/ai-sdk-stream';
@@ -59,6 +60,20 @@ const firstCall = (transport: FakeTransport): TransportRequest => {
 };
 
 describe('sendTurn', () => {
+  it('gives the turn’s status 120 s (the server picks who answers first), not the 30 s default', async () => {
+    const calls: StreamCallOptions[] = [];
+    const client: Pick<ApiClient, 'stream'> = {
+      stream: async (_route, call = {}) => {
+        calls.push(call);
+        return chunked(['0:"ok"\n']);
+      },
+    };
+    await sendTurn(client, buildChatRequest({ text: 'hi' }), () => undefined);
+    expect(CHAT_TURN_CONNECT_TIMEOUT_MS).toBeGreaterThanOrEqual(120_000);
+    expect(STREAM_CONNECT_TIMEOUT_MS).toBeLessThan(CHAT_TURN_CONNECT_TIMEOUT_MS);
+    expect(calls[0]?.connectTimeoutMs).toBe(CHAT_TURN_CONNECT_TIMEOUT_MS);
+  });
+
   const BODY = buildChatRequest({ chatId: CHAT_ID, text: 'What needs me?' });
 
   it('posts the ChatRequest to /api/chat and feeds every frame in order', async () => {
@@ -106,8 +121,8 @@ describe('sendTurn', () => {
   });
 
   it('throws the taxonomy error when the server refuses the turn before the body', async () => {
-    const transport = fakeTransport(
-      (): StreamingResponse => reply(403, JSON.stringify({ detail: 'Access denied' })),
+    const transport = fakeTransport((): StreamingResponse =>
+      reply(403, JSON.stringify({ detail: 'Access denied' })),
     );
     const error = await failureOf(sendTurn(clientWith(transport), BODY, () => undefined));
     expect(error).toMatchObject({ kind: 'forbidden', status: 403 });

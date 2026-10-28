@@ -63,6 +63,11 @@ export type CallOptions = {
 
 export type ParsedCallOptions<S extends z.ZodTypeAny> = CallOptions & { readonly schema: S };
 
+export type StreamCallOptions = CallOptions & {
+  /** The status must arrive within this long; the client's own when not given. No cap after it. */
+  readonly connectTimeoutMs?: number;
+};
+
 export type BinaryCallOptions = CallOptions & {
   /** The whole call, status and body, gives up after this long; the client's own when not given. */
   readonly timeoutMs?: number;
@@ -87,7 +92,7 @@ export interface ApiClient {
   /** A call whose response body is not needed: it resolves once the server answers OK. */
   request(route: Route, options?: CallOptions): Promise<void>;
   /** Opens a streaming body (stream.ts, sse.ts read it); a non-OK status throws first. */
-  stream(route: Route, options?: CallOptions): Promise<StreamingResponse>;
+  stream(route: Route, options?: StreamCallOptions): Promise<StreamingResponse>;
   /** A body read whole as bytes, with its headers; a non-OK status throws first. */
   binary(route: Route, options?: BinaryCallOptions): Promise<BinaryBody>;
   /** The bearer and workspace headers, for native loads outside the client (auth-headers.ts). */
@@ -254,9 +259,14 @@ function disposing(response: StreamingResponse, dispose: () => void): StreamingR
   };
 }
 
-async function open(ctx: Context, route: Route, call: CallOptions): Promise<StreamingResponse> {
+async function open(
+  ctx: Context,
+  route: Route,
+  call: StreamCallOptions,
+): Promise<StreamingResponse> {
   const { request, token } = await prepare(ctx, route, call);
-  const deadline = startDeadline(ctx.connectTimeoutMs, call.signal);
+  const connectTimeoutMs = call.connectTimeoutMs ?? ctx.connectTimeoutMs;
+  const deadline = startDeadline(connectTimeoutMs, call.signal);
   try {
     const opened = await ctx.transport.stream({ ...request, signal: deadline.signal });
     const response = await checked(ctx, opened, token);
@@ -264,7 +274,7 @@ async function open(ctx: Context, route: Route, call: CallOptions): Promise<Stre
     return disposing(response, deadline.dispose);
   } catch (error) {
     deadline.dispose();
-    throw failure(error, deadline, call, ctx.connectTimeoutMs);
+    throw failure(error, deadline, call, connectTimeoutMs);
   }
 }
 
@@ -282,7 +292,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     server: ctx.server,
     request: ((route: Route, call: AnyCallOptions = {}) =>
       send(ctx, route, call)) as ApiClient['request'],
-    stream: (route: Route, call: CallOptions = {}) => open(ctx, route, call),
+    stream: (route: Route, call: StreamCallOptions = {}) => open(ctx, route, call),
     binary: (route: Route, call: BinaryCallOptions = {}) => fetchBinary(ctx, route, call),
     authHeaders: createAuthHeaders(ctx.getToken, ctx.getWorkspaceId),
   });

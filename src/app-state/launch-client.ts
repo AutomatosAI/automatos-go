@@ -13,6 +13,7 @@ import {
   type ApiClient,
   type BinaryCallOptions,
   type CallOptions,
+  type StreamCallOptions,
 } from '../api/client';
 import { routes, type Route } from '../api/routes';
 import type { Server } from '../api/server';
@@ -49,7 +50,8 @@ function reportingRefusals(client: ApiClient, refusals: Pick<Refusals, 'report'>
     server: client.server,
     request: ((route: Route, call?: CallOptions) =>
       reported(route, () => client.request(route, call))) as ApiClient['request'],
-    stream: (route: Route, call?: CallOptions) => reported(route, () => client.stream(route, call)),
+    stream: (route: Route, call?: StreamCallOptions) =>
+      reported(route, () => client.stream(route, call)),
     binary: (route: Route, call?: BinaryCallOptions) =>
       reported(route, () => client.binary(route, call)),
     authHeaders: client.authHeaders,

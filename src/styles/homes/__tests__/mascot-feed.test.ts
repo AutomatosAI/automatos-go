@@ -82,6 +82,46 @@ describe('Auto over A2’s thread: the frames and how the thread moved', () => {
     expect(autoShows(broken)).toBe('oops');
   });
 
+  it('a tool that failed mid-turn is a snag only until the reply has finished (28 Oct 2026)', () => {
+    const failedTool: Frame = {
+      kind: 'tool-end',
+      toolCallId: 'call-search',
+      toolName: 'platform_web_search',
+      success: false,
+      error: 'Invalid API key',
+      skipped: false,
+      waiting: false,
+    };
+    const snag = live(homeOn(opened()), SEND, frame(SEARCH_START), frame(failedTool));
+    expect(autoShows(snag)).toBe('oops');
+    const answered = live(snag, frame(parsed(line.text('Aqui vão três ideias.'))), frame(FINISH));
+    const done = live(answered, FINISHED);
+    expect(done.state.status).toBe('idle');
+    expect(autoShows(done)).toBe('idle');
+    expect(threadMascotEvents(answered.state, done.state)).toContainEqual({ type: 'request-ok' });
+  });
+
+  it('a turn that failed or hit its cap keeps its snag after it ends', () => {
+    const failedTurn = live(
+      homeOn(opened()),
+      SEND,
+      frame(parsed(line.text('Half an answer'))),
+      frame(parsed(line.error('The model is busy', 'model_unavailable'))),
+      FINISHED,
+    );
+    expect(autoShows(failedTurn)).toBe('oops');
+    const capped = live(
+      homeOn(opened()),
+      SEND,
+      frame({ kind: 'limit_reached', limit: { limit: 'tool_calls', value: 25, message: 'Cap' } }),
+      frame(FINISH),
+    );
+    const cappedDone = live(capped, FINISHED);
+    expect(threadMascotEvents(capped.state, cappedDone.state)).not.toContainEqual({
+      type: 'request-ok',
+    });
+  });
+
   it('a tool card waiting on the user: Auto listens until it is answered', () => {
     const waiting = live(homeOn(opened()), SEND, frame(TOOL_APPROVAL), frame(FINISH), FINISHED);
     expect(approvalWaiting(waiting.state)).toBe(true);

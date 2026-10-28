@@ -1,6 +1,7 @@
 // One quick-ask reply fed as it streams (US-019g, KV6): the transcript's words (speakable), the
 // running tool, the sentences new since the last view, the rest at the end; a failed or stopped turn
-// silences the speech; after the first ending the feed says nothing.
+// silences the speech; after the first ending the feed says nothing. A read that broke is not an
+// ending: turn_failed once, then turn_resumed and the rest when the turn runs on (28 Oct 2026).
 
 import { describe, expect, it } from 'vitest';
 
@@ -70,11 +71,38 @@ describe('createReplyFeed', () => {
   it('a failed turn says turn_failed and silences the speech', () => {
     const feed = createReplyFeed();
     feed.next(reply({ text: 'Let me. ' }));
-    expect(feed.next(reply({ streaming: false, failedKind: 'network' }))).toEqual({
-      events: [{ type: 'turn_failed', kind: 'network' }],
+    expect(feed.next(reply({ streaming: false, failedKind: 'turn' }))).toEqual({
+      events: [{ type: 'turn_failed', kind: 'turn' }],
       speak: [],
       ended: true,
       silence: true,
+    });
+  });
+
+  it('a read that broke says turn_failed once, then resumes with the words not yet spoken', () => {
+    const feed = createReplyFeed();
+    expect(feed.next(reply({ text: 'Aqui vão três ideias. Primeira' })).speak).toEqual([
+      'Aqui vão três ideias.',
+    ]);
+    const broke = reply({ text: 'Aqui vão três ideias. Primeira', streaming: false });
+    expect(feed.next({ ...broke, failedKind: 'network' })).toEqual({
+      events: [{ type: 'turn_failed', kind: 'network' }],
+      speak: [],
+      ended: false,
+      silence: true,
+    });
+    expect(feed.next({ ...broke, failedKind: 'stream' })).toEqual({
+      events: [],
+      speak: [],
+      ended: false,
+      silence: false,
+    });
+    const text = 'Aqui vão três ideias. Primeira, um carrossel. Segunda, um vídeo.';
+    expect(feed.next(reply({ text, streaming: false, finished: true }))).toEqual({
+      events: [{ type: 'turn_resumed' }, { type: 'turn_text', text }, { type: 'turn_finished' }],
+      speak: ['Primeira, um carrossel.', 'Segunda, um vídeo.'],
+      ended: true,
+      silence: false,
     });
   });
 
