@@ -189,3 +189,56 @@ export const PUSH_ACCOUNT_COPY = Object.freeze({
   removeFailed:
     "This phone couldn't be removed from your workspace's devices. Studio may still list this phone.",
 });
+
+/**
+ * Settings → Notifications → Recent notification taps: what became of the last taps, in plain
+ * words, so a tap that did not open what it should can be told apart from one that never arrived.
+ */
+export const PUSH_TAPS_COPY = Object.freeze({
+  section: 'Recent notification taps',
+  empty: 'No taps yet. Tap a notification and what happened shows here.',
+  note: 'Kept on this phone only: what happened and when, never what a notification said.',
+  outcome: Object.freeze({
+    screen: 'Opened its screen',
+    inbox: 'Opened Notifications',
+    moved: 'It had moved on',
+    answer: 'Answered from the notification',
+    unverified: "Couldn't be checked",
+    other_workspace: 'From another workspace',
+    cannot_answer: 'Your role cannot answer here',
+    blank_reply: 'The reply was empty',
+    unknown: 'Opened Notifications',
+    unreadable: "Couldn't be read",
+    repeat: 'Already handled',
+    navigate: "The screen didn't open",
+    failed: 'Something went wrong',
+  } as Readonly<Record<string, string>>),
+  /** Why a notification could not be checked (the signature check's word). */
+  check: Object.freeze({
+    no_record: 'this phone holds no notification key',
+    other_server: "the phone's key is another server's",
+    keychain: "the phone's keychain was locked",
+    no_key: 'this phone holds no notification key',
+    stale: "it is over 7 days old, or the phone's clock is off",
+    mismatch: "the phone's key does not match the server's",
+    digest_failed: 'the check failed on this phone',
+    not_v2: 'it is not an Automatos notification',
+  } as Readonly<Record<string, string>>),
+  /** The answer route's verdicts (answer.ts AnswerVerdictKind). */
+  answer: Object.freeze({
+    answered: 'Answer sent',
+    already_answered: 'Already answered',
+    refused: 'Answer refused',
+    not_sent: 'Answer not sent',
+  } as Readonly<Record<string, string>>),
+  link: Object.freeze({
+    question: 'Question',
+    task: 'Ticket',
+    chat: 'Chat',
+    social_post: 'Social post',
+    approval_grant: 'Approval',
+    mission: 'Mission plan',
+    other: 'Other link',
+  } as Readonly<Record<string, string>>),
+  noLink: 'No link',
+});

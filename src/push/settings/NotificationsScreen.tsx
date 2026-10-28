@@ -1,8 +1,9 @@
 // Settings → Notifications (PRD-001 §4.7; the handoff §3 with D19, D21, D22 and D24 over it): the
 // head, this phone's state in plain words with its one button, then what notifies you and the
-// daily digest (where the server pushes), question text (likewise) and Face ID before approve or
-// answer (always). Every section reads and writes through its own hooks; the words are
-// view-model.ts's. Back returns to Settings, or opens it when this screen was opened first.
+// daily digest (where the server pushes), question text (likewise), Face ID before approve or
+// answer (always), and Recent notification taps (what became of the last taps, from the phone's
+// own tap log). Every section reads and writes through its own hooks; the words are view-model.ts's
+// and taps-view.ts's. Back returns to Settings, or opens it when this screen was opened first.
 
 import { StyleSheet, View } from 'react-native';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
@@ -17,6 +18,7 @@ import { Section } from './components/Section';
 import { PhoneStatus } from './PhoneStatus';
 import { PreferenceSections } from './PreferenceSections';
 import { FaceIdSection, QuestionTextSection } from './PrivacySections';
+import { TapLogSection } from './TapLogSection';
 import { usePhone } from './use-phone';
 import { screenHead, sectionsShown } from './view-model';
 
@@ -67,6 +69,7 @@ export function NotificationsScreen() {
         ) : null}
         {shown.redact ? <QuestionTextSection /> : null}
         <FaceIdSection />
+        <TapLogSection />
       </View>
     </Screen>
   );

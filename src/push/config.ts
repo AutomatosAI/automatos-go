@@ -148,3 +148,11 @@ export const MS_PER_SECOND = 1000;
 
 /** How often the menu's unread number is read again while it shows (the needs-you number's pace). */
 export const INBOX_REFETCH_INTERVAL_MS = 60_000;
+
+/**
+ * The tap diagnostics (Settings → Notifications → Recent notification taps): the last TAP_LOG_MAX
+ * responses' outcomes in ONE MMKV item — a kind, a reason, a link type and a time each; never a
+ * payload, a key, a sig, a title or a reply.
+ */
+export const TAP_LOG_ITEM = 'push.tap-log.v1';
+export const TAP_LOG_MAX = 10;

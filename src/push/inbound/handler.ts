@@ -18,7 +18,7 @@ import type { WorkspaceRole } from '../../api/workspace';
 import { logger } from '../../lib/logger';
 import { routes } from '../../navigation/routes';
 import { markNotificationRead } from '../api';
-import { REPLY_ACTION_ID } from '../config';
+import { QUESTION_LINK_TYPE, REPLY_ACTION_ID } from '../config';
 import { resolveTarget, type StaleChecks } from '../links/stale';
 import { targetFor } from '../links/targets';
 import type { NotificationsPort } from '../platform/expo';
@@ -40,6 +40,7 @@ import {
   type HandledOutcome,
 } from './outcomes';
 import { fromResponse, type InboundEvent } from './parse';
+import type { TapLog, TapReport } from './tap-log';
 
 export type { HandledOutcome } from './outcomes';
 
@@ -69,6 +70,8 @@ export type HandlerDeps = Readonly<{
   notify: (message: string) => void;
   /** After a reply settles its question: the caller refreshes needs-you and Questions. */
   refresh?: () => void;
+  /** The tap diagnostics (tap-log.ts): one entry per response, kinds and words only. */
+  taps?: Pick<TapLog, 'record'>;
 }>;
 
 /** What a signature check reads: this server's push record, the hash and the clock. */
@@ -87,11 +90,16 @@ function kindOf(error: unknown): string {
   return isApiError(error) ? error.kind : 'unknown';
 }
 
+/** One response's end: where it went, whether the router took it, and the diagnostics' words. */
+type Handled = Readonly<{ outcome: HandledOutcome; navigated: boolean; tap: TapReport }>;
+
 /** Navigates, then shows the line; neither failing stops the other or throws. */
-function show(deps: HandlerDeps, outcome: HandledOutcome): HandledOutcome {
+function show(deps: HandlerDeps, outcome: HandledOutcome, tap: TapReport): Handled {
+  let navigated = true;
   try {
     deps.navigate(outcome.route);
   } catch {
+    navigated = false;
     logger.warn('[push] could not open the screen of a notification');
   }
   try {
@@ -99,7 +107,22 @@ function show(deps: HandlerDeps, outcome: HandledOutcome): HandledOutcome {
   } catch {
     logger.warn('[push] could not show the line of a notification');
   }
-  return Object.freeze({ ...outcome });
+  return Object.freeze({ outcome: Object.freeze({ ...outcome }), navigated, tap });
+}
+
+/** The entry for one response: a screen the router refused is an error, whatever was decided. */
+function record(deps: HandlerDeps, handled: Handled | null, repeat: TapReport | null): void {
+  const tap = handled
+    ? handled.navigated
+      ? handled.tap
+      : { ...handled.tap, kind: 'error' as const, reason: 'navigate', detail: handled.tap.kind }
+    : repeat;
+  if (!tap) return;
+  try {
+    deps.taps?.record(tap);
+  } catch {
+    logger.warn('[push] could not note a notification tap');
+  }
 }
 
 /** Marked once now; false when it was handled before. A store that throws lets it through. */
@@ -172,11 +195,12 @@ async function answer(
   intent: Intent<'answer'>,
   event: ReadableEvent,
   deps: HandlerDeps,
-): Promise<HandledOutcome> {
+): Promise<Handled> {
   const verdict = await sendAnswer(deps.client, intent);
   const settled = settlesQuestion(verdict);
   if (settled) refreshAfterReply(deps);
-  const shown = show(deps, outcome(routes.cc.questions, verdict.toast));
+  const tap: TapReport = { kind: 'answer', reason: verdict.kind, linkType: QUESTION_LINK_TYPE };
+  const shown = show(deps, outcome(routes.cc.questions, verdict.toast), tap);
   if (settled) {
     await markRead(deps, intent.notificationId);
     await dismiss(deps, event.id);
@@ -192,21 +216,27 @@ function refreshAfterReply(deps: HandlerDeps): void {
   }
 }
 
-async function open(intent: Intent<'open'>, deps: HandlerDeps): Promise<HandledOutcome> {
+async function open(intent: Intent<'open'>, deps: HandlerDeps): Promise<Handled> {
   const resolved = await resolveTarget(targetFor(intent.link), deps.checks);
   const route = resolved.route ?? unroutedRoute(intent.notificationId);
-  const shown = show(deps, outcome(route, resolved.notice));
+  const tap: TapReport = {
+    kind: 'open',
+    reason: resolved.route === null ? 'inbox' : 'screen',
+    detail: resolved.notice ? 'moved' : null,
+    linkType: intent.link.link_type,
+  };
+  const shown = show(deps, outcome(route, resolved.notice), tap);
   await markRead(deps, intent.notificationId);
   return shown;
 }
 
-async function act(event: ReadableEvent, deps: HandlerDeps): Promise<HandledOutcome> {
+async function act(event: ReadableEvent, deps: HandlerDeps): Promise<Handled> {
   const payload = parsePushData(event.data);
-  const verified = await isVerified(payload, deps);
+  const verification = await verificationOf(payload, deps);
   const role = deps.session.role();
   const intent = intentFor({
     event,
-    verified,
+    verified: verification === 'verified',
     payload,
     currentWorkspaceId: deps.session.workspaceId(),
     role,
@@ -228,8 +258,23 @@ async function act(event: ReadableEvent, deps: HandlerDeps): Promise<HandledOutc
           focus: payload?.notification_id ?? null,
           replied: event.action === REPLY_ACTION_ID,
         }),
+        {
+          kind: 'neutral',
+          reason: intent.reason,
+          detail: intent.reason === 'unverified' ? verification : null,
+          linkType: payload?.link_type,
+        },
       );
   }
+}
+
+/** The response read and handled; null when seen before. Throws only what act() throws. */
+async function handle(event: ReturnType<typeof fromResponse>, deps: HandlerDeps) {
+  if (event.kind !== 'readable') {
+    logger.debug('[push] notification action', 'unreadable');
+    return show(deps, UNREADABLE_OUTCOME, { kind: 'neutral', reason: 'unreadable' });
+  }
+  return act(event, deps);
 }
 
 /** One response (a tap or an action on a notification) → its one outcome; null when seen before. */
@@ -239,15 +284,21 @@ export async function handleResponse(
 ): Promise<HandledOutcome | null> {
   // read and claimed before the first await: a second delivery of it, however soon, finds the claim
   const event = fromResponse(response);
-  if (event.kind === 'readable' && !firstTime(deps.handled, responseKey(event))) return null;
+  if (event.kind === 'readable' && !firstTime(deps.handled, responseKey(event))) {
+    record(deps, null, { kind: 'unhandled', reason: 'repeat' });
+    return null;
+  }
+  let handled: Handled;
   try {
-    if (event.kind !== 'readable') {
-      logger.debug('[push] notification action', 'unreadable');
-      return show(deps, UNREADABLE_OUTCOME);
-    }
-    return await act(event, deps);
+    handled = await handle(event, deps);
   } catch (error) {
     logger.warn('[push] a notification action failed', kindOf(error));
-    return show(deps, FAILED_OUTCOME);
+    handled = show(deps, FAILED_OUTCOME, {
+      kind: 'error',
+      reason: 'failed',
+      detail: kindOf(error),
+    });
   }
+  record(deps, handled, null);
+  return handled.outcome;
 }
