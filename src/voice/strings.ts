@@ -1,6 +1,7 @@
 // The voice wave's copy (one strings module per feature, §4.11). Quick-ask's words may say the
-// voice is recognised on this phone (true by KV4: recognition runs on the phone or not at all); they
-// never claim more than that (KV18), and say nothing commercial (D8).
+// voice is recognised on this phone for the phone's own language (KV4); for another language chosen
+// on an iPhone they say Apple may recognise it (LANGUAGE_COPY.iosNote). They never claim more than
+// that (KV18), and say nothing commercial (D8).
 
 import type { RecognizerFailure, VoiceMessage } from './machine/voice-state';
 
@@ -254,9 +255,14 @@ export const LANGUAGE_COPY = Object.freeze({
   automaticSummary: (name: string) => `This phone's language: ${name}`,
   /** Brazil's Portuguese by name in the app's words (the refusals, the row's summary, the note). */
   names: Object.freeze({ 'pt-BR': 'Portuguese (Brazil)' }),
-  /** Under "I speak" on an iPhone, when the choice is not the iPhone's own language. */
-  iosNote: (phoneLanguage: string) =>
-    `On iPhone, hold to talk works only in your iPhone's language, ${phoneLanguage}: it's the one language the app can check is recognised on the phone.`,
+  /**
+   * Under "I speak" on an iPhone, when the choice is not the iPhone's own language: iOS recognises
+   * it on the iPhone when its dictation model is installed, else Apple's servers do
+   * (recognition-policy.ts). {language} by language ('Portuguese'), {dictation} as iOS lists it
+   * ('Portuguese (Brazil)').
+   */
+  iosNote: (language: string, dictation: string) =>
+    `${language} is recognised on this iPhone when ${dictation} dictation is installed (Settings → General → Keyboard → Dictation). Otherwise Apple recognises it.`,
   /** The EN/PT switch, as VoiceOver and TalkBack read it: 'Speaking English. Switch to Portuguese'. */
   switchLabel: (now: string, next: string) => `Speaking ${now}. Switch to ${next}`,
   switchHint: 'Changes the language hold to talk listens in and Auto answers in',

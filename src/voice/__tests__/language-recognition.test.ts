@@ -5,7 +5,8 @@
 // is installed and otherwise on Apple's servers. Android checks the chosen locale itself
 // (installed: ready; supported: the download offer; else unavailable), as before. The engine asks
 // the policy for the speech's language at each press and after a download, and a change of
-// language clears a refusal about the old one.
+// language clears a refusal about the old one. Settings → Voice says, under I speak, where another
+// language is recognised on an iPhone.
 
 import { describe, expect, it } from 'vitest';
 
@@ -186,13 +187,27 @@ describe('what the person sees', () => {
     expect(view.message?.text).toBe(RECOGNITION_COPY.notOnPhone('Portuguese (Brazil)'));
   });
 
-  it('Settings on an iPhone: a note while the choice is not the iPhone’s language', () => {
+  it('Settings on an iPhone: Portuguese on an English iPhone says where it is recognised', () => {
     const brazil = { ...DEFAULT_VOICE_SETTING, language: 'pt-BR' } as const;
     expect(languageNote('ios', brazil, 'en-GB')).toBe(
-      "On iPhone, hold to talk works only in your iPhone's language, English: it's the one language the app can check is recognised on the phone.",
+      'Portuguese is recognised on this iPhone when Portuguese (Brazil) dictation is installed (Settings → General → Keyboard → Dictation). Otherwise Apple recognises it.',
     );
+    expect(languageNote('ios', brazil, 'en-US')).toBe(languageNote('ios', brazil, 'en-GB'));
+  });
+
+  it('Settings on an iPhone: English on a Portuguese iPhone, likewise', () => {
+    const english = { ...DEFAULT_VOICE_SETTING, language: 'en' } as const;
+    expect(languageNote('ios', english, 'pt-BR')).toBe(
+      'English is recognised on this iPhone when English dictation is installed (Settings → General → Keyboard → Dictation). Otherwise Apple recognises it.',
+    );
+  });
+
+  it('no note in the iPhone’s own language, or on Android', () => {
+    const brazil = { ...DEFAULT_VOICE_SETTING, language: 'pt-BR' } as const;
     expect(languageNote('ios', DEFAULT_VOICE_SETTING, 'en-GB')).toBeNull();
     expect(languageNote('ios', { ...DEFAULT_VOICE_SETTING, language: 'en' }, 'en-GB')).toBeNull();
+    expect(languageNote('ios', brazil, 'pt-BR')).toBeNull();
+    expect(languageNote('ios', brazil, 'pt_br')).toBeNull();
     expect(languageNote('android', brazil, 'en-GB')).toBeNull();
   });
 });

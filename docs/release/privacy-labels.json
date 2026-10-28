@@ -215,7 +215,7 @@
       "linked": true,
       "tracking": false,
       "purposes": ["AppFunctionality"],
-      "source": "Auto Live calls send the person's voice to Retell, over LiveKit, when the workspace can use Auto Live. Quick-ask audio is recognised on the phone and never sent. Auto Live (A6 US-020a–e) is not built on the merged base: today no audio leaves the phone; the row is declared for the Auto Live release, so neither the labels nor the privacy manifest change when it ships.",
+      "source": "Auto Live calls send the person's voice to Retell, over LiveKit, when the workspace can use Auto Live. Quick-ask audio is never sent to Automatos: it is recognised on the phone, except on iPhone for a language chosen in Settings → Voice other than the iPhone's own whose dictation model is not installed, where Apple's speech recognition processes it and the app receives only the text. Auto Live (A6 US-020a–e) is not built on the merged base: today no audio goes to Automatos or Retell; the row is declared for the Auto Live release, so neither the labels nor the privacy manifest change when it ships.",
       "evidence": [
         "src/voice/quick-ask/recognition-policy.ts",
         "scripts/ralph/prd-001-voice.json",

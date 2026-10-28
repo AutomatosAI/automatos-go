@@ -14,7 +14,7 @@
 //   plays the sample through the server, as quick-ask would speak (serverSpeechFor), the phone's
 //   voice saying it when the server cannot. Speaks through the one voice out (voice-out.ts).
 //   "I speak" (27 Oct 2026): the language rows first (language/language-rows.ts), with iOS's note
-//   while the choice is not the iPhone's language; a tap saves the choice (withSpeakChoice) and
+//   (where that language is recognised) while the choice is not the iPhone's language; a tap saves the choice (withSpeakChoice) and
 //   plays the sample in it. The voice part below is the chosen language's (language-voice.ts):
 //   its server voices (Portuguese: only pt ones), its saved choice (as spokenLanguage resolves it),
 //   and a tap saves that language's choice alone (withLanguageVoice). Speed and pitch are shared;
@@ -69,7 +69,7 @@ export type VoiceSettingsView = Readonly<{
   lede: string;
   /** "I speak": Automatic, English, Português (Brasil). */
   languages: readonly LanguageRow[];
-  /** iOS, while the choice is not the iPhone's language: hold to talk works only in that one. */
+  /** iOS, while the choice is not the iPhone's language: on the iPhone when installed, else Apple. */
   languageNote: string | null;
   chooseLanguage: (choice: SpeakChoice) => void;
   /** "Auto's voice" with the server's voices for the language; null when the server lists no tts. */

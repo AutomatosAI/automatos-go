@@ -66,7 +66,7 @@ the type is not collected.
 | Contacts | Contacts | No | — | — | — | No contacts access: no contacts usage key; app.json blocks READ_CONTACTS and WRITE_CONTACTS. |
 | User Content | Emails or Text Messages | No | — | — | — | The app reads and sends no email or SMS. Chat with Auto is declared as Other User Content. |
 | User Content | Photos or Videos | Yes | App Functionality | Yes | No | Photos the person takes or picks to attach to a message for Auto: photos only (the camera and the photo picker ask for images; the server's attachment allow-list has no video type), re-encoded on the phone first. |
-| User Content | Audio Data | Yes | App Functionality | Yes | No | Auto Live calls send the person's voice to Retell, over LiveKit, when the workspace can use Auto Live. Quick-ask audio is recognised on the phone and never sent. Auto Live (A6 US-020a–e) is not built on the merged base: today no audio leaves the phone; the row is declared for the Auto Live release, so neither the labels nor the privacy manifest change when it ships. |
+| User Content | Audio Data | Yes | App Functionality | Yes | No | Auto Live calls send the person's voice to Retell, over LiveKit, when the workspace can use Auto Live. Quick-ask audio is never sent to Automatos: it is recognised on the phone, except on iPhone for a language chosen in Settings → Voice other than the iPhone's own whose dictation model is not installed, where Apple's speech recognition processes it and the app receives only the text. Auto Live (A6 US-020a–e) is not built on the merged base: today no audio goes to Automatos or Retell; the row is declared for the Auto Live release, so neither the labels nor the privacy manifest change when it ships. |
 | User Content | Gameplay Content | No | — | — | — | Not a game. |
 | User Content | Customer Support | Yes | App Functionality | Yes | No | Report this on Auto's messages and Deliverables: the reason and an optional note, sent to the workspace (on hosted Studio also to Automatos's moderation inbox). |
 | User Content | Other User Content | Yes | App Functionality | Yes | No | Messages to Auto, files attached from Files, answers to agents' questions (in the app and from a notification), approvals, ticket and social-post verdicts with their notes; Auto Live transcripts once it ships. |
@@ -125,7 +125,10 @@ which push registration sends (`src/push/registration/device-facts.ts`); the ans
 ## Notes for Gerard
 
 - **Audio Data before Auto Live.** Auto Live (A6 US-020a–e) is not built on the merged base, so
-  today no audio leaves the phone: quick-ask is recognised on the phone and never sent. Audio Data
+  today no audio goes to Automatos or Retell: quick-ask sends only the recognised text. On iPhone, a
+  language chosen in Settings → Voice other than the iPhone's own is recognised by Apple's speech
+  recognition when its dictation model is not installed (Apple processes that audio and the app
+  receives only the text; Gerard, 27 Oct 2026). Audio Data
   is declared now so that neither these answers nor the privacy manifest (a native change) move when
   Auto Live ships. Until then the label over-states this build; it never under-states it. If you
   would rather answer No until Auto Live ships, change `privacy-labels.json` first: the test then

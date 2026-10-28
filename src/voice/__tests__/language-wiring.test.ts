@@ -37,6 +37,18 @@ describe('Settings → Voice: "I speak"', () => {
       /chooseLanguage: \(choice\) => save\(withSpeakChoice\(voiceSetting\.get\(\), choice\)\)/,
     );
   });
+
+  it('shows iOS’s note (where another language is recognised) under the rows', () => {
+    expect(hook).toMatch(
+      /const PLATFORM: RecognitionPlatform = Platform\.OS === 'android' \? 'android' : 'ios';/,
+    );
+    expect(hook).toMatch(/languageNote: languageNote\(PLATFORM, saved, phone\)/);
+    expect(screen).toMatch(
+      /<LanguageList\s+rows=\{view\.languages\}\s+note=\{view\.languageNote\}/,
+    );
+    const list = sections.slice(sections.indexOf('export function LanguageList'));
+    expect(list.indexOf('<Note text={note} />')).toBeGreaterThan(list.indexOf('<Rows'));
+  });
 });
 
 describe('hold to talk in the chosen language (source)', () => {

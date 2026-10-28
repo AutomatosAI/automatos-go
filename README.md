@@ -27,12 +27,13 @@ Each page says what is on `main` and what is still on a branch.
 
 ## Voice
 
-Hold to talk to Auto and hear the answer. Auto listens and speaks English and Portuguese (Portugal
-and Brazil), chosen in Settings → Voice, with a one-tap EN/PT switch beside hold to talk. Speech is
-recognised on the phone; on iPhone that works only in the iPhone's own language. Auto's natural
-server voice (self-hosted Kokoro) has nine languages: English (US and UK), Spanish, French,
-Italian, Portuguese (Brazil), Hindi, Japanese and Mandarin; European Portuguese uses the phone's own
-voice. Automatic language detection across about 100 languages is planned (speech recognition on
+Hold to talk to Auto and hear the answer. Auto listens and speaks English and Portuguese (Brazil),
+chosen in Settings → Voice, with a one-tap EN/PT switch beside hold to talk. Speech in the phone's
+own language is recognised on the phone. On iPhone, another chosen language is recognised on the
+iPhone when its dictation model is installed, otherwise by Apple's speech recognition (Apple
+processes the audio; the app receives only the text). Auto's natural server voice (self-hosted
+Kokoro) has nine languages: English (US and UK), Spanish, French, Italian, Portuguese (Brazil),
+Hindi, Japanese and Mandarin. Automatic language detection across about 100 languages is planned (speech recognition on
 the server, which needs a GPU server), not built. Details: [docs/voice.md](docs/voice.md).
 
 ## Stack

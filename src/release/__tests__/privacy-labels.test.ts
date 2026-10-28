@@ -3,7 +3,8 @@
 // form asks about, with KR15's manifest keys; it never tracks and collects for App Functionality
 // only; it cites files that exist; Apple and Play agree; its answers say what the code does (no
 // tracing, no tap or screen breadcrumbs, no user on crash events, the crash switch, photos only, no
-// location, cleartext on private networks); and the two form documents carry the same words.
+// location, cleartext on private networks, where quick-ask audio is recognised); and the two form
+// documents carry the same words.
 
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -15,6 +16,7 @@ import { expo, infoPlist, pluginOptions, type PluginEntry } from '../../config/_
 import { parseCrashSetting } from '../../observability/crash-setting';
 import { buildSentryOptions } from '../../observability/options';
 import { scrubBreadcrumb, scrubEvent } from '../../observability/scrub';
+import { recognitionPolicy } from '../../voice/quick-ask/recognition-policy';
 import { PRIVACY_POLICY_URL, SUPPORT_URL } from '../legal-links';
 import { privacySectionRows } from '../privacy-section';
 import { markdownTables, sectionStartingWith, tableWithColumns } from './support/markdown';
@@ -204,6 +206,36 @@ describe('the answers say what the code does (KR7 and this wave)', () => {
     expect(play('Videos').collected).toBe(false);
     expect(cameraOptions().mediaTypes).toEqual(['images']);
     expect(libraryOptions(5).mediaTypes).toEqual(['images']);
+  });
+
+  it("Audio Data names Apple's speech recognition, because iOS starts another chosen language", () => {
+    // Gerard, 27 Oct 2026: on iPhone a language other than the iPhone's own is recognised on the
+    // iPhone when its dictation model is installed, else by Apple. The Apple row says so, and no
+    // longer claims quick-ask audio is never sent; Android stays on the phone or does not start.
+    const other = recognitionPolicy({
+      platform: 'ios',
+      supportsOnDevice: false,
+      recognitionAvailable: true,
+      locale: 'pt-BR',
+      phoneLocale: 'en-GB',
+    });
+    expect(other.kind).toBe('ready');
+    const audio = apple(key('AudioData'));
+    expect(audio.source).toContain("Apple's speech recognition processes it");
+    expect(audio.source).toContain('the app receives only the text');
+    expect(audio.source).not.toMatch(/recognised on the phone and never sent|no audio leaves/);
+    const android = recognitionPolicy({
+      platform: 'android',
+      androidApiLevel: 34,
+      supportsOnDevice: false,
+      recognitionAvailable: true,
+      locale: 'pt-BR',
+      phoneLocale: 'en-GB',
+    });
+    expect(android.kind).toBe('unavailable');
+    expect(play('Voice or sound recordings').source).toContain(
+      'Quick-ask audio stays on the phone.',
+    );
   });
 
   it('Location: not collected, because the build has no location permission or usage key', () => {

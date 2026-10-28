@@ -39,7 +39,8 @@ and checks each push's signature, the notification buttons, Face ID before appro
 notification settings, links into the app, and what the operator sets. On branch (A4 in this repo);
 the server side, W2, merged into automatos-ai `main` on 24 Oct (#1300).
 
-**[voice.md](voice.md).** Talking to Auto: quick-ask (hold to talk, recognition on the phone, the
+**[voice.md](voice.md).** Talking to Auto: quick-ask (hold to talk, recognition on the phone in its own
+language and, on iPhone, by Apple for another chosen language without its dictation model, the
 reply spoken by the phone or by Auto's server voice, the AI notice once per voice session), the
 languages (English and Portuguese, with a one-tap EN/PT switch) and, later, Auto Live through
 Retell. Quick-ask, the server voice and the languages are on `main`; Auto Live is not built.

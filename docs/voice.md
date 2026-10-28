@@ -40,8 +40,9 @@ For everyone, on every plan and edition. Never gated on a plan.
 1. The person presses and holds **HOLD TO TALK** on the voice screen.
 2. On the first press only, the phone asks for the microphone and, on iOS, speech recognition.
    Never at launch or on opening a screen.
-3. The phone checks it can recognise speech **on the device** (below). If not, it says so and
-   typing stays.
+3. The phone checks it can recognise speech **on the device** in its own language (below). If
+   not, it says so and typing stays. Another language chosen on an iPhone is recognised as iOS
+   does it: on the device when installed, otherwise by Apple.
 4. While held, the microphone is open and **MIC LIVE** shows. The words appear as they are heard.
    MIC LIVE follows the recogniser's real audio start and end, not the button.
 5. On release, the words go to Auto through the normal chat (A2's chat controller), with
@@ -66,10 +67,10 @@ Stopping (KV5):
 Only turns started by quick-ask are spoken, and only while the voice screen is open. A typed turn
 is never spoken (KV6).
 
-### Recognition stays on the phone
+### Where speech is recognised
 
-KV4. Speech recognition runs on the phone or not at all, so the audio never goes to Apple or
-Google:
+KV4. In the phone's own language, speech recognition runs on the phone or not at all, so the audio
+never goes to Apple or Google:
 
 - **iOS:** start only when the recogniser supports on-device recognition. Otherwise the module
   would silently use Apple's servers, so the app checks first.
@@ -78,7 +79,10 @@ Google:
 
 - **The language:** recognition listens in the language chosen in Settings → Voice
   ([Languages](#languages)). Android checks that language on the phone as above. On iPhone the
-  module can check only the iPhone's own language, so hold to talk starts only in that one.
+  module can check only the iPhone's own language, so another chosen language (Portuguese (Brazil)
+  on an English iPhone) is recognised on the iPhone when its dictation model is installed and
+  otherwise by Apple's speech recognition: Apple processes the audio and the app receives only the
+  text (Gerard's decision, 27 Oct 2026). Settings → Voice says so under I speak.
 
 The words still go to Auto's AI providers, as any chat does. The consent sheet names them. No copy
 may say that nothing leaves the server (KV18).
@@ -224,20 +228,21 @@ from English to the Portuguese last chosen (Portugal's until Brazil's is picked)
 there for anyone who may talk, Automatic included, so one tap flips it from the default. Viewers do
 not see it. It is 44 pt to touch.
 
-**Recognition.** Hold to talk listens in the chosen language, still on the phone or not at all
-(KV4):
+**Recognition.** Hold to talk listens in the chosen language:
 
 - **Android:** the chosen language is checked on the phone: installed, it starts; supported but not
-  installed, the download offer; otherwise it says the language is not available.
-- **iPhone:** only the iPhone's own language starts. expo-speech-recognition checks on-device
-  support for the iPhone's language only, and for a language whose recognizer is not on the phone
-  it would silently use Apple's servers. So for any other language the app does not start, the
-  voice screen shows VOICE UNAVAILABLE with "Hold to talk can't listen in Portuguese (Portugal) on
-  this iPhone. It works only in your iPhone's language, English, so your voice is recognised on the
-  phone. You can type to Auto instead.", and Settings shows a note under I speak. Apple lists
-  on-device dictation for Portuguese (Brazil) but not for Portuguese (Portugal). Talking in
-  Portuguese on an English iPhone needs a per-language native check (a native build) or a decision
-  to allow Apple's servers for that language; neither is in this change.
+  installed, the download offer; otherwise it says the language is not available. On the phone or
+  not at all (KV4).
+- **iPhone, its own language:** as before, the module's on-device check (KV4).
+- **iPhone, another language** (Portuguese (Brazil) on an English iPhone): it starts, listening in
+  that language with `requiresOnDeviceRecognition: true`. expo-speech-recognition builds the
+  recogniser for the chosen language and recognises on the iPhone when that language's dictation
+  model is installed (Settings → General → Keyboard → Dictation); otherwise Apple's speech
+  recognition does it on Apple's servers. Apple processes the audio; the app receives only the
+  text. Gerard accepted this on 27 Oct 2026; a per-language native check (a native build) would
+  let the app tell the two apart. Settings shows, under I speak: "Portuguese is recognised on this
+  iPhone when Portuguese (Brazil) dictation is installed (Settings → General → Keyboard →
+  Dictation). Otherwise Apple recognises it."
 
 **The voice.** Each language keeps its own voice choice; speed and pitch are shared.
 
