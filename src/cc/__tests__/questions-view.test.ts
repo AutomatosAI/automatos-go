@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { questionControls, sendingOf, type ControlsInput } from '../questions/controls';
 import { plainParagraphs } from '../questions/plain';
 import { QuestionSchema, QuestionsSchema, type Question } from '../questions/schemas';
-import { cascadeView, questionCardView } from '../questions/view-model';
+import { NeedsYouSchema, type NeedsYouAskRow } from '../../api/needs-you';
+import { cascadeView, questionCardView, questionStatuses } from '../questions/view-model';
+import { CC_ROUTES } from '../routes';
 import { QUESTIONS_COPY } from '../strings';
 
 const OPTIONS = ['Calendar', 'Customer story'];
@@ -33,6 +35,11 @@ const ROW = {
 
 function question(overrides: Record<string, unknown> = {}): Question {
   return QuestionSchema.parse({ ...ROW, ...overrides });
+}
+
+/** needs-you's question rows, parsed as the app does. */
+function askRows(rows: readonly Record<string, unknown>[]): readonly NeedsYouAskRow[] {
+  return NeedsYouSchema.parse({ total: rows.length, rows: { question: rows } }).rows.question;
 }
 
 describe('the questions schema', () => {
@@ -104,6 +111,46 @@ describe('the card’s words', () => {
     expect(
       questionCardView(question({ owner: null, asked_by_agent_id: null, subject_type: null })),
     ).toMatchObject({ agent: 'An agent', ticket: null });
+  });
+
+  it("has no status of its own: none without its needs-you row's state (PRD-268)", () => {
+    expect(questionCardView(question()).rowStatus).toBeNull();
+    const rows = askRows([{ source: 'grant', id: '31', title: 'Lead with what?' }]);
+    expect(questionCardView(question(), questionStatuses(rows)).rowStatus).toBeNull();
+  });
+
+  it('takes its state and next step from the needs-you row with its grant id', () => {
+    const rows = askRows([
+      { source: 'mission', id: '31', display_state: 'working' },
+      {
+        source: 'grant',
+        id: '31',
+        title: 'Lead with the calendar, or the customer story?',
+        ticket_id: 2680,
+        display_state: 'needs_you',
+        next_step: 'Pick one, and Quill writes the intro.',
+      },
+      { source: 'grant', id: '99', display_state: 'done' },
+    ]);
+    const view = questionCardView(question(), questionStatuses(rows));
+    expect(view.rowStatus).toEqual({
+      state: 'needs_you',
+      next: 'Pick one, and Quill writes the intro.',
+      retry: null,
+      accessibilityLabel:
+        'Needs you: Lead with the calendar, or the customer story? Pick one, and Quill writes the intro.',
+    });
+  });
+
+  it("names the question's words when its row has no title, and its ticket for Try again", () => {
+    const rows = askRows([
+      { source: 'grant', id: '31', display_state: 'failed', retry: { kind: 'retry_ticket' } },
+    ]);
+    const view = questionCardView(question(), questionStatuses(rows));
+    expect(view.rowStatus).toMatchObject({
+      accessibilityLabel: "Couldn't finish: Lead with the calendar, or the customer story?",
+      retry: { kind: 'retry_ticket', route: CC_ROUTES.board.runNow, params: { task_id: '2680' } },
+    });
   });
 
   it('says a stopped run’s question closes its run when dismissed', () => {

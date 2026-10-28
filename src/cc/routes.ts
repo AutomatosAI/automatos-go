@@ -17,6 +17,20 @@ export const CC_ROUTES = Object.freeze({
     approve: { method: 'POST', path: '/api/v1/tasks/{task_id}/approve' },
     /** {feedback}: Send back to the same agent, the note leading the redo's brief. */
     reject: { method: 'POST', path: '/api/v1/tasks/{task_id}/reject' },
+    /**
+     * Try again on a ticket (PRD-268 retry_ticket): Run Now, which runs a failed ticket again on a
+     * fresh claim (board_tasks.py run_task_now, PRD-161 S5; missions:execute).
+     */
+    runNow: { method: 'POST', path: '/api/v1/tasks/{task_id}/run-now' },
+  }),
+  missions: Object.freeze({
+    /**
+     * Try again on a failed Mission (PRD-268 rerun_mission): Resume, which first makes a failed
+     * Mission's failed steps wait to run again (api/mission_retry.py F247; missions:execute).
+     */
+    resume: { method: 'POST', path: '/api/missions/{mission_id}/resume' },
+    /** A new plan for a failed Mission's failed steps (PRD-268 replan_mission; missions:update). */
+    replan: { method: 'POST', path: '/api/missions/{mission_id}/replan' },
   }),
   calendar: Object.freeze({
     /** ?range=7d: routines, playbooks, scheduled tasks, mission SLAs, deadlines, social posts. */

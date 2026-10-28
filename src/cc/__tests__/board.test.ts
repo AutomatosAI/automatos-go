@@ -103,6 +103,8 @@ describe('board schemas', () => {
       review_reason: null,
       blocked_code: null,
       parent_task_id: null,
+      // a mission card's run, for its Try again (PRD-268)
+      orchestration_run_id: null,
       created_at: '2026-10-20T08:00:00+00:00',
       updated_at: '2026-10-20T09:00:00+00:00',
     });

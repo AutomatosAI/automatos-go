@@ -1,7 +1,8 @@
 // The ticket sheet's blocks (handoff §2 'ticket sheet'): the head (kind row, serif title, the agent
 // and when it was updated), a labelled run of text, why it waits, the 'Waiting for your answer'
 // box that opens Questions, and the ticket's Deliverables, each a row that opens it. Sizes and
-// token keys are chrome.ts's; the words view-model and sheet.ts's.
+// token keys are chrome.ts's; the words view-model and sheet.ts's. PRD-268 (US-G05): with the
+// server's state, the head's kind row says it and the next step and Try again sit under the title.
 
 import { Pressable, StyleSheet, View } from 'react-native';
 import PackageIcon from 'lucide-react-native/icons/package';
@@ -11,6 +12,8 @@ import { Card, Chip, Text } from '../../ui';
 import { ICON_STROKE, joinLabel } from '../../ui/paint';
 import { tonePaint } from '../../ui/variants';
 import { Agent, KindRow } from '../board/TicketCard';
+import { StatusBlock } from '../status/StatusLine';
+import { useRetry } from '../status/use-retry';
 import { TICKET_COPY } from '../strings';
 import { LINKED_ROW, QUESTION_BOX, TICKET_HEAD, TICKET_REASON, TICKET_TEXT } from './chrome';
 import type { LinkedDeliverableView } from './linked';
@@ -18,12 +21,15 @@ import type { TicketReason, TicketSheetView } from './sheet';
 
 export function TicketHead({ view }: { readonly view: TicketSheetView }) {
   const { spacing } = useTokens();
+  const { rowStatus } = view.card;
+  const retry = useRetry(rowStatus?.retry ?? null);
   return (
     <View style={{ gap: spacing[TICKET_HEAD.gap] }}>
       <KindRow view={view.card} />
       <Text variant="title" level={TICKET_HEAD.titleLevel} accessibilityRole="header">
         {view.card.title}
       </Text>
+      {rowStatus ? <StatusBlock status={rowStatus} retry={retry} /> : null}
       <Agent agent={view.card.agent} label={view.byline} level={TICKET_HEAD.bylineLevel} />
     </View>
   );

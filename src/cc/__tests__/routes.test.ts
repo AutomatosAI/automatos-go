@@ -8,6 +8,10 @@ const EXPECTED = [
   'GET /api/v1/tasks/{task_id}',
   'POST /api/v1/tasks/{task_id}/approve',
   'POST /api/v1/tasks/{task_id}/reject',
+  // PRD-268 US-G05: Try again on a row (retry_ticket, rerun_mission, replan_mission)
+  'POST /api/v1/tasks/{task_id}/run-now',
+  'POST /api/missions/{mission_id}/resume',
+  'POST /api/missions/{mission_id}/replan',
   'GET /api/activity/schedule',
   'PATCH /api/heartbeat/{agent_id}/toggle',
   'PATCH /api/v1/scheduled-tasks/{task_id}/status',

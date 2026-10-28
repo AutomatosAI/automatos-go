@@ -10,6 +10,7 @@ export const STEP_UP_PROMPT_COPY: Readonly<Record<PromptedAction, string>> = Obj
   approve_plan: "Confirm it's you to approve this Mission plan",
   grant_tool: "Confirm it's you to allow this tool",
   approve_social: "Confirm it's you to approve this post",
+  retry: "Confirm it's you to try this again",
   settings_off: "Confirm it's you to stop asking before approvals and answers",
 });
 

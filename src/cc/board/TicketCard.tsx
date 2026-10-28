@@ -2,7 +2,9 @@
 // priority, the status as dot and WORD), the serif title, the reason chip from the vendored
 // ticket-stage, the tags and the agent's swatch and name. The whole card is one button that opens
 // the ticket sheet (routes.cc.ticket), whose head reuses the kind row and the agent. Its fields are
-// view-model.ts's; its sizes chrome.ts's.
+// view-model.ts's; its sizes chrome.ts's. PRD-268 (US-G05): with the server's state, the kind row
+// says it (glyph and word) where the board's dot was, the next step and Try again sit under the
+// title, and VoiceOver offers Try again as the card's own action (the card is one button).
 
 import type { LucideIcon } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -17,6 +19,8 @@ import { useTokens } from '../../styles/theme';
 import { Card, Chip, StatusPip, Text } from '../../ui';
 import { ICON_STROKE } from '../../ui/paint';
 import type { TextLevel } from '../../ui/variants';
+import { StateMark, StatusBlock, retryAccessibility } from '../status/StatusLine';
+import { useRetry } from '../status/use-retry';
 import { BOARD_COPY } from '../strings';
 import { TICKET_AGENT, TICKET_CARD, TICKET_TAG } from './chrome';
 import type { TicketCardView } from './view-model';
@@ -53,7 +57,11 @@ export function KindRow({ view }: { readonly view: TicketCardView }) {
         </Text>
       ) : null}
       <View style={styles.spacer} />
-      <StatusPip status={view.status.pip} word={view.status.word} />
+      {view.rowStatus ? (
+        <StateMark state={view.rowStatus.state} />
+      ) : (
+        <StatusPip status={view.status.pip} word={view.status.word} />
+      )}
     </View>
   );
 }
@@ -119,11 +127,13 @@ export type TicketCardProps = { readonly view: TicketCardView };
 
 export function TicketCard({ view }: TicketCardProps) {
   const router = useRouter();
+  const retry = useRetry(view.rowStatus?.retry ?? null);
   return (
     <Card
       onPress={() => router.push(view.href)}
       accessibilityLabel={view.accessibilityLabel}
       accessibilityHint={BOARD_COPY.openHint}
+      {...retryAccessibility(view.rowStatus, retry)}
       style={{
         paddingVertical: TICKET_CARD.paddingY,
         paddingHorizontal: TICKET_CARD.paddingX,
@@ -134,6 +144,9 @@ export function TicketCard({ view }: TicketCardProps) {
       <Text variant="title" level={TICKET_CARD.titleLevel}>
         {view.title}
       </Text>
+      {view.rowStatus ? (
+        <StatusBlock status={view.rowStatus} retry={retry} retryIsCardAction />
+      ) : null}
       {view.reason ? <Chip label={view.reason} /> : null}
       <Foot view={view} />
     </Card>

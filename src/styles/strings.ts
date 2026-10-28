@@ -266,12 +266,33 @@ export const STATUS_WORDS = Object.freeze({
   working: 'Working',
   queued: 'Queued',
   needs_you: 'Needs you',
+  /** PRD-268 §6.11.1: a finished piece not yet looked at (HUD's short word; STATE_WORDS' long one). */
+  ready: 'Ready',
+  /** PRD-268 §6.11.3: a readiness item a person must set up, or one that couldn't be checked. */
+  needs_setup: 'Needs setup',
+  not_checked: 'Not checked',
   approved: 'Approved',
   error: 'Error',
   paused: 'Paused',
   idle: 'Idle',
   offline: 'Offline',
   running: 'Running',
+});
+
+/**
+ * PRD-268 §6.11.1's states in Studio, an installed theme and Play: the server computes the state,
+ * the app draws its glyph and this word (dress/status-glyphs.ts stateGlyph). HUD says its own
+ * shorter words in capitals (READY, FAILED: STATUS_WORDS and the board's). A Brand Kit may relabel
+ * a word; the glyph and the colour role stay.
+ */
+export const STATE_WORDS = Object.freeze({
+  needs_you: 'Needs you',
+  working: 'Working',
+  ready: 'Ready to look at',
+  done: 'Done',
+  failed: "Couldn't finish",
+  needs_setup: 'Needs setup',
+  not_checked: 'Not checked',
 });
 
 /** Auto on screen (US-017b): VoiceOver hears his name and what he is doing (the vendored caption). */

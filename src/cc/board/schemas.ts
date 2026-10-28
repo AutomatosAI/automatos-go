@@ -3,10 +3,13 @@
 // the pinned SHA. The list is persisted (query-keys.ts 'board'), so its schema keeps only what a card
 // and the Board's rules read; the ticket sheet's fields are on the detail, which is not. The detail's
 // `cost` is never parsed (D8). A status outside the known set is kept as sent (board.ts gives it its
-// own word); a row this version cannot read at all is left out, never the whole board.
+// own word); a row this version cannot read at all is left out, never the whole board. PRD-268
+// US-C17 adds display_state, next_step and retry to board reads (api/row-status.ts): optional, so
+// today's server parses as before; a mission card's run id is kept for its Try again.
 
 import { z } from 'zod';
 
+import { ROW_STATUS_FIELDS } from '../../api/row-status';
 import { logger } from '../../lib/logger';
 
 const Text = z.string().nullable().catch(null);
@@ -40,8 +43,12 @@ export const BOARD_TICKET_FIELDS = {
   blocked_code: Text,
   /** A mission step's card: the web nests it under its parent rather than listing it. */
   parent_task_id: RowId,
+  /** A mission ticket's run (orchestration_run_id): its plan and steps live on the mission. */
+  orchestration_run_id: Text,
   created_at: Text,
   updated_at: Text,
+  /** PRD-268: where it stands, what happens next and what Try again runs. */
+  ...ROW_STATUS_FIELDS,
 } as const;
 
 export const BoardTicketSchema = z.object(BOARD_TICKET_FIELDS);
@@ -90,8 +97,6 @@ export const TicketDetailSchema = z.object({
   blocked_reason: Text,
   started_at: Text,
   completed_at: Text,
-  /** A mission ticket's run (orchestration_run_id): its plan and steps live on the mission. */
-  orchestration_run_id: Text,
   /** Sends back since the brief was last agreed (PRD-252 D3). */
   times_sent_back: z.number().int().nonnegative().catch(0),
   /** The draft a failed redo keeps on the card's face (F243). */

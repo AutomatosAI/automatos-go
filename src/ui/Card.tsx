@@ -5,10 +5,20 @@
 // HUD's 1.5 pt accent line with a soft accent glow (Studio and Play draw it as any card); a header
 // is the panel's header row, its label on the left and a value on the right, in the style's
 // panel face (Studio's eyebrow, Play's label, HUD's display face tracked .2em). Buttons inside
-// know they are in a panel (HUD's are 46 high there).
+// know they are in a panel (HUD's are 46 high there). A pressable card is one button to VoiceOver,
+// so what a control inside it does is also offered as the card's own action (a board card's Try
+// again, PRD-268).
 
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  View,
+  type AccessibilityActionEvent,
+  type AccessibilityActionInfo,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
 import { Brackets } from '../styles/dress/Brackets';
 import type { Dress } from '../styles/dress/dress';
@@ -38,6 +48,9 @@ export type CardProps = CardBase &
         readonly onPress: () => void;
         readonly accessibilityLabel: string;
         readonly accessibilityHint?: string;
+        /** What a control inside the card does, offered as the card's own VoiceOver action. */
+        readonly accessibilityActions?: readonly AccessibilityActionInfo[];
+        readonly onAccessibilityAction?: (event: AccessibilityActionEvent) => void;
       }
   );
 
@@ -108,6 +121,8 @@ export function Card(props: CardProps) {
       accessibilityRole="button"
       accessibilityLabel={props.accessibilityLabel}
       accessibilityHint={props.accessibilityHint}
+      accessibilityActions={props.accessibilityActions}
+      onAccessibilityAction={props.onAccessibilityAction}
       accessibilityState={selected ? { disabled: false, selected } : { disabled: false }}
       style={({ pressed }) => [frame(tokens, dress, { padding, radius, pressed, selected }), style]}
     >
