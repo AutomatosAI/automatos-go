@@ -264,6 +264,8 @@ describe('the settings modules stay pure', () => {
         'view-model.ts',
         'phone-link.ts',
         'cache.ts',
+        'digest-now.ts',
+        'digest-now-store.ts',
       ]),
     );
     const native = files.flatMap((file) =>

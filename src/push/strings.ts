@@ -79,6 +79,24 @@ export const PUSH_SETTINGS_COPY = Object.freeze({
   off: 'Off',
 });
 
+const minutesWord = (minutes: number) => (minutes === 1 ? '1 minute' : `${minutes} minutes`);
+
+/**
+ * Settings → Notifications → Daily digest: today's brief on request (digest_now). The 202's words
+ * are a toast; a refusal or a failure is one plain line under the button; the wait after a 202 is
+ * that line and part of the button's VoiceOver label.
+ */
+export const PUSH_DIGEST_NOW_COPY = Object.freeze({
+  button: "Send today's brief now",
+  queued: "On its way. It arrives in a minute as Auto's message, with a notification.",
+  tryAgainIn: (minutes: number) => `Try again in ${minutesWord(minutes)}.`,
+  tryAgainSoon: 'Try again in a few minutes.',
+  unavailable: "Today's brief can't be sent right now. Try again later.",
+  sentWait: (minutes: number) => `Sent. You can send another in ${minutesWord(minutes)}.`,
+  waitLabel: (minutes: number) =>
+    `Send today's brief now. You can send another in ${minutesWord(minutes)}.`,
+});
+
 /** The three push types' switches (D-TYPES): what each one covers, in the person's words. */
 export const PUSH_TYPE_COPY = Object.freeze({
   needs_answer: Object.freeze({

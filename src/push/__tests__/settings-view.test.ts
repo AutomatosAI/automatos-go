@@ -212,16 +212,26 @@ describe("phoneStatusOf: the server's gates, then the registrar, then the server
 });
 
 describe('sections: hidden without their capability (D-CAPABILITIES)', () => {
+  const none = { pushTypes: false, digest: false, digestNow: false, redact: false };
   it.each([
-    ['no discovery', null, { pushTypes: false, digest: false, redact: false }],
-    ['no push', doc(['digest']), { pushTypes: false, digest: false, redact: false }],
+    ['no discovery', null, none],
+    ['no push', doc(['digest', 'digest_now']), none],
+    ['push, the operator said no', doc(['push', 'digest', 'digest_now'], false), none],
     [
-      'push, the operator said no',
-      doc(['push', 'digest'], false),
-      { pushTypes: false, digest: false, redact: false },
+      'push without digest',
+      doc(['push', 'digest_now']),
+      { pushTypes: true, digest: false, digestNow: false, redact: true },
     ],
-    ['push without digest', doc(['push']), { pushTypes: true, digest: false, redact: true }],
-    ['push and digest', PUSHING, { pushTypes: true, digest: true, redact: true }],
+    [
+      'push and digest, no digest_now',
+      PUSHING,
+      { pushTypes: true, digest: true, digestNow: false, redact: true },
+    ],
+    [
+      'push, digest and digest_now',
+      doc(['push', 'digest', 'digest_now']),
+      { pushTypes: true, digest: true, digestNow: true, redact: true },
+    ],
   ] as const)('%s', (_name, discovery, shown) => {
     expect(sectionsShown(discovery)).toEqual({ ...shown, faceId: true });
   });

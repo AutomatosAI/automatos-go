@@ -27,6 +27,8 @@ export const CAPABILITIES = [
   'digest',
   /** Auto's server voice: POST /api/voice/speech, GET /api/voice/voices (listed only with a voice). */
   'tts',
+  /** Today's brief on request: POST /api/v1/mobile/digest/now (Settings → Notifications). */
+  'digest_now',
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];

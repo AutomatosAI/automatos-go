@@ -4,8 +4,9 @@
 // {"detail": {"code": "pending_invitation", "redirect", "token", "message"}} (automatos-ai
 // core/auth/hybrid.py:852-861) and its code and message are kept exactly as sent. A code beside the
 // detail ({"code", "detail"}: the server voice's refusals, tts_busy) is read when the detail has
-// none. Statuses outside the named ones (400, 422, 429, …) are 'server': the server refused and the
-// app cannot fix it.
+// none, and so is a 429's retry_after_seconds (the digest's {"code": "digest_rate_limited",
+// "retry_after_seconds": N}), beside the detail or in it. Statuses outside the named ones (400, 422,
+// 429, …) are 'server': the server refused and the app cannot fix it.
 
 import { z } from 'zod';
 
@@ -27,6 +28,8 @@ export type ApiErrorDetail = {
   readonly status?: number;
   readonly code?: string;
   readonly serverMessage?: string;
+  /** How long the server asks the caller to wait before trying again (retry_after_seconds). */
+  readonly retryAfterSeconds?: number;
   /** What went wrong underneath, for the logs only. */
   readonly cause?: unknown;
 };
@@ -36,6 +39,7 @@ export class ApiError extends Error {
   readonly status?: number;
   readonly code?: string;
   readonly serverMessage?: string;
+  readonly retryAfterSeconds?: number;
 
   constructor(kind: ApiErrorKind, detail: ApiErrorDetail = {}) {
     // the message is for logs: the kind, status and code, never a URL, a token or a body
@@ -48,6 +52,7 @@ export class ApiError extends Error {
     this.status = detail.status;
     this.code = detail.code;
     this.serverMessage = detail.serverMessage;
+    this.retryAfterSeconds = detail.retryAfterSeconds;
   }
 }
 
@@ -80,10 +85,20 @@ export function kindForStatus(status: number): ApiErrorKind {
 }
 
 const optionalString = z.string().optional().catch(undefined);
+/** A wait in seconds: a finite number, never negative; anything else is dropped. */
+const optionalSeconds = z.number().finite().nonnegative().optional().catch(undefined);
 const ErrorBodySchema = z.object({
   code: optionalString,
+  retry_after_seconds: optionalSeconds,
   detail: z
-    .union([z.string(), z.object({ code: optionalString, message: optionalString })])
+    .union([
+      z.string(),
+      z.object({
+        code: optionalString,
+        message: optionalString,
+        retry_after_seconds: optionalSeconds,
+      }),
+    ])
     .optional()
     .catch(undefined),
 });
@@ -96,15 +111,27 @@ function codeOf(code: string | undefined): Pick<ApiErrorDetail, 'code'> {
   return code ? { code } : {};
 }
 
-/** The code and words a FastAPI error body carries, when it carries any (a non-JSON body: none). */
-export function detailOf(body: string): Pick<ApiErrorDetail, 'code' | 'serverMessage'> {
+function retryAfterOf(seconds: number | undefined): Pick<ApiErrorDetail, 'retryAfterSeconds'> {
+  return seconds === undefined ? {} : { retryAfterSeconds: seconds };
+}
+
+type BodyDetail = Pick<ApiErrorDetail, 'code' | 'serverMessage' | 'retryAfterSeconds'>;
+
+/**
+ * The code, words and wait a FastAPI error body carries, when it carries any (a non-JSON body:
+ * none). The detail's own code and wait win over the ones beside it.
+ */
+export function detailOf(body: string): BodyDetail {
   const parsed = ErrorBodySchema.safeParse(parseJson(body)?.value);
   if (!parsed.success) return {};
-  const { code, detail } = parsed.data;
-  if (typeof detail === 'string') return { ...codeOf(code), serverMessage: clip(detail) };
-  if (!detail) return codeOf(code);
+  const { code, detail, retry_after_seconds: retryAfter } = parsed.data;
+  if (typeof detail === 'string') {
+    return { ...codeOf(code), ...retryAfterOf(retryAfter), serverMessage: clip(detail) };
+  }
+  if (!detail) return { ...codeOf(code), ...retryAfterOf(retryAfter) };
   return {
     ...codeOf(detail.code ?? code),
+    ...retryAfterOf(detail.retry_after_seconds ?? retryAfter),
     ...(detail.message ? { serverMessage: clip(detail.message) } : {}),
   };
 }

@@ -1,7 +1,8 @@
 // What notifies you and the daily digest (D22, D24): the person's own preference rows, read once for
 // both. The three push types are switches for the person in this workspace on every phone; the
 // digest is a switch for the person and a time for THIS phone (its device row), chosen from 07:00,
-// 08:00 and 09:00 in the phone's time zone — not while the digest is off or the phone has no row.
+// 08:00 and 09:00 in the phone's time zone — not while the digest is off or the phone has no row —
+// and, under the time where the server lists digest_now, "Send today's brief now" (DigestNowButton).
 // The rows are read with the screen and every state has its words: reading, a failure with Try
 // again, then the switches.
 
@@ -13,6 +14,7 @@ import type { Device, Preferences } from '../schemas/server';
 import { PUSH_SETTINGS_COPY } from '../strings';
 import { Section, SectionNote } from './components/Section';
 import { SwitchRow } from './components/Switch';
+import { DigestNowButton } from './DigestNowButton';
 import { useDigestTime, usePreferences, usePushSwitches } from './use-notification-settings';
 import { digestView, pushTypeRows } from './view-model';
 
@@ -55,9 +57,10 @@ type DigestProps = {
   readonly switches: Switches;
   readonly row: Device | null;
   readonly timeZone: string | null;
+  readonly digestNow: boolean;
 };
 
-function DigestSection({ preferences, switches, row, timeZone }: DigestProps) {
+function DigestSection({ preferences, switches, row, timeZone, digestNow }: DigestProps) {
   const { spacing } = useTokens();
   const digestTime = useDigestTime();
   const view = digestView({
@@ -101,6 +104,12 @@ function DigestSection({ preferences, switches, row, timeZone }: DigestProps) {
             </Text>
           ) : null}
         </View>
+        {digestNow ? (
+          <>
+            <Divider />
+            <DigestNowButton />
+          </>
+        ) : null}
       </Card>
       <SectionNote>{view.phoneLine}</SectionNote>
     </Section>
@@ -111,6 +120,8 @@ export type PreferenceSectionsProps = {
   readonly workspaceName: string;
   /** The digest needs the 'digest' capability as well as push. */
   readonly digest: boolean;
+  /** "Send today's brief now" needs 'digest_now' as well (digestNowShown). */
+  readonly digestNow: boolean;
   /** This phone's device row and time zone (usePhone). */
   readonly row: Device | null;
   readonly timeZone: string | null;
@@ -119,6 +130,7 @@ export type PreferenceSectionsProps = {
 export function PreferenceSections({
   workspaceName,
   digest,
+  digestNow,
   row,
   timeZone,
 }: PreferenceSectionsProps) {
@@ -143,6 +155,7 @@ export function PreferenceSections({
           switches={switches}
           row={row}
           timeZone={timeZone}
+          digestNow={digestNow}
         />
       ) : null}
     </>

@@ -141,6 +141,11 @@ export const workspacePushSchema = z
 
 export type WorkspacePush = Readonly<z.output<typeof workspacePushSchema>>;
 
+/** POST /api/v1/mobile/digest/now's 202: the brief is being written in the background. */
+export const digestQueuedSchema = z.object({ status: z.literal('queued') });
+
+export type DigestQueued = Readonly<z.output<typeof digestQueuedSchema>>;
+
 /** What /answer sends back ({grant: to_dict}); only what the honest result reads (KP8). */
 export const answerSchema = z.object({
   grant: z.object({

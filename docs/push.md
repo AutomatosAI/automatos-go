@@ -182,7 +182,7 @@ copy in `A4:src/push/strings.ts`):
 |---|---|---|
 | This phone | One sentence on its state, and at most one button (Turn on notifications, Open Settings, Try again) | — |
 | What notifies you | Needs an answer · Ready for review · Auto messaged you | The person's `push` rows in `notification_preferences` |
-| Daily digest | On/off, and a time of 07:00, 08:00 or 09:00 in the phone's time zone (default 08:00). Needs `digest` | The switch: the `daily_digest` push row. The time: this phone's device row (`digest_time`) |
+| Daily digest | On/off, and a time of 07:00, 08:00 or 09:00 in the phone's time zone (default 08:00). Needs `digest`. With `digest_now` too, **Send today's brief now**: `POST /api/v1/mobile/digest/now`, then a toast on its 202 (the brief arrives as Auto's message with a notification), *Try again in N minutes* on a 429 (`retry_after_seconds`, rounded up), one plain line on any other failure; disabled for 5 minutes after a 202, the minutes left in its VoiceOver label | The switch: the `daily_digest` push row. The time: this phone's device row (`digest_time`). The 5-minute wait: in memory only |
 | Question text | **Hide question text in notifications**. Owners and admins only | `PUT /api/v1/mobile/push-settings {redact_questions}` → workspace settings |
 | Approvals and answers | **Face ID before approve or answer**, on by default | The encrypted MMKV store, on this phone |
 
