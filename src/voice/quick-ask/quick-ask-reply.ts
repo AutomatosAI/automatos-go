@@ -1,7 +1,7 @@
 // Quick-ask's turn and its reply (KV6, US-019g). Pure: no React, React Native or Expo (the ports are
 // quick-ask-store.ts's).
 //   send → A2's thread send for the voice screen's conversation (spokenMode when the server lists it,
-//   US-019f), once the thread may send: a turn that barge-in cancelled settles first, and until then
+//   US-019f; the locale it was heard in, the speech's language), once the thread may send: a turn that barge-in cancelled settles first, and until then
 //   the words wait. The reducer hears 'sent' with the AI notice when it is the session's first; the
 //   last turn's reply leaves the snapshot until this turn's shows up.
 //   Each thread state → the turn quick-ask sent, followed by identity (reply-text.ts) → its reply fed
@@ -22,13 +22,13 @@ import { awaitingTurn, quickAskReply, trackTurn, type QuickAskReply } from './re
 import { quickAskMessage } from './spoken-mode';
 
 export function send(engine: Engine, text: string): void {
-  const { thread, discovery } = engine.deps.context();
+  const { thread, discovery, speech } = engine.deps.context();
   if (!canSend(thread.state)) return set(engine, { pending: text });
   set(engine, { tracking: awaitingTurn(thread.state), feed: createReplyFeed(), pending: null });
   // The last turn's reply no longer describes the screen ('See it in the chat', its agent).
   show(engine, { reply: null });
   engine.deps.speaker.newTurn();
-  thread.send(quickAskMessage(text, discovery));
+  thread.send(quickAskMessage(text, discovery, speech.language));
   dispatch(engine, { type: 'sent', notice: noticeFor(get(engine).session) });
 }
 

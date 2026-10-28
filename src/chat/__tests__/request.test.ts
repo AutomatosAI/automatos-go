@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import { discussionSelection, type Discussion } from '../../core/web/lib/discussion';
-import { CHAT_PAGE, ChatRequestSchema, buildChatRequest, type ChatFile } from '../request';
+import {
+  CHAT_PAGE,
+  ChatRequestSchema,
+  buildChatRequest,
+  localeTag,
+  type ChatFile,
+} from '../request';
 
 const CHAT_ID = '0c5a9e1e-0000-4000-8000-00000000c001';
 
@@ -121,5 +127,30 @@ describe('buildChatRequest', () => {
     const input = Object.freeze({ text: 'hi', files, context: Object.freeze({ route: '/chat' }) });
     expect(() => buildChatRequest(input)).not.toThrow();
     expect(input.files[0]).toEqual(PHOTO);
+  });
+});
+
+describe('the locale (BCP 47)', () => {
+  it('goes out as given: the language the person speaks', () => {
+    expect(buildChatRequest({ text: 'Oi', locale: 'pt-BR' })).toHaveProperty('locale', 'pt-BR');
+    expect(buildChatRequest({ text: 'Hola', locale: 'es-419' })).toHaveProperty('locale', 'es-419');
+  });
+
+  it("writes iOS's underscore form with a hyphen and trims it", () => {
+    expect(localeTag(' pt_BR ')).toBe('pt-BR');
+    expect(buildChatRequest({ text: 'Oi', locale: 'pt_BR' })).toHaveProperty('locale', 'pt-BR');
+  });
+
+  it('is left out when absent, blank or not a tag: never sent malformed, never thrown on', () => {
+    for (const locale of [undefined, '', '  ', 'pt BR', 'português', 'p', `en-${'x'.repeat(40)}`]) {
+      const body = buildChatRequest({ text: 'hi', locale });
+      expect(body).not.toHaveProperty('locale');
+    }
+  });
+
+  it('is a field the strict schema knows, and only as a tag', () => {
+    const body = buildChatRequest({ text: 'hi' });
+    expect(ChatRequestSchema.safeParse({ ...body, locale: 'en-GB' }).success).toBe(true);
+    expect(ChatRequestSchema.safeParse({ ...body, locale: 'not a tag' }).success).toBe(false);
   });
 });

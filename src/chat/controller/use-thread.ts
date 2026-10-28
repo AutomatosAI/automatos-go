@@ -20,6 +20,7 @@ import { queryKeys } from '../../api/query-keys';
 import { useApiClient } from '../../app-state/session';
 import type { Frame } from '../../core/ai-sdk-stream';
 import { logger } from '../../lib/logger';
+import { phoneLocale } from '../../voice/quick-ask/locale';
 import { fetchMessages } from '../api';
 import type { CardOutcome } from '../cards/model';
 import { buildChatRequest, type ChatRequestInput } from '../request';
@@ -39,7 +40,10 @@ import {
 } from './thread';
 import { createTurnRunner, type TurnRunner } from './turn-runner';
 
-/** One message; spokenMode is quick-ask's (A6) and passes through to buildChatRequest as it is. */
+/**
+ * One message; spokenMode is quick-ask's (A6) and passes through to buildChatRequest as it is, and
+ * so does quick-ask's locale ("I speak"). A typed message carries the phone's locale.
+ */
 export type ThreadSendInput = Omit<ChatRequestInput, 'chatId'>;
 
 export type ThreadView = {
@@ -266,7 +270,7 @@ export function useThread(cachedId: string | null, onFrame?: (frame: Frame) => v
     (input: ThreadSendInput) => {
       const current = latest.current;
       if (!canSend(current)) return;
-      const body = buildChatRequest({ ...input, chatId: current.chatId });
+      const body = buildChatRequest({ locale: phoneLocale(), ...input, chatId: current.chatId });
       const draft = {
         text: input.text.trim(),
         files: input.files ?? [],

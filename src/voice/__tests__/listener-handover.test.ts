@@ -68,7 +68,9 @@ async function asksAgain(screens: Screens): Promise<void> {
   screens.module.emit('result', result(ASKED));
   letGo(screens, first, ASKED);
   expect(first.voice()).toMatchObject({ phase: 'thinking', micOpen: false, heard: ASKED });
-  expect(first.sends.slice(sentBefore)).toEqual([{ text: ASKED, spokenMode: true }]);
+  expect(first.sends.slice(sentBefore)).toEqual([
+    { text: ASKED, spokenMode: true, locale: 'en-GB' },
+  ]);
   expect(second.sends).toEqual([]);
   // The hold is over: no HOLD_MAX_MS or RELEASE_SETTLE_MS timer is left to fire.
   expect(first.later()).toEqual([]);
@@ -146,7 +148,7 @@ describe('a second engine attaching covers the first (P001V-RVW-2)', () => {
     await holdOn(screens, second, ASKED);
     expect(second.voice()).toMatchObject({ phase: 'listening', micOpen: true });
     letGo(screens, second, ASKED);
-    expect(second.sends).toEqual([{ text: ASKED, spokenMode: true }]);
+    expect(second.sends).toEqual([{ text: ASKED, spokenMode: true, locale: 'en-GB' }]);
     second.feed(...frames(wire.text('Two meetings.'), wire.finish), { type: 'finished' });
     playAll(screens);
     expect(speech.utterances.length).toBeGreaterThan(0);
@@ -164,7 +166,7 @@ describe('a second engine attaching covers the first (P001V-RVW-2)', () => {
     await holdOn(screens, second, ASKED);
     expect(second.voice()).toMatchObject({ phase: 'listening', micOpen: true });
     letGo(screens, second, ASKED);
-    expect(second.sends).toEqual([{ text: ASKED, spokenMode: true }]);
+    expect(second.sends).toEqual([{ text: ASKED, spokenMode: true, locale: 'en-GB' }]);
     expect(first.sends).toEqual([]);
   });
 });
