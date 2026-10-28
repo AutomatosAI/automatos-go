@@ -5,6 +5,10 @@
 // build/Notifications.types.d.ts: Notification {date, request}, NotificationResponse
 // {notification, actionIdentifier, userText?}). On Android the data may still be the JSON string
 // Expo sent (content.dataString, or data itself as a string) when the JS mapping did not parse it.
+// On iOS content.data is the APNs userInfo's 'body' key, where Expo puts the data
+// (EXNotificationSerializer.m serializedNotificationData), and the trigger keeps the whole userInfo
+// (trigger.payload): when content.data comes over empty, trigger.payload.body is read instead, so a
+// push the phone holds is never unreadable for want of the one copy the JS mapping used.
 // Anything missing or malformed is {kind: 'unreadable'}: this never throws. Nothing here is
 // verified: event.data is the data as received, and only src/push/signature decides whether it
 // came from the phone's own server (the action handler acts on parsePushData's output only).
@@ -41,6 +45,9 @@ const RequestShape = z.object({
   }),
 });
 
+/** iOS: a push's trigger carries the APNs userInfo, Expo's data under 'body'. */
+const PushTriggerShape = z.object({ payload: z.object({ body: z.unknown() }) });
+
 const NotificationShape = z.object({ request: RequestShape });
 
 const ResponseShape = z.object({
@@ -76,13 +83,22 @@ function dataOf(content: unknown, data: unknown): Record<string, unknown> | null
   return typeof dataString === 'string' ? recordFromJson(dataString) : null;
 }
 
+/** iOS: Expo's data from the trigger's userInfo ('body'), an object or its JSON; null otherwise. */
+function triggerDataOf(rawRequest: unknown): Record<string, unknown> | null {
+  const trigger = PushTriggerShape.safeParse((rawRequest as { trigger?: unknown }).trigger);
+  if (!trigger.success) return null;
+  const { body } = trigger.data.payload;
+  return typeof body === 'string' ? recordFromJson(body) : nonEmptyRecord(body);
+}
+
 function eventOf(
   request: Request,
-  rawContent: unknown,
+  rawRequest: unknown,
   action: string | null,
   userText: string | null,
 ): InboundRead {
-  const data = dataOf(rawContent, request.content.data);
+  const rawContent = (rawRequest as { content: unknown }).content;
+  const data = dataOf(rawContent, request.content.data) ?? triggerDataOf(rawRequest);
   if (!data) return UNREADABLE;
   return Object.freeze({
     kind: 'readable',
@@ -94,9 +110,9 @@ function eventOf(
   });
 }
 
-/** The raw content object behind a parsed request (zod drops the keys it was not told about). */
-function rawContentOf(notification: unknown): unknown {
-  return (notification as { request: { content: unknown } }).request.content;
+/** The raw request behind a parsed one (zod drops the keys it was not told about). */
+function rawRequestOf(notification: unknown): unknown {
+  return (notification as { request: unknown }).request;
 }
 
 /** A notification received while the app is open (the foreground handler's argument). */
@@ -104,7 +120,7 @@ export function fromNotification(notification: unknown): InboundRead {
   try {
     const parsed = NotificationShape.safeParse(notification);
     if (!parsed.success) return UNREADABLE;
-    return eventOf(parsed.data.request, rawContentOf(notification), null, null);
+    return eventOf(parsed.data.request, rawRequestOf(notification), null, null);
   } catch {
     // A getter that throws on a native object is an unreadable notification, never a crash.
     return UNREADABLE;
@@ -118,7 +134,7 @@ export function fromResponse(response: unknown): InboundRead {
     if (!parsed.success) return UNREADABLE;
     const { notification, actionIdentifier, userText } = parsed.data;
     const raw = (response as { notification: unknown }).notification;
-    return eventOf(notification.request, rawContentOf(raw), actionIdentifier, userText ?? null);
+    return eventOf(notification.request, rawRequestOf(raw), actionIdentifier, userText ?? null);
   } catch {
     // As above: a native object that throws when read is unreadable.
     return UNREADABLE;

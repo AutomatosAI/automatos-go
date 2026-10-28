@@ -25,7 +25,7 @@ import type { PushKeyStore } from '../registration/key-store';
 import type { PushRecord } from '../registration/record';
 import { parsePushData, type PushPayload } from '../schemas/payload';
 import type { Sha256 } from '../signature/hmac';
-import { verifyPushSignature } from '../signature/verify';
+import { checkPushSignature, type SignatureCheck } from '../signature/verify';
 import { PUSH_ACTION_COPY } from '../strings';
 import { sendAnswer, settlesQuestion } from './answer';
 import { responseKey } from './dedupe';
@@ -111,23 +111,43 @@ function firstTime(handled: HandlerDeps['handled'], key: string): boolean {
   }
 }
 
-/** The record's key when the record is this server's, else null (nothing verifies). */
-async function pushKeyFor(deps: VerifyDeps): Promise<string | null> {
+/**
+ * What a signature check found (the tap diagnostics' word for it): the signature's own answer, or
+ * why there was no key to check with — no push record, a record of another server, or a keychain
+ * that refused the read.
+ */
+export type Verification = SignatureCheck | 'no_record' | 'other_server' | 'keychain';
+
+type KeyRead = Readonly<{ key: string }> | Readonly<{ missing: Verification }>;
+
+/** The record's key when the record is this server's, else why there is none (nothing verifies). */
+async function pushKeyFor(deps: VerifyDeps): Promise<KeyRead> {
   let record: PushRecord | null;
   try {
     record = await deps.store.load();
   } catch {
     logger.warn('[push] the keychain refused the push record; the notification is unverified');
-    return null;
+    return { missing: 'keychain' };
   }
-  return record && record.serverOrigin === deps.session.serverOrigin ? record.pushKey : null;
+  if (!record) return { missing: 'no_record' };
+  if (record.serverOrigin !== deps.session.serverOrigin) return { missing: 'other_server' };
+  return { key: record.pushKey };
+}
+
+/** Whether the payload's sig checks out with this server's push key and is fresh, and if not why. */
+export async function verificationOf(
+  payload: PushPayload | null,
+  deps: VerifyDeps,
+): Promise<Verification> {
+  if (!payload) return 'not_v2';
+  const read = await pushKeyFor(deps);
+  if ('missing' in read) return read.missing;
+  return checkPushSignature(payload, read.key, deps.sha256, deps.nowSeconds());
 }
 
 /** The payload's sig checks out with this server's push key, and it is fresh (also receive.ts's). */
 export async function isVerified(payload: PushPayload | null, deps: VerifyDeps): Promise<boolean> {
-  if (!payload) return false;
-  const pushKey = await pushKeyFor(deps);
-  return verifyPushSignature(payload, pushKey, deps.sha256, deps.nowSeconds());
+  return (await verificationOf(payload, deps)) === 'verified';
 }
 
 async function markRead(deps: HandlerDeps, notificationId: string | undefined): Promise<void> {

@@ -40,9 +40,14 @@ export function refreshAfterPush(queryClient: Pick<QueryClient, 'invalidateQueri
   void invalidateFamilies(queryClient, PUSH_REFRESH_FAMILIES);
 }
 
-/** The person is on the screen the push's signed link opens. */
+/**
+ * The person is on the screen of the record the push's signed link names. A push that names no
+ * record the phone has a screen for (an approval, a Mission plan, no link at all) is never "on
+ * screen": home is where it would have fallen back to, not its screen, so it keeps its banner there.
+ */
 function onTarget(payload: PushPayload, currentRoute: string | null): boolean {
-  return currentRoute !== null && routeFor(targetFor(payload)) === currentRoute;
+  const target = targetFor(payload);
+  return currentRoute !== null && target.kind !== 'home' && routeFor(target) === currentRoute;
 }
 
 function refreshed(deps: IncomingDeps): void {
