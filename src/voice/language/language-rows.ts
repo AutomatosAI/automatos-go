@@ -1,12 +1,10 @@
 // Settings → Voice's "I speak" (27 Oct 2026): its rows and its note, pure (no React, React Native or
 // Expo). The words are LANGUAGE_COPY's (src/voice/strings.ts).
 //   Rows: Automatic (the phone's language, named with its accent: 'English (GB)'), English (the
-// English it listens in: the phone's own, else British), Português (Portugal), Português (Brasil);
-// exactly one selected. A tap saves the choice (withSpeakChoice) and plays the sample in it.
+// English it listens in: the phone's own, else British), Português (Brasil); exactly one selected.
+// A tap saves the choice (withSpeakChoice) and plays the sample in it.
 //   The note, iOS only: while the choice listens in another language than the iPhone's own, hold to
 // talk refuses (recognition-policy.ts 'other-language'), and the note says so before any press.
-//   Portuguese (Portugal)'s server note: Kokoro has no European Portuguese, so the phone's voice
-// speaks it unless a Brazilian server voice is chosen (language-voice.ts).
 
 import type { RecognitionPlatform } from '../quick-ask/recognition-policy';
 import { accentOf } from '../settings/view-model';
@@ -16,7 +14,6 @@ import {
   choiceLocale,
   isPortuguese,
   listeningLocale,
-  portugueseFor,
   sameLocale,
   speakChoiceOf,
   spokenName,
@@ -60,9 +57,4 @@ export function languageNote(
 ): string | null {
   if (platform !== 'ios' || sameLocale(listeningLocale(setting, phone), phone)) return null;
   return COPY.iosNote(spokenName(phone));
-}
-
-/** Above the server's voices for Portuguese (Portugal), which has none of its own; else null. */
-export function serverNote(language: string, serverOffered: boolean): string | null {
-  return serverOffered && portugueseFor(language) === 'pt-PT' ? COPY.portugalServerNote : null;
 }

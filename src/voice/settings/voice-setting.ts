@@ -8,12 +8,14 @@
 //   source and serverVoice came with the server voice (27 Oct 2026) under the same version: a value
 // saved before them reads with their defaults (source 'server', the server's default voice) and
 // keeps its phone voice, speed and pitch; a bad value in either reads as its default alone.
-//   language, portuguese and voices came with "I speak" (27 Oct 2026), also under the same version
-// and kept only when they are not their defaults: absent, the language is Automatic (the phone's,
-// as before), the EN/PT switch goes to Portuguese (Portugal), and each Portuguese has its default
-// voice. The top-level source, serverVoice and voice stay the voice for English and for any language
-// other than Portuguese (language-voice.ts), so a value saved before reads exactly as it did. A bad
-// value in any of the three reads as its default alone.
+//   language and voices came with "I speak" (27 Oct 2026), also under the same version and kept
+// only when they are not their defaults: absent, the language is Automatic (the phone's, as before)
+// and Portuguese (Brazil) has its default voice. The top-level source, serverVoice and voice stay the
+// voice for English and for any language other than Portuguese (language-voice.ts), so a value saved
+// before reads exactly as it did. A bad value in either reads as its default alone.
+//   Portuguese is Brazil's only (Gerard, 27 Oct 2026): a saved 'pt-PT' language reads as 'pt-BR';
+// the 'portuguese' field and a 'pt-PT' voice that #25 may have saved are ignored (unknown fields),
+// so Brazil's Portuguese speaks with its own voice.
 
 import { z } from 'zod';
 
@@ -25,11 +27,11 @@ import type { SpeakOptions } from '../speech/speaker-core';
 /** Whose voice Auto speaks in: the server's (when it offers one) or this phone's. */
 export type VoiceSource = 'server' | 'phone';
 
-/** Settings → Voice's "I speak": the phone's language (Automatic), English, or a Portuguese. */
-export type SpeakChoice = 'auto' | 'en' | 'pt-PT' | 'pt-BR';
+/** Settings → Voice's "I speak": the phone's language (Automatic), English, or Brazil's Portuguese. */
+export type SpeakChoice = 'auto' | 'en' | 'pt-BR';
 
-/** The two Portuguese the app speaks: Portugal's and Brazil's. */
-export type Portuguese = 'pt-PT' | 'pt-BR';
+/** The Portuguese the app speaks: Brazil's. */
+export type Portuguese = 'pt-BR';
 
 /** One language's voice: Auto's server voice (an id, or the language's default) or this phone's. */
 export type LanguageVoice = {
@@ -51,19 +53,15 @@ export type VoiceSetting = {
   readonly pitch: number;
   /** "I speak"; absent is 'auto' (the phone's language). */
   readonly language?: SpeakChoice;
-  /** The Portuguese the EN/PT switch goes to; absent is 'pt-PT'. */
-  readonly portuguese?: Portuguese;
-  /** Each Portuguese's own voice; absent is that language's default (language-voice.ts). */
+  /** Portuguese's own voice; absent is its default (language-voice.ts). */
   readonly voices?: Readonly<Partial<Record<Portuguese, LanguageVoice>>>;
 };
 
-export const SPEAK_CHOICES: readonly SpeakChoice[] = Object.freeze([
-  'auto',
-  'en',
-  'pt-PT',
-  'pt-BR',
-]);
-export const PORTUGUESE: readonly Portuguese[] = Object.freeze(['pt-PT', 'pt-BR']);
+export const SPEAK_CHOICES: readonly SpeakChoice[] = Object.freeze(['auto', 'en', 'pt-BR']);
+export const PORTUGUESE: readonly Portuguese[] = Object.freeze(['pt-BR']);
+
+/** #25's European Portuguese, which a saved value may still name: read as Brazil's. */
+const RETIRED_PORTUGUESE = 'pt-PT';
 
 /** The stored shape's version; a value written under any other version reads as the default. */
 export const VOICE_SETTING_VERSION = 1;
@@ -97,14 +95,14 @@ const StoredSchema = z.object({
   // Added with the server voice: absent (an older value) or unreadable → the default.
   source: z.enum(['server', 'phone']).optional().catch(undefined),
   serverVoice: identifier.nullable().optional().catch(null),
-  // Added with "I speak": absent (an older value) or unreadable → the default.
-  language: z.enum(['auto', 'en', 'pt-PT', 'pt-BR']).optional().catch(undefined),
-  portuguese: z.enum(['pt-PT', 'pt-BR']).optional().catch(undefined),
+  // Added with "I speak": absent (an older value) or unreadable → the default; 'pt-PT' → 'pt-BR'.
+  language: z
+    .enum(['auto', 'en', 'pt-BR', RETIRED_PORTUGUESE])
+    .transform((language): SpeakChoice => (language === RETIRED_PORTUGUESE ? 'pt-BR' : language))
+    .optional()
+    .catch(undefined),
   voices: z
-    .object({
-      'pt-PT': LanguageVoiceSchema.optional().catch(undefined),
-      'pt-BR': LanguageVoiceSchema.optional().catch(undefined),
-    })
+    .object({ 'pt-BR': LanguageVoiceSchema.optional().catch(undefined) })
     .optional()
     .catch(undefined),
 });
@@ -128,18 +126,17 @@ function settleVoice(voice: LanguageVoice): LanguageVoice {
   });
 }
 
-type LanguageFields = Pick<VoiceSetting, 'language' | 'portuguese' | 'voices'>;
+type LanguageFields = Pick<VoiceSetting, 'language' | 'voices'>;
 
 /** "I speak"'s fields that are not their defaults (absent is the default: nothing is written). */
 function languageFields(setting: VoiceSetting): LanguageFields {
-  const { language, portuguese, voices = {} } = setting;
+  const { language, voices = {} } = setting;
   const kept = PORTUGUESE.flatMap((key) => {
     const voice = voices[key];
     return voice ? [[key, settleVoice(voice)] as const] : [];
   });
   return {
     ...(language && language !== 'auto' ? { language } : {}),
-    ...(portuguese === 'pt-BR' ? { portuguese } : {}),
     ...(kept.length > 0 ? { voices: Object.freeze(Object.fromEntries(kept)) } : {}),
   };
 }
@@ -184,7 +181,7 @@ export function parseVoiceSetting(raw: unknown): VoiceSetting {
   if (typeof raw !== 'string') return DEFAULT_VOICE_SETTING;
   const parsed = StoredSchema.safeParse(parseJson(raw));
   if (!parsed.success) return DEFAULT_VOICE_SETTING;
-  const { voice, rate, pitch, source, serverVoice, language, portuguese, voices } = parsed.data;
+  const { voice, rate, pitch, source, serverVoice, language, voices } = parsed.data;
   return settleSetting({
     source: source ?? DEFAULT_VOICE_SETTING.source,
     serverVoice: serverVoice ?? null,
@@ -192,7 +189,6 @@ export function parseVoiceSetting(raw: unknown): VoiceSetting {
     rate,
     pitch,
     ...(language ? { language } : {}),
-    ...(portuguese ? { portuguese } : {}),
     ...(voices ? { voices } : {}),
   });
 }

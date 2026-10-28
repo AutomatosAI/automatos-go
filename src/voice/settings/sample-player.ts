@@ -6,8 +6,8 @@
 //   server's, and the phone's voice says it when the server cannot: the sample is what a reply
 //   would sound like right now. Only the latest play speaks: one tapped while an earlier one was
 //   still resolving its voice wins, and stop() (the screen going away) cancels a play that has not
-//   spoken yet. The line is in the language it is spoken in: each Portuguese's own (SAMPLE_LINES),
-//   else the one given (English).
+//   spoken yet. The line is in the language it is spoken in: Portuguese (Brazil)'s own
+//   (SAMPLE_LINES), else the one given (English).
 
 import { logger } from '../../lib/logger';
 import { portugueseFor } from '../language/speak-language';
@@ -21,7 +21,7 @@ export type SamplePlayer = Readonly<{
   stop: () => void;
 }>;
 
-/** The sample in the language's own words: each Portuguese's, else `line`. */
+/** The sample in the language's own words: Portuguese (Brazil)'s for any Portuguese, else `line`. */
 export function sampleLine(language: string, line: string): string {
   const portuguese = portugueseFor(language);
   return portuguese === null ? line : SAMPLE_LINES[portuguese];

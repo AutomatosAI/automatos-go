@@ -87,7 +87,9 @@ describe('Settings → Voice: the chosen language’s voice (source)', () => {
     expect(hook).toMatch(/choose: \(voice\) => keep\(\{ \.\.\.mine\(\), voice \}\)/);
     expect(hook).toMatch(/save\(withLanguageVoice\(voiceSetting\.get\(\), language, chosen\)\)/);
     expect(hook).toMatch(/reset: \(\) => save\(resetLanguage\(voiceSetting\.get\(\), language\)\)/);
-    expect(screen).toMatch(/<ServerVoiceList rows=\{view\.server\} note=\{view\.serverNote\}/);
+    expect(screen).toMatch(
+      /<ServerVoiceList rows=\{view\.server\} onChoose=\{view\.chooseServer\}/,
+    );
   });
 
   it('plays the sample in the saved language, as quick-ask would speak it', () => {

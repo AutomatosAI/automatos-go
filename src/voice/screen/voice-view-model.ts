@@ -15,7 +15,7 @@
 //   The line under the core, first that applies: a viewer's words; the error's; why the next hold
 //   cannot start (a permission, the download offer, the reason); the reducer's message; 'See it in
 //   the chat' when this turn's reply came with cards or receipts. The reason names the language hold
-//   to talk listens in ("I speak", spokenName: 'Portuguese (Portugal)') and, for iOS's
+//   to talk listens in ("I speak", spokenName: 'Portuguese (Brazil)') and, for iOS's
 //   'other-language', the iPhone's own.
 
 import { ROLE_COPY } from '../../auth/strings';

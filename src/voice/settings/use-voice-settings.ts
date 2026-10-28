@@ -26,12 +26,7 @@ import { AppState, Platform } from 'react-native';
 import { useAppSession } from '../../app-state/session';
 import { logger } from '../../lib/logger';
 import { SPEECH_PITCH_LIMITS, SPEECH_RATE_LIMITS } from '../config';
-import {
-  languageNote,
-  languageRows,
-  serverNote,
-  type LanguageRow,
-} from '../language/language-rows';
+import { languageNote, languageRows, type LanguageRow } from '../language/language-rows';
 import {
   defaultsToServer,
   hasServerDefault,
@@ -72,15 +67,13 @@ export type PhonePart = Readonly<{ title: string; rows: readonly VoiceRow[]; hel
 
 export type VoiceSettingsView = Readonly<{
   lede: string;
-  /** "I speak": Automatic, English, Português (Portugal), Português (Brasil). */
+  /** "I speak": Automatic, English, Português (Brasil). */
   languages: readonly LanguageRow[];
   /** iOS, while the choice is not the iPhone's language: hold to talk works only in that one. */
   languageNote: string | null;
   chooseLanguage: (choice: SpeakChoice) => void;
   /** "Auto's voice" with the server's voices for the language; null when the server lists no tts. */
   server: readonly ServerVoiceRow[] | null;
-  /** Above them for Portuguese (Portugal): the server has no European Portuguese voice. */
-  serverNote: string | null;
   chooseServer: (choice: ServerChoice) => void;
   /** The phone's voices; null while Auto's server voice is chosen. */
   phone: PhonePart | null;
@@ -195,7 +188,6 @@ export function useVoiceSettings(): VoiceSettingsView {
     languageNote: languageNote(PLATFORM, saved, phone),
     chooseLanguage: (choice) => save(withSpeakChoice(voiceSetting.get(), choice)),
     server: serverVoiceRows(voices, setting, hasServerDefault(language)),
-    serverNote: serverNote(language, voices.kind !== 'off'),
     chooseServer: (choice) => keep(withServerChoice(mine(), choice)),
     phone: phonePart(voices, setting, choices, language),
     choose: (voice) => keep({ ...mine(), voice }),

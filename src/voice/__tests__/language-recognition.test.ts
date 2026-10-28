@@ -141,18 +141,18 @@ describe('what the person sees', () => {
     const view = voiceView({
       ...base,
       state: { ...base.state, phase: 'error', errorKind: 'other-language' },
-      locale: 'pt-PT',
+      locale: 'pt-BR',
       phoneLocale: 'en-GB',
     });
     expect(view.chipWords).toBe('VOICE UNAVAILABLE');
     expect(view.message?.text).toBe(
-      RECOGNITION_COPY.otherLanguage('Portuguese (Portugal)', 'English'),
+      RECOGNITION_COPY.otherLanguage('Portuguese (Brazil)', 'English'),
     );
     expect(view.centre.enabled).toBe(true);
   });
 
   it('Settings on an iPhone: a note while the choice is not the iPhone’s language', () => {
-    const portugal = { ...DEFAULT_VOICE_SETTING, language: 'pt-PT' } as const;
+    const portugal = { ...DEFAULT_VOICE_SETTING, language: 'pt-BR' } as const;
     expect(languageNote('ios', portugal, 'en-GB')).toBe(
       "On iPhone, hold to talk works only in your iPhone's language, English: it's the one language the app can check is recognised on the phone.",
     );

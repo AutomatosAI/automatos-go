@@ -86,7 +86,7 @@ export type LanguageListProps = {
   readonly onChoose: (choice: SpeakChoice) => void;
 };
 
-/** "I speak": Automatic, English and the two Portuguese, one chosen. */
+/** "I speak": Automatic, English and Portuguese (Brazil), one chosen. */
 export function LanguageList({ rows, note, onChoose }: LanguageListProps) {
   return (
     <Titled title={LANGUAGE_COPY.section}>
@@ -98,16 +98,13 @@ export function LanguageList({ rows, note, onChoose }: LanguageListProps) {
 
 export type ServerVoiceListProps = {
   readonly rows: readonly ServerVoiceRow[];
-  /** Above the rows: why the language's voice is what it is (Portuguese (Portugal)); or none. */
-  readonly note?: string | null;
   readonly onChoose: (choice: ServerChoice) => void;
 };
 
 /** "Auto's voice" with the server voice: the server's voices, then this phone's. */
-export function ServerVoiceList({ rows, note, onChoose }: ServerVoiceListProps) {
+export function ServerVoiceList({ rows, onChoose }: ServerVoiceListProps) {
   return (
     <Titled title={COPY.voiceSection}>
-      <Note text={note} />
       <Rows rows={rows} onPress={(row) => onChoose(row.choice)} />
     </Titled>
   );

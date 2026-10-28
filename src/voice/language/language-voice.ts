@@ -2,13 +2,11 @@
 // React, React Native or Expo.
 //   English, and any language other than Portuguese (Automatic on a French phone), keep the
 // setting's own source, serverVoice and voice, exactly as before "I speak": the server's default
-// voice until one is chosen, from the server's whole list. Each Portuguese has its own, in the
-// setting's `voices`:
-//   Portuguese (Brazil): Auto's server voice by default, its first pt-BR voice (the server's default
-// is English, so it is never asked for); this phone's when the server has none, when its list is
-// not known yet and none was chosen, or when the person chooses the phone's.
-//   Portuguese (Portugal): this phone's voice by default (pickVoice for pt-PT, a Premium or Enhanced
-// voice first): Kokoro has no European Portuguese. A pt-BR server voice may be chosen instead.
+// voice until one is chosen, from the server's whole list. Portuguese (Brazil), the one Portuguese
+// the app speaks, has its own, in the setting's `voices`: Auto's server voice by default, its first
+// pt-BR voice (pf_dora on Kokoro; the server's default is English, so it is never asked for); this
+// phone's pt-BR voice when the server has none, when its list is not known yet and none was chosen,
+// or when the person chooses the phone's.
 //   Every reader takes the language's choice as a whole setting (settingForLanguage: its source,
 // serverVoice and voice in the top-level fields), so speakOptionsFor, serverSpeechFor and the
 // Settings rows read it unchanged; withLanguageVoice writes such a setting back to its language.
@@ -19,7 +17,7 @@ import { languageOf } from '../quick-ask/recognition-policy';
 import { voicesReady, type ServerVoicesState } from '../server/server-voices';
 import type { ServerVoice } from '../server/voice-api';
 import type { LanguageVoice, Portuguese, VoiceSetting } from '../settings/voice-setting';
-import { listeningLocale, portugueseFor } from './speak-language';
+import { PORTUGUESE_CHOICE, listeningLocale, portugueseFor, sameLocale } from './speak-language';
 
 /** Whose voice choice a locale speaks with: the setting's own ('main'), or a Portuguese's. */
 export type VoiceKey = 'main' | Portuguese;
@@ -32,12 +30,9 @@ const MAIN_DEFAULT: LanguageVoice = Object.freeze({
   voice: null,
 });
 
-/** Each Portuguese's voice until one is chosen (Kokoro has no European Portuguese). */
+/** Portuguese's voice until one is chosen: Auto's server voice, its first pt-BR one. */
 export const PORTUGUESE_VOICE_DEFAULTS: Readonly<Record<Portuguese, LanguageVoice>> = Object.freeze(
-  {
-    'pt-PT': Object.freeze({ source: 'phone', serverVoice: null, voice: null }),
-    'pt-BR': Object.freeze({ source: 'server', serverVoice: null, voice: null }),
-  },
+  { 'pt-BR': Object.freeze({ source: 'server', serverVoice: null, voice: null }) },
 );
 
 export function voiceKeyFor(locale: string): VoiceKey {
@@ -110,12 +105,18 @@ export function serverVoicesFor(voices: ServerVoicesState, locale: string): Serv
   );
 }
 
-/** A Portuguese's server voice: the saved one while offered, else the first; null: none known. */
+/**
+ * Portuguese's server voice: the saved one while offered, else the first pt-BR one (else the first
+ * Portuguese one); null: none known.
+ */
 function portugueseServerVoice(saved: string | null, voices: ServerVoicesState): string | null {
   if (voices.kind !== 'ready') return saved;
   const offered = voices.list.voices;
   if (saved !== null && offered.some((voice) => voice.id === saved)) return saved;
-  return offered[0]?.id ?? null;
+  const brazil = offered.find(
+    (voice) => voice.accent !== null && sameLocale(voice.accent, PORTUGUESE_CHOICE),
+  );
+  return (brazil ?? offered[0])?.id ?? null;
 }
 
 /**
