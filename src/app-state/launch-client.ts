@@ -5,9 +5,11 @@
 // whichever kit made the call (a chat turn, a card's Approve, an upload, a Command Centre write),
 // so the role is read again even for calls the TanStack caches never see (US-007a,
 // P001N-SEAM-1). The workspace read's own refusal is not reported: it IS the read, and the gate
-// shows it, so it can never loop. use-launch.ts builds it over the real transport; tests build it
-// over a fake one.
+// shows it, so it can never loop. Every call says the person's "I speak" as Accept-Language
+// (getLanguage, read per call: api/accept-language.ts). use-launch.ts builds it over the real
+// transport and the voice setting; tests build it over a fake one.
 
+import type { LanguageGetter } from '../api/accept-language';
 import {
   createApiClient,
   type ApiClient,
@@ -29,6 +31,8 @@ export type LaunchClientInput = {
   /** The holder workspace-ids.ts hands out for this server. */
   readonly workspaceIds: Pick<WorkspaceIdStore, 'get'>;
   readonly transport: Transport;
+  /** "I speak", read on every call for Accept-Language; none sends no header. */
+  readonly getLanguage?: LanguageGetter;
   /** Where its 403s are reported: the session's channel unless a test hands its own. */
   readonly refusals?: Pick<Refusals, 'report'>;
 };
@@ -63,6 +67,7 @@ export function createLaunchClient({
   clientAuth,
   workspaceIds,
   transport,
+  getLanguage,
   refusals = sessionRefusals,
 }: LaunchClientInput): ApiClient {
   const client = createApiClient({
@@ -70,6 +75,7 @@ export function createLaunchClient({
     ...clientAuth,
     getWorkspaceId: workspaceIds.get,
     transport,
+    getLanguage,
   });
   return reportingRefusals(client, refusals);
 }
