@@ -46,9 +46,24 @@ function zonedDate(now: Date, timeZone: string): string | null {
 
 /** The phone's local date (YYYY-MM-DD) in its zone, or on its own clock. */
 export function localDateIn(now: Date, timeZone: string | null): string {
+  return phoneDay(now, timeZone).date;
+}
+
+export type PhoneDay = {
+  readonly date: string;
+  /** The zone to send: the phone's when the engine read it, else UTC (core refuses others, 422). */
+  readonly timezone: string;
+};
+
+/** The local date and the zone to send with it. */
+export function phoneDay(now: Date, timeZone: string | null): PhoneDay {
   const zone = timeZone?.trim();
   const zoned = zone ? zonedDate(now, zone) : null;
-  return zoned ?? isoDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
+  if (zone && zoned) return { date: zoned, timezone: zone };
+  return {
+    date: isoDate(now.getFullYear(), now.getMonth() + 1, now.getDate()),
+    timezone: FALLBACK_TIME_ZONE,
+  };
 }
 
 /** The answer names the day's message: the day is settled. */
@@ -78,22 +93,24 @@ export type BriefOpener = {
   readonly foreground: (scope: string) => Promise<void>;
 };
 
-/** One opener per app: the settled date per workspace, and the call in flight. */
+/** One opener per app: the settled date per workspace, and the calls in flight (per workspace and date). */
 export function createBriefOpener(deps: BriefOpenerDeps): BriefOpener {
   let settled: ReadonlyMap<string, string> = new Map();
-  let inFlight: string | null = null;
+  let inFlight: ReadonlySet<string> = new Set();
   const settle = (scope: string, date: string) => {
+    // a call that answers after the phone's date moved on settles nothing: today is still open
+    if (phoneDay(deps.now(), deps.timeZone()).date !== date) return;
     settled = new Map([...settled, [scope, date]]);
   };
   return Object.freeze({
     foreground: async (scope: string) => {
-      const zone = deps.timeZone()?.trim() || null;
-      const today = localDateIn(deps.now(), zone);
+      const day = phoneDay(deps.now(), deps.timeZone());
+      const today = day.date;
       const key = `${scope}\n${today}`;
-      if (settled.get(scope) === today || inFlight === key) return;
-      inFlight = key;
+      if (settled.get(scope) === today || inFlight.has(key)) return;
+      inFlight = new Set([...inFlight, key]);
       try {
-        const answer = await deps.open({ local_date: today, timezone: zone ?? FALLBACK_TIME_ZONE });
+        const answer = await deps.open({ local_date: today, timezone: day.timezone });
         if (answersTheDay(answer)) {
           settle(scope, today);
           deps.onAnswered(answer);
@@ -102,7 +119,7 @@ export function createBriefOpener(deps: BriefOpenerDeps): BriefOpener {
         if (refusalSettlesTheDay(error)) settle(scope, today);
         logger.warn("[brief] today's brief could not be opened", error);
       } finally {
-        if (inFlight === key) inFlight = null;
+        inFlight = new Set([...inFlight].filter((each) => each !== key));
       }
     },
   });

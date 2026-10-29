@@ -104,11 +104,19 @@ function twoDigits(value: number): string {
   return String(value).padStart(2, '0');
 }
 
-function rowView(row: BriefRow, number: number | null, webUrl?: string): BriefRowView {
+type RowPlace = {
+  readonly section: BriefSectionName;
+  readonly index: number;
+  readonly number: number | null;
+};
+
+/** A row's key is its section and place: the brief may list one id in two sections. */
+function rowView(row: BriefRow, place: RowPlace, webUrl?: string): BriefRowView {
   const target = briefTarget(row, webUrl);
   const action = actionOf(row, target);
+  const { number } = place;
   return {
-    key: row.id,
+    key: `${place.section}:${place.index}:${row.id}`,
     row,
     target,
     actionLabel: action.label,
@@ -151,7 +159,7 @@ export function briefView(brief: Brief, { needsYou, webUrl }: BriefViewOptions):
     if (rows.length === 0) return [];
     const first = firstNumber(brief, name);
     const views = rows.map((row, index) =>
-      rowView(row, first === null ? null : first + index, webUrl),
+      rowView(row, { section: name, index, number: first === null ? null : first + index }, webUrl),
     );
     const { shown, folded } = foldRows(views);
     const count = sectionCount(brief, name, total);
@@ -162,7 +170,8 @@ export function briefView(brief: Brief, { needsYou, webUrl }: BriefViewOptions):
     greeting: brief.greeting.trim(),
     prose: brief.prose.trim(),
     sections,
-    empty: sections.length === 0 ? BRIEF_COPY.empty : null,
+    // never "Nothing new needs you" beside a strip that still counts something
+    empty: sections.length === 0 && total === 0 ? BRIEF_COPY.empty : null,
     needsYou: total,
   };
 }

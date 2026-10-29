@@ -138,10 +138,16 @@ export function hudTurn(state: ThreadState): HudTurn {
   return { ...turn, auto };
 }
 
-/** The day's brief while it is the newest message and no turn is live; null otherwise. */
-export function hudBrief(state: ThreadState): Brief | null {
+export type HudBrief = { readonly brief: Brief; readonly messageId: string };
+
+/**
+ * Today's brief while it is the newest message and no turn is live (yesterday's never fills the
+ * slot), with its message for Report this; null otherwise.
+ */
+export function hudBrief(state: ThreadState, today: string): HudBrief | null {
   if (state.status === 'loading' || state.live) return null;
   const messages = shownMessages(state);
   const newest = messages[messages.length - 1];
-  return newest?.role === 'assistant' ? briefOf(newest) : null;
+  const brief = newest?.role === 'assistant' ? briefOf(newest) : null;
+  return newest && brief && brief.date === today ? { brief, messageId: newest.id } : null;
 }

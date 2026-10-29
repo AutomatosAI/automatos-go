@@ -81,6 +81,15 @@ describe('briefView', () => {
     const view = briefView(brief({ sections: none }), { needsYou: 0 });
     expect(view.sections).toEqual([]);
     expect(view.empty).toBe('Nothing new needs you, and nothing is scheduled today.');
+    // never beside a strip that still counts something
+    expect(briefView(brief({ sections: none }), { needsYou: 2 }).empty).toBeNull();
+  });
+
+  it('keys each row by its section and place: one id in two sections stays two rows', () => {
+    const twice = sections({ today: [row('same')], since: [row('same')] });
+    const view = briefView(brief({ sections: twice }), { needsYou: 2 });
+    const keys = view.sections.flatMap((section) => section.shown.map((each) => each.key));
+    expect(new Set(keys).size).toBe(keys.length);
   });
 
   it('numbers what asks for something, needs you first, so "start three" names a row', () => {

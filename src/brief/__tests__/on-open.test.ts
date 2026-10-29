@@ -96,10 +96,42 @@ describe('createBriefOpener: once per local date per workspace', () => {
     expect(viewer.open).toHaveBeenCalledOnce();
   });
 
-  it('sends UTC for a phone that reports no zone', async () => {
-    const { subject, open } = opener([POSTED], null);
+  it('sends UTC for a phone that reports no zone, or one the engine cannot read', async () => {
+    const none = opener([POSTED], null);
+    await none.subject.foreground('ws-1');
+    expect(none.open.mock.calls[0][0].timezone).toBe(FALLBACK_TIME_ZONE);
+    const unreadable = opener([POSTED], 'Mars/Olympus');
+    await unreadable.subject.foreground('ws-1');
+    expect(unreadable.open.mock.calls[0][0].timezone).toBe(FALLBACK_TIME_ZONE);
+  });
+
+  it('keeps one call per workspace in flight while another workspace calls', async () => {
+    const release: (() => void)[] = [];
+    const open = vi.fn(
+      (_body: BriefOpenBody) =>
+        new Promise<BriefOpen>((resolve) => release.push(() => resolve(POSTED))),
+    );
+    const subject = createBriefOpener({
+      open,
+      now: () => new Date('2026-10-28T08:00:00Z'),
+      timeZone: () => 'Europe/Lisbon',
+      onAnswered: () => undefined,
+    });
+    const first = subject.foreground('ws-1');
+    const other = subject.foreground('ws-2');
+    const again = subject.foreground('ws-1');
+    release.forEach((done) => done());
+    await Promise.all([first, other, again]);
+    expect(open).toHaveBeenCalledTimes(2);
+  });
+
+  it('a call that answers after the date moved on leaves the new date open', async () => {
+    const { subject, open, now } = opener([POSTED, POSTED]);
+    const late = subject.foreground('ws-1');
+    now.at = new Date('2026-10-29T07:00:00Z');
+    await late;
     await subject.foreground('ws-1');
-    expect(open.mock.calls[0][0].timezone).toBe(FALLBACK_TIME_ZONE);
+    expect(open.mock.calls.map(([body]) => body.local_date)).toEqual(['2026-10-28', '2026-10-29']);
   });
 });
 

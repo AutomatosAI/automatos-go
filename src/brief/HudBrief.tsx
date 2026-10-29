@@ -7,9 +7,10 @@
 // closes the sheet and opens it, model.ts briefTarget); its words are the server's. Copy, numbers
 // and targets are model.ts's; capitals come from HUD's label face.
 
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { StateMark } from '../cc/status/StatusLine';
+import { reportAccessibility } from '../chat/report/report';
 import type { WebLinkTarget } from '../navigation/web-links';
 import { HUD_CORE } from '../styles/hud/core/model';
 import { useVoiceCore } from '../styles/hud/core/use-voice-core';
@@ -27,10 +28,12 @@ export type HudBriefSlotProps = {
   /** Auto's Read as plain words (hud-turn.ts plainText). */
   readonly words: string;
   readonly onOpen: () => void;
+  /** Report this on the brief's message (a long-press and the accessible action); absent, none. */
+  readonly onReport?: () => void;
 };
 
 /** The transcript slot while the brief is the newest message. */
-export function HudBriefSlot({ greeting, words, onOpen }: HudBriefSlotProps) {
+export function HudBriefSlot({ greeting, words, onOpen, onReport }: HudBriefSlotProps) {
   const core = useVoiceCore();
   const { spacing } = useTokens();
   const you = core.style.type.body(transcript.you.size, 400, { leading: transcript.you.leading });
@@ -45,9 +48,15 @@ export function HudBriefSlot({ greeting, words, onOpen }: HudBriefSlotProps) {
         </Text>
       ) : null}
       {words ? (
-        <Text selectable style={[auto, { color: core.paint.text }]}>
-          {words}
-        </Text>
+        <Pressable accessible={false} onLongPress={onReport} disabled={!onReport}>
+          <Text
+            selectable
+            style={[auto, { color: core.paint.text }]}
+            {...reportAccessibility(onReport)}
+          >
+            {words}
+          </Text>
+        </Pressable>
       ) : null}
       <View style={{ alignSelf: 'flex-start' }}>
         <Button

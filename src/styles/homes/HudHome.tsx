@@ -54,7 +54,7 @@ export function HudHome({ chatId, ticketId = null }: HudHomeProps) {
   const turn = useMemo(() => hudTurn(state), [state]);
   const voice = useHudHomeVoice(home, turn);
   const { report, sheet } = useMessageReport();
-  const brief = useHudBrief(state);
+  const brief = useHudBrief(state, report);
   const { sendMessage } = home;
   const { typed } = voice;
   const close = useCallback(() => setTyping(false), []);

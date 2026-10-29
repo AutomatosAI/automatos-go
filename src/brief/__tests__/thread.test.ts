@@ -34,17 +34,20 @@ describe('threadRows with the brief', () => {
 });
 
 describe('HUD: the brief fills the transcript slot while it is the newest message', () => {
-  it('is the newest message’s brief', () => {
-    expect(hudBrief(opened([ASKED, REPLY, briefMessage()]))?.date).toBe('2026-10-28');
+  it('is the newest message’s brief, today’s only, with its message for Report this', () => {
+    const shown = hudBrief(opened([ASKED, REPLY, briefMessage()]), '2026-10-28');
+    expect(shown?.brief.date).toBe('2026-10-28');
+    expect(shown?.messageId).toBe('m-brief');
+    expect(hudBrief(opened([ASKED, REPLY, briefMessage()]), '2026-10-29')).toBeNull();
   });
 
   it('is none once a newer message lands, while a turn is live, or while loading', () => {
-    expect(hudBrief(opened([briefMessage(), ASKED, REPLY]))).toBeNull();
+    expect(hudBrief(opened([briefMessage(), ASKED, REPLY]), '2026-10-28')).toBeNull();
     const live = threadReducer(opened([briefMessage()]), {
       type: 'send',
       draft: { text: 'And now?', files: [], sentAt: '2026-10-28T08:00:00.000Z' },
     });
-    expect(hudBrief(live)).toBeNull();
+    expect(hudBrief(live, '2026-10-28')).toBeNull();
     expect(hudTurn(opened([briefMessage()])).auto).toBe(PROSE);
   });
 });
