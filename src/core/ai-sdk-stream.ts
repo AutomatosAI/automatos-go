@@ -5,10 +5,13 @@
 // React state; the backend emits no `data:` SSE lines or 'done' type, so that legacy branch is not
 // ported. Every frame comes off the wire: each type is checked with zod, unknown fields are
 // dropped, and anything this version does not know is {kind: 'unknown'}. parseLine never throws.
+// An approval card keeps the ApprovalView@1 core W2 sends beside it (PRD-268 US-C20a,
+// approval-view.ts), which the vendored approvals.ts does not read.
 
 import { z } from 'zod';
 
-import { approvalsInPart, type ApprovalCard } from './web/lib/chat/approvals';
+import { withViews, type ViewedApproval } from './approval-view';
+import { approvalsInPart } from './web/lib/chat/approvals';
 import { deliverablesInPart, type DeliverableRef } from './web/lib/chat/deliverables';
 import { parseErrorFrame } from './web/lib/chat/errors';
 import { liveReceipts, liveReceiptsFromToolData } from './web/lib/chat/receipts';
@@ -87,7 +90,7 @@ export type ToolEndFrame = {
 export type ToolDataFrame = {
   readonly kind: 'tool-data';
   readonly taskCard?: TaskCardData;
-  readonly approvals: readonly ApprovalCard[];
+  readonly approvals: readonly ViewedApproval[];
   readonly deliverables: readonly DeliverableRef[];
   readonly receipts?: LiveReceipts;
 };
@@ -228,7 +231,7 @@ function toolDataFrame(envelope: Envelope): Frame | null {
   return {
     kind: 'tool-data',
     ...(taskCard ? { taskCard } : {}),
-    approvals: approvalsInPart(part),
+    approvals: withViews(approvalsInPart(part), data),
     deliverables: deliverablesInPart(part),
     ...(live?.receipts ? { receipts: receiptsOf(live.receipts, live.receiptsAbove) } : {}),
   };

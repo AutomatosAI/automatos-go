@@ -20,6 +20,8 @@
 //   A6's quick-ask on HUD's home (US-019k) passes `quickAsk` instead: HUD's home as A5 built it, with
 // HOLD TO TALK's hold, STOP on while the voice works, and, while it does or has a line, the voice's
 // chip and status word and its line under the chip. Under `voice` it is not read.
+//   HUD's home may pass `underChip` (PRD-268 US-G08): what sits under the state chip and the voice's
+// line, measured with them (a waiting approval's way back to its sheet).
 //   Both may pass `language` (27 Oct 2026): the EN/PT switch beside HOLD TO TALK (HudButtons).
 //   HUD's home and the voice screen pass `report` (A2's useMessageReport): the transcript offers
 // Report this on Auto's saved reply (P001R-AF-1). First open and the look previews pass none.
@@ -110,6 +112,8 @@ export type HudCoreProps = {
   readonly onMenu: () => void;
   /** A6's live mic levels for the waveform, 0 to 1. */
   readonly levels?: readonly number[] | null;
+  /** Under the state chip and the voice's line (a waiting approval, US-G08); absent, nothing. */
+  readonly underChip?: ReactNode;
   /** A6's voice screen; absent, HUD's home exactly as A5 built it. */
   readonly voice?: HudCoreVoice;
   /** A6's quick-ask on HUD's home; absent, HOLD TO TALK inert as A5 built it. */
@@ -251,6 +255,7 @@ export function HudCore(props: HudCoreProps) {
               <StateChip state={state} words={parts.chip} />
             </View>
             {parts.line}
+            {props.underChip}
           </View>
           <Transcript turn={turn} report={props.report} />
         </View>

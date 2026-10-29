@@ -14,6 +14,9 @@
 //   HOLD TO TALK is A6's quick-ask in place (US-019k, useHudHomeVoice over this thread): MIC LIVE,
 // the waveform, the voice's turn in the transcript from a press until a typed send, the voice's chip
 // and line while it works, and STOP stopping the speech too (and A2's turn, typed or spoken).
+//   An approval (PRD-268 US-G08, src/approvals/use-hud-approval.tsx): HUD draws no thread cards, so
+// a card waiting with an ApprovalView opens its answer sheet by itself, once; closed unanswered,
+// '◆ WAITING FOR YOU · OPEN' under the state chip opens it again.
 //   Report this (D15, P001R-AF-1): a long-press or the accessible action on Auto's saved reply in the
 // transcript opens the foundation's one ReportSheet (A2's useMessageReport), mounted once beside
 // TYPE's Sheet, never inside it.
@@ -24,6 +27,7 @@ import { useNeedsYou } from '../../api/needs-you';
 import { Composer } from '../../chat/composer/Composer';
 import { DiscussionBar } from '../../chat/discussion/DiscussionBar';
 import { HomeMenu } from '../../chat/home/HomeMenu';
+import { useHudApproval } from '../../approvals/use-hud-approval';
 import { menuHere } from '../../chat/home/menu';
 import { useHomeMenu } from '../../chat/home/use-home-menu';
 import { useMessageReport } from '../../chat/report/use-message-report';
@@ -48,6 +52,7 @@ export function HudHome({ chatId, ticketId = null }: HudHomeProps) {
   const [typing, setTyping] = useState(false);
   const { state, stop } = home.thread;
   const menu = useHomeMenu(menuHere(state, ticketId));
+  const approval = useHudApproval(state, home.thread.settleCard);
   const turn = useMemo(() => hudTurn(state), [state]);
   const voice = useHudHomeVoice(home, turn);
   const { report, sheet } = useMessageReport();
@@ -73,6 +78,7 @@ export function HudHome({ chatId, ticketId = null }: HudHomeProps) {
         needsYou={total}
         onMenu={menu.open}
         levels={voice.levels}
+        underChip={approval.line}
         quickAsk={{
           ...voice.core,
           line: <VoiceLine line={voice.line} onAction={voice.lineAction} />,

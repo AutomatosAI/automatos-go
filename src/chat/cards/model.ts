@@ -8,6 +8,7 @@
 // components/play/chat/approval-cards.tsx). Nothing here is persisted (D-CACHE).
 
 import type { ApiClient } from '../../api/client';
+import type { ApprovalView } from '../../core/approval-view';
 import type { TurnState } from '../../core/turn-reducer';
 import type {
   MissionApprovalWidgetData,
@@ -22,8 +23,13 @@ export type WithdrawRequest = WithdrawOffer['requests'][number];
 
 export type ThreadCard =
   | { readonly kind: 'suggestion'; readonly suggestion: MissionSuggestion }
-  | { readonly kind: 'plan'; readonly plan: MissionApprovalWidgetData }
-  | { readonly kind: 'tool'; readonly tool: ToolApprovalWidgetData }
+  /** `view`: the ApprovalView@1 core W2 sends beside the card (PRD-268 US-C20a), when it did. */
+  | {
+      readonly kind: 'plan';
+      readonly plan: MissionApprovalWidgetData;
+      readonly view?: ApprovalView;
+    }
+  | { readonly kind: 'tool'; readonly tool: ToolApprovalWidgetData; readonly view?: ApprovalView }
   /** One request of a withdraw offer; the view draws an offer's requests as one card. */
   | { readonly kind: 'withdraw'; readonly message: string; readonly request: WithdrawRequest };
 
@@ -93,9 +99,12 @@ export function raisedCards(turn: TurnState): ThreadCard[] {
   const suggestion: ThreadCard[] = turn.missionSuggestion
     ? [{ kind: 'suggestion', suggestion: turn.missionSuggestion }]
     : [];
-  const approvals = turn.approvals.map((card): ThreadCard =>
-    card.kind === 'mission' ? { kind: 'plan', plan: card.data } : { kind: 'tool', tool: card.data },
-  );
+  const approvals = turn.approvals.map((card): ThreadCard => {
+    const view = card.view ? { view: card.view } : {};
+    return card.kind === 'mission'
+      ? { kind: 'plan', plan: card.data, ...view }
+      : { kind: 'tool', tool: card.data, ...view };
+  });
   return [...suggestion, ...approvals, ...withdrawCards(turn.withdrawOffer)];
 }
 
