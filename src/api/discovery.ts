@@ -29,6 +29,10 @@ export const CAPABILITIES = [
   'tts',
   /** Today's brief on request: POST /api/v1/mobile/digest/now (Settings → Notifications). */
   'digest_now',
+  /** PRD-268 W2 (K20): the brief on open, POST /api/proactive/brief/open, and its card in the thread. */
+  'brief',
+  /** PRD-268 W2 (K20): Auto's suggestions, GET /api/proactive/suggestions and suggestion_changed. */
+  'suggestions',
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];

@@ -11,6 +11,7 @@ import { CHAT_ROUTES } from '../chat/routes';
 import { CONNECT_ROUTES } from '../connect/routes';
 import { PUSH_ROUTES } from '../push/routes';
 import { STYLE_ROUTES } from '../styles/routes';
+import { SUGGESTION_ROUTES } from '../suggestions/routes';
 import { VOICE_ROUTES } from '../voice/routes';
 import { MAX_INPUT_LENGTH, MAX_TEXT_LENGTH } from './redact';
 
@@ -25,6 +26,7 @@ export const ROUTE_TABLES: readonly object[] = Object.freeze([
   CONNECT_ROUTES,
   PUSH_ROUTES,
   STYLE_ROUTES,
+  SUGGESTION_ROUTES,
   VOICE_ROUTES,
 ]);
 

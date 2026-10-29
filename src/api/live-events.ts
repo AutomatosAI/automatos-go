@@ -6,6 +6,9 @@
 // parsed with zod; an unknown event or a frame that does not fit is ignored, never a crash.
 // board_changed refetches the board, the open ticket, the needs-you number and the questions (the
 // web's use-board-event-stream.ts + use-needs-you.ts); both are fanned out to subscribers (the hub).
+// PRD-268 W2 (US-C08b) adds suggestion_changed {workspace_id, suggestion_id, user_id, status} on a
+// suggestion's create, Start, Hide and expiry: it refetches the open suggestions (src/suggestions).
+// It names ids only, never a suggestion's words.
 
 import type { QueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
@@ -14,7 +17,7 @@ import { logger } from '../lib/logger';
 import { matchesFamily, type KeyFamilyName } from './query-keys';
 import type { ServerEvent } from './sse';
 
-export const LIVE_EVENT_TYPES = ['board_changed', 'chat_changed'] as const;
+export const LIVE_EVENT_TYPES = ['board_changed', 'chat_changed', 'suggestion_changed'] as const;
 export type LiveEventType = (typeof LIVE_EVENT_TYPES)[number];
 
 /** A field this version reads loosely: a value of another type reads as absent. */
@@ -36,10 +39,23 @@ export const ChatChangedSchema = z.object({
   event: OptionalText,
 });
 
+/** A suggestion was made, started, hidden or lapsed (PRD-268 US-C08b); user_id says whose. */
+export const SuggestionChangedSchema = z.object({
+  workspace_id: z.string(),
+  suggestion_id: z.string(),
+  user_id: z.union([z.number(), z.string()]).nullable().optional().catch(undefined),
+  status: OptionalText,
+});
+
 export type BoardChanged = Readonly<z.output<typeof BoardChangedSchema>>;
 export type ChatChanged = Readonly<z.output<typeof ChatChangedSchema>>;
+export type SuggestionChanged = Readonly<z.output<typeof SuggestionChangedSchema>>;
 
-type LiveData = { readonly board_changed: BoardChanged; readonly chat_changed: ChatChanged };
+type LiveData = {
+  readonly board_changed: BoardChanged;
+  readonly chat_changed: ChatChanged;
+  readonly suggestion_changed: SuggestionChanged;
+};
 export type LiveEventData<T extends LiveEventType> = LiveData[T];
 
 export type LiveEvent = {
@@ -51,6 +67,7 @@ const SCHEMAS: {
 } = {
   board_changed: BoardChangedSchema,
   chat_changed: ChatChangedSchema,
+  suggestion_changed: SuggestionChangedSchema,
 };
 
 function isLiveEventType(name: string): name is LiveEventType {
@@ -70,6 +87,7 @@ export const LIVE_INVALIDATIONS: Readonly<Record<LiveEventType, readonly KeyFami
   Object.freeze({
     board_changed: Object.freeze(['board', 'ticket', 'needsYou', 'questions'] as const),
     chat_changed: Object.freeze([] as const),
+    suggestion_changed: Object.freeze(['suggestions'] as const),
   });
 
 /** The stream replays nothing, so a resume refetches every family a missed event would have. */

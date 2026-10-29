@@ -4,6 +4,8 @@
 // the header slot. Under it, while the server's needs-you total is above zero, the slim line
 // 'NEEDS YOU · N  Command Centre →' (the label style in the accent text, KS10, FR-4): the number
 // is the app's one answer (useNeedsYou), and the line opens the Board, as CommandCentreButton does.
+// PRD-268 US-G01: the caller may hand in `ideas`, the count of Auto's open suggestions ('Ideas · N'),
+// drawn as a line of the same style that opens the sheet of them all.
 
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -16,9 +18,18 @@ import { PLAY_CHAT_COPY } from '../../strings';
 import { COMPANION, needsLine, shelfView, type NeedsLineView } from './model';
 import { useCompanionPaint, type CompanionPaint } from './use-companion';
 
+/** 'Ideas · N': the count of Auto's open suggestions, and what opens them. */
+export type PlayIdeas = {
+  readonly text: string;
+  readonly label: string;
+  readonly onPress: () => void;
+};
+
 export type PlayHeaderProps = {
   /** The conversation's title. */
   readonly title: string;
+  /** Auto's open suggestions (US-G01); absent, no line. */
+  readonly ideas?: PlayIdeas;
   /** Deliverables that landed in this conversation: 'Shelf +N'. */
   readonly shelfCount?: number;
   readonly onChats: () => void;
@@ -43,7 +54,10 @@ function HeaderButton({ text, label, colour, paint, onPress }: HeaderButtonProps
       accessibilityLabel={label}
       style={({ pressed }) => [
         styles.button,
-        { paddingHorizontal: header.buttonPaddingX, opacity: pressed ? COMPANION.pressedOpacity : 1 },
+        {
+          paddingHorizontal: header.buttonPaddingX,
+          opacity: pressed ? COMPANION.pressedOpacity : 1,
+        },
       ]}
     >
       <Text style={[paint.style.type.body(header.buttonSize, 500), { color: colour }]}>{text}</Text>
@@ -51,7 +65,13 @@ function HeaderButton({ text, label, colour, paint, onPress }: HeaderButtonProps
   );
 }
 
-function NeedsLine({ view, paint }: { readonly view: NeedsLineView; readonly paint: CompanionPaint }) {
+function NeedsLine({
+  view,
+  paint,
+}: {
+  readonly view: NeedsLineView;
+  readonly paint: CompanionPaint;
+}) {
   const router = useRouter();
   const { type, tokens } = paint.style;
   const ink = { color: paint.vars.accentText };
@@ -73,7 +93,32 @@ function NeedsLine({ view, paint }: { readonly view: NeedsLineView; readonly pai
   );
 }
 
-export function PlayHeader({ title, shelfCount = 0, onChats, onShelf }: PlayHeaderProps) {
+function IdeasLine({
+  ideas,
+  paint,
+}: {
+  readonly ideas: PlayIdeas;
+  readonly paint: CompanionPaint;
+}) {
+  const { type, tokens } = paint.style;
+  const height = type.label.lineHeight + tokens.spacing.space2 * 2;
+  return (
+    <Pressable
+      onPress={ideas.onPress}
+      hitSlop={hitSlopFor(height)}
+      accessibilityRole="button"
+      accessibilityLabel={ideas.label}
+      style={[
+        styles.needs,
+        { paddingHorizontal: tokens.spacing.space7, paddingVertical: tokens.spacing.space2 },
+      ]}
+    >
+      <Text style={[type.label, { color: paint.vars.accentText }]}>{ideas.text}</Text>
+    </Pressable>
+  );
+}
+
+export function PlayHeader({ title, ideas, shelfCount = 0, onChats, onShelf }: PlayHeaderProps) {
   const paint = useCompanionPaint();
   const { total } = useNeedsYou();
   if (!paint) return null;
@@ -111,6 +156,7 @@ export function PlayHeader({ title, shelfCount = 0, onChats, onShelf }: PlayHead
         />
       </View>
       {needs ? <NeedsLine view={needs} paint={paint} /> : null}
+      {ideas ? <IdeasLine ideas={ideas} paint={paint} /> : null}
     </View>
   );
 }

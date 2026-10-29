@@ -7,6 +7,9 @@
 // '<AGENT> · <STATE>' and the turn's mm:ss (Geist Mono 11 .1em, text2), ticking while it streams.
 // A6's voice screen (US-019j) names the menu square for what it does there ('Close voice'), LOOK's
 // hint and the status row's state word; without them the bar is HUD's home's.
+// PRD-268 US-G01: HUD's home may hand in `ideas` ('IDEAS · N' after COMMAND, opening the sheet of
+// Auto's suggestions) and `next` (the NEXT ▸ line, under the status row); the voice screen passes
+// neither.
 
 import { useRouter } from 'expo-router';
 import Menu from 'lucide-react-native/icons/menu';
@@ -100,6 +103,13 @@ function RowButton({ core, label, hint, square = false, onPress, children }: Row
   );
 }
 
+/** 'IDEAS · N': the count of Auto's open suggestions, opening the sheet of them all. */
+export type HudIdeas = {
+  readonly text: string;
+  readonly label: string;
+  readonly onPress: () => void;
+};
+
 type CommandRowProps = {
   readonly core: VoiceCore;
   readonly needsYou: number;
@@ -107,9 +117,18 @@ type CommandRowProps = {
   readonly onMenu: () => void;
   readonly menuLabel?: string;
   readonly lookHint?: string;
+  readonly ideas?: HudIdeas;
 };
 
-function CommandRow({ core, needsYou, onLook, onMenu, menuLabel, lookHint }: CommandRowProps) {
+function CommandRow({
+  core,
+  needsYou,
+  onLook,
+  onMenu,
+  menuLabel,
+  lookHint,
+  ideas,
+}: CommandRowProps) {
   const router = useRouter();
   const { paint, style } = core;
   const command = commandView(needsYou);
@@ -130,9 +149,16 @@ function CommandRow({ core, needsYou, onLook, onMenu, menuLabel, lookHint }: Com
         },
       ]}
     >
-      <RowButton core={core} label={command.label} onPress={() => router.push(routes.cc.board)}>
-        <Text style={face}>{command.text}</Text>
-      </RowButton>
+      <View style={[styles.end, { gap: commandRow.gap }]}>
+        <RowButton core={core} label={command.label} onPress={() => router.push(routes.cc.board)}>
+          <Text style={face}>{command.text}</Text>
+        </RowButton>
+        {ideas ? (
+          <RowButton core={core} label={ideas.label} onPress={ideas.onPress}>
+            <Text style={face}>{ideas.text}</Text>
+          </RowButton>
+        ) : null}
+      </View>
       <View style={[styles.end, { gap: commandRow.gap }]}>
         <RowButton
           core={core}
@@ -192,10 +218,15 @@ export type HudTopBarProps = {
   readonly lookHint?: string;
   /** A6: the status row's state word (the voice screen's, 'Speaking'); else Auto's state's. */
   readonly stateWord?: string;
+  /** PRD-268: 'IDEAS · N' after COMMAND; absent, none. */
+  readonly ideas?: HudIdeas;
+  /** PRD-268: the NEXT ▸ line under the status row; absent, none. */
+  readonly next?: ReactNode;
 };
 
 export function HudTopBar(props: HudTopBarProps) {
   const { turn, state, micOpen, needsYou, onLook, onMenu, menuLabel, lookHint, stateWord } = props;
+  const { ideas, next } = props;
   const core = useVoiceCore();
   return (
     <View>
@@ -207,8 +238,10 @@ export function HudTopBar(props: HudTopBarProps) {
         onMenu={onMenu}
         menuLabel={menuLabel}
         lookHint={lookHint}
+        ideas={ideas}
       />
       <StatusRow core={core} turn={turn} state={state} stateWord={stateWord} />
+      {next}
     </View>
   );
 }

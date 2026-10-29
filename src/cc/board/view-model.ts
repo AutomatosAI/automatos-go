@@ -17,6 +17,7 @@ import { isPipStatus, statusPip } from '../../ui/variants';
 import { rowStatusView, type RowStatusView } from '../status/row-status';
 import { BOARD_COPY } from '../strings';
 import {
+  FROM_SUGGESTIONS,
   boardColumn,
   boardFilters,
   filterTickets,
@@ -31,6 +32,7 @@ import {
   topLevelTickets,
   visibleTags,
   type BoardFilter,
+  type BoardFilterOptions,
 } from './board';
 import { AGENT_SWATCHES, NO_AGENT_SWATCH } from './chrome';
 import type { BoardTicket } from './schemas';
@@ -151,16 +153,22 @@ export type FilterPillView = {
   readonly selected: boolean;
 };
 
+/** A pill's dot: a column's or a status's; none on All and From suggestions (no status). */
+function pillDot(filter: BoardFilter): ColourName | undefined {
+  return filter === 'all' || filter === FROM_SUGGESTIONS ? undefined : statusPip(filter).tokenKey;
+}
+
 /** All, every column (Failed and Cancelled too, even when empty), then each unknown status. */
 export function filterPills(
   tickets: readonly BoardTicket[],
   active: BoardFilter,
+  options: BoardFilterOptions = {},
 ): FilterPillView[] {
-  return boardFilters(tickets).map((option) => ({
+  return boardFilters(tickets, options).map((option) => ({
     filter: option.filter,
     label: option.word,
     count: option.count,
-    dot: option.filter === 'all' ? undefined : statusPip(option.filter).tokenKey,
+    dot: pillDot(option.filter),
     selected: option.filter === active,
   }));
 }
@@ -170,6 +178,7 @@ export type EmptyCopy = { readonly title: string; readonly message: string };
 /** What an empty filter says: All has its own words, a column its own line. */
 export function emptyCopy(filter: BoardFilter): EmptyCopy {
   if (filter === 'all') return BOARD_COPY.emptyAll;
+  if (filter === FROM_SUGGESTIONS) return BOARD_COPY.emptySuggestions;
   const message = isBoardColumn(filter) ? BOARD_COPY.emptyMessages[filter] : BOARD_COPY.emptyOther;
   return { title: BOARD_COPY.emptyTitle(statusWord(filter)), message };
 }
@@ -184,17 +193,25 @@ export type BoardView = {
 };
 
 /** The chosen filter while the pills still offer it; All otherwise. */
-export function filterInForce(tickets: readonly BoardTicket[], chosen: BoardFilter): BoardFilter {
-  return boardFilters(tickets).some((option) => option.filter === chosen) ? chosen : 'all';
+export function filterInForce(
+  tickets: readonly BoardTicket[],
+  chosen: BoardFilter,
+  options: BoardFilterOptions = {},
+): BoardFilter {
+  return boardFilters(tickets, options).some((option) => option.filter === chosen) ? chosen : 'all';
 }
 
-export function boardView(tickets: readonly BoardTicket[], chosen: BoardFilter): BoardView {
+export function boardView(
+  tickets: readonly BoardTicket[],
+  chosen: BoardFilter,
+  options: BoardFilterOptions = {},
+): BoardView {
   const listed = topLevelTickets(tickets);
-  const filter = filterInForce(listed, chosen);
+  const filter = filterInForce(listed, chosen, options);
   const cards = sortTickets(filterTickets(listed, filter)).map(ticketCard);
   return {
     filter,
-    pills: filterPills(listed, filter),
+    pills: filterPills(listed, filter, options),
     cards,
     empty: cards.length === 0 ? emptyCopy(filter) : null,
   };

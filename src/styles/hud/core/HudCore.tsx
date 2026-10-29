@@ -21,6 +21,8 @@
 // HOLD TO TALK's hold, STOP on while the voice works, and, while it does or has a line, the voice's
 // chip and status word and its line under the chip. Under `voice` it is not read.
 //   Both may pass `language` (27 Oct 2026): the EN/PT switch beside HOLD TO TALK (HudButtons).
+//   HUD's home may pass `ideas` and `next` (PRD-268 US-G01): 'IDEAS · N' in the command row and the
+// NEXT ▸ line under the status row (HudTopBar).
 //   HUD's home and the voice screen pass `report` (A2's useMessageReport): the transcript offers
 // Report this on Auto's saved reply (P001R-AF-1). First open and the look previews pass none.
 
@@ -37,7 +39,7 @@ import { Mascot } from '../../mascot/Mascot';
 import type { MascotController } from '../../mascot/use-mascot';
 import { LooksDrawer } from '../LooksDrawer';
 import { HudButtons } from './HudButtons';
-import { HudTopBar } from './HudTopBar';
+import { HudTopBar, type HudIdeas } from './HudTopBar';
 import {
   HUD_CORE,
   coreSizeFor,
@@ -114,6 +116,10 @@ export type HudCoreProps = {
   readonly voice?: HudCoreVoice;
   /** A6's quick-ask on HUD's home; absent, HOLD TO TALK inert as A5 built it. */
   readonly quickAsk?: HudCoreQuickAsk;
+  /** 'IDEAS · N' in the command row (US-G01); absent, none. */
+  readonly ideas?: HudIdeas;
+  /** The NEXT ▸ line under the status row (US-G01); absent, none. */
+  readonly next?: ReactNode;
   /** Report this on Auto's saved reply in the transcript; absent, nothing is offered. */
   readonly report?: ThreadReport;
 };
@@ -242,6 +248,8 @@ export function HudCore(props: HudCoreProps) {
           needsYou={needsYou}
           onLook={openLooks}
           onMenu={onMenu}
+          ideas={props.ideas}
+          next={props.next}
           {...parts.bar}
         />
         <View style={styles.middle} onLayout={core.onMiddleLayout}>

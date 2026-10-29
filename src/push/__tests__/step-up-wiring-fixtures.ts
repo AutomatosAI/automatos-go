@@ -25,6 +25,8 @@ import { grantCall } from '../../chat/cards/grants';
 import { createGuard, type Guard } from '../../step-up/guard';
 import type { AuthResult, GatedAction } from '../../step-up/policy';
 import { createStepUp } from '../../step-up/step-up';
+import { startSuggestion } from '../../suggestions/api';
+import { startGated } from '../../suggestions/gated';
 import { fakeAuth } from '../../step-up/__tests__/step-up-fixtures';
 
 const WS = '7f1c2a54-0000-4000-8000-000000000001';
@@ -33,6 +35,7 @@ const GRANT_ID = 31;
 const QUESTION_ID = 44;
 const TASK_ID = 2680;
 const POST_ID = '5b0c3f7e-8a51-4c1f-9d2e-0f6a7b8c9d10';
+const SUGGESTION_ID = 'a11ce000-0000-4000-8000-000000000268';
 const HASH = '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08';
 export const OPTIONS = Object.freeze(['Ship it', 'Wait for me']);
 const OPTION: AnswerChoice = { kind: 'option', option: 'Ship it' };
@@ -122,6 +125,17 @@ export const GATED_CASES: readonly GatedCase[] = Object.freeze([
     answer: { success: true, task_id: TASK_ID, status: 'assigned', message: 'Running again.' },
     gated: async (guard, client) => (await retryGated(guard, client, retryOf())).ran,
     plain: (client) => sendRetry(client, retryOf()),
+  },
+  {
+    label: "PRD-268's Start on one of Auto's suggestions",
+    action: 'start_suggestion',
+    route: api(`/api/proactive/suggestions/${SUGGESTION_ID}/start`),
+    answer: {
+      suggestion: { id: SUGGESTION_ID, title: 'Turn tickets into an FAQ', status: 'started' },
+      opens: { type: 'board_task', board_task_id: TASK_ID },
+    },
+    gated: async (guard, client) => (await startGated(guard, client, SUGGESTION_ID)).ran,
+    plain: (client) => startSuggestion(client, SUGGESTION_ID),
   },
 ]);
 

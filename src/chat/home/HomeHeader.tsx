@@ -3,13 +3,16 @@
 // the brand lockup, the sail mark from assets/brand beside 'automatos' in Newsreader 17 on one
 // line; on the right, ONE menu button carrying the server's needs-you number (D26). New chat,
 // Chats (D28), the Command Centre and Settings sit in the menu it opens (HomeMenu, menu.ts).
+// Beside it, where discovery lists `suggestions` and one is open, 'Ideas · N' opens the sheet of
+// every open suggestion (PRD-268 US-G01, src/suggestions/use-ideas.tsx).
 
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import { Image, StyleSheet, View } from 'react-native';
 
 import { useNeedsYou } from '../../api/needs-you';
 import { useTokens } from '../../styles/theme';
-import { IconButton, Text } from '../../ui';
+import { useIdeas } from '../../suggestions/use-ideas';
+import { Button, IconButton, Text } from '../../ui';
 import { HOME_COPY } from '../strings';
 import { HeaderBar } from './HeaderBar';
 import { HomeMenu } from './HomeMenu';
@@ -59,6 +62,7 @@ function Brand() {
 export function HomeHeader({ onBack, here = null }: HomeHeaderProps) {
   const { total } = useNeedsYou();
   const menu = useHomeMenu(here);
+  const ideas = useIdeas();
   return (
     <>
       <HeaderBar left={onBack ? HEADER.edge.control : HEADER.edge.text} right={HEADER.edge.control}>
@@ -72,9 +76,19 @@ export function HomeHeader({ onBack, here = null }: HomeHeaderProps) {
           />
         ) : null}
         <Brand />
+        {ideas.button ? (
+          <Button
+            label={ideas.button.text}
+            accessibilityLabel={ideas.button.label}
+            onPress={ideas.button.onPress}
+            variant="ghost"
+            size="sm"
+          />
+        ) : null}
         <MenuButton needsYou={total} expanded={menu.visible} onPress={menu.open} />
       </HeaderBar>
       <HomeMenu menu={menu} needsYou={total} />
+      {ideas.sheet}
     </>
   );
 }
