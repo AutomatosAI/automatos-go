@@ -7,6 +7,7 @@
 
 import { z } from 'zod';
 
+import { BriefPartSchema } from '../brief/schema';
 import type { Receipt, TaskCardData } from '../core/web/types';
 import { logger } from '../lib/logger';
 
@@ -75,7 +76,9 @@ export const TaskCardSchema: z.ZodType<TaskCardData, z.ZodTypeDef, unknown> = z.
 /**
  * The parts a saved message carries (digest line 17). Only the text part is the answer. A file part
  * is the request's own part as sent (api/chat.py saves part.dict()): its url is usually null, read
- * as ''. Any other part type is left out.
+ * as ''. A brief@1 part is the day's brief beside its text (PRD-268 §6.11.2, src/brief/schema.ts):
+ * the thread draws it as the brief card where discovery lists `brief`, and the text part stays the
+ * answer everywhere else. Any other part type is left out.
  */
 export const MessagePartSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('text'), text: z.string() }),
@@ -90,9 +93,24 @@ export const MessagePartSchema = z.discriminatedUnion('type', [
     url: Words,
     attachment_id: Text,
   }),
+  BriefPartSchema,
 ]);
 
 export type MessagePart = z.output<typeof MessagePartSchema>;
+
+/** A card's data posted beside Auto's text (PRD-268 §6.11.2): drawn by the layouts, not the core. */
+export type StructuredPart = z.output<typeof BriefPartSchema>;
+
+/** The parts the vendored core's ChatMessage knows (its MessagePart); every helper of it reads these. */
+export type CorePart = Exclude<MessagePart, StructuredPart>;
+
+function isStructuredPart(part: MessagePart): part is StructuredPart {
+  return part.type === 'brief@1';
+}
+
+function isCorePart(part: MessagePart): part is CorePart {
+  return !isStructuredPart(part);
+}
 
 /** api/attachments.py AttachmentMetadata, as a message's attachments column keeps it. */
 export const StoredAttachmentSchema = z.object({
@@ -108,9 +126,11 @@ export type MessageRole = (typeof MESSAGE_ROLES)[number];
 /**
  * One saved message (GET /api/chat/{id}/messages). source.origin 'turn_error' is a saved failure
  * and source.code its turn error code (consumers/chatbot/service.py _persist_turn_error): the
- * thread shows the kit's words for the code, never the saved text (D-NO-BILLING).
+ * thread shows the kit's words for the code, never the saved text (D-NO-BILLING). `parts` keeps the
+ * parts the vendored core reads, so a saved message is still the web's ChatMessage; a structured
+ * part (brief@1) rides beside them in `structured`, there only when the message has one.
  */
-export const StoredMessageSchema = z.object({
+const StoredMessageObject = z.object({
   id: Id,
   role: z.enum(MESSAGE_ROLES),
   parts: nestedList(MessagePartSchema, 'message part'),
@@ -122,9 +142,29 @@ export const StoredMessageSchema = z.object({
   createdAt: Text,
 });
 
-export const StoredMessagesSchema = list(StoredMessageSchema, 'message');
+type ParsedMessage = z.output<typeof StoredMessageObject>;
 
-export type StoredMessage = Readonly<z.output<typeof StoredMessageSchema>>;
+export type StoredMessage = Readonly<
+  Omit<ParsedMessage, 'parts'> & {
+    parts: CorePart[];
+    /** The structured parts (brief@1), beside the core's; absent when there are none. */
+    structured?: readonly StructuredPart[];
+  }
+>;
+
+function splitParts({ parts, ...rest }: ParsedMessage): StoredMessage {
+  const structured = parts.filter(isStructuredPart);
+  return {
+    ...rest,
+    parts: parts.filter(isCorePart),
+    ...(structured.length > 0 ? { structured } : {}),
+  };
+}
+
+export const StoredMessageSchema: z.ZodType<StoredMessage, z.ZodTypeDef, unknown> =
+  StoredMessageObject.transform(splitParts);
+
+export const StoredMessagesSchema = list(StoredMessageSchema, 'message');
 
 /** 'auto' is the thread where Auto speaks unprompted (PRD-205); anything else is the user's. */
 export const CHAT_KINDS = ['user', 'auto'] as const;

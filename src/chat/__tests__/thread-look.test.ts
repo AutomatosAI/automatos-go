@@ -129,6 +129,7 @@ describe('foldNotices', () => {
     notices: [],
     tickets: [],
     cards: [],
+    brief: null,
     ...overrides,
   });
   const noticeRow: ChatRow = { type: 'notice', key: TURN_NOTICE_KEY, notice: turnNotice };

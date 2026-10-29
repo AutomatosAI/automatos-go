@@ -13,9 +13,11 @@
 // Beside the send sits A6's voice button (US-019k): the voice screen on this conversation, by its id
 // once it has one; not there for a viewer.
 // `empty` takes the thread's place while it is a draft with nothing in it (A5's First open on home).
+// Where discovery lists `brief`, a message carrying the day's brief draws the brief card (US-G06).
 
 import { useCallback, useMemo, type ReactNode } from 'react';
 
+import { canBrief } from '../../api/capabilities';
 import { useAppSession } from '../../app-state/session';
 import { roleCan } from '../../auth/role';
 import { isBlankDraft } from '../../styles/homes/layout';
@@ -56,7 +58,8 @@ function Thread({ thread, empty }: ThreadProps) {
   const { state, send, settleCard, loadError, retry } = thread;
   const follow = useFollowLink();
   const { report, sheet } = useMessageReport();
-  const rows = useMemo(() => threadRows(state), [state]);
+  const briefs = canBrief(useAppSession().discovery);
+  const rows = useMemo(() => threadRows(state, { briefs }), [state, briefs]);
   const askAgain = useCallback(() => {
     const again = retryInput(state);
     if (again) send(again);

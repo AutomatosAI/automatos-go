@@ -14,6 +14,8 @@
 // names. Every row is built anew on each streamed delta, so each row is memoised on row-same.ts's
 // sameThreadRow (equal in value, the same handlers) and Try again is one stable function that
 // calls the screen's latest: only the row that changed draws again.
+// The list says whether the day's brief card is on screen (PRD-268 US-G06: home's needs strip then
+// shrinks to its count, src/brief/on-screen.tsx); outside home nobody listens.
 
 import {
   memo,
@@ -25,9 +27,11 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
-import { FlatList, StyleSheet, View, type ListRenderItem } from 'react-native';
+import { FlatList, StyleSheet, View, type ListRenderItem, type ViewToken } from 'react-native';
 import Animated, { FadeIn, FadeInDown, useReducedMotion } from 'react-native-reanimated';
 
+import { briefOnScreen } from '../../brief/model';
+import { useReportBriefOnScreen } from '../../brief/on-screen';
 import type { WebLinkTarget } from '../../navigation/web-links';
 import { AiLabel } from '../../styles/ai-label';
 import { useTokens } from '../../styles/theme';
@@ -174,6 +178,28 @@ function useStableRetry(onRetry: (() => void) | undefined): (() => void) | undef
 
 const keyOf = (row: ChatRow) => row.key;
 
+/** A row counts as on screen once a tenth of it shows. */
+const VIEWABILITY = Object.freeze({ itemVisiblePercentThreshold: 10 });
+
+type Sighting = { readonly viewableItems: readonly ViewToken<ChatRow>[] };
+
+/**
+ * Tells home whether the brief card is on screen, from the rows the list shows; one function for
+ * the list's life (FlatList refuses a new one), and off again when the list goes.
+ */
+function useBriefSighting(): (sighting: Sighting) => void {
+  const report = useReportBriefOnScreen();
+  const latest = useRef(report);
+  useEffect(() => {
+    latest.current = report;
+  });
+  useEffect(() => () => latest.current(false), []);
+  return useCallback(
+    ({ viewableItems }: Sighting) => latest.current(briefOnScreen(viewableItems)),
+    [],
+  );
+}
+
 /** The thread's first row: the AI label, centred, 16 pt above the first message. */
 function ThreadCaption() {
   const { spacing } = useTokens();
@@ -190,6 +216,7 @@ export function MessageList({ rows, onLink, onRetry, onCard, report }: MessageLi
   const retry = useStableRetry(onRetry);
   // counted before the fold: a notice landing in the reply's box still scrolls to it
   const onContentSizeChange = useScrollOnAdd(list, rows.length);
+  const onViewableItemsChanged = useBriefSighting();
   const shown = useMemo(() => foldNotices(rows), [rows]);
   const places = useMemo(() => threadPlaces(shown), [shown]);
   const renderItem = useCallback<ListRenderItem<ChatRow>>(
@@ -215,6 +242,8 @@ export function MessageList({ rows, onLink, onRetry, onCard, report }: MessageLi
       renderItem={renderItem}
       ListHeaderComponent={ThreadCaption}
       onContentSizeChange={onContentSizeChange}
+      onViewableItemsChanged={onViewableItemsChanged}
+      viewabilityConfig={VIEWABILITY}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
       contentContainerStyle={{ padding: spacing.space7 }}

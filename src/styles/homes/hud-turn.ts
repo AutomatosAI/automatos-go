@@ -8,7 +8,11 @@
 // the live turn's (agent-info), else Auto. The saved reply carries its id where A2's thread offers
 // Report this on that message (reportTarget on A2's own row: never a failure, never an id the
 // server would refuse); the reply being written carries none (P001R-AF-1).
+// HUD has no thread, so the day's brief (PRD-268 US-G06) fills the transcript slot while it is the
+// newest message and no turn is live (hudBrief); OPEN BRIEF then opens its numbered rows.
 
+import { briefOf } from '../../brief/model';
+import type { Brief } from '../../brief/schema';
 import { canStop, shownMessages, type ThreadState } from '../../chat/controller/thread';
 import { markdownBlocks, type Block } from '../../chat/markdown/blocks';
 import { spansText } from '../../chat/markdown/inline';
@@ -132,4 +136,12 @@ export function hudTurn(state: ThreadState): HudTurn {
   const auto = turn.auto ?? (notice ? notice.text : null);
   if (turn.you === null && auto === null && !turn.streaming) return EMPTY_TURN;
   return { ...turn, auto };
+}
+
+/** The day's brief while it is the newest message and no turn is live; null otherwise. */
+export function hudBrief(state: ThreadState): Brief | null {
+  if (state.status === 'loading' || state.live) return null;
+  const messages = shownMessages(state);
+  const newest = messages[messages.length - 1];
+  return newest?.role === 'assistant' ? briefOf(newest) : null;
 }

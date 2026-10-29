@@ -23,6 +23,7 @@
 //   Both may pass `language` (27 Oct 2026): the EN/PT switch beside HOLD TO TALK (HudButtons).
 //   HUD's home and the voice screen pass `report` (A2's useMessageReport): the transcript offers
 // Report this on Auto's saved reply (P001R-AF-1). First open and the look previews pass none.
+//   HUD's home may pass `transcriptSlot` (PRD-268 US-G06): the day's brief in the rows' place.
 
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
@@ -116,6 +117,8 @@ export type HudCoreProps = {
   readonly quickAsk?: HudCoreQuickAsk;
   /** Report this on Auto's saved reply in the transcript; absent, nothing is offered. */
   readonly report?: ThreadReport;
+  /** In the transcript's rows' place (the day's brief, US-G06); absent, the turn's rows. */
+  readonly transcriptSlot?: ReactNode;
 };
 
 /** The state Auto should show: the one held, or the controller's target. */
@@ -252,7 +255,7 @@ export function HudCore(props: HudCoreProps) {
             </View>
             {parts.line}
           </View>
-          <Transcript turn={turn} report={props.report} />
+          <Transcript turn={turn} report={props.report} slot={props.transcriptSlot} />
         </View>
         <View style={{ paddingHorizontal: HUD_CORE.wave.padX }}>
           <Waveform colour={paint.accent} levels={levels} />

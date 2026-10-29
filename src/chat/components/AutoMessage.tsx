@@ -9,11 +9,13 @@
 // as an accessible action: the message is not one element, so a screen reader still reaches the
 // cards' buttons one by one. The accessible action is the same object for as long as Report this is
 // offered (it calls the newest onReport), so the memoised answer is not drawn again on every frame
-// of another reply.
+// of another reply. A message carrying the day's brief (row.brief, PRD-268 US-G06) draws the brief
+// card as Auto's box in place of its words: the card holds the same words (Auto's Read).
 
 import { useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 
+import { StudioBriefCard } from '../../brief/BriefCard';
 import type { WebLinkTarget } from '../../navigation/web-links';
 import { useTokens } from '../../styles/theme';
 import { Divider } from '../../ui';
@@ -93,7 +95,9 @@ export function AutoMessage({ row, onLink, onRetry, onCard, onReport }: AutoMess
   return (
     <ReportPress onReport={onReport}>
       <AutoColumn avatar="header" report={report}>
-        {bubbleHolds(row) ? (
+        {row.brief ? (
+          <StudioBriefCard brief={row.brief} onLink={onLink} />
+        ) : bubbleHolds(row) ? (
           <AutoWords row={row} onLink={onLink} onRetry={onRetry} report={report} />
         ) : null}
         <TicketCards tickets={row.tickets} onLink={onLink} />
