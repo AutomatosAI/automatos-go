@@ -475,6 +475,61 @@
       "priority": 14,
       "passes": true,
       "notes": "US-022k DONE 30 Oct (02f55c5): the docs say four layouts and which theme gets each; CLAUDE.md says four styles; PRD-001 US-022's boxes are ticked with their evidence; no stand-in left. PRD-268 SEAM OPEN: brief — Go #31 (feat/prd-268-g06-brief) is open and src/brief is not on main (c2dfcb1); its PR adds the day's brief as a slot in Arcade's story window, as in HudHome. PRD-268 SEAM OPEN: suggestions — Go #32 (feat/prd-268-g01-suggestions) is open, src/suggestions not on main; its PR adds the ideas count and next line under Arcade's status bar. PRD-268 SEAM OPEN: approvals — Go #33 (feat/prd-268-g08-approval-sheet) is open, src/approvals not on main; its PR adds the under-chip approval line under Arcade's dialogue window. SEAM EDIT: docs/styles-and-themes.md — four layouts, what each draws, which theme gets each, a pre-Arcade build's view of automatos/arcade; the A5-branch framing brought up to date (A5 is on main, #14). SEAM EDIT: CLAUDE.md — four styles (Studio / Play / HUD / Arcade), four layouts, Arcade's design sources. SEAM EDIT: docs/prd/PRD-001-AUTOMATOS-GO-V1.md — Gerard's addendum (§4.6.1, D-ARC-1..7, US-022, the wave's first commit) and US-022's five boxes ticked with evidence (this story). No FOUNDATION GAP. No ARCADE_STAND_IN left anywhere. ArcadeHome.tsx unchanged (nothing on main to wire)."
+    },
+    {
+      "id": "P001A-RVW-1",
+      "prdStory": "review",
+      "phase": 1,
+      "title": "The pause control on every screen where Arcade loops: the voice screen, the edge screens and Options (D-ARC-5, WCAG 2.2.2)",
+      "description": "Review finding (MEDIUM; D-ARC-5 'a pause control stops every loop (WCAG 2.2.2)', D-A11Y 'Reduce Motion and the pause control stop loops'). The one PauseButton is mounted only by the home's status bar: src/styles/arcade/parts/StatusBar.tsx:75 ({pause ? <PauseButton /> : null}, from ArcadeHome.tsx:100; the picker passes pause={false}, ArcadePreview.tsx:84). Arcade's loops also run, with no control on screen, on: (1) the voice screen in Arcade: src/voice/screen/VoiceScreen.tsx:68 mounts HudCore, whose rings and pulse (RingCore.tsx, useVoiceCore), waveform shimmer (WaveformView.tsx) and Auto's sprite (HudCore.tsx:137-145 CoreSprite → PixelSprite) loop for the whole voice session; use-voice-core.ts:23-24 stills them when paused, but the voice screen has no way to pause or play; (2) every edge screen: src/styles/edges/ArcadeEdgeWindow.tsx:27 <PixelSprite state={state} /> loops sleeping / oops / lost / hello without end on Not running (parts.tsx:153, reached from GateEdge before the home exists), Something went wrong (SomethingWrong.tsx:56), Lost (Lost.tsx:79, app/+not-found.tsx) and First open (FirstOpen.tsx:112); (3) Options: src/styles/arcade/look-page/OptionsPreview.tsx:47 <PixelSprite state={PREVIEW_STATE} /> loops celebrate (4 frames, preview.ts:15) and :42 blinks the ▼ cursor, and KnobRows.tsx:60 blinks the ▶ cursor beside the row last changed, indefinitely. Options is reached from Settings on any style: a person on Studio editing Arcade's looks has no Arcade home and so no pause anywhere. (4) The style picker's Arcade card: src/styles/picker/previews/ArcadePreview.tsx:57 blinks its ▼ cursor while the picker is focused, with no control on that screen. The design kit at 034fa629c reaches the toggle from every page (src/motion/pause-toggle.tsx, mounted by src/frame/status-bar.tsx:46 and src/frame/phone-menu.tsx:40, which frame every theme page); on the phone these four screens sit outside the handheld. The US-022 box in docs/prd/PRD-001-AUTOMATOS-GO-V1.md ('Reduce Motion and the pause control stop every loop') is only true once the control is reachable where the loops run.",
+      "acceptanceCriteria": [
+        "Cause: PauseButton is drawn only by the home's StatusBar (src/styles/arcade/parts/StatusBar.tsx:75); the voice screen (src/voice/screen/VoiceScreen.tsx:68 → HudCore), ArcadeEdgeWindow (src/styles/edges/ArcadeEdgeWindow.tsx:27), Options (src/styles/arcade/look-page/OptionsPreview.tsx:42,47, KnobRows.tsx:60) and the picker's Arcade card (src/styles/picker/previews/ArcadePreview.tsx:57) loop Arcade's sprite, rings, waveform or cursor with no control on screen",
+        "Change: the existing PauseButton (src/styles/arcade/PauseButton.tsx, unchanged: PAUSE / PLAY, 44 pt, its accessibilityLabel, nothing under Reduce Motion) is drawn (a) on the voice screen when the style is Arcade (VoiceScreen.tsx renders it when model.core.sprite is true, e.g. through an optional slot HudCore draws in its top bar; absent for Studio, Play, HUD and an installed theme, so their voice screen and HUD's home are unchanged), (b) in ArcadeEdgeWindow, so all four edge screens carry it, (c) on Arcade's Options page (ArcadeLookPage.tsx's heading or OptionsWindow), inside the page's StyleScope so it reads the one stored pause; (d) the picker's Arcade card holds its ▼ cursor on (no loop where no control sits; its sprite is already still). One tap anywhere still sets the one store value (styles.arcade.motionPaused), so the sprite, cursors, typing and the voice core's loops stop together everywhere",
+        "Test (new src/styles/arcade/__tests__/pause-reach.test.ts, reading the product tree as the release audits do): every non-test .tsx under src/styles and src/voice that mounts a moving Arcade part (`<PixelSprite` without `still`, `useCursorOn(` with a live argument, `useTypewriter(`, or HudCore's CoreSprite) is listed with the screen file that hosts it (the home's parts → StatusBar.tsx; ArcadeEdgeWindow.tsx; OptionsPreview.tsx and KnobRows.tsx → ArcadeLookPage.tsx (or OptionsWindow.tsx); HudCore.tsx → VoiceScreen.tsx), each host file renders `<PauseButton`, and a moving file with no host entry fails the test; ArcadePreview.tsx calls no live useCursorOn. Existing tests (motion-pause.test.ts, voice/__tests__/dress.test.ts, edges tests) still pass unchanged",
+        "Docs: docs/styles-and-themes.md says where the pause control sits (the home's status bar, the voice screen in Arcade, the edge screens and Options); the DONE note carries 'SEAM EDIT: src/voice/screen/VoiceScreen.tsx — …' (and HudCore.tsx's slot, if used, stays additive)",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "bash scripts/ralph/acceptance-prd001-arcade.sh --no-ci passes"
+      ],
+      "files": [
+        "src/voice/screen/VoiceScreen.tsx",
+        "src/styles/hud/core/HudCore.tsx",
+        "src/styles/edges/ArcadeEdgeWindow.tsx",
+        "src/styles/arcade/look-page/ArcadeLookPage.tsx",
+        "src/styles/arcade/look-page/OptionsWindow.tsx",
+        "src/styles/picker/previews/ArcadePreview.tsx",
+        "src/styles/arcade/__tests__/pause-reach.test.ts",
+        "docs/styles-and-themes.md"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P001A-RVW-2",
+      "prdStory": "review",
+      "phase": 1,
+      "title": "The D-pad fits the phone at every text size: cells capped at a third of the row, the words wrap (D-A11Y, OT-A5)",
+      "description": "Review finding (MEDIUM; D-A11Y 'Dynamic Type with layouts that wrap … tap targets 44 pt (the D-pad's 64)', OT-A5 'Largest Dynamic Type size in Arcade: nothing clipped, the D-pad's words wrap'). src/styles/arcade/parts/pad-grid.ts:29-32 padSide grows the cell with the font scale and never caps it (Math.round(64 × fontScale)), src/styles/arcade/parts/DPad.tsx:70 sizes every cell from it, and DPad.tsx:55 holds each word to numberOfLines={1}, so the words can never wrap. The Text primitive scales uncapped (src/ui/Text.tsx:45 TEXT_SCALING). React Native's iOS font multipliers are 2.143 at Accessibility Large, 2.643, 3.143 and 3.571 at the largest: a 3-cell grid of 137, 169, 201 and 229 pt cells is 411 to 686 pt wide on a 375–430 pt phone, plus ArcadeControls' 8 pt row padding (src/styles/arcade/home/ArcadeControls.tsx:28,120). The home's ScrollView (ArcadeHome.tsx:98) scrolls vertically only and clips the overflow, so from Accessibility Large up ▶ Inventory (the grid's third column) is cut, and at the largest size it starts at x ≈ 466 pt, entirely off-screen and untouchable, with ▲ Quests and ▼ Menu half off. pad-grid.test.ts:43-49 tests growth (padSide(1.5) = 96) but no cap. A 390 pt phone fits three 64 pt cells up to a font scale of about 1.9; past that the grid must stop growing and the word must wrap inside its cell.",
+      "acceptanceCriteria": [
+        "Cause: padSide (src/styles/arcade/parts/pad-grid.ts:29-32) has no upper bound and DPad.tsx:55 forbids the word to wrap (numberOfLines={1}), so at large Dynamic Type the 3 × padSide grid is wider than the controls row and the home's vertical ScrollView clips ▶ Inventory (fully off-screen at React Native's 3.571 multiplier on a 390 pt phone)",
+        "Change: padSide takes the row's width as well as the font scale and returns min(round(64 × scale), floor(rowWidth / 3)), never under 64 (DPAD_METRICS.cell) and 64 at a scale of 1 or less or a non-finite one, as today; DPad passes the width its row has (useWindowDimensions().width less ArcadeControls' horizontal padding, the padding exported as a constant rather than repeated); the word in a cell may wrap (no numberOfLines cap) and the cell takes minHeight equal to its side (its width stays the side), so a wrapped word makes the cell taller, never wider; the voice surround keeps wrapping under the D-pad as ArcadeControls' flexWrap row does today",
+        "Test (src/styles/arcade/parts/__tests__/pad-grid.test.ts): padSide(1, 390) = 64, padSide(0.82, 390) = 64, padSide(NaN, 390) = 64 and padSide(1.5, 390) = 96 as today; for every React Native iOS multiplier (0.823, 0.882, 0.941, 1, 1.118, 1.235, 1.353, 1.786, 2.143, 2.643, 3.143, 3.571) and row widths 359 and 414 (375 and 430 pt phones less the 16 pt row padding), 3 × padSide(scale, width) ≤ width and padSide ≥ 64; DPad.tsx sets no numberOfLines on the pad word (a source assertion in the same file); the existing check that every word fits inside a cell's borders at fontScale 1 still passes",
+        "npm run typecheck passes",
+        "npm run lint passes (0 errors)",
+        "npx vitest run passes",
+        "bash scripts/ralph/acceptance-prd001-arcade.sh --no-ci passes"
+      ],
+      "files": [
+        "src/styles/arcade/parts/pad-grid.ts",
+        "src/styles/arcade/parts/DPad.tsx",
+        "src/styles/arcade/home/ArcadeControls.tsx",
+        "src/styles/arcade/parts/__tests__/pad-grid.test.ts"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": ""
     }
   ]
 }
