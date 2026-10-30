@@ -46,7 +46,7 @@ PIXELIFY_COMMIT=39df74aba80df8157546034b878e8be1eb565ced                       #
 KIT_FILES_RE='^scripts/ralph/(prd-001-arcade\.json|PROMPT_build_prd001-arcade\.md|PROMPT_review_prd001-arcade\.md|acceptance-prd001-arcade\.sh)$'
 TEST_RE='(^|/)__tests__/|\.test\.tsx?$'
 # KA1-FILES: the only paths this wave may add or change (the tests beside each included).
-KA1_ALLOWED='^(src/release/__tests__/support/surfaces\.ts$|src/config/__tests__/app-config\.test\.ts$|src/styles/|src/ui/(Slider\.tsx|dressed\.ts)$|src/ui/__tests__/|src/voice/home/(use-)?arcade-home-voice\.ts$|src/voice/home/__tests__/|src/voice/screen/|src/voice/nav\.ts$|src/voice/__tests__/|app/\(app\)/settings/look/arcade\.tsx$|assets/fonts/(press-start-2p/|pixelify-sans/|SOURCES\.md$)|app\.json$|docs/styles-and-themes\.md$|docs/prd/PRD-001-AUTOMATOS-GO-V1\.md$|CLAUDE\.md$|src/(brief|suggestions|approvals)/)'
+KA1_ALLOWED='^(src/chat/|src/cc/|src/release/__tests__/support/surfaces\.ts$|src/config/__tests__/app-config\.test\.ts$|src/styles/|src/ui/(Slider\.tsx|dressed\.ts)$|src/ui/__tests__/|src/voice/home/(use-)?arcade-home-voice\.ts$|src/voice/home/__tests__/|src/voice/screen/|src/voice/nav\.ts$|src/voice/__tests__/|app/\(app\)/settings/look/arcade\.tsx$|assets/fonts/(press-start-2p/|pixelify-sans/|SOURCES\.md$)|app\.json$|docs/styles-and-themes\.md$|docs/prd/PRD-001-AUTOMATOS-GO-V1\.md$|CLAUDE\.md$|src/(brief|suggestions|approvals)/)'
 # KA3: each vendored file and the kit source (under themes/arcade/) whose sha256 its header must carry.
 VENDORED="src/styles/tokens/arcade-catalogue.ts=src/looks/catalogue.ts src/styles/arcade/sprite/grid.ts=src/art/grid.ts src/styles/arcade/sprite/auto-sprite.ts=src/art/auto-sprite.ts src/styles/arcade/sprite/states.ts=src/art/states.ts src/styles/arcade/look-schema.ts=looks/schema.json"
 # D-SHAPE: modules the stories call pure (no React, React Native, Expo or Skia), so vitest loads them.
@@ -347,6 +347,33 @@ us022j() {
   need "picker/cards.ts gains arcade" has 'arcade' src/styles/picker/cards.ts || b=1
   [ $b -eq 0 ]
 }
+us022l() {
+  local b=0
+  all_exist src/styles/arcade/parts/PartyStrip.tsx src/styles/arcade/home/party.ts || b=1
+  need "the party under the status bar in the Arcade home" in_arcade_home 'PartyStrip' || b=1
+  need "party state from needs-you" has 'agent_name' src/styles/arcade/home/party.ts || b=1
+  need "party tests" arcade_tests_mention 'party' || b=1
+  [ $b -eq 0 ]
+}
+us022m() {
+  local b=0
+  all_exist src/styles/arcade/map/world-map.ts src/styles/arcade/home/QuestsView.tsx src/styles/arcade/home/quests.ts || b=1
+  need "world-map.ts names its kit source and commit" grep -q 'themes/arcade/src/art/world-map.ts' src/styles/arcade/map/world-map.ts || b=1
+  need "world-map.ts's sha256 at the pinned commit" has "$(git -C "$KIT_DIR" show "$KIT_PIN:themes/arcade/src/art/world-map.ts" 2>/dev/null | shasum -a 256 | cut -d' ' -f1)" src/styles/arcade/map/world-map.ts || b=1
+  need "the map drawn with Skia" grep -rq '@shopify/react-native-skia' src/styles/arcade/home/QuestsView.tsx src/styles/arcade/map 2>/dev/null || b=1
+  need "quests view in the Arcade home" in_arcade_home 'QuestsView' || b=1
+  need "the quiet map's words" grep -rq 'The map is quiet' src/styles || b=1
+  need "quests tests" arcade_tests_mention 'quests' || b=1
+  [ $b -eq 0 ]
+}
+us022n() {
+  local b=0
+  all_exist src/styles/arcade/home/InventoryView.tsx src/styles/arcade/home/inventory.ts || b=1
+  need "inventory view in the Arcade home" in_arcade_home 'InventoryView' || b=1
+  need "the empty bag's words" grep -rq 'Your bag is empty' src/styles || b=1
+  need "inventory tests" arcade_tests_mention 'inventory' || b=1
+  [ $b -eq 0 ]
+}
 us022k() {
   local b=0
   need "docs/styles-and-themes.md describes four layouts and automatos/arcade" flat_has '[Ff]our (built-in )?(styles|layouts).*automatos/arcade|automatos/arcade.*[Ff]our (built-in )?(styles|layouts)' docs/styles-and-themes.md || b=1
@@ -400,6 +427,9 @@ check "US-022g the Arcade home over A2's thread: composer, voice, the D-pad's wa
 check "US-022h the shared screens in Arcade's dress" "us022h"
 check "US-022i the edge screens and the voice screen in Arcade" "us022i"
 check "US-022j Options (the look page) and Arcade's card in the picker" "us022j"
+check "US-022l the party strip" "us022l"
+check "US-022m Quests: the overworld map" "us022m"
+check "US-022n Inventory: the item grid" "us022n"
 check "US-022k PRD-268's slots, the docs, the PRD's US-022 boxes" "us022k"
 
 echo ""; echo "=== Contract (negative, added lines only)"

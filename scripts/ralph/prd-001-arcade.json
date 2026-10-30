@@ -45,7 +45,7 @@
     },
     {
       "id": "D-ARC-6",
-      "text": "The home is the handheld: ▲ Quests → Board, ◀ Chat → home, ▶ Inventory → Deliverables, ▼ Menu → the header menu. The shared screens are dressed, never copied. Counters only from numbers the app already fetches; no new endpoint.",
+      "text": "The home is the handheld, with Arcade's own screens (Gerard, 30 Oct): the party strip under the status bar; the D-pad switches the handheld's screen between Chat, Quests (the overworld map, the Board's tickets as quests) and Inventory (the item grid, the Deliverables as items), with links to the full Board and Deliverables; ▼ Menu opens the header menu. The shared screens are dressed, never copied. Counters and every screen only from data the app already reads; no new endpoint.",
       "source": "PRD-001 §4.6.1"
     },
     {
@@ -95,7 +95,7 @@
     },
     {
       "id": "KA1-FILES",
-      "text": "This wave may create or change ONLY: src/styles/** (never src/styles/ai-label.tsx), src/ui/Slider.tsx and src/ui/dressed.ts (additive), src/voice/home/use-arcade-home-voice.ts, src/voice/home/arcade-home-voice.ts, src/voice/screen/**, src/voice/nav.ts, app/(app)/settings/look/arcade.tsx, assets/fonts/press-start-2p/**, assets/fonts/pixelify-sans/**, assets/fonts/SOURCES.md and app.json's expo-font list (US-022d only), docs/styles-and-themes.md, docs/prd/PRD-001-AUTOMATOS-GO-V1.md (US-022 boxes), CLAUDE.md (the styles count), and in US-022k the PRD-268 folders src/brief/**, src/suggestions/** and src/approvals/** where the base carries them (additive), the tests beside each, and this kit's files under scripts/ralph/. Never: src/core/**, core.lock.json, src/api/**, src/navigation/routes.ts, package.json, package-lock.json, eas.json, .eas/**, .github/**, any other assets/fonts/** family.",
+      "text": "This wave may create or change ONLY: src/styles/** (never src/styles/ai-label.tsx), src/ui/Slider.tsx and src/ui/dressed.ts (additive), src/voice/home/use-arcade-home-voice.ts, src/voice/home/arcade-home-voice.ts, src/voice/screen/**, src/voice/nav.ts, app/(app)/settings/look/arcade.tsx, assets/fonts/press-start-2p/**, assets/fonts/pixelify-sans/**, assets/fonts/SOURCES.md and app.json's expo-font list (US-022d only), docs/styles-and-themes.md, docs/prd/PRD-001-AUTOMATOS-GO-V1.md (US-022 boxes), CLAUDE.md (the styles count), and in US-022k the PRD-268 folders src/brief/**, src/suggestions/** and src/approvals/** where the base carries them (additive), additive exports in src/chat/** and src/cc/** for US-022l..n (SEAM EDIT), the store audit's src/release/__tests__/support/surfaces.ts and src/config/__tests__/app-config.test.ts entries, the tests beside each, and this kit's files under scripts/ralph/. Never: src/core/**, core.lock.json, src/api/**, src/navigation/routes.ts, package.json, package-lock.json, eas.json, .eas/**, .github/**, any other assets/fonts/** family.",
       "source": "kit"
     },
     {
@@ -387,6 +387,74 @@
       "notes": ""
     },
     {
+      "id": "US-022l",
+      "prdStory": "US-022",
+      "phase": 1,
+      "title": "The party strip: your agents under the status bar, each with its state word",
+      "description": "As a user in Arcade, I want my agents as the party on the handheld, as the design's phone shows them (Gerard, 30 Oct: the app gets Arcade's own screens).",
+      "acceptanceCriteria": [
+        "src/styles/arcade/parts/PartyStrip.tsx (props only): PARTY, then each agent as a small pixel avatar in its colour (the catalogue's AGENT_COLOURS, cycled by the agent's position, as the design kit (AutomatosAI/automatos-design-kit) at 034fa629c's src/art/agents-icons.ts and src/chat/party.tsx do) with a glyph and word for its state; a 44 pt target per agent; the row scrolls sideways when it doesn't fit; VoiceOver hears 'Scout, needs you' per agent. Design: <workspace>/DUMPING AREA/automatos-arcade/'Automatos Arcade.dc.html' Phone 390 (PARTY row under the status bar)",
+        "src/styles/arcade/home/party.ts (pure, tested): each agent's state from data the app already reads — NEEDS YOU when a needs-you row names the agent (useNeedsYou rows' agent_name), WORKING when a Board ticket in progress is the agent's (the Board query the shell already makes), READY otherwise; agents in the order the read gives them",
+        "The agents come from the chat's existing read (src/chat/routes.ts agents, GET /api/chat/agents) through the chat's own hook or query key; no new endpoint, no fetch outside src/api. If the hook isn't exported, export it (additive, SEAM EDIT)",
+        "ArcadeHome draws the PartyStrip under the StatusBar, as the design's phone does; with no agents it draws nothing",
+        "npm run typecheck, npm run lint and npx vitest run pass"
+      ],
+      "files": [
+        "src/styles/arcade/parts/PartyStrip.tsx",
+        "src/styles/arcade/home/",
+        "src/styles/homes/ArcadeHome.tsx",
+        "src/chat/ (additive export only)"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": "SEAM EDIT notes for any src/chat/** or src/cc/** file."
+    },
+    {
+      "id": "US-022m",
+      "prdStory": "US-022",
+      "phase": 1,
+      "title": "Quests: the overworld map on the handheld, the Board's tickets as quests",
+      "description": "As a user in Arcade, I want ▲ Quests to show the design's overworld map with my work as quests, as Arcade's web Quests does (Gerard, 30 Oct).",
+      "acceptanceCriteria": [
+        "src/styles/arcade/map/world-map.ts: the design kit (AutomatosAI/automatos-design-kit) at 034fa629c's src/art/world-map.ts vendored as pure TypeScript with its provenance header (path, commit, sha256): the 40×24 tile map, regions (active Greenwood, needs Storm Peaks, done Hearth Village), MAP_RECTS and placeMarkers; its colours from tokens/arcade-catalogue.ts (the palette's map colours, never a literal); read with `git -C \"$RALPH_WORKSPACE/.worktrees/automatos-design-kit/kit-arcade-official\" show 034fa629c:themes/arcade/<path>`; tests pin the tile map and marker placement against the kit's",
+        "src/styles/arcade/home/QuestsView.tsx: the map drawn with Skia from MAP_RECTS (crisp, no antialiasing), scaled to the screen's width; the region names; one marker per quest at its placed tile, a 44 pt target held inside the map (as the kit's 1.0.0 clamp), glyph and word in its accessibilityLabel ('Compare three laptops, in progress'); the quest window under the map for the selected marker: its title, its status word, and Open → the ticket sheet (routes.cc ticket route); 'N quests' in the header; with none: 'The map is quiet. Start a quest from the chat.'",
+        "src/styles/arcade/home/quests.ts (pure, tested): the quests are the Board's tickets (the query the Command Centre shell already makes): in progress → Greenwood, needs you (review, question, approval, stuck, failed) → Storm Peaks, done → Hearth Village; the first that needs you is selected first",
+        "The D-pad switches the handheld's screen, as the web handheld does: ▲ Quests shows QuestsView in the screen (no route), ◀ Chat shows the chat again; the quest window keeps a 'Board' link to routes.cc.board for the full board",
+        "npm run typecheck, npm run lint and npx vitest run pass"
+      ],
+      "files": [
+        "src/styles/arcade/map/",
+        "src/styles/arcade/home/",
+        "src/styles/homes/ArcadeHome.tsx",
+        "src/styles/tokens/arcade-catalogue.ts (read)"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-022n",
+      "prdStory": "US-022",
+      "phase": 1,
+      "title": "Inventory: the item grid with tabs on the handheld, the Deliverables as items",
+      "description": "As a user in Arcade, I want ▶ Inventory to show my Deliverables as the design's item slots, as Arcade's web Inventory does (Gerard, 30 Oct).",
+      "acceptanceCriteria": [
+        "src/styles/arcade/home/InventoryView.tsx: tabs ALL, REPORTS, DOCUMENTS, IMAGES (and POSTS where the app's Deliverables offer socials), a grid of item slots (two columns on the phone, newest first): each slot its kind word, a pixel item icon (the catalogue's ICON_COLOURS, after the design kit (AutomatosAI/automatos-design-kit) at 034fa629c's src/art/ and src/deliverables/inventory.tsx), its title and day; the ▶ cursor on the selected slot; an info window naming the selected item ('Laptop shortlist · Report · Today'); Open → the Deliverable's own screen (routes.cc deliverable route); a 'More' / 'All Deliverables' link to routes.cc.deliverables",
+        "The items come from the Command Centre's Deliverables read (src/cc/deliverables useGallery, or its query), with its paging; no new endpoint. Empty: the sprite asleep, 'Your bag is empty.', 'Ask Auto for something and it lands here.' and GO TO CHAT",
+        "src/styles/arcade/home/inventory.ts (pure, tested): the tab → the gallery's type filter, the slot's kind word and icon from the Deliverable's kind, the info line",
+        "▶ Inventory on the D-pad shows InventoryView in the handheld's screen (no route); ◀ Chat shows the chat again",
+        "npm run typecheck, npm run lint and npx vitest run pass"
+      ],
+      "files": [
+        "src/styles/arcade/home/",
+        "src/styles/homes/ArcadeHome.tsx",
+        "src/cc/deliverables/ (additive export only)"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": "SEAM EDIT notes for any src/cc/** file."
+    },
+    {
       "id": "US-022k",
       "prdStory": "US-022",
       "phase": 1,
@@ -394,7 +462,7 @@
       "description": "As Automatos, we want Arcade to have what every layout has, and the docs to say there are four layouts (D-ARC-7).",
       "acceptanceCriteria": [
         "If origin/main now carries PRD-268's brief (src/brief/), suggestions (src/suggestions/) or approval sheet (src/approvals/) — Go #31, #32, #33 — the runner has merged origin/main in before this story and ArcadeHome wires each as HudHome does: the day's brief as a story-window slot, the ideas count and next line under the status bar, the approval under-chip line under the dialogue window; any of the three not on main is listed in the DONE note as 'PRD-268 SEAM OPEN: <which>' for that PR to add Arcade",
-        "docs/styles-and-themes.md describes four layouts (Studio, Play, HUD, Arcade), what each draws, that automatos/play, automatos/hud and automatos/arcade switch the phone to theirs while every other theme paints Studio through its skin, and that a build from before Arcade paints automatos/arcade's skin on Studio; CLAUDE.md's 'three styles' lines say four",
+        "docs/styles-and-themes.md describes four layouts (Studio, Play, HUD, Arcade), what each draws (Arcade: the handheld with its party, the chat, Quests and Inventory screens), that automatos/play, automatos/hud and automatos/arcade switch the phone to theirs while every other theme paints Studio through its skin, and that a build from before Arcade paints automatos/arcade's skin on Studio; CLAUDE.md's 'three styles' lines say four",
         "docs/prd/PRD-001-AUTOMATOS-GO-V1.md US-022's boxes are ticked with the evidence that is in the code (screenshots stay Gerard's, ownerTest)",
         "`grep -rn ARCADE_STAND_IN src app` finds nothing; no file over 800 lines; npm run typecheck, npm run lint, npx vitest run, npm run check:bundle, npm run check:routes and npx expo-doctor pass"
       ],
@@ -404,7 +472,7 @@
         "CLAUDE.md",
         "docs/prd/PRD-001-AUTOMATOS-GO-V1.md"
       ],
-      "priority": 11,
+      "priority": 14,
       "passes": false,
       "notes": ""
     }
