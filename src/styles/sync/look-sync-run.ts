@@ -1,18 +1,18 @@
-// The look sync running (US-017d, D-PHONE-CHOICE): one runner per style store and theme, over the
-// pure reducer (play/look-sync.ts). It reads the member's looks (GET /api/themes/looks/{themeId})
-// when LookSync asks (mount, every foreground, a look page opening) and writes the result to the
-// style store, which repaints the style and keeps the copy on the phone; it watches the style store
-// for a change made on the phone (the look page, HUD's drawer) and sends the whole set through the
-// outbox (one PUT at a time, a newer waiting save replacing an older). A part changed on the phone
-// wins until the server keeps it. Not installed (404): the looks stay on the phone. 401, 403, 5xx
-// and no answer: kept, sent after the next read. No timers and no polling. The target's session is
-// the copy's owner (server, workspace, user): a copy another owner left is put back to the theme's
-// defaults when a new one attaches or reads, before anything is read, merged or sent. One read at
-// a time per session: a second call joins it. A read's answer (or failure) is dropped, changing
-// nothing on the phone, when it is for an older session or when a save of the theme was queued, in
-// flight or answered at any point between the read's start and its answer: the server may have
-// served the read before that save landed. The next mount, foreground or look page reads again.
-// Pure TypeScript (no React).
+// The look sync running (US-017d, D-PHONE-CHOICE; Arcade's from US-022c): one runner per style
+// store and theme (Play, HUD, Arcade), over the pure reducer (play/look-sync.ts). It reads the
+// member's looks (GET /api/themes/looks/{themeId}) when LookSync asks (mount, every foreground, a
+// look page opening) and writes the result to the style store, which repaints the style and keeps
+// the copy on the phone; it watches the style store for a change made on the phone (the look page,
+// HUD's drawer) and sends the whole set through the outbox (one PUT at a time, a newer waiting save
+// replacing an older). A part changed on the phone wins until the server keeps it. Not installed
+// (404): the looks stay on the phone. 401, 403, 5xx and no answer: kept, sent after the next read.
+// No timers and no polling. The target's session is the copy's owner (server, workspace, user): a
+// copy another owner left is put back to the theme's defaults when a new one attaches or reads,
+// before anything is read, merged or sent. One read at a time per session: a second call joins it.
+// A read's answer (or failure) is dropped, changing nothing on the phone, when it is for an older
+// session or when a save of the theme was queued, in flight or answered at any point between the
+// read's start and its answer: the server may have served the read before that save landed. The
+// next mount, foreground or look page reads again. Pure TypeScript (no React).
 
 import type { ApiClient } from '../../api/client';
 import { logger } from '../../lib/logger';
@@ -29,7 +29,12 @@ import {
 } from '../play/look-sync';
 import type { StyleState, StyleStoreApi } from '../provider/store';
 import { createLookOutbox, type LookOutbox } from './look-outbox';
-import { HUD_LOOK_THEME, PLAY_LOOK_THEME, type LookTheme } from './look-themes';
+import {
+  ARCADE_LOOK_THEME,
+  HUD_LOOK_THEME,
+  PLAY_LOOK_THEME,
+  type LookTheme,
+} from './look-themes';
 
 /** Where the looks are read from and sent to: the session's client, and whose looks they are. */
 export type LookSyncTarget = {
@@ -226,11 +231,15 @@ function createRunner<L extends LookDoc>(
   });
 }
 
-type Runners = { readonly play: LookSyncRunner; readonly hud: LookSyncRunner };
+type Runners = {
+  readonly play: LookSyncRunner;
+  readonly hud: LookSyncRunner;
+  readonly arcade: LookSyncRunner;
+};
 
 const runners = new WeakMap<StyleStoreApi, Runners>();
 
-/** Play's and HUD's runners for this store, made once (one outbox between them). */
+/** Play's, HUD's and Arcade's runners for this store, made once (one outbox between them). */
 export function lookSyncRunners(store: StyleStoreApi): Runners {
   const made = runners.get(store);
   if (made) return made;
@@ -238,6 +247,7 @@ export function lookSyncRunners(store: StyleStoreApi): Runners {
   const next: Runners = Object.freeze({
     play: createRunner(store, PLAY_LOOK_THEME, outbox),
     hud: createRunner(store, HUD_LOOK_THEME, outbox),
+    arcade: createRunner(store, ARCADE_LOOK_THEME, outbox),
   });
   runners.set(store, next);
   return next;

@@ -1,11 +1,12 @@
-// The phone's one style store (PRD-001 §4.6, D54, D59): the style choice, Play's look, HUD's looks
-// and the cached theme painting, read synchronously from the encrypted MMKV store when the store
-// is made, so the first frame paints the chosen style (no flash of Studio at launch). Each part
-// lives in its own MMKV store: the choice in US-016a's (styles.choice; nothing stored is 'Same as
-// Studio'), HUD's looks in US-018a's (styles.hud.looks), what 'Same as Studio' painted and the
-// theme painting in US-016i's (styles.theme.followed, styles.theme.paint, themes/cache.ts), Play's
-// looks in US-017d's (styles.play.looks, play/look-store.ts) with each theme's look sync marks
-// beside them (styles.*.looks.sync, sync/look-marks.ts). The installs the last read offered, the
+// The phone's one style store (PRD-001 §4.6, D54, D59): the style choice, Play's look, HUD's and
+// Arcade's looks and the cached theme painting, read synchronously from the encrypted MMKV store
+// when the store is made, so the first frame paints the chosen style (no flash of Studio at
+// launch). Each part lives in its own MMKV store: the choice in US-016a's (styles.choice; nothing
+// stored is 'Same as Studio'), HUD's looks in US-018a's (styles.hud.looks), Arcade's in US-022c's
+// (styles.arcade.looks), what 'Same as Studio' painted and the theme painting in US-016i's
+// (styles.theme.followed, styles.theme.paint, themes/cache.ts), Play's looks in US-017d's
+// (styles.play.looks, play/look-store.ts) with each theme's look sync marks beside them
+// (styles.*.looks.sync, sync/look-marks.ts). The installs the last read offered, the
 // fonts loaded for the painting and the look sync's standing with the server are this launch's
 // only (ThemeSync, themes/fonts.ts and LookSync fill them). Pure over zustand's vanilla store and
 // the KeyValueStorage port, so it runs in vitest; theme.tsx hands it the foundation's appStorage.
@@ -14,6 +15,8 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import type { Look } from '../../core/frozen/lib/looks/types';
 import type { KeyValueStorage } from '../../storage/encrypted-storage';
+import type { ArcadeLooks } from '../arcade/arcade-looks';
+import { createArcadeLooksStore, type ArcadeLooksStore } from '../arcade/look-store';
 import type { HudLooks } from '../hud/hud-looks';
 import { createHudLooksStore, type HudLooksStore } from '../hud/look-store';
 import { NO_MARKS, statusFromMarks, type LookMarks, type LookSyncStatus } from '../play/look-sync';
@@ -36,6 +39,7 @@ export type StyleSource<Value> = {
 export type StyleSources = {
   readonly choice: StyleChoiceStore;
   readonly hudLooks: HudLooksStore;
+  readonly arcadeLooks: ArcadeLooksStore;
   readonly playLooks: StyleSource<PlayLooks>;
   readonly themePaint: StyleSource<ThemePaint | null>;
   /** What 'Same as Studio' painted at the last read; Studio when none is kept. */
@@ -56,6 +60,7 @@ export type StyleState = {
   readonly playLook: Look;
   readonly playLooks: PlayLooks;
   readonly hudLooks: HudLooks;
+  readonly arcadeLooks: ArcadeLooks;
   readonly themePaint: ThemePaint | null;
   /** The installs the last read offered (the picker's rows under Studio), this launch only. */
   readonly themes: readonly OfferedTheme[];
@@ -66,7 +71,7 @@ export type StyleState = {
    * reducer one 'app-open', his hello, for each new value — never on mount.
    */
   readonly playEntries: number;
-  /** Play's and HUD's looks against the server: the marks (kept) and this launch's standing. */
+  /** Each theme's looks against the server: the marks (kept) and this launch's standing. */
   readonly lookSync: LookSyncStatuses;
 };
 
@@ -82,6 +87,7 @@ export type StyleActions = {
   readonly setPlayLook: (look: Look) => boolean;
   readonly setPlayLooks: (looks: PlayLooks) => boolean;
   readonly setHudLooks: (looks: HudLooks) => boolean;
+  readonly setArcadeLooks: (looks: ArcadeLooks) => boolean;
   /** One theme's look sync standing; its marks are kept on the phone (false: not saved). */
   readonly setLookSync: (key: LookThemeKey, status: LookSyncStatus) => boolean;
   readonly setThemePaint: (paint: ThemePaint | null) => boolean;
@@ -114,6 +120,7 @@ export function appStyleSources(storage: () => KeyValueStorage): StyleSources {
   return Object.freeze({
     choice: createStyleChoiceStore(storage),
     hudLooks: createHudLooksStore(storage),
+    arcadeLooks: createArcadeLooksStore(storage),
     playLooks: createPlayLooksStore(storage),
     themePaint: themePaintPart(storage),
     followed: themeFollowedPart(storage),
@@ -127,7 +134,7 @@ function marksSources(sources: StyleSources) {
   const kept = sources.lookMarks;
   if (kept) return kept;
   const memory = () => memorySource<LookMarks>(NO_MARKS);
-  return Object.freeze({ play: memory(), hud: memory() });
+  return Object.freeze({ play: memory(), hud: memory(), arcade: memory() });
 }
 
 function lookSyncOf(marks: Readonly<Record<LookThemeKey, StyleSource<LookMarks>>>) {
@@ -144,6 +151,7 @@ export function hydrateStyleState(sources: StyleSources): StyleState {
     playLook: playLooks.active,
     playLooks,
     hudLooks: sources.hudLooks.get(),
+    arcadeLooks: sources.arcadeLooks.get(),
     themePaint: sources.themePaint.get(),
     themes: NO_THEMES,
     themeFonts: null,
@@ -190,6 +198,11 @@ export function createStyleStore(sources: StyleSources): StyleStoreApi {
     setHudLooks: (looks) => {
       const saved = sources.hudLooks.set(looks);
       set({ hudLooks: sources.hudLooks.get() });
+      return saved;
+    },
+    setArcadeLooks: (looks) => {
+      const saved = sources.arcadeLooks.set(looks);
+      set({ arcadeLooks: sources.arcadeLooks.get() });
       return saved;
     },
     setThemePaint: (paint) => {

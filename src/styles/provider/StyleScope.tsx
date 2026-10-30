@@ -5,16 +5,14 @@
 
 import { useMemo, type ReactNode } from 'react';
 
-import type { Look } from '../../core/frozen/lib/looks/types';
-import type { HudLook } from '../hud/look-schema';
 import type { StyleChoice } from '../registry/style-id';
 import { StyleContext, useStyleRoot } from './context';
-import { resolveStyle, scopeInput } from './resolve';
+import { resolveStyle, scopeInput, type StyleLook } from './resolve';
 
 type StyleScopeProps = {
   readonly choice: StyleChoice;
-  /** A Play look for Play, a HUD look for HUD; the phone's own look when omitted. */
-  readonly look?: Look | HudLook;
+  /** Play's, HUD's or Arcade's look for that style (by its interface); the phone's own if omitted. */
+  readonly look?: StyleLook;
   readonly children: ReactNode;
 };
 

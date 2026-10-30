@@ -1,28 +1,31 @@
 // What the phone paints (PRD-001 §4.6, D54, D58, D59): resolveStyle turns the phone's style choice,
-// Studio's Light / Dark / System, the phone's appearance, Play's and HUD's looks and an installed
-// theme's cached painting into one ResolvedStyle — the layout, its tone, the Studio-keyed token set
-// every shared screen reads through useTokens(), the radii, the type, Play's and HUD's own
-// variables, the motion rule and where Auto comes from. Pure: theme.tsx feeds it the store and
-// the phone, StyleScope a preview's own choice and look.
+// Studio's Light / Dark / System, the phone's appearance, Play's, HUD's and Arcade's looks and an
+// installed theme's cached painting into one ResolvedStyle — the layout, its tone, the Studio-keyed
+// token set every shared screen reads through useTokens(), the radii, the type, Play's, HUD's and
+// Arcade's own variables, the motion rule and where Auto comes from. Pure: theme.tsx feeds it the
+// store and the phone, StyleScope a preview's own choice and look.
 //
 //   Studio  the scheme's tokens (System → the phone's appearance)
 //   Play    the look's ground decides the tone; the scheme does not apply (as on the web)
 //   HUD     always dark
-//   Arcade  Studio's paint until Arcade's look reaches the input (US-022c; its palettes are tokens)
+//   Arcade  the look's palette decides the tone (Handheld light, the others dark), as on the web;
+//           Studio's type until Arcade's faces land (US-022d); never the bundled Auto (D-ARC-5)
 //   theme   the Studio layout with the theme's painting, or Studio's own while none is cached; its
 //           fonts once they are loaded (themes/fonts.ts), Studio's faces until then
 
 import type { Look } from '../../core/frozen/lib/looks/types';
+import { ARCADE_DEFAULT_LOOK, ARCADE_INTERFACE, type ArcadeLook } from '../arcade/look-schema';
 import { HUD_INTERFACE, type HudLook } from '../hud/look-schema';
 import { styleEntry } from '../registry/registry';
 import { layoutOf, type BuiltInStyleId, type Layout, type StyleChoice } from '../registry/style-id';
 import { resolveScheme, type SystemScheme, type ThemeChoice } from '../theme-choice';
-import type { ArcadeVars } from '../tokens/arcade';
+import { arcadeTone, arcadeVars, type ArcadeVars } from '../tokens/arcade';
 import { HUD_TONE, hudVars, type HudVars } from '../tokens/hud';
 import { playTone, playVars, type PlayVars } from '../tokens/play';
 import { STYLE_RADII, type StyleRadii } from '../tokens/radii';
 import { studioTokens } from '../tokens/studio';
 import {
+  arcadeStyleTokens,
   hudStyleTokens,
   oncePerObject,
   paintedStudioTokens,
@@ -45,6 +48,8 @@ export type StyleInput = {
   readonly systemScheme: SystemScheme;
   readonly playLook: Look;
   readonly hudLook: HudLook;
+  /** Arcade's active look; absent: Overworld (the default preset). */
+  readonly arcadeLook?: ArcadeLook;
   /** The cached painting of the theme last read (US-016i); null or absent while none is. */
   readonly themePaint?: ThemePaint | null;
   /** The theme fonts loaded for that painting (US-016i); null or absent: Studio's faces. */
@@ -79,7 +84,8 @@ export type ResolvedStyle = {
   /** HUD only: the look, and the README's derived variables for HUD's own components. */
   readonly hudLook?: HudLook;
   readonly hud?: HudVars;
-  /** Arcade only: the palette's variables for Arcade's own components (painted from US-022c). */
+  /** Arcade only: the look, and its palette's variables for Arcade's own components. */
+  readonly arcadeLook?: ArcadeLook;
   readonly arcade?: ArcadeVars;
   readonly motion: StyleMotion;
   readonly mascot: MascotSource;
@@ -109,9 +115,10 @@ function paintFor(installId: string, paint: ThemePaint | null | undefined): Them
   return paint && paint.installId === installId ? paint : null;
 }
 
-/** Play's and HUD's own variables, once per look object (the vendored engine runs once). */
+/** Play's, HUD's and Arcade's own variables, once per look object (the engine runs once). */
 const playVarsOf = oncePerObject(playVars);
 const hudVarsOf = oncePerObject((look: HudLook): HudVars => hudVars(look));
+const arcadeVarsOf = oncePerObject((look: ArcadeLook): ArcadeVars => arcadeVars(look));
 
 type Painted = Omit<ResolvedStyle, 'choice' | 'motion'>;
 
@@ -152,6 +159,19 @@ function hud(look: HudLook): Painted {
   };
 }
 
+function arcade(look: ArcadeLook): Painted {
+  return {
+    layout: 'arcade',
+    tone: arcadeTone(look),
+    tokens: arcadeStyleTokens(look),
+    radii: STYLE_RADII.arcade,
+    type: styleType({ layout: 'studio' }), // ARCADE_STAND_IN US-022d: Arcade's type
+    arcadeLook: look,
+    arcade: arcadeVarsOf(look),
+    mascot: 'none', // the registry's 'never': the bundled clips never show in Arcade (D-ARC-5)
+  };
+}
+
 /** The loaded families for this install, or null while none are (Studio's faces). */
 function fontsFor(installId: string, fonts: LoadedThemeFonts | null | undefined) {
   const families = fonts && fonts.installId === installId ? fonts.families : null;
@@ -178,8 +198,7 @@ function painted(input: StyleInput): Painted {
   if (choice.kind === 'theme') return theme(input, choice.installId);
   if (choice.id === 'play') return play(input.playLook);
   if (choice.id === 'hud') return hud(input.hudLook);
-  // ARCADE_STAND_IN US-022c: Arcade paints Studio until its look reaches the input
-  if (choice.id === 'arcade') return studio(resolveScheme(input.studioScheme, input.systemScheme));
+  if (choice.id === 'arcade') return arcade(input.arcadeLook ?? ARCADE_DEFAULT_LOOK);
   return studio(resolveScheme(input.studioScheme, input.systemScheme));
 }
 
@@ -192,13 +211,16 @@ export function resolveStyle(input: StyleInput): ResolvedStyle {
   });
 }
 
-/** A preview's input (StyleScope): the app's, with its own choice and, when given, its own look. */
-export function scopeInput(
-  input: StyleInput,
-  choice: StyleChoice,
-  look?: Look | HudLook,
-): StyleInput {
+/** Any style's look: Play's, HUD's or Arcade's, told apart by its interface. */
+export type StyleLook = Look | HudLook | ArcadeLook;
+
+/**
+ * A preview's input (StyleScope): the app's, with its own choice and, when given, its own look —
+ * a HUD look by its interface 'command', an Arcade look by 'arcade', any other a Play look.
+ */
+export function scopeInput(input: StyleInput, choice: StyleChoice, look?: StyleLook): StyleInput {
   if (!look) return { ...input, choice };
   if (look.interface === HUD_INTERFACE) return { ...input, choice, hudLook: look };
+  if (look.interface === ARCADE_INTERFACE) return { ...input, choice, arcadeLook: look };
   return { ...input, choice, playLook: look };
 }

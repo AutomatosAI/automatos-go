@@ -81,13 +81,15 @@ export const THEME_COPY = Object.freeze({
 });
 
 /**
- * Play's and HUD's looks in step with the web (US-017d): what Play's look page says while Play is
- * not installed in the workspace (a 404 from the looks route). HUD's looks stay on the phone then
- * with no words. A failed read or save shows the API taxonomy's own words.
+ * Play's, HUD's and Arcade's looks in step with the web (US-017d, US-022c): what Play's and Arcade's
+ * look pages say while the theme is not installed in the workspace (a 404 from the looks route).
+ * HUD's looks stay on the phone then with no words. A failed read or save shows the API taxonomy's
+ * own words.
  */
 export const LOOK_SYNC_COPY = Object.freeze({
   localOnly: 'Kept on this phone only',
   playNotInstalled: 'Install Play in Studio to keep your looks in step with the web.',
+  arcadeNotInstalled: "Arcade isn't installed in this workspace, so your looks stay on this phone.",
 });
 
 /**
@@ -224,6 +226,16 @@ export const HUD_LOOK_COPY = Object.freeze({
   edited: (name: string) => `${name} · EDITED`,
   /** A look saved with 'Save as new look': 'MINE 1', 'MINE 2'. */
   savedName: (n: number) => `MINE ${n}`,
+});
+
+/**
+ * Arcade's looks (US-022c; the Options page is US-022j): the name and line 'Save look' gives a
+ * saved look, as the design kit's spec.ts asNewLook writes them ('Save slot 1', 'From Overworld').
+ * Each knob's label is the kit's looks/schema.json's (arcade/look-schema.ts).
+ */
+export const ARCADE_LOOK_COPY = Object.freeze({
+  savedName: (n: number) => `Save slot ${n}`,
+  savedSub: (name: string) => `From ${name}`,
 });
 
 /**

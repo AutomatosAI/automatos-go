@@ -1,15 +1,19 @@
 // The style store (D54, D59): hydrated synchronously from the phone's storage (the style choice
-// under styles.choice, HUD's looks under styles.hud.looks, Play's under styles.play.looks with the
-// look sync's marks beside them, the theme 'Same as Studio' followed and its painting under
-// styles.theme.*) so the first frame paints the chosen style; every setter
-// saves through its source and holds what the next launch reads back; a failing store is logged,
-// never thrown; a flip into Play counts Auto's hello. A new phone follows Studio (D-PHONE-CHOICE).
+// under styles.choice, HUD's looks under styles.hud.looks, Arcade's under styles.arcade.looks
+// (US-022c), Play's under styles.play.looks with the look sync's marks beside them, the theme 'Same
+// as Studio' followed and its painting under styles.theme.*) so the first frame paints the chosen
+// style; every setter saves through its source and holds what the next launch reads back; a failing
+// store is logged, never thrown; a flip into Play counts Auto's hello. A new phone follows Studio
+// (D-PHONE-CHOICE).
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DEFAULT_LOOK, OBSIDIAN } from '../../../core/frozen/lib/looks/presets';
 import { logger } from '../../../lib/logger';
 import { memoryStorage, type KeyValueStorage } from '../../../storage/encrypted-storage';
+import { INITIAL_ARCADE_LOOKS, type ArcadeLooks } from '../../arcade/arcade-looks';
+import { ARCADE_DEFAULT_LOOK, ARCADE_PRESET_LOOKS, type ArcadeLook } from '../../arcade/look-schema';
+import { ARCADE_LOOKS_KEY, serialiseArcadeLooks } from '../../arcade/look-store';
 import { INITIAL_HUD_LOOKS, type HudLooks } from '../../hud/hud-looks';
 import { HUD_DEFAULT_LOOK, HUD_PRESET_LOOKS, type HudLook } from '../../hud/look-schema';
 import { HUD_LOOKS_KEY, serialiseHudLooks } from '../../hud/look-store';
@@ -33,6 +37,9 @@ import {
 const MINE: HudLook = Object.freeze({ ...HUD_DEFAULT_LOOK, id: 'mine-1', name: 'MINE 1', grid: 3 });
 const MY_LOOKS: HudLooks = Object.freeze({ saved: Object.freeze([MINE]), active: MINE });
 const INSTALL_ID = '3f2b6c1e-9d4a-4b7e-8c21-5a6f0e9d1b42';
+const HANDHELD = ARCADE_PRESET_LOOKS[4] as ArcadeLook;
+const SLOT: ArcadeLook = Object.freeze({ ...HANDHELD, id: 'mine-1', name: 'Save slot 1', sub: '' });
+const MY_ARCADE: ArcadeLooks = Object.freeze({ saved: Object.freeze([SLOT]), active: SLOT });
 
 function failingStorage(): KeyValueStorage {
   const fail = () => {
@@ -88,6 +95,7 @@ function firstFrame(state: StyleState) {
     systemScheme: 'light',
     playLook: state.playLook,
     hudLook: state.hudLooks.active,
+    arcadeLook: state.arcadeLooks.active,
     themePaint: state.themePaint,
     reduceMotion: false,
   });
@@ -114,6 +122,21 @@ describe('hydration: the first frame paints the chosen style (D54)', () => {
     expect(firstFrame(state).hudLook).toEqual(MINE);
   });
 
+  it('paints Arcade on the first frame of a phone left on Arcade, in its kept look', () => {
+    const { storage: watched, reads } = recording(
+      phoneOn({
+        [STYLE_CHOICE_KEY]: serialiseChoice(builtinChoice('arcade')),
+        [ARCADE_LOOKS_KEY]: serialiseArcadeLooks(MY_ARCADE),
+      }),
+    );
+    const state = storeOver(watched).getState();
+    expect(reads).toEqual(expect.arrayContaining([STYLE_CHOICE_KEY, ARCADE_LOOKS_KEY]));
+    expect(state.arcadeLooks).toEqual(MY_ARCADE);
+    expect(firstFrame(state).layout).toBe('arcade');
+    expect(firstFrame(state).arcadeLook).toEqual(SLOT);
+    expect(firstFrame(state).tone).toBe('light');
+  });
+
   it('paints Play on the first frame of a phone left on Play, in its kept look', () => {
     const store = storeOver(
       phoneOn({
@@ -132,6 +155,9 @@ describe('hydration: the first frame paints the chosen style (D54)', () => {
     ).getState();
     expect(state.lookSync.hud).toEqual({ ...marks, synced: 'pending', failure: null });
     expect(state.lookSync.play).toMatchObject({ serverSeen: false, synced: 'server' });
+    expect(state.lookSync.arcade).toMatchObject({ serverSeen: false, synced: 'server' });
+    const arcade = storeOver(phoneOn({ [LOOK_MARKS_KEYS.arcade]: serialiseLookMarks(marks) }));
+    expect(arcade.getState().lookSync.arcade).toEqual({ ...marks, synced: 'pending', failure: null });
   });
 
   it("starts a new phone on 'Same as Studio' (painting Studio), ARC, Ember and no theme painting", () => {
@@ -142,6 +168,7 @@ describe('hydration: the first frame paints the chosen style (D54)', () => {
     expect(state.themes).toEqual([]);
     expect(state.themeFonts).toBeNull();
     expect(state.hudLooks).toEqual(INITIAL_HUD_LOOKS);
+    expect(state.arcadeLooks).toEqual(INITIAL_ARCADE_LOOKS);
     expect(state.playLook).toBe(DEFAULT_LOOK);
     expect(state.playLooks).toEqual(INITIAL_PLAY_LOOKS);
     expect(state.themePaint).toBeNull();
@@ -154,11 +181,12 @@ describe('hydration: the first frame paints the chosen style (D54)', () => {
     expect(state.hudLooks.active).toEqual(HUD_DEFAULT_LOOK);
   });
 
-  it('starts on Studio and ARC, logged, when the storage fails', () => {
+  it('starts on Studio, ARC and Overworld, logged, when the storage fails', () => {
     const warn = silenceWarnings();
     const state = storeOver(failingStorage()).getState();
     expect(state.choice).toEqual(builtinChoice('studio'));
     expect(state.hudLooks.active).toEqual(HUD_DEFAULT_LOOK);
+    expect(state.arcadeLooks.active).toEqual(ARCADE_DEFAULT_LOOK);
     expect(warn).toHaveBeenCalled();
   });
 
@@ -227,6 +255,23 @@ describe('the setters', () => {
     store.getState().setHudLooks({ saved: [MINE, broken], active: MINE });
     expect(store.getState().hudLooks.saved).toEqual([MINE]);
     expect(storeOver(storage).getState().hudLooks.active).toEqual(MINE);
+  });
+
+  it("stores Arcade's looks on the phone and drops one the validator refuses", () => {
+    const storage = memoryStorage();
+    const store = storeOver(storage);
+    const broken = { ...SLOT, id: 'mine-2', palette: 'forest' } as unknown as ArcadeLook;
+    expect(store.getState().setArcadeLooks({ saved: [SLOT, broken], active: SLOT })).toBe(true);
+    expect(store.getState().arcadeLooks.saved).toEqual([SLOT]);
+    expect(storage.getItem(ARCADE_LOOKS_KEY)).not.toBeNull();
+    expect(storeOver(storage).getState().arcadeLooks).toEqual(MY_ARCADE);
+  });
+
+  it("keeps Arcade's looks it could not save for this launch, and says so", () => {
+    silenceWarnings();
+    const store = storeOver(failingStorage());
+    expect(store.getState().setArcadeLooks(MY_ARCADE)).toBe(false);
+    expect(store.getState().arcadeLooks).toEqual(MY_ARCADE);
   });
 
   it("stores Play's looks on the phone: the next launch reads them back (US-017d)", () => {
