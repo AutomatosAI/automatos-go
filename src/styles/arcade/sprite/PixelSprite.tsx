@@ -43,7 +43,7 @@ const Layer = memo(function Layer({ layer }: { readonly layer: SpriteLayer }) {
 export type PixelSpriteProps = {
   /** Auto's state: one of the vendored mascot names. */
   readonly state: MascotName;
-  /** 'sprite' (32 × pixelScale) or 'portrait' (twice that); 'sprite' when omitted. */
+  /** 'sprite' (32 × pixelScale), 'portrait' (twice that) or 'mark' (32 pt); 'sprite' when omitted. */
   readonly view?: SpriteView;
   /** Auto's name and state for VoiceOver; leave it out where the words around him say it. */
   readonly label?: string;

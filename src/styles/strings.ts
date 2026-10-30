@@ -250,6 +250,43 @@ export const ARCADE_PAUSE_COPY = Object.freeze({
 });
 
 /**
+ * Arcade's handheld (US-022f; the design kit's frame/{controls,status-bar,today}.tsx and
+ * chat/dialogue.tsx): the status bar's wordmark and today's counters, each a game word and a
+ * number on screen and words for VoiceOver ('3 done today'); the D-pad's four targets with what
+ * each opens (D-ARC-6); the voice surround's word; the dialogue window's tab, Skip, the thinking
+ * dots and the ▼ cursor, the design's dialogue cursor. Glyphs on screen are hidden from VoiceOver.
+ */
+export const ARCADE_COPY = Object.freeze({
+  brand: 'AUTOMATOS',
+  brandLabel: 'Automatos',
+  counters: Object.freeze({
+    xp: Object.freeze({ game: 'XP', words: (n: number) => `${n} done today` }),
+    needs: Object.freeze({
+      game: '!',
+      words: (n: number) => (n === 1 ? '1 needs you' : `${n} need you`),
+    }),
+    quest: Object.freeze({ game: 'QUEST', words: (n: number) => `${n} in progress` }),
+  }),
+  dpad: Object.freeze({
+    quests: Object.freeze({ arrow: '▲', word: 'Quests', hint: 'Opens the Board' }),
+    chat: Object.freeze({ arrow: '◀', word: 'Chat', hint: "Auto's chat" }),
+    inventory: Object.freeze({ arrow: '▶', word: 'Inventory', hint: 'Opens Deliverables' }),
+    menu: Object.freeze({ arrow: '▼', word: 'Menu', hint: 'Opens the menu' }),
+  }),
+  voice: 'VOICE',
+  dialogue: Object.freeze({
+    speaker: 'AUTO',
+    /** Under the portrait, for VoiceOver: 'Auto: thinking'. */
+    stateLabel: (state: string) => `Auto: ${state.toLowerCase()}`,
+    thinking: '…',
+    thinkingLabel: 'Auto is thinking',
+    cursor: '▼',
+    skip: 'Skip',
+    skipHint: "Shows Auto's whole reply",
+  }),
+});
+
+/**
  * HUD's Looks drawer (US-018c, 'Automatos Command HUD.dc.html'): what it draws, in the drawing's
  * capitals, and the option names its script gives; what VoiceOver hears, in sentence case. The
  * sheet a long press opens, the refusals and the glow's words are Play's (PLAY_LOOK_COPY).

@@ -38,6 +38,13 @@ export const ARCADE_BODY_MIN = 15;
 export const ARCADE_DIALOGUE = Object.freeze({ size: 17, leading: 1.3 });
 
 /**
+ * The D-pad's word under its arrow (▲ Quests …): Pixelify Sans at D38's 11 with the pad's 1.1
+ * leading (handheld.module.css .pad). The design's 13 px does not fit 'Inventory' (5.17 em in
+ * Pixelify Sans Regular) inside a 64 pt cell's 60 pt between its borders (arcade/parts/pad-grid.ts).
+ */
+export const ARCADE_PAD_WORD = Object.freeze({ size: MIN_TEXT_SIZE, leading: 1.1 });
+
+/**
  * Lost's '404', decorative: three full-em glyphs inside a 390 pt screen's 16 pt gutters (3 × 112 =
  * 336), on the face's 8-unit pixel grid.
  */
@@ -108,6 +115,13 @@ function body(size: number, weight: FontWeight = 400, options?: TypeOptions): Ty
 
 function mono(size: number, weight: FontWeight = 400, options?: TypeOptions): TypeStyle {
   return roleStyle(STYLE_FACES.arcade.mono, size, weight, { leading: LEADING.body }, options);
+}
+
+/** The D-pad's word (ARCADE_PAD_WORD): Arcade's only running-text face under ARCADE_BODY_MIN. */
+export function arcadePadWord(): TypeStyle {
+  return roleStyle(STYLE_FACES.arcade.body, ARCADE_PAD_WORD.size, 400, {
+    leading: ARCADE_PAD_WORD.leading,
+  });
 }
 
 /** Arcade's StyleType; Press Start 2P has one weight, so every pixel slot is its 400. */

@@ -30,6 +30,13 @@ describe("the sprite's size", () => {
     expect(spriteSide({ pixelScale: '2' }, 'portrait')).toBe(128);
     expect(spriteSide({ pixelScale: '3' }, 'portrait')).toBe(192);
   });
+
+  it('draws the status bar’s mark at 32 points, one point a pixel, at every scale', () => {
+    expect(spritePixel({ pixelScale: '2' }, 'mark')).toBe(1);
+    expect(spritePixel({ pixelScale: '3' }, 'mark')).toBe(1);
+    expect(spriteSide({ pixelScale: '2' }, 'mark')).toBe(AUTO_SIZE);
+    expect(spriteSide({ pixelScale: '3' }, 'mark')).toBe(32);
+  });
 });
 
 describe("a frame's layers", () => {

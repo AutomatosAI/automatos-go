@@ -1,7 +1,8 @@
 // What PixelSprite draws, pure (D-ARC-5, D-TOKENS): the sprite's colours from the catalogue's
 // SPRITE_COLOURS by the palette's art (the bronze robot on the dark palettes, the four screen shades
 // on Handheld; never a literal here), its size (32 sprite pixels, each the look's pixelScale in
-// points, the portrait twice that: the kit's art.module.css 'small' and 'portrait'), and a frame's
+// points, the portrait twice that: the kit's art.module.css 'small' and 'portrait'; the status
+// bar's mark one point each whatever the scale, the kit's 32 px 'still'), and a frame's
 // runs as rects grouped by colour, so Skia draws one path per colour. Every rect sits on whole
 // points, so a pixel never blurs. Pure: no React, React Native, Expo or Skia.
 
@@ -10,16 +11,24 @@ import { arcadePalette, arcadePixelScale, type ArcadePaintPicks } from '../../to
 import { AUTO_SIZE } from './auto-sprite';
 import type { SpriteFrame } from './states';
 
-/** 'sprite': 32 × pixelScale points; 'portrait' (the dialogue window's): twice that. */
-export type SpriteView = 'sprite' | 'portrait';
+/**
+ * 'sprite': 32 × pixelScale points; 'portrait' (the dialogue window's): twice that; 'mark' (the
+ * status bar's, beside the wordmark): 32 points at every scale.
+ */
+export type SpriteView = 'mark' | 'sprite' | 'portrait';
 
-const VIEW_SCALE: Readonly<Record<SpriteView, number>> = Object.freeze({ sprite: 1, portrait: 2 });
+/** Points per sprite pixel: the mark's fixed, the others times the look's pixel scale. */
+const VIEW_PIXEL: Readonly<Record<SpriteView, (scale: number) => number>> = Object.freeze({
+  mark: () => 1,
+  sprite: (scale) => scale,
+  portrait: (scale) => scale * 2,
+});
 
 export type SpriteColours = Readonly<Record<SpriteKey, string>>;
 
 /** How many points one sprite pixel takes in this view. */
 export function spritePixel(look: Pick<ArcadePaintPicks, 'pixelScale'>, view: SpriteView): number {
-  return arcadePixelScale(look) * VIEW_SCALE[view];
+  return VIEW_PIXEL[view](arcadePixelScale(look));
 }
 
 /** The sprite's side in points. */
