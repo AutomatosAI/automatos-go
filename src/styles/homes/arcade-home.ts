@@ -2,14 +2,24 @@
 // chat/saying.ts, frame/today.tsx and frame/controls.tsx at 034fa629c), pure: what the dialogue
 // window says, today's counters and where each D-pad target goes. The components only draw.
 //
-//   The dialogue says Auto's newest reply as HUD's transcript reads it (hud-turn.ts: plain words,
-//   A2's notice for a turn that failed or stopped): '…' while a turn runs and has no words yet
+//   The dialogue says Auto's newest reply, the one the story leaves out (sayingRowKey's row: the
+//   newest of Auto's messages after the user's last, so a second message is never lost), as HUD's
+//   transcript reads a reply (hud-turn.ts sayingTurn: plain words, A2's notice for a turn that
+//   failed or stopped): '…' while a turn runs and has no words yet
 //   (A2's isWorking), the kit's greeting before anything is said, 'Your move.' after a message no
 //   reply came to. A reply is keyed by its turn (the chat and the index its question has among the
 //   saved messages, which the live turn's `since` is), so the live reply and its saved copy are one
 //   reply to the typewriter, typed once and said once. A reply typed on this screen (a live turn
 //   was seen for its key) types; one already there when the chat opened shows whole and is not said
-//   again (the window cannot tell a chat switch, so the home does).
+//   again (the window cannot tell a chat switch, so the home does). A later message after the same
+//   question is its own reply (keyed by its id too): typed when it lands on screen, whole when the
+//   chat opened with it (openedChat).
+//   The day's brief (PRD-268 US-G06, D-ARC-7): where the reply the dialogue says carries one
+//   (threadRows' row.brief, only where discovery lists `brief`), the dialogue says its greeting and
+//   Auto's Read as plain words (hud-turn.ts plainText), keyed by its message, and offers OPEN
+//   BRIEF. A brief already there when the chat opened shows whole; one that lands while the chat is
+//   on screen (the brief on open) types, as a reply does (openedChat remembers which messages the
+//   chat showed first).
 //   The counters (D-ARC-6, the kit's today.tsx): ! is needs-you's total as served (useNeedsYou, the
 //   header menu's number); QUEST the Board's In progress count, as its pill counts it (the top-level
 //   tickets, from the query the Command Centre already makes); XP would be the tickets done today
@@ -22,9 +32,10 @@
 //   to it); ▼ Menu the header menu. Routes only from routes.ts.
 // Pure: no React, React Native, Expo or Skia.
 
+import type { Brief } from '../../brief/schema';
 import type { ThreadState } from '../../chat/controller/thread';
 import type { StoredMessage } from '../../chat/schemas';
-import { isWorking } from '../../chat/view-model';
+import { isWorking, type ChatRow } from '../../chat/view-model';
 import { filterTickets, topLevelTickets } from '../../cc/board/board';
 import type { BoardTicket } from '../../cc/board/schemas';
 import { routes } from '../../navigation/routes';
@@ -32,7 +43,7 @@ import type { CounterValues } from '../arcade/parts/counters';
 import type { DialogueReply } from '../arcade/parts/dialogue';
 import type { DPadId } from '../arcade/parts/pad-grid';
 import { ARCADE_HOME_COPY } from '../strings';
-import { hudTurn } from './hud-turn';
+import { plainText, sayingTurn } from './hud-turn';
 
 // ── The dialogue ─────────────────────────────────────────────────────────────────────────────
 
@@ -68,6 +79,8 @@ export type DialogueSay = {
   readonly reply: DialogueReply;
   /** A turn runs with no words yet: '…'. */
   readonly thinking: boolean;
+  /** The day's brief the dialogue says (OPEN BRIEF opens it); absent otherwise. */
+  readonly brief?: Brief;
 };
 
 function line(id: string, text: string): DialogueSay {
@@ -77,17 +90,91 @@ function line(id: string, text: string): DialogueSay {
   });
 }
 
-/** What the dialogue window says now; `typed` is withTyped's memory for this screen. */
-export function dialogueSay(state: ThreadState, typed: ReadonlySet<string>): DialogueSay {
-  if (state.status === 'loading') return line(LINE_IDS.loading, '');
+/**
+ * The reply the dialogue says, as the story's rows have it (sayingRowKey's row): its saved
+ * message's id (null for the reply still being written) and the day's brief it carries, where
+ * threadRows kept one (discovery lists `brief`).
+ */
+export type Saying = { readonly messageId: string | null; readonly brief: Brief | null };
+
+/** The saying row's message and brief; null when no row is the dialogue's. */
+export function sayingOf(rows: readonly ChatRow[], sayingKey: string | null): Saying | null {
+  if (sayingKey === null) return null;
+  const row = rows.find((each) => each.key === sayingKey);
+  if (row?.type !== 'auto') return null;
+  return Object.freeze({ messageId: row.messageId, brief: row.brief });
+}
+
+/** The brief as the dialogue says it: the greeting, then Auto's Read as plain words. */
+export function briefWords(brief: Pick<Brief, 'greeting' | 'prose'>): string {
+  return [brief.greeting.trim(), plainText(brief.prose)].filter(Boolean).join('\n');
+}
+
+/** The chat as it first showed on this screen: its id and the saved messages it held then. */
+export type OpenedChat = {
+  readonly chatId: string | null;
+  readonly ids: ReadonlySet<string>;
+} | null;
+
+/** Remembers the messages a chat held when it first showed loaded, until the chat changes. */
+export function openedChat(
+  current: OpenedChat,
+  state: Pick<ThreadState, 'status' | 'chatId' | 'messages'>,
+): OpenedChat {
+  if (state.status === 'loading') return current;
+  if (current !== null && current.chatId === state.chatId) return current;
+  const ids = new Set(state.messages.map((message) => message.id));
+  return Object.freeze({ chatId: state.chatId, ids });
+}
+
+/** What the dialogue knows beyond the thread: the row it says, and the chat as it opened. */
+export type DialogueMemory = { readonly saying: Saying | null; readonly opened: OpenedChat };
+
+const NO_MEMORY: DialogueMemory = Object.freeze({ saying: null, opened: null });
+
+/** A saved message that landed while the chat was on screen types; one it opened with is whole. */
+function landedWhole(opened: OpenedChat, messageId: string): boolean {
+  return opened?.ids.has(messageId) ?? true;
+}
+
+/** The brief said as a reply is: whole when the chat opened with it, typed when it landed later. */
+function briefSay(brief: Brief, messageId: string, opened: OpenedChat): DialogueSay {
+  const text = briefWords(brief);
+  const whole = landedWhole(opened, messageId);
+  const reply = Object.freeze({ id: `brief:${messageId}`, text, streaming: false, whole });
+  return Object.freeze({ reply, thinking: false, brief });
+}
+
+/**
+ * The saved reply the dialogue says when it is not the first of Auto's messages after the user's
+ * last (a second message, after the turn's own reply): its id; null for the first, or a live turn.
+ */
+export function laterReplyId(state: ThreadState, saying: Saying | null): string | null {
+  const id = saying?.messageId ?? null;
+  if (state.live !== null || id === null) return null;
+  const messages = state.messages;
+  const first = messages
+    .slice(lastQuestion(messages) + 1)
+    .find((message) => message.role === 'assistant');
+  return first === undefined || first.id === id ? null : id;
+}
+
+/**
+ * The reply's place to the typewriter: the turn's key for its first reply (so the live reply and
+ * its saved copy are one), its own for a later message, whole when the chat opened with it.
+ */
+function replyPlace(state: ThreadState, typed: ReadonlySet<string>, memory: DialogueMemory) {
   const id = dialogueKey(state);
-  if (isWorking(state)) {
-    const reply = Object.freeze({ id, text: '', streaming: true, whole: false });
-    return Object.freeze({ reply, thinking: true });
-  }
-  const turn = hudTurn(state);
+  const later = laterReplyId(state, memory.saying);
+  if (later !== null) return { id: `${id}:${later}`, whole: landedWhole(memory.opened, later) };
+  return { id, whole: state.live === null && !typed.has(id) };
+}
+
+/** The saved or streaming reply the turn says, or the greeting or 'Your move.' when it says none. */
+function replySay(state: ThreadState, typed: ReadonlySet<string>, memory: DialogueMemory) {
+  const turn = sayingTurn(state, memory.saying?.messageId ?? null);
   if (turn.auto !== null) {
-    const whole = state.live === null && !typed.has(id);
+    const { id, whole } = replyPlace(state, typed, memory);
     const reply = Object.freeze({ id, text: turn.auto, streaming: turn.streaming, whole });
     return Object.freeze({ reply, thinking: false });
   }
@@ -95,6 +182,30 @@ export function dialogueSay(state: ThreadState, typed: ReadonlySet<string>): Dia
   return turn.you === null
     ? line(LINE_IDS.greeting, said.greeting)
     : line(LINE_IDS.yourMove, said.yourMove);
+}
+
+/**
+ * What the dialogue window says now; `typed` is withTyped's memory for this screen, `memory` the
+ * saying row (sayingOf: the same reply the story leaves out) and openedChat's memory.
+ */
+export function dialogueSay(
+  state: ThreadState,
+  typed: ReadonlySet<string>,
+  memory: DialogueMemory = NO_MEMORY,
+): DialogueSay {
+  if (state.status === 'loading') return line(LINE_IDS.loading, '');
+  if (isWorking(state)) {
+    const reply = Object.freeze({
+      id: dialogueKey(state),
+      text: '',
+      streaming: true,
+      whole: false,
+    });
+    return Object.freeze({ reply, thinking: true });
+  }
+  const { saying, opened } = memory;
+  if (saying?.brief && saying.messageId) return briefSay(saying.brief, saying.messageId, opened);
+  return replySay(state, typed, memory);
 }
 
 // ── The status bar's counters ────────────────────────────────────────────────────────────────

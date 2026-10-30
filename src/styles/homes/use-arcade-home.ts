@@ -8,14 +8,21 @@
 // composer, so opening it is Auto's composer focus (typingEvent) and closing it the blur; a sprite
 // has no clip boundary, so a one-shot (hello, celebrate) ends on its timer (turn-state.ts
 // oneShotEndMs); the story is A2's rows with the Deliverables this conversation made placed in
-// them (shelf.ts), A2's Try again, cards and links.
+// them (shelf.ts), A2's Try again, cards and links. Where discovery lists `brief` (canBrief), the
+// rows keep the day's brief (threadRows' briefs, as Play's thread does, PRD-268 US-G06): the story
+// draws a brief's window, named for the phone's local date, and the dialogue says the brief the
+// newest reply carries, whole or typed as a reply is (openedChat). The dialogue says the row the
+// story leaves out (sayingOf: its message and brief), so no reply is lost or said twice.
 
 import { useQuery } from '@tanstack/react-query';
 import { usePathname, useRouter } from 'expo-router';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
+import { canBrief } from '../../api/capabilities';
 import type { NeedsYouRows } from '../../api/needs-you';
-import { useApiClient } from '../../app-state/session';
+import { useApiClient, useAppSession } from '../../app-state/session';
+import { localDateIn } from '../../brief/on-open';
+import { usePhoneTimeZone } from '../../cc/shell/use-shell';
 import { useFollowLink, type FollowLink } from '../../chat/components/follow-link';
 import type { SettleCard } from '../../chat/cards/model';
 import { reportTarget, type ThreadReport } from '../../chat/report/report';
@@ -28,15 +35,24 @@ import type { ThreadView } from '../../chat/controller/use-thread';
 import { partyOf, type PartyMember } from '../arcade/home/party';
 import type { CounterValues } from '../arcade/parts/counters';
 import type { DPadId } from '../arcade/parts/pad-grid';
-import { oneShotEndMs, oneShotEnded, portraitState, typingEvent } from '../arcade/sprite/turn-state';
+import {
+  oneShotEndMs,
+  oneShotEnded,
+  portraitState,
+  typingEvent,
+} from '../arcade/sprite/turn-state';
 import type { MascotController } from '../mascot/use-mascot';
 import {
   arcadeCounters,
   dialogueSay,
+  openedChat,
   padAction,
+  sayingOf,
   withTyped,
   type DialogueSay,
   type HandheldScreen,
+  type OpenedChat,
+  type Saying,
 } from './arcade-home';
 import { sayingRowKey, storyEntries, type StoryEntry } from './arcade-story';
 import { placeReports } from './shelf';
@@ -58,13 +74,22 @@ export function useArcadeParty(needsYou: NeedsYouRows): readonly PartyMember[] {
   return useMemo(() => partyOf({ agents, needsYou, board }), [agents, needsYou, board]);
 }
 
-/** What the dialogue says, remembering the turns this screen saw live. */
-export function useDialogueSay(state: ThreadState): DialogueSay {
+/**
+ * What the dialogue says, remembering the turns this screen saw live and the messages the chat
+ * held when it first showed; `saying` is the row the story leaves out (useArcadeStory).
+ */
+export function useDialogueSay(state: ThreadState, saying: Saying | null = null): DialogueSay {
   const [typed, setTyped] = useState<ReadonlySet<string>>(() => withTyped(new Set(), state));
+  const [opened, setOpened] = useState<OpenedChat>(() => openedChat(null, state));
   useEffect(() => {
     setTyped((current) => withTyped(current, state));
+    setOpened((current) => openedChat(current, state));
   }, [state]);
-  return useMemo(() => dialogueSay(state, withTyped(typed, state)), [state, typed]);
+  return useMemo(
+    () =>
+      dialogueSay(state, withTyped(typed, state), { saying, opened: openedChat(opened, state) }),
+    [state, typed, opened, saying],
+  );
 }
 
 /** A one-shot the portrait shows ends after ONE_SHOT_MS, as a clip's end would. */
@@ -146,7 +171,14 @@ export type ArcadeStory = {
   readonly onLink: FollowLink;
   /** Report this on the reply the dialogue window says; undefined where it is not offered. */
   readonly sayingReport: (() => void) | undefined;
+  /** The row the dialogue window says (its message and brief); null when none is its to say. */
+  readonly saying: Saying | null;
 };
+
+/** The phone's local date, as the brief's date is written ('2026-10-28'). */
+function useToday(): string {
+  return localDateIn(new Date(), usePhoneTimeZone());
+}
 
 /**
  * Try again as one function for the screen's life, asking the newest state's last message again
@@ -168,12 +200,15 @@ export function useArcadeStory(home: HomeThread, report: ThreadReport): ArcadeSt
   const { state, send, settleCard } = home.thread;
   const onLink = useFollowLink();
   const shelf = useShelf(state);
-  const rows = useMemo(() => threadRows(state), [state]);
+  const briefs = canBrief(useAppSession().discovery);
+  const today = useToday();
+  const rows = useMemo(() => threadRows(state, { briefs }), [state, briefs]);
   const sayingKey = sayingRowKey(rows);
   const entries = useMemo(() => {
     const places = placeReports(shelf, state, LIVE_AUTO_KEY, new Set(rows.map((row) => row.key)));
-    return storyEntries(rows, places, sayingKey);
-  }, [shelf, state, rows, sayingKey]);
+    return storyEntries(rows, places, sayingKey, today);
+  }, [shelf, state, rows, sayingKey, today]);
+  const sayingRow = useMemo(() => sayingOf(rows, sayingKey), [rows, sayingKey]);
   const onRetry = useTryAgain(state, send);
   const saying = rows.find((row) => row.key === sayingKey);
   const target = saying ? reportTarget(saying, report.allowed) : null;
@@ -185,5 +220,5 @@ export function useArcadeStory(home: HomeThread, report: ThreadReport): ArcadeSt
       targetId === null ? undefined : () => open({ target_type: 'message', target_id: targetId }),
     [targetId, open],
   );
-  return { entries, onRetry, onCard: settleCard, onLink, sayingReport };
+  return { entries, onRetry, onCard: settleCard, onLink, sayingReport, saying: sayingRow };
 }

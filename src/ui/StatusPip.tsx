@@ -2,13 +2,15 @@
 // the colour is never the only signal. The dot's token and the word come from statusPip(); a word
 // may be given for a wider phrase ('Streaming live'). A5: HUD draws a glyph instead of the dot
 // (src/styles/dress/status-glyphs.ts: ● ○ ◆ ✓ ✕ ▸ —) in its role's colour, and its word in
-// capitals (Geist Mono 11, .1em); every style's word is the dress's label.
+// capitals (Geist Mono 11, .1em); every style's word is the dress's label. Arcade draws the same
+// glyph in its state's role instead (the dress's glyphPaint, state-tokens.ts glyphToken; D-ARC-7).
 
 import { StyleSheet, View } from 'react-native';
 
-import { GLYPH_ROLE_TOKENS, statusGlyph } from '../styles/dress/status-glyphs';
+import { statusGlyph } from '../styles/dress/status-glyphs';
 import { useDress } from '../styles/dress/use-dress';
 import { useTokens } from '../styles/theme';
+import { glyphToken } from './state-tokens';
 import { Text } from './Text';
 import { DOT_SIZE, statusPip, type PipStatus, type TextTone } from './variants';
 
@@ -21,7 +23,8 @@ export type StatusPipProps = {
 
 export function StatusPip({ status, word, tone = 'muted' }: StatusPipProps) {
   const { colours, radii, spacing } = useTokens();
-  const glyph = useDress().status === 'glyph' ? statusGlyph(status) : null;
+  const dress = useDress();
+  const glyph = dress.status === 'glyph' ? statusGlyph(status) : null;
   const spec = statusPip(status);
   const said = word ?? glyph?.word ?? spec.word;
   return (
@@ -32,7 +35,7 @@ export function StatusPip({ status, word, tone = 'muted' }: StatusPipProps) {
       accessibilityLabel={said}
     >
       {glyph ? (
-        <Text variant="mono" style={{ color: colours[GLYPH_ROLE_TOKENS[glyph.role]] }}>
+        <Text variant="mono" style={{ color: colours[glyphToken(status, dress.glyphPaint)] }}>
           {glyph.glyph}
         </Text>
       ) : (

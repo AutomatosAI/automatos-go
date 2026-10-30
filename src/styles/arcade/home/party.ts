@@ -5,9 +5,10 @@
 // agent: the rows name an agent by its name only, so the match is by name, trimmed, in any case;
 // WORKING when a Board ticket in progress is the agent's (its column by board.ts, so the web's old
 // 'running' counts; a mission's step too: an agent works it); READY otherwise. Each state is a
-// glyph and a word in its colour (the design's: ! in quest yellow, ● in the accent, — in the
-// secondary text), never the colour alone, and VoiceOver hears 'Scout, needs you'. Each agent's
-// robot is its place in the list. Pure: no React, React Native, Expo or Skia.
+// glyph and a word in its PRD-268 §6.12.2 role's colour (D-ARC-7, tokens/arcade.ts ARCADE_ROLES:
+// ! in quest yellow as needs you, ● in mana blue as working, never the accent, — in the secondary
+// text as an idle agent), never the colour alone, and VoiceOver hears 'Scout, needs you'. Each
+// agent's robot is its place in the list. Pure: no React, React Native, Expo or Skia.
 
 import type { NeedsYouRows } from '../../../api/needs-you';
 import { filterTickets } from '../../../cc/board/board';
@@ -81,10 +82,16 @@ export function partyOf({ agents, needsYou, board }: PartySources): readonly Par
 
 // ── What the strip shows ─────────────────────────────────────────────────────────────────────
 
-/** Each state's colour, by the palette's variable names (the design's stCol). */
-export const PARTY_TONES: Readonly<Record<PartyState, 'qs' | 'ac' | 'tx2'>> = Object.freeze({
+/** A party state's colour, by the palette's variable names. */
+export type PartyTone = 'qs' | 'mp' | 'tx2';
+
+/**
+ * Each state's colour: its §6.12.2 role's on Arcade (needs you → warning, working → running, an
+ * idle agent muted), the design's stCol with working out of the accent (D-ARC-7).
+ */
+export const PARTY_TONES: Readonly<Record<PartyState, PartyTone>> = Object.freeze({
   needs: 'qs',
-  working: 'ac',
+  working: 'mp',
   ready: 'tx2',
 });
 
@@ -92,7 +99,7 @@ export type PartyBadge = {
   readonly glyph: string;
   /** The state's word (the label face draws it in capitals). */
   readonly word: string;
-  readonly tone: 'qs' | 'ac' | 'tx2';
+  readonly tone: PartyTone;
   /** What VoiceOver hears: 'Scout, needs you'. */
   readonly label: string;
 };
