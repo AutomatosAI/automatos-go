@@ -239,6 +239,17 @@ export const ARCADE_LOOK_COPY = Object.freeze({
 });
 
 /**
+ * Arcade's pause control (US-022e, WCAG 2.2.2; the kit's motion/pause-toggle.tsx): the word it
+ * shows, in the design's capitals, and what VoiceOver hears, the action a tap takes.
+ */
+export const ARCADE_PAUSE_COPY = Object.freeze({
+  pause: 'PAUSE',
+  play: 'PLAY',
+  pauseLabel: 'Pause the animation',
+  playLabel: 'Play the animation',
+});
+
+/**
  * HUD's Looks drawer (US-018c, 'Automatos Command HUD.dc.html'): what it draws, in the drawing's
  * capitals, and the option names its script gives; what VoiceOver hears, in sentence case. The
  * sheet a long press opens, the refusals and the glow's words are Play's (PLAY_LOOK_COPY).

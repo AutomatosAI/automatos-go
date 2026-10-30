@@ -3,7 +3,8 @@
 // when the store is made, so the first frame paints the chosen style (no flash of Studio at
 // launch). Each part lives in its own MMKV store: the choice in US-016a's (styles.choice; nothing
 // stored is 'Same as Studio'), HUD's looks in US-018a's (styles.hud.looks), Arcade's in US-022c's
-// (styles.arcade.looks), what 'Same as Studio' painted and the theme painting in US-016i's
+// (styles.arcade.looks) with Arcade's pause beside them (US-022e, styles.arcade.motionPaused,
+// arcade/motion-pause.ts), what 'Same as Studio' painted and the theme painting in US-016i's
 // (styles.theme.followed, styles.theme.paint, themes/cache.ts), Play's looks in US-017d's
 // (styles.play.looks, play/look-store.ts) with each theme's look sync marks beside them
 // (styles.*.looks.sync, sync/look-marks.ts). The installs the last read offered, the
@@ -17,6 +18,7 @@ import type { Look } from '../../core/frozen/lib/looks/types';
 import type { KeyValueStorage } from '../../storage/encrypted-storage';
 import type { ArcadeLooks } from '../arcade/arcade-looks';
 import { createArcadeLooksStore, type ArcadeLooksStore } from '../arcade/look-store';
+import { createMotionPauseSource } from '../arcade/motion-pause';
 import type { HudLooks } from '../hud/hud-looks';
 import { createHudLooksStore, type HudLooksStore } from '../hud/look-store';
 import { NO_MARKS, statusFromMarks, type LookMarks, type LookSyncStatus } from '../play/look-sync';
@@ -46,6 +48,8 @@ export type StyleSources = {
   readonly followed?: StyleSource<StyleChoice>;
   /** Each theme's look sync marks; none kept when absent. */
   readonly lookMarks?: Readonly<Record<LookThemeKey, StyleSource<LookMarks>>>;
+  /** Arcade's pause (WCAG 2.2.2); this launch only, not paused, when absent. */
+  readonly arcadeMotionPaused?: StyleSource<boolean>;
 };
 
 /** Each theme's look sync standing (sync/look-sync-run.ts keeps it). */
@@ -61,6 +65,8 @@ export type StyleState = {
   readonly playLooks: PlayLooks;
   readonly hudLooks: HudLooks;
   readonly arcadeLooks: ArcadeLooks;
+  /** Arcade's animation paused by the person: the sprite, cursor and typing hold still. */
+  readonly arcadeMotionPaused: boolean;
   readonly themePaint: ThemePaint | null;
   /** The installs the last read offered (the picker's rows under Studio), this launch only. */
   readonly themes: readonly OfferedTheme[];
@@ -88,6 +94,8 @@ export type StyleActions = {
   readonly setPlayLooks: (looks: PlayLooks) => boolean;
   readonly setHudLooks: (looks: HudLooks) => boolean;
   readonly setArcadeLooks: (looks: ArcadeLooks) => boolean;
+  /** Arcade's pause, kept on the phone; false when the save failed (it still applies). */
+  readonly setArcadeMotionPaused: (paused: boolean) => boolean;
   /** One theme's look sync standing; its marks are kept on the phone (false: not saved). */
   readonly setLookSync: (key: LookThemeKey, status: LookSyncStatus) => boolean;
   readonly setThemePaint: (paint: ThemePaint | null) => boolean;
@@ -125,6 +133,7 @@ export function appStyleSources(storage: () => KeyValueStorage): StyleSources {
     themePaint: themePaintPart(storage),
     followed: themeFollowedPart(storage),
     lookMarks: lookMarksParts(storage),
+    arcadeMotionPaused: createMotionPauseSource(storage),
   });
 }
 
@@ -152,6 +161,7 @@ export function hydrateStyleState(sources: StyleSources): StyleState {
     playLooks,
     hudLooks: sources.hudLooks.get(),
     arcadeLooks: sources.arcadeLooks.get(),
+    arcadeMotionPaused: sources.arcadeMotionPaused?.get() ?? false,
     themePaint: sources.themePaint.get(),
     themes: NO_THEMES,
     themeFonts: null,
@@ -162,6 +172,28 @@ export function hydrateStyleState(sources: StyleSources): StyleState {
 
 function helloOf(options?: FlipOptions): number {
   return options?.hello === true ? 1 : 0;
+}
+
+type SetStyle = StoreApi<StyleStore>['setState'];
+
+/** Arcade's looks and its pause, each saved through its source first (the pause: this launch's). */
+function arcadeActions(
+  sources: StyleSources,
+  set: SetStyle,
+): Pick<StyleActions, 'setArcadeLooks' | 'setArcadeMotionPaused'> {
+  const pause = sources.arcadeMotionPaused ?? memorySource(false);
+  return {
+    setArcadeLooks: (looks) => {
+      const saved = sources.arcadeLooks.set(looks);
+      set({ arcadeLooks: sources.arcadeLooks.get() });
+      return saved;
+    },
+    setArcadeMotionPaused: (paused) => {
+      const saved = pause.set(paused);
+      set({ arcadeMotionPaused: pause.get() });
+      return saved;
+    },
+  };
 }
 
 /**
@@ -200,11 +232,7 @@ export function createStyleStore(sources: StyleSources): StyleStoreApi {
       set({ hudLooks: sources.hudLooks.get() });
       return saved;
     },
-    setArcadeLooks: (looks) => {
-      const saved = sources.arcadeLooks.set(looks);
-      set({ arcadeLooks: sources.arcadeLooks.get() });
-      return saved;
-    },
+    ...arcadeActions(sources, set),
     setThemePaint: (paint) => {
       const saved = sources.themePaint.set(paint);
       set({ themePaint: sources.themePaint.get() });
