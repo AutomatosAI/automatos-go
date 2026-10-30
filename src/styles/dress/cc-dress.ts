@@ -86,6 +86,7 @@ const MARK: Readonly<Record<Layout, ColourName>> = Object.freeze({
   play: 'primary',
   hud: 'primary',
   arcade: 'accent', // the palette's highlight (ARCADE_ROLES: accent is hl)
+  candy: 'accent', // CANDY_STAND_IN US-023k
 });
 
 /** The token a mark (a tab's rule, a day's dot) takes: the style's accent. */

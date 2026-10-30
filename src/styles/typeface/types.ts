@@ -65,10 +65,12 @@ export type StyleType = {
 
 /**
  * What styleType reads of a resolved style: the layout it paints and, for Play and HUD, the look's
- * font knob (Arcade's looks have none). An installed theme paints the Studio layout (D58).
+ * font knob (Arcade's looks have none; Candy's type is Studio's until US-023d). An installed theme
+ * paints the Studio layout (D58).
  */
 export type TypeSource =
   | { readonly layout: 'studio' }
   | { readonly layout: 'play'; readonly font: TypeStyleKey }
   | { readonly layout: 'hud'; readonly font: HudFontKey }
-  | { readonly layout: 'arcade' };
+  | { readonly layout: 'arcade' }
+  | { readonly layout: 'candy' };

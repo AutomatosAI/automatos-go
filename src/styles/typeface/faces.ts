@@ -101,6 +101,7 @@ export const STYLE_FACES = Object.freeze({
     body: weights(F.pixelifySans, 400, 600),
     mono: weights(F.geistMono, 400, 500, 600),
   }),
+  candy: STUDIO_FACES, // CANDY_STAND_IN US-023d
 } satisfies Readonly<Record<BuiltInStyleId, StyleFaceSet>>);
 
 /** Play's display face for the look's font knob. */

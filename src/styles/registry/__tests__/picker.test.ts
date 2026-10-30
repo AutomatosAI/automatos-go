@@ -47,7 +47,7 @@ function selectedIds(state: PickerState) {
 }
 
 describe('the picker sections', () => {
-  it('has Studio, Play, HUD and Arcade in order, each with its look page and link', () => {
+  it('has Studio, Play, HUD, Arcade and Candy in order, each with its look page and link', () => {
     const { sections } = pickerState(input());
     expect(
       sections.map(({ id, name, lookPage, lookLink }) => ({ id, name, lookPage, lookLink })),
@@ -56,17 +56,21 @@ describe('the picker sections', () => {
       { id: 'play', name: 'Play', lookPage: 'play', lookLink: 'Make it yours' },
       { id: 'hud', name: 'HUD', lookPage: 'hud', lookLink: 'Looks' },
       { id: 'arcade', name: 'Arcade', lookPage: 'arcade', lookLink: 'Options' },
+      { id: 'candy', name: 'Candy', lookPage: 'candy', lookLink: 'Make it sweet' },
     ]);
     expect(sections.map((s) => s.choice)).toEqual([
       builtinChoice('studio'),
       builtinChoice('play'),
       builtinChoice('hud'),
       builtinChoice('arcade'),
+      builtinChoice('candy'),
     ]);
   });
 
   it('gives Studio Light / Dark / System with the foundation scheme selected', () => {
-    const [studio, play, hud, arcade] = pickerState(input({ studioScheme: 'dark' })).sections;
+    const [studio, play, hud, arcade, candy] = pickerState(
+      input({ studioScheme: 'dark' }),
+    ).sections;
     expect(studio.schemes).toEqual([
       { value: 'light', label: 'Light', selected: false },
       { value: 'dark', label: 'Dark', selected: true },
@@ -75,10 +79,11 @@ describe('the picker sections', () => {
     expect(play.schemes).toEqual([]);
     expect(hud.schemes).toEqual([]);
     expect(arcade.schemes).toEqual([]);
+    expect(candy.schemes).toEqual([]);
   });
 
   it('lists the installed themes under Studio when the server offers mobile themes', () => {
-    const [studio, play, hud, arcade] = pickerState(input()).sections;
+    const [studio, play, hud, arcade, candy] = pickerState(input()).sections;
     expect(
       studio.themes.map(({ installId, title, choice }) => ({ installId, title, choice })),
     ).toEqual([
@@ -88,6 +93,7 @@ describe('the picker sections', () => {
     expect(play.themes).toEqual([]);
     expect(hud.themes).toEqual([]);
     expect(arcade.themes).toEqual([]);
+    expect(candy.themes).toEqual([]);
   });
 
   it('lists no themes without canMobileTheme (D-CAPABILITIES)', () => {
@@ -108,6 +114,10 @@ describe('the picker sections', () => {
     });
     expect(selectedIds(pickerState(input({ choice: builtinChoice('arcade') })))).toEqual({
       sections: ['arcade'],
+      themes: [],
+    });
+    expect(selectedIds(pickerState(input({ choice: builtinChoice('candy') })))).toEqual({
+      sections: ['candy'],
       themes: [],
     });
     expect(selectedIds(pickerState(input({ choice: themeChoice('inst-moss') })))).toEqual({
@@ -132,7 +142,13 @@ describe('the label words (never colour alone)', () => {
     const labels = pickerState(input({ choice: builtinChoice('play') })).sections.map(
       (s) => s.accessibilityLabel,
     );
-    expect(labels).toEqual(['Studio style', 'Play style, selected', 'HUD style', 'Arcade style']);
+    expect(labels).toEqual([
+      'Studio style',
+      'Play style, selected',
+      'HUD style',
+      'Arcade style',
+      'Candy style',
+    ]);
     expect(pickerState(input()).sections[0].accessibilityLabel).toBe('Studio style, selected');
   });
 
@@ -150,6 +166,7 @@ describe('the label words (never colour alone)', () => {
       'Auto and the Ember look',
       'Voice first, glow and grid',
       'Your agents as a party, Auto in the dialogue box',
+      'Bright, glossy and round',
     ]);
     expect(PICKER_COPY.selected).toBe('Selected');
     expect(PICKER_COPY.schemeGroup).toBe('Studio appearance');
@@ -219,7 +236,7 @@ describe('pickerReducer on a deep-frozen state', () => {
 describe("'Same as Studio' under Studio (D-PHONE-CHOICE)", () => {
   it('is the first row under Studio only, and the one selected while the phone follows', () => {
     const state = pickerState(input({ choice: FOLLOW_STUDIO }));
-    const [studio, play, hud, arcade] = state.sections;
+    const [studio, play, hud, arcade, candy] = state.sections;
     expect(studio.follow).toMatchObject({
       choice: FOLLOW_STUDIO,
       title: 'Same as Studio',
@@ -230,6 +247,7 @@ describe("'Same as Studio' under Studio (D-PHONE-CHOICE)", () => {
     expect(play.follow).toBeNull();
     expect(hud.follow).toBeNull();
     expect(arcade.follow).toBeNull();
+    expect(candy.follow).toBeNull();
     expect(selectedIds(state)).toEqual({ sections: [], themes: [] });
   });
 
@@ -238,6 +256,7 @@ describe("'Same as Studio' under Studio (D-PHONE-CHOICE)", () => {
       pickerState(input({ choice: FOLLOW_STUDIO, ...overrides })).sections[0].follow?.summary;
     expect(summary({ followed: builtinChoice('play') })).toBe('Now Play');
     expect(summary({ followed: builtinChoice('arcade') })).toBe('Now Arcade');
+    expect(summary({ followed: builtinChoice('candy') })).toBe('Now Candy');
     expect(summary({ followed: themeChoice('inst-moss') })).toBe('Now Moss · 2.0.3');
     expect(summary({ followed: themeChoice('inst-new') })).toBe("Now Studio's theme");
     expect(summary({ followed: themeChoice('inst-moss'), canMobileTheme: false })).toBe(

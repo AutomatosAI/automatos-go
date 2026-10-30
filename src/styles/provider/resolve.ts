@@ -10,6 +10,7 @@
 //   HUD     always dark
 //   Arcade  the look's palette decides the tone (Handheld light, the others dark), as on the web;
 //           Studio's type until Arcade's faces land (US-022d); never the bundled Auto (D-ARC-5)
+//   Candy   Studio's paint until Candy's palettes and looks land (US-023b, US-023c)
 //   theme   the Studio layout with the theme's painting, or Studio's own while none is cached; its
 //           fonts once they are loaded (themes/fonts.ts), Studio's faces until then
 
@@ -199,6 +200,8 @@ function painted(input: StyleInput): Painted {
   if (choice.id === 'play') return play(input.playLook);
   if (choice.id === 'hud') return hud(input.hudLook);
   if (choice.id === 'arcade') return arcade(input.arcadeLook ?? ARCADE_DEFAULT_LOOK);
+  // CANDY_STAND_IN US-023c: Candy paints Studio until its look reaches the input
+  if (choice.id === 'candy') return studio(resolveScheme(input.studioScheme, input.systemScheme));
   return studio(resolveScheme(input.studioScheme, input.systemScheme));
 }
 

@@ -29,6 +29,7 @@ export function styleType(source: TypeSource): StyleType {
   if (source.layout === 'play') return PLAY_TYPES[source.font];
   if (source.layout === 'hud') return HUD_TYPES[source.font];
   if (source.layout === 'arcade') return ARCADE_TYPE;
+  if (source.layout === 'candy') return STUDIO_STYLE_TYPE; // CANDY_STAND_IN US-023d
   return STUDIO_STYLE_TYPE;
 }
 

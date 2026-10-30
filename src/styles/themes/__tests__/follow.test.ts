@@ -44,11 +44,12 @@ function withdrawn(installId: string): Active {
 }
 
 describe('followStudio: what Same as Studio paints', () => {
-  it("paints Play's, HUD's or Arcade's built-in style for their web themes (installing them flips the phone)", () => {
+  it("paints Play's, HUD's, Arcade's or Candy's built-in style for their web themes (installing them flips the phone)", () => {
     expect(BUILT_IN_THEME_STYLES).toEqual({
       'automatos/play': 'play',
       'automatos/hud': 'hud',
       'automatos/arcade': 'arcade',
+      'automatos/candy': 'candy',
     });
     expect(followStudio(activeTheme(PLAY_ID, 'automatos/play'), null)).toEqual(
       builtinChoice('play'),
@@ -58,6 +59,10 @@ describe('followStudio: what Same as Studio paints', () => {
       builtinChoice('arcade'),
     );
     expect(builtInStyleOf('automatos/arcade')).toBe('arcade');
+    expect(followStudio(activeTheme(PLAY_ID, 'automatos/candy'), null)).toEqual(
+      builtinChoice('candy'),
+    );
+    expect(builtInStyleOf('automatos/candy')).toBe('candy');
     expect(builtInStyleOf('acme/harbour')).toBeNull();
     expect(builtInStyleOf('toString')).toBeNull();
   });

@@ -247,6 +247,7 @@ const DRESSES: Readonly<Record<Layout, (style: ResolvedStyle) => Dress>> = Objec
   play,
   hud,
   arcade,
+  candy: studio, // CANDY_STAND_IN US-023k
 });
 
 /** What the shared primitives wear in the style this subtree paints. */

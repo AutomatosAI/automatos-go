@@ -31,8 +31,19 @@ const STUDIO_KEYS = Object.keys(studioTokens('light')).sort();
 const COLOUR_KEYS = Object.keys(STUDIO_COLOURS.light).sort();
 
 describe('the accessor knows every built-in style', () => {
-  it('lists Studio, Play, HUD and Arcade', () => {
-    expect([...STYLE_IDS].sort()).toEqual(['arcade', 'hud', 'play', 'studio']);
+  it('lists Studio, Play, HUD, Arcade and Candy', () => {
+    expect([...STYLE_IDS].sort()).toEqual(['arcade', 'candy', 'hud', 'play', 'studio']);
+  });
+
+  // CANDY_STAND_IN US-023b: Candy's own palettes replace Studio's set here
+  it("gives Candy Studio's set under Candy's name, the same object each time", () => {
+    for (const scheme of ['light', 'dark'] as const) {
+      const tokens = tokensFor('candy', scheme);
+      expect(tokens.style).toBe('candy');
+      expect(tokens.colours).toBe(studioTokens(scheme).colours);
+      expect(tokensFor('candy', scheme)).toBe(tokens);
+      expect(Object.isFrozen(tokens)).toBe(true);
+    }
   });
 
   it("gives Arcade its default look, Overworld, in the palette's tone whatever the scheme", () => {

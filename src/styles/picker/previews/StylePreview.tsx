@@ -18,6 +18,7 @@ const PREVIEWS: Readonly<Record<BuiltInStyleId, ComponentType<PreviewProps>>> = 
   play: PlayPreview,
   hud: HudPreview,
   arcade: ArcadePreview,
+  candy: StudioPreview, // CANDY_STAND_IN US-023m
 });
 
 export function StylePreview({ id, animate }: PreviewProps & { readonly id: BuiltInStyleId }) {

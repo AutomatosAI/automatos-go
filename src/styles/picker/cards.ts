@@ -27,7 +27,7 @@ import type { BuiltInStyleId, StyleChoice } from '../registry/style-id';
 import { ARCADE_HOME_COPY, PICKER_COPY, PREVIEW_COPY } from '../strings';
 
 export type LookLink = {
-  /** On screen: 'Make it yours →', 'Looks →', 'Options →'. */
+  /** On screen: 'Make it yours →', 'Looks →', 'Options →', 'Make it sweet →'. */
   readonly label: string;
   /** For VoiceOver: the words without the arrow. */
   readonly accessibilityLabel: string;
@@ -55,7 +55,10 @@ export type PickerCard = {
   /** Studio only: Light / Dark / System; empty for Play and HUD. */
   readonly schemes: readonly SchemeOption[];
   readonly schemeGroup: string;
-  /** Play's 'Make it yours →', HUD's 'Looks →', Arcade's 'Options →'; null for Studio. */
+  /**
+   * Play's 'Make it yours →', HUD's 'Looks →', Arcade's 'Options →', Candy's 'Make it sweet →';
+   * null for Studio.
+   */
   readonly lookLink: LookLink | null;
   /** Studio only, when US-016i lists installed themes with a phone look. */
   readonly themes: readonly PickerCardTheme[];
@@ -104,7 +107,7 @@ function card(section: PickerSection): PickerCard {
   });
 }
 
-/** One card per section, in the registry's order (Studio, Play, HUD, Arcade). */
+/** One card per section, in the registry's order (Studio, Play, HUD, Arcade, Candy). */
 export function pickerCards(state: PickerState): readonly PickerCard[] {
   return Object.freeze(state.sections.map(card));
 }

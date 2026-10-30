@@ -36,6 +36,7 @@ const STUDIO = builtinChoice('studio');
 const PLAY = builtinChoice('play');
 const HUD = builtinChoice('hud');
 const ARCADE = builtinChoice('arcade');
+const CANDY = builtinChoice('candy');
 const INSTALL_ID = '3f2b6c1e-9d4a-4b7e-8c21-5a6f0e9d1b42';
 const THEME = themeChoice(INSTALL_ID);
 
@@ -98,6 +99,23 @@ describe('Studio follows Light / Dark / System (D59)', () => {
     const style = resolveStyle(input(STUDIO));
     expect(style.choice).toBe(STUDIO);
     expect(Object.isFrozen(style)).toBe(true);
+  });
+});
+
+// CANDY_STAND_IN US-023c: Candy's palettes and look replace Studio's paint here
+describe("Candy paints Studio's paint until its looks land", () => {
+  it.each(SCHEME_GRID)('Candy with Studio %s on a %s phone', (studioScheme, systemScheme) => {
+    const style = resolveStyle(input(CANDY, { studioScheme, systemScheme }));
+    expect(style.choice).toBe(CANDY);
+    expect(style.tokens).toBe(studioTokens(expectedScheme(studioScheme, systemScheme)));
+    expect(style.mascot).toBe('none');
+    expect(style.motion).toEqual({ loops: true, reason: null });
+  });
+
+  it('never paints a theme over Candy', () => {
+    const style = resolveStyle(input(CANDY, { themePaint: painting({ mascot: true }) }));
+    expect(style.tokens).toBe(studioTokens('light'));
+    expect(style.mascot).toBe('none');
   });
 });
 
@@ -233,6 +251,8 @@ describe('HUD is always dark', () => {
     expect(resolveStyle(input(HUD, { hudLook: GHOST })).mascot).toBe('none');
     expect(bundledMascot('studio', HUD_DEFAULT_LOOK)).toBe('none');
     expect(bundledMascot('play', GHOST)).toBe('bundled');
+    // Candy draws its own Auto with Skia (D-CAN-5): never the bundled clips
+    expect(bundledMascot('candy', HUD_DEFAULT_LOOK)).toBe('none');
   });
 });
 
@@ -297,7 +317,7 @@ describe('an installed theme paints the Studio layout (D58)', () => {
 });
 
 describe('motion (D-A11Y)', () => {
-  const CHOICES = [STUDIO, PLAY, HUD, ARCADE, THEME];
+  const CHOICES = [STUDIO, PLAY, HUD, ARCADE, CANDY, THEME];
 
   it.each(CHOICES)('Reduce Motion stops every loop: %o', (choice) => {
     expect(resolveStyle(input(choice, { reduceMotion: true })).motion).toEqual({
@@ -318,6 +338,7 @@ describe('motion (D-A11Y)', () => {
     expect(resolveStyle(input(PLAY, { hudLook: HUD_STILL })).motion.loops).toBe(true);
     expect(resolveStyle(input(STUDIO, { hudLook: HUD_STILL })).motion.loops).toBe(true);
     expect(resolveStyle(input(ARCADE, { hudLook: HUD_STILL })).motion.loops).toBe(true);
+    expect(resolveStyle(input(CANDY, { hudLook: HUD_STILL })).motion.loops).toBe(true);
   });
 
   it('names Reduce Motion first when both stop the loops', () => {
