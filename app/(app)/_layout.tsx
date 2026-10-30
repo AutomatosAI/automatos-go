@@ -23,6 +23,10 @@
 // discovery (src/push/bind/session.ts). It is imported lazily, behind its own Suspense boundary,
 // so this layout imports no native module (shell-bar.test.ts renders it over mocked natives) and
 // the screens never wait for it.
+// The brief on open (PRD-268 US-G06) is mounted once beside the screens too, under the ready session
+// and lazily for the same reason (it reads the phone's timezone through expo-localization):
+// BriefOnOpen calls the brief route on the first foreground of each local date, only where discovery
+// lists `brief`; it draws nothing.
 import { Stack } from 'expo-router';
 import { lazy, Suspense } from 'react';
 
@@ -53,6 +57,12 @@ const SessionPush = lazy(async () => {
   return { default: SessionPushRoot };
 });
 
+/** The brief on open for the ready session, mounted once (it reads useAppSession). */
+const SessionBrief = lazy(async () => {
+  const { BriefOnOpen } = await import('../../src/brief/BriefOnOpen');
+  return { default: BriefOnOpen };
+});
+
 export default function SignedInLayout() {
   useSessionRefresh();
   return (
@@ -61,6 +71,9 @@ export default function SignedInLayout() {
       <Stack screenOptions={{ headerShown: false }} />
       <Suspense fallback={null}>
         <SessionPush />
+      </Suspense>
+      <Suspense fallback={null}>
+        <SessionBrief />
       </Suspense>
     </AppGate>
   );

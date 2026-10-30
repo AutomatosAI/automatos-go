@@ -17,10 +17,13 @@
 //   Report this (D15, P001R-AF-1): a long-press or the accessible action on Auto's saved reply in the
 // transcript opens the foundation's one ReportSheet (A2's useMessageReport), mounted once beside
 // TYPE's Sheet, never inside it.
+//   The day's brief (PRD-268 US-G06, src/brief/use-hud-brief.tsx): while it is the newest message it
+// fills the transcript slot, and OPEN BRIEF opens its numbered rows in a Sheet beside TYPE's.
 
 import { useCallback, useMemo, useState } from 'react';
 
 import { useNeedsYou } from '../../api/needs-you';
+import { useHudBrief } from '../../brief/use-hud-brief';
 import { Composer } from '../../chat/composer/Composer';
 import { DiscussionBar } from '../../chat/discussion/DiscussionBar';
 import { HomeMenu } from '../../chat/home/HomeMenu';
@@ -51,6 +54,7 @@ export function HudHome({ chatId, ticketId = null }: HudHomeProps) {
   const turn = useMemo(() => hudTurn(state), [state]);
   const voice = useHudHomeVoice(home, turn);
   const { report, sheet } = useMessageReport();
+  const brief = useHudBrief(state, report);
   const { sendMessage } = home;
   const { typed } = voice;
   const close = useCallback(() => setTyping(false), []);
@@ -78,6 +82,7 @@ export function HudHome({ chatId, ticketId = null }: HudHomeProps) {
           line: <VoiceLine line={voice.line} onAction={voice.lineAction} />,
         }}
         report={report}
+        transcriptSlot={brief.slot}
       />
       <Sheet visible={typing} onClose={close}>
         <DiscussionBar state={home.discussion} messages={state.messages} />
@@ -92,6 +97,7 @@ export function HudHome({ chatId, ticketId = null }: HudHomeProps) {
       </Sheet>
       <HomeMenu menu={menu} needsYou={total} />
       <ReportSheet {...sheet} />
+      {brief.sheet}
     </>
   );
 }

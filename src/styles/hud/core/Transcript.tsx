@@ -9,6 +9,8 @@
 // Given A2's ThreadReport, Auto's saved reply offers Report this (D15) as A2's AutoMessage does: a
 // long-press on the line and the 'Report this' accessible action. Never on YOU's line, never while
 // he streams, never past the gate (a viewer, a server without report_content).
+// HUD's home may hand in `slot` (PRD-268 US-G06: the day's brief while it is the newest message):
+// it then shows under the AI label in the rows' place.
 
 import { useCallback, useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import {
@@ -148,9 +150,11 @@ export type TranscriptProps = {
   readonly turn: HudTurn;
   /** Report this on Auto's saved reply (A2's useMessageReport); absent, nothing is offered. */
   readonly report?: ThreadReport;
+  /** In the rows' place (the day's brief); absent, the turn's rows. */
+  readonly slot?: ReactNode;
 };
 
-export function Transcript({ turn, report }: TranscriptProps) {
+export function Transcript({ turn, report, slot }: TranscriptProps) {
   const core = useVoiceCore();
   const scroll = useRef<ScrollView>(null);
   const follow = useFollowEnd(scroll, turn.you);
@@ -168,10 +172,14 @@ export function Transcript({ turn, report }: TranscriptProps) {
       onLayout={follow.toEnd}
     >
       <AiLabel agent={turn.agent} />
-      <Hint turn={turn} core={core} />
-      {transcriptRows(turn).map((row) => (
-        <Row key={row.who} row={row} core={core} onReport={reportOpener(row, report)} />
-      ))}
+      {slot ?? (
+        <>
+          <Hint turn={turn} core={core} />
+          {transcriptRows(turn).map((row) => (
+            <Row key={row.who} row={row} core={core} onReport={reportOpener(row, report)} />
+          ))}
+        </>
+      )}
     </ScrollView>
   );
 }

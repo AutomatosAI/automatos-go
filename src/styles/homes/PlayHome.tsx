@@ -9,12 +9,15 @@
 // none for a viewer), and the EN/PT switch just before it (LanguageChip, none for a viewer). The frame is First open's: the ground's light where the
 // screen kind puts it, everything lifted over the keyboard on iOS. Report this opens A2's one
 // ReportSheet. Chats goes back on the chat route, else to the history; Shelf to the Deliverables.
+// Where discovery lists `brief`, the day's brief draws as Play's brief card in the thread (US-G06).
 
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaFrame } from 'react-native-safe-area-context';
 
+import { canBrief } from '../../api/capabilities';
+import { useAppSession } from '../../app-state/session';
 import { roleCan } from '../../auth/role';
 import { AttachMenu } from '../../chat/attachments/AttachMenu';
 import { AttachmentChips } from '../../chat/attachments/AttachmentChips';
@@ -86,7 +89,8 @@ function Thread({ home, shelf }: ThreadProps) {
   const { state, send, settleCard } = home.thread;
   const follow = useFollowLink();
   const { report, sheet } = useMessageReport();
-  const rows = useMemo(() => threadRows(state), [state]);
+  const briefs = canBrief(useAppSession().discovery);
+  const rows = useMemo(() => threadRows(state, { briefs }), [state, briefs]);
   const reports = useMemo(
     () => placeReports(shelf, state, LIVE_AUTO_KEY, new Set(rows.map((row) => row.key))),
     [shelf, state, rows],
