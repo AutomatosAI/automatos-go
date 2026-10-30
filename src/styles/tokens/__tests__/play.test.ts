@@ -5,7 +5,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { contrastRatio } from '../../../core/web/lib/look-kit/contrast';
-import { studioConsequence } from '../../../core/web/lib/look-kit/studio-tokens';
+import {
+  STUDIO_STATUS_TOKEN_NAMES,
+  studioConsequence,
+} from '../../../core/web/lib/look-kit/studio-tokens';
 import { ACCENT_KEYS, GROUND_KEYS } from '../../../core/frozen/lib/looks/catalogue';
 import {
   PLAY_LOOK_CATALOGUE,
@@ -34,6 +37,14 @@ import {
 import { STUDIO_COLOURS, sourceToHex } from '../studio';
 
 const HEX6 = /^#[0-9A-F]{6}$/;
+/** PRD-268 K13's status tokens (the vendored STUDIO_STATUS_TOKEN_NAMES) under their layout names. */
+const STATUS_KEYS = [
+  ['--success', 'success'],
+  ['--warning', 'warning'],
+  ['--warn-ink', 'warnInk'],
+  ['--info', 'info'],
+  ['--running', 'running'],
+] as const;
 const HEX8 = /^#[0-9A-F]{8}$/;
 /** What React Native's normalize-colors reads: #RRGGBB, or rgba() with 0-255 channels. */
 const RN_COLOUR = /^(?:#[0-9A-F]{6}|rgba\((?:\d{1,3},){3}(?:0|1|0?\.\d+)\))$/i;
@@ -97,22 +108,45 @@ describe('playTokens (PRD-260 D3: a look as Studio-keyed tokens)', () => {
   it('keeps the tone’s Studio value for every key the look does not set', () => {
     const dark = playTokens(EMBER);
     const light = playTokens(DAYLIGHT);
-    for (const name of ['success', 'warning', 'info', 'chart1', 'olive', 'navy', 'running'] as const) {
+    for (const name of ['chart1', 'olive', 'navy'] as const) {
       expect(dark[name], name).toBe(STUDIO_COLOURS.dark[name]);
       expect(light[name], name).toBe(STUDIO_COLOURS.light[name]);
     }
   });
 
+  it('takes the status tokens from the look: Studio’s values for the ground’s tone (PRD-268 K13)', () => {
+    expect(STATUS_KEYS.map(([key]) => key)).toEqual(STUDIO_STATUS_TOKEN_NAMES);
+    const dark = playTokens(EMBER);
+    const light = playTokens(DAYLIGHT);
+    for (const [key, name] of STATUS_KEYS) {
+      expect(dark[name], name).toBe(sourceToHex(lookToStudioTokens(EMBER)[key]));
+      expect(light[name], name).toBe(sourceToHex(lookToStudioTokens(DAYLIGHT)[key]));
+      expect(dark[name], name).toBe(STUDIO_COLOURS.dark[name]);
+    }
+    for (const name of ['success', 'warning', 'warnInk', 'info'] as const) {
+      expect(light[name], name).toBe(STUDIO_COLOURS.light[name]);
+    }
+    // Light --running is core's real token (§6.12.2); Go's Studio Light source still has the web's
+    // old literal, hsl(40 20% 65%), and no light ground paints it (ui/state-tokens.ts stand-in).
+    expect(light.running).toBe(sourceToHex('40 20% 36%'));
+  });
+
   it('keeps --accent-2’s alpha as #RRGGBBAA: the error colour at Studio Dark’s 0.14, Light’s 0.10', () => {
-    expect(playTokens(EMBER).accent2).toBe(`${studioConsequence(PLAY_LOOK_CATALOGUE, 'graphite').fill}24`);
-    expect(playTokens(DAYLIGHT).accent2).toBe(`${studioConsequence(PLAY_LOOK_CATALOGUE, 'paper').fill}1A`);
+    expect(playTokens(EMBER).accent2).toBe(
+      `${studioConsequence(PLAY_LOOK_CATALOGUE, 'graphite').fill}24`,
+    );
+    expect(playTokens(DAYLIGHT).accent2).toBe(
+      `${studioConsequence(PLAY_LOOK_CATALOGUE, 'paper').fill}1A`,
+    );
   });
 
   it('writes every colour as #RRGGBB (accent2 #RRGGBBAA) and freezes the set', () => {
     for (const look of [...PAIRS, DAYLIGHT]) {
       const tokens = playTokens(look);
       for (const [name, hex] of Object.entries(tokens)) {
-        expect(hex, `${look.ground}/${look.accent} ${name}`).toMatch(name === 'accent2' ? HEX8 : HEX6);
+        expect(hex, `${look.ground}/${look.accent} ${name}`).toMatch(
+          name === 'accent2' ? HEX8 : HEX6,
+        );
       }
       expect(Object.isFrozen(tokens)).toBe(true);
     }
@@ -151,9 +185,13 @@ describe('playVars (the --pl-* set, re-keyed)', () => {
   it('never paints the glow past the vendored safeGlowAlpha', () => {
     for (const look of [...PAIRS, ...PRESETS]) {
       const cap = safeGlowAlpha(look.ground, look.accent);
-      expect(alphaOf(playVars(look).glow), `${look.ground}/${look.accent}`).toBeLessThanOrEqual(cap);
+      expect(alphaOf(playVars(look).glow), `${look.ground}/${look.accent}`).toBeLessThanOrEqual(
+        cap,
+      );
     }
-    expect(alphaOf(playVars(EMBER).glow)).toBe(Math.min(EMBER.glow / 100, safeGlowAlpha('graphite', 'molten')));
+    expect(alphaOf(playVars(EMBER).glow)).toBe(
+      Math.min(EMBER.glow / 100, safeGlowAlpha('graphite', 'molten')),
+    );
   });
 });
 

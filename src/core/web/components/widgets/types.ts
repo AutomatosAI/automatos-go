@@ -1,5 +1,5 @@
-// Vendored from AutomatosAI/automatos-ai frontend/components/widgets/types.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b · typeOnly: MissionApprovalTask, MissionApprovalWidgetData, ToolApprovalWidgetData — do not edit — scripts/sync-core.ts
-// Approve/deny a gated tool call via its approval grant
+// Vendored from AutomatosAI/automatos-ai frontend/components/widgets/types.ts @ 1a8956c874dc42cff05b96f431c50b7d722a71aa · typeOnly: MissionApprovalTask, MissionApprovalWidgetData, ToolApprovalWidgetData — do not edit — scripts/sync-core.ts
+import type { ApprovalView } from '../../lib/proactive/types'  // Approve/deny a gated tool call via its approval grant
 
 export interface MissionApprovalTask {
   title: string
@@ -28,6 +28,8 @@ export interface MissionApprovalWidgetData {
   risk_class?: string
   oversight_rationale?: string
   requires_approval?: boolean
+  /** PRD-268 US-C20c: the exact action and the rule that held the plan (its grant_id is the mission_id). */
+  approval_view?: ApprovalView
 }
 
 /**
@@ -49,4 +51,6 @@ export interface ToolApprovalWidgetData {
   risk_class?: string
   oversight_rationale?: string
   requires_approval?: boolean
+  /** PRD-268 US-C20c: the exact action, its target and preview, and the rule that asked. */
+  approval_view?: ApprovalView
 }

@@ -154,8 +154,8 @@ to the phone's speaker unchanged.
   `audio/mpeg`, one MP3 for that text, with `X-Voice-Id`. Refusals `{code, detail}`: 503 `tts_off`,
   503 `tts_unavailable`, 422 `tts_bad_request`, 413 `tts_too_long`, 429 `tts_busy`.
 - `GET /api/voice/voices` → `{default, voices: [{id, name, accent, gender}]}`, or 503.
-- Both are `pendingUpstream` in [src/voice/routes.ts](../src/voice/routes.ts) until a re-pin
-  carries them.
+- Both are on the server at the core pin (automatos-ai #1348, since the re-pin to `1a8956c87`), so
+  [src/voice/routes.ts](../src/voice/routes.ts) carries no `pendingUpstream` mark.
 
 **From the server to the speaker.** The one API client reads the 200's body as bytes
 (`client.binary()`: expo/fetch's body stream in `src/api/transport.ts`, read by `src/api/body.ts`

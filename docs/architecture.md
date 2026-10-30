@@ -25,7 +25,7 @@ the system browser ([CLAUDE.md](../CLAUDE.md) "Never").
  | src/navigation  app routes, web link -> app route                                |
  | src/auth        AuthProvider: clerk (hosted) | device (paired own server)        |
  | src/api         the one client: bearer + X-Workspace-ID, zod, errors, SSE, cache |
- | src/core        pure TypeScript vendored from automatos-ai at 8c9361687          |
+ | src/core        pure TypeScript vendored from automatos-ai at 1a8956c87          |
  | src/storage     encrypted MMKV          src/lib  env, logger, keychain registry  |
  +----------------------------------------------------------------------------------+
                          |  HTTPS (http only to a home-network address)
@@ -185,7 +185,7 @@ offline: an answer or an approval reaches the server now or fails.
 
 `src/core/web/` is pure TypeScript copied from automatos-ai's `frontend/` by
 [scripts/sync-core.ts](../scripts/sync-core.ts) and recorded in [core.lock.json](../core.lock.json)
-(source `AutomatosAI/automatos-ai`, sha `8c9361687`, synced 26 Oct 2026). It holds the chat
+(source `AutomatosAI/automatos-ai`, sha `1a8956c87`, synced 30 Oct 2026). It holds the chat
 helpers (receipts, narration, tool calls, errors), the board and calendar helpers and the look
 kit. Nobody edits it by hand: `npm run check:core` fails on any drift. The lock also lists the
 web's tests that could not be copied, and why.
@@ -197,7 +197,10 @@ state machine, their web tests and the theme SDK type slices they import stay as
 vendored them. It mirrors `frontend/` like `src/core/web/`; each file opens with a provenance
 header (source path and SHA), and `scripts/core-manifest.json` `frozen` records its sha256, so
 `npm run check:core` fails on an edit, a lost header or a stray file. Nothing writes these files:
-to change one, make it the app's own code outside `src/core/frozen/` and drop its entry.
+to change one, make it the app's own code outside `src/core/frozen/` and drop its entry. The looks
+engine's Studio-token test did that at the re-pin to `1a8956c87`, when PRD-268 K13 made the
+vendored `lookToStudioTokens` set Studio's status tokens: it is now
+[play-look-studio-tokens.test.ts](../src/styles/tokens/__tests__/play-look-studio-tokens.test.ts).
 
 The app's own pure code sits beside it: [turn-reducer.ts](../src/core/turn-reducer.ts) folds one
 chat turn from its stream frames, and `src/core/parity/` with `src/core/__fixtures__/parity/`
@@ -262,11 +265,11 @@ If the hosted server answers 404, the app uses built-in defaults with no capabil
 | `report_content` | Report this (**Gated**) | no: Report this stays hidden on every server |
 | `push` (with `push.expo: true`) | Notifications (A4) | yes, since #1300 (W2, 24 Oct); `push.expo` is true on SaaS, and self-hosted once its operator agrees |
 | `digest` | Daily digest time (A4) | yes, since #1300 (W2, 24 Oct) |
-| `tts` | Auto's server voice: quick-ask's replies and Settings → Voice's list ([voice.md](voice.md#autos-server-voice)) | no: built on automatos-ai `feat/voice-tts` (27 Oct), listed only when the server has a voice |
-| `digest_now` | **Send today's brief now** under the digest time (A4, `POST /api/v1/mobile/digest/now`) | no: built on automatos-ai `feat/digest-now` (28 Oct) |
-| `brief` | PRD-268's brief: the on-open call (`POST /api/proactive/brief/open`) and the `brief@1` card in the thread (US-G06) | no: core W2 (PRD-268 K20, `feat/prd-268-w2-delivery`) |
-| `suggestions` | PRD-268's suggestions: the pinned card, the header count, Start and Hide (US-G01) | no: core W2 (PRD-268 K20, `feat/prd-268-w2-delivery`) |
-| `readiness` | PRD-268's **What Auto depends on** in Settings: `GET /api/readiness`, Check again (`POST /api/readiness/check`), and this phone's push, microphone, speech recognition and server voice rows (US-G07) | no: the routes are on core `main` (W1, US-C18); the capability is core W2's (PRD-268 K20) |
+| `tts` | Auto's server voice: quick-ask's replies and Settings → Voice's list ([voice.md](voice.md#autos-server-voice)) | yes, since #1348 (27 Oct), listed only when the server has a voice (`VOICE_TTS_URL`) |
+| `digest_now` | **Send today's brief now** under the digest time (A4, `POST /api/v1/mobile/digest/now`) | yes, since #1356 (28 Oct) |
+| `brief` | PRD-268's brief: the on-open call (`POST /api/proactive/brief/open`) and the `brief@1` card in the thread (US-G06) | yes, since #1375 (PRD-268 W2, K20; on core `main` 30 Oct) |
+| `suggestions` | PRD-268's suggestions: the pinned card, the header count, Start and Hide (US-G01) | yes, since #1375 (PRD-268 W2, K20; the routes since W1, #1367; on core `main` 30 Oct) |
+| `readiness` | PRD-268's **What Auto depends on** in Settings: `GET /api/readiness`, Check again (`POST /api/readiness/check`), and this phone's push, microphone, speech recognition and server voice rows (US-G07) | yes, since #1375 (PRD-268 W2, K20; the routes since W1, US-C18, #1367; on core `main` 30 Oct) |
 
 The server side is automatos-ai `orchestrator/services/mobile/discovery.py` (`CAPABILITY_ROUTES`).
 

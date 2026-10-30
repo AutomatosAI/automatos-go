@@ -16,6 +16,7 @@ import {
   type FakeResponse,
 } from '../../api/__tests__/fake-transport';
 import type { TransportRequest } from '../../api/transport-types';
+import { servedAtPin } from '../../api/__tests__/served';
 import { logger } from '../../lib/logger';
 import { SERVER_VOICE_MAX_BYTES } from '../config';
 import { VOICE_ROUTES } from '../routes';
@@ -56,11 +57,11 @@ afterEach(() => {
 });
 
 describe('the voice routes', () => {
-  it('are the server contract, pending upstream until the re-pin', () => {
-    expect(VOICE_ROUTES.speech).toMatchObject({ method: 'POST', path: '/api/voice/speech' });
-    expect(VOICE_ROUTES.voices).toMatchObject({ method: 'GET', path: '/api/voice/voices' });
-    expect(VOICE_ROUTES.speech.pendingUpstream).toMatch(/voice-tts/);
-    expect(VOICE_ROUTES.voices.pendingUpstream).toMatch(/voice-tts/);
+  it('are the server contract, on the server at the core pin with no pendingUpstream mark', () => {
+    expect(VOICE_ROUTES.speech).toEqual({ method: 'POST', path: '/api/voice/speech' });
+    expect(VOICE_ROUTES.voices).toEqual({ method: 'GET', path: '/api/voice/voices' });
+    expect(servedAtPin(VOICE_ROUTES.speech)).toBe(true);
+    expect(servedAtPin(VOICE_ROUTES.voices)).toBe(true);
   });
 });
 
