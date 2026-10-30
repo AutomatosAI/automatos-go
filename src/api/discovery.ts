@@ -33,6 +33,8 @@ export const CAPABILITIES = [
   'brief',
   /** PRD-268 W2 (K20): Auto's suggestions, GET /api/proactive/suggestions and suggestion_changed. */
   'suggestions',
+  /** PRD-268 (K20): what Auto depends on, GET /api/readiness and POST /api/readiness/check (Settings). */
+  'readiness',
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];

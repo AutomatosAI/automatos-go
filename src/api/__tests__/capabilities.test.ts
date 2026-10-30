@@ -6,6 +6,7 @@ import {
   canDigestNow,
   canMobileTheme,
   canPush,
+  canReadiness,
   canReportContent,
   canServerVoice,
   canSpokenMode,
@@ -31,6 +32,7 @@ const GATES: readonly [Capability, (discovery: GateInput) => boolean][] = [
   ['digest_now', canDigestNow],
   ['brief', canBrief],
   ['suggestions', canSuggestions],
+  ['readiness', canReadiness],
 ];
 
 describe('capability gates', () => {
