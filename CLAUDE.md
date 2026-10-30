@@ -1,7 +1,7 @@
 # CLAUDE.md — Automatos Go
 
 The Automatos mobile app (iOS first): Auto chat, the Command Centre, push and
-voice, in three styles (Studio / Play / HUD). Native Expo app, no WebView.
+voice, in four styles (Studio / Play / HUD / Arcade). Native Expo app, no WebView.
 Public, Apache-2.0. Plan: `docs/prd/PRD-001-AUTOMATOS-GO-V1.md`; server side:
 automatos-ai PRD-266.
 
@@ -102,8 +102,8 @@ src/chat/            the chat controller over src/core (turnReducer), streaming
 src/cc/              Board, Calendar, Questions, Deliverables data and screens
 src/push/            registration, categories, action handler, signature check
 src/voice/           quick-ask (STT, TTS), Auto Live (LiveKit), voice screen
-src/styles/          tokens, looks, the three layouts, fonts, mascot, the AI label
-src/ui/              primitives shared by all three layouts
+src/styles/          tokens, looks, the four layouts, fonts, mascot, the AI label
+src/ui/              primitives shared by all four layouts
 src/lib/             logger (the only console user), env (zod-parsed EXPO_PUBLIC_*)
 src/app-state/       the shell: the signed-in gate (gate.ts decides), the session (useAppSession, useApiClient), the cache roots
 src/navigation/      every app route (routes.ts) and web link → app route (web-links.ts); kits link only through them
@@ -223,4 +223,6 @@ functions < 50 lines, components < 150; pure logic outside React with tests in
   tokens in `_ds/…/tokens/`). Where the handoff and a PRD decision differ, the decision wins.
 - Play: `<workspace>/DUMPING AREA/automatos-play-ember/`; HUD:
   `<workspace>/DUMPING AREA/automatos-play-command/`.
+- Arcade: `<workspace>/DUMPING AREA/automatos-arcade/` (the "Phone 390" handheld) and the
+  design kit's `themes/arcade` at `034fa629c`, which Arcade's vendored files name (PRD-001 §4.6.1).
 - Decisions D1–D63: `<workspace>/reports/mobile-review-2026-10-20/decisions.md`.

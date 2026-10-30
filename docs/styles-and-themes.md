@@ -1,110 +1,153 @@
 # Styles and themes (the phone's side)
 
-How Automatos Go paints itself: three built-in styles (Studio, Play, HUD), installed workspace
-themes, and "Same as Studio". This page covers the phone only. The theme package, the `mobile`
-block in `theme.json` and the server routes are owned by the Themes docs in automatos-ai: see
+How Automatos Go paints itself: four built-in styles (Studio, Play, HUD and Arcade), each with its
+own layout, installed workspace themes, and "Same as Studio". Which theme gets which layout: under
+Same as Studio, `automatos/play`, `automatos/hud` and `automatos/arcade` switch the phone to that
+style's own layout; every other theme paints the Studio layout through its `mobile` skin. This page
+covers the phone only. The theme package, the `mobile` block in `theme.json` and the server routes
+are owned by the Themes docs in automatos-ai: see
 [docs/theme-host/mobile.md](https://github.com/AutomatosAI/automatos-ai/blob/main/docs/theme-host/mobile.md)
 for the contract, and the Themes pages for people who install themes,
 [docs/themes/](https://github.com/AutomatosAI/automatos-ai/blob/main/docs/themes/_index.md) (the phone's page is
 [on-your-phone.md](https://github.com/AutomatosAI/automatos-ai/blob/main/docs/themes/on-your-phone.md)). The Themes pages
 merged in automatos-ai #1304, which also revised mobile.md (first merged in #1258).
 
-State on 24 Oct 2026. Most of this page describes the A5 branch, `feat/a5-styles` at `e4336ff` or
-later, which is still being built. Paths below marked `A5:` are on that branch.
+State on 30 Oct 2026. Studio, Play and HUD are on `main` (A5, #14). Arcade is wave A8 (PRD-001
+§4.6.1, US-022) on the branch `feat/a8-arcade`, not on `main` yet; the parts of this page about
+Arcade describe that branch.
 
 ## Status
 
 | Part | Status |
 |---|---|
-| Studio style, Light/Dark following the iPhone, the AI label | **On `main`** |
-| Style registry, the flip, Studio's Light / Dark / System control | On branch (A5), built |
-| Style and look screen (`/settings/style`) | On branch (A5), built; the Settings row "Style and look" links to it from `48a7365` (US-016j, `A5:app/(app)/settings/index.tsx`) |
-| Same as Studio, installed themes with a `mobile` block | On branch (A5), built |
-| Play's tokens, glow and "Make it yours" (`/settings/look/play`) | On branch (A5), built |
-| HUD's tokens, grid, glow and its phone core | On branch (A5), built |
-| Play and HUD looks kept in step with the web | On branch (A5), built |
-| Auto the mascot (clips, stills, ring) | On branch (A5), built |
-| `StyleSync` mounted once in the signed-in shell | On branch (A5), built from `48a7365` (US-016j) |
-| HUD's Looks drawer (`/settings/look/hud`) | On branch (A5), built |
-| A home per style; Play's Conversations and Shelf; Command Centre in every style | Kit only (US-016k, US-017g, US-016l) |
-| Styled First open, Not running, Something went wrong, Lost (`A5:src/styles/edges/`) | On branch (A5), built; only Lost is wired in (`A5:app/+not-found.tsx`). From `8b5c939` the gate has an `edge` slot and `GateEdge` draws its error and Not running, but the signed-in layout does not pass `edge` yet (US-016j, not passing) |
+| Studio style, Light/Dark following the iPhone, the AI label | On `main` |
+| Style registry, the flip, Studio's Light / Dark / System control, the Style and look screen (`/settings/style`) | On `main` (A5) |
+| Same as Studio, installed themes with a `mobile` block | On `main` (A5) |
+| Play: tokens, glow, the Companion home, Conversations, Shelf, "Make it yours" (`/settings/look/play`) | On `main` (A5) |
+| HUD: tokens, grid, glow, the voice-first core as home, the Looks drawer (`/settings/look/hud`) | On `main` (A5) |
+| Play and HUD looks kept in step with the web; `StyleSync` mounted once in the signed-in shell | On `main` (A5) |
+| Auto the mascot (clips, stills, ring) | On `main` (A5) |
+| The Command Centre, sheets, settings, the edge screens and the voice screen dressed per style | On `main` (A5, A6) |
+| Arcade: the fourth style, its looks and Options (`/settings/look/arcade`), Press Start 2P and Pixelify Sans, Auto as a pixel sprite, the handheld home with its party, Quests and Inventory, the shared screens in its dress | Branch `feat/a8-arcade` (A8) |
 
-The kit is `scripts/ralph/prd-001-styles.json` on the branch; each story's `passes` is the truth.
+The kits are `scripts/ralph/prd-001-styles.json` (A5) and `scripts/ralph/prd-001-arcade.json`
+(A8); each story's `passes` is the truth.
 
-## On `main` today
+The AI label stays the same in every style: one small muted caption, "Auto is an AI" (or "{agent}
+is an AI"), at the top of each thread ([src/styles/ai-label.tsx](../src/styles/ai-label.tsx)). It
+never blocks typing. In Arcade it is the story window's first row and scrolls away with it;
+scanlines are never drawn over it.
 
-Only Studio ships. [src/styles/theme-choice.ts](../src/styles/theme-choice.ts) holds `light`,
-`dark` and `system`, and the app follows the iPhone's appearance (`system`): there is no control
-yet. [src/styles/tokens/types.ts](../src/styles/tokens/types.ts) notes that A5 adds `play` and
-`hud`.
+## The four layouts
 
-The AI label is on `main` and stays the same in every style: one small muted caption, "Auto is an
-AI" (or "{agent} is an AI"), at the top of each thread ([src/styles/ai-label.tsx](../src/styles/ai-label.tsx)).
-It never blocks typing.
+Every home talks to the same Auto over A2's one thread (`src/chat/controller`). The resolved
+style's layout picks the home ([src/styles/homes/layout.ts](../src/styles/homes/layout.ts),
+`homeFor`; [StyleHome.tsx](../src/styles/homes/StyleHome.tsx)):
 
-## The three styles (A5)
+| Layout | What it draws |
+|---|---|
+| **Studio** | A2's home as built: the brand header with the Command Centre button and avatar, the needs strip, the thread with its cards, the composer |
+| **Play** | The Companion chat (Ember 01-02): the chat's title, "Shelf +N" and the needs line, Auto's row with his state, the thread, Play's message box; Conversations and the Shelf of Deliverables behind it |
+| **HUD** | The voice-first core: the ring core with Auto and the state chip, the YOU / AUTO transcript, the waveform, TYPE · HOLD TO TALK · STOP, COMMAND and LOOK |
+| **Arcade** | The handheld: the status bar (Auto's mark, the counters, the pause control), the party strip (your agents, each with its state word), and a screen the D-pad switches: ◀ Chat (the story window over the thread, then the dialogue window with Auto's portrait and his reply typing out), ▲ Quests (the overworld map, the Board's tickets as quests) and ▶ Inventory (the item grid with tabs, the Deliverables as items); ▼ Menu opens the header menu; hold to talk in the round surround |
+
+An installed theme paints the Studio layout, so it has Studio's home. The Command Centre, sheets,
+settings, the edge screens (First open, Not running, Something went wrong, Lost) and the voice
+screen are one set of screens in every style, each dressed by the style
+(`src/styles/dress/`, `src/styles/edges/`, `src/voice/screen/dress.ts`).
+
+**Arcade's handheld** ([src/styles/homes/ArcadeHome.tsx](../src/styles/homes/ArcadeHome.tsx), the
+parts in `src/styles/arcade/parts/`, the screens in `src/styles/arcade/home/`). It shows only data
+the app already reads; there is no new endpoint (D-ARC-6). The counters: **!** is the needs-you
+number (`useNeedsYou`), **QUEST** the Board's work in progress; XP is left out while the Board's
+rows carry no completion time. The party is the chat's agents (`GET /api/chat/agents`). Quests
+draws the Board's tickets on the design kit's map, with a link to the full Board; Inventory the
+Deliverables gallery, with a link to all of them. TYPE in the dialogue window opens A2's composer
+in a sheet; hold to talk is A6's quick-ask. Auto is the design kit's 32 × 32 pixel sprite, drawn
+with Skia from vendored source (`src/styles/arcade/sprite/`), never the bundled clips: twelve
+states on a 60 ms clock. Reduce Motion, or the pause control on the status bar, stills every loop
+(the sprite on frame 1, the ▶ / ▼ cursors, the typewriter, the voice screen's rings) and says so
+in words.
+
+## The four styles in the picker
 
 | Style | Picker line | Look page |
 |---|---|---|
 | **Studio** | "Cream paper or Studio Dark", with Light / Dark / System on its card | none: the scheme is the look |
 | **Play** | "Auto and the Ember look" | **Make it yours →** (`/settings/look/play`) |
 | **HUD** | "Voice first, glow and grid" | **Looks →** (`/settings/look/hud`) |
+| **Arcade** | "Your agents as a party, Auto in the dialogue box" | **Options →** (`/settings/look/arcade`) |
 
-Copy: `A5:src/styles/strings.ts`. Screens: `A5:app/(app)/settings/style.tsx`,
-`A5:app/(app)/settings/look/play.tsx`, `A5:app/(app)/settings/look/hud.tsx`; paths in
-`A5:src/styles/nav.ts`.
+Copy: [src/styles/strings.ts](../src/styles/strings.ts). Screens: `app/(app)/settings/style.tsx`
+and `app/(app)/settings/look/{play,hud,arcade}.tsx`; paths in
+[src/styles/nav.ts](../src/styles/nav.ts). The registry
+([src/styles/registry/registry.ts](../src/styles/registry/registry.ts)) gives each style its look
+page and whether the bundled Auto shows: Studio and Arcade never, Play always, HUD when the look
+turns him on.
 
-**The flip** (`A5:src/styles/provider/flip.ts`). Tapping a card stores the choice on the phone,
-plays one haptic tick and crossfades the whole app over 180 ms (at once under Reduce Motion).
-Entering Play also counts one "hello" from Auto. Picking the choice already stored does nothing.
+**The flip** ([src/styles/provider/flip.ts](../src/styles/provider/flip.ts)). Tapping a card
+stores the choice on the phone, plays one haptic tick and crossfades the whole app over 180 ms (at
+once under Reduce Motion). Entering Play also counts one "hello" from Auto. Picking the choice
+already stored does nothing.
 
-**What the phone stores** (`A5:src/styles/registry/choice.ts`, `choice-store.ts`). A small
-versioned JSON value under `styles.choice` in the encrypted MMKV store:
+**What the phone stores** ([src/styles/registry/choice.ts](../src/styles/registry/choice.ts),
+`choice-store.ts`). A small versioned JSON value under `styles.choice` in the encrypted MMKV store:
 `{v: 1, kind: 'builtin', id}` or `{v: 1, kind: 'theme', installId}`, or `{v: 1, kind: 'follow'}`.
 **Nothing stored means "Same as Studio"**, the default since 24 Oct. A value the parser cannot
 read, or a style this build does not have, is Studio, never a crash.
 
-## Same as Studio (A5)
+## Same as Studio
 
 The first row in the Studio card, just below its Light / Dark / System control
-(`A5:src/styles/picker/StyleCard.tsx`, `CardControls`): "Same as Studio · Now {style}". While it
+(`src/styles/picker/StyleCard.tsx`, `CardControls`): "Same as Studio · Now {style}". While it
 is chosen, the phone paints what Studio shows this member, from `GET /api/themes/active`
-(`A5:src/styles/themes/follow.ts`):
+(`src/styles/themes/follow.ts`):
 
 | Theme active in Studio | What the phone paints |
 |---|---|
 | `automatos/play` | Play, the phone's built-in style |
 | `automatos/hud` | HUD, the phone's built-in style |
+| `automatos/arcade` | Arcade, the phone's built-in style (A8; a build from before Arcade: see below) |
 | Any other theme whose install has a `mobile` block the phone can paint | The Studio layout in that theme's colours, fonts and mascot |
 | `studio` / `classic`, no theme, a theme revoked with `disable` (`revoked` on `/active`'s answer, or `theme.revoked.level` `disable`), or no `mobile` block | Studio |
 
-Only a `disable` revocation sends the phone to Studio (`A5:src/styles/themes/follow.ts`,
+Only a `disable` revocation sends the phone to Studio (`src/styles/themes/follow.ts`,
 `followStudio`). A `warn` revocation still paints, as it still runs on the web (automatos-ai
 `orchestrator/services/themes/revocations.py`).
 
 `/active`'s theme is the member's own choice in Studio, else the workspace default (automatos-ai
 `orchestrator/services/themes/defaults.py`, `resolve_active`), not whatever is installed. The phone
-follows it only while it is on Same as Studio (`A5:src/styles/registry/style-id.ts`,
-`paintedChoice`). So choosing Play or HUD in Studio, or making it the workspace default, switches
-the phone to that built-in style: today its tokens, dress, type, ground and Auto. The per-style
-homes (HUD's core, Play's Companion) come with US-016k (kit only). Any other theme repaints Studio.
-Play then paints the member's Play look and HUD the member's HUD look (see "Looks").
+follows it only while it is on Same as Studio (`src/styles/registry/style-id.ts`,
+`paintedChoice`). So choosing Play, HUD or Arcade in Studio, or making it the workspace default,
+switches the phone to that built-in style: its layout and home, tokens, dress, type, ground and
+Auto. Any other theme repaints Studio. Play then paints the member's Play look, HUD the member's
+HUD look and Arcade the member's Arcade look (see "Looks").
+
+**A build from before Arcade.** The theme ids that are a built-in style are one map,
+`BUILT_IN_THEME_STYLES` in [src/styles/themes/follow.ts](../src/styles/themes/follow.ts); A8 adds
+`'automatos/arcade': 'arcade'` (D-ARC-1). A build without that entry (anything from `main` before
+A8 merges, TestFlight builds included) treats `automatos/arcade` as any other theme: under Same as
+Studio it paints `automatos/arcade`'s `mobile` skin on the Studio layout (D-ARC-2; the kit's
+`theme.json` at `034fa629c`: colours from its looks, Press Start 2P and Pixelify Sans as its two
+faces, the mascot as stills), and the picker lists it under Studio as "{name} · {version}". It never
+draws the handheld: that layout is app code, and a theme brings data only.
 
 A theme picked on the phone that goes away (uninstalled, withdrawn, no longer offered) puts the
 phone back on Studio, with one toast when it was on screen: "That theme isn't available any more,
 so Automatos Go is back on Studio." Under Same as Studio, Studio switching to another style or
 theme is an ordinary follow, with no toast; the toast shows only when Studio still names a theme
-the phone can no longer paint, or `/active` reports it withdrawn (`A5:src/styles/themes/follow.ts`,
-`themeGone`; `A5:src/styles/themes/plan.ts`). A read that fails keeps what the phone had: a
+the phone can no longer paint, or `/active` reports it withdrawn (`src/styles/themes/follow.ts`,
+`themeGone`; `src/styles/themes/plan.ts`). A read that fails keeps what the phone had: a
 passing network fault never drops it to Studio.
 
-## Installed themes (A5, gated on `mobile_theme`)
+## Installed themes (gated on `mobile_theme`)
 
 The picker lists installed themes in the Studio card, after Same as Studio, as "{name} · {version}",
 sorted by name, only when the server's discovery lists `mobile_theme`
-(`A5:src/styles/themes/installed.ts`). automatos-ai `main` lists it (#1295).
+(`src/styles/themes/installed.ts`). automatos-ai `main` lists it (#1295).
 
-For each install that is not withdrawn and is not Play's or HUD's own web theme, the phone asks
+For each install that is not withdrawn and is not a built-in style's own web theme (Play's, HUD's
+or, from A8, Arcade's: `builtInStyleOf` in `follow.ts`), the phone asks
 `GET /api/themes/mobile/{install_id}`, at most 4 at a time and at most 100 installs per read. An
 install is offered when its answer carries a `mobile` block the phone can paint. A 404 skips that
 install; any other failure fails the whole read, so a network fault never reads as every theme
@@ -118,7 +161,7 @@ answer is PLAY's contract,
 
 ### Which files the phone downloads
 
-`A5:src/styles/themes/file-url.ts` and `files.ts`:
+`src/styles/themes/file-url.ts` and `files.ts`:
 
 - Only a relative URL under `/api/themes/files/<digest>/`, where `<digest>` is 64 lowercase hex.
   No scheme, no host, no `//`, no `..`, no query, no percent-escape.
@@ -137,45 +180,53 @@ Known limit (security review, 24 Oct): expo-file-system's download has no byte c
 the size is checked once the file has arrived, and iOS follows a redirect with the request's
 headers. Both need the configured server itself to misbehave.
 
-## Looks (A5)
+## Looks
 
-A look is one person's settings for Play or HUD. The phone keeps them in step with the web through
-`GET` and `PUT /api/themes/looks/{theme_id}`, with `automatos/play` and `automatos/hud` as path
-segments (`A5:src/styles/sync/look-themes.ts`, `A5:src/styles/play/looks-api.ts`).
+A look is one person's settings for Play, HUD or Arcade. The phone keeps them in step with the web
+through `GET` and `PUT /api/themes/looks/{theme_id}`, with `automatos/play`, `automatos/hud` and
+(A8) `automatos/arcade` as path segments (`src/styles/sync/look-themes.ts`, `src/styles/play/looks-api.ts`).
 
 - The server's copy wins, except for a part changed on the phone and not yet kept by the server,
   which is sent next. The first sync merges: the server's saved looks first, then each look only
-  the phone has (`A5:src/styles/play/look-sync.ts`, `A5:src/styles/sync/look-sync-run.ts`).
+  the phone has (`src/styles/play/look-sync.ts`, `src/styles/sync/look-sync-run.ts`).
 - A `PUT` sends `{looks, active}`, both every time, one save at a time.
 - The phone keeps looks per owner: server, workspace and person.
-- Stored on the phone under `styles.play.looks` and `styles.hud.looks`, with sync marks under
-  `styles.play.looks.sync` and `styles.hud.looks.sync`.
+- Stored on the phone under `styles.play.looks`, `styles.hud.looks` and `styles.arcade.looks`,
+  with sync marks under `styles.play.looks.sync`, `styles.hud.looks.sync` and
+  `styles.arcade.looks.sync`. Arcade's pause is the phone's alone, under
+  `styles.arcade.motionPaused`, and never synced.
 - If the theme is not installed in the workspace (404), the looks stay on the phone. Play's look
   page says "Kept on this phone only" and "Install Play in Studio to keep your looks in step with
-  the web." HUD says nothing.
+  the web."; Arcade's Options says "Kept on this phone only" and "Arcade isn't installed in this
+  workspace, so your looks stay on this phone." HUD says nothing.
 
-**Play's "Make it yours"** (`A5:src/styles/play/look-page/`): six controls (Accent, Background,
+**Play's "Make it yours"** (`src/styles/play/look-page/`): six controls (Accent, Background,
 Type, Auto's shell, Auto's light · eyes + ring, Glow), the presets Ember, Obsidian, Aurora, Workshop
 and Daylight (the web's, frozen in `src/core/frozen/lib/looks/presets.ts`), **Save as new look**,
 **Reset**, and a long press for Rename, Duplicate and Delete.
 
-**HUD's Looks drawer** (`A5:src/styles/hud/LooksDrawer.tsx`, `drawer-model.ts`, `drawer/`). Today
-it is reached through **Looks →**, the page `/settings/look/hud`
-(`A5:src/styles/hud/drawer/HudLookPage.tsx`). The HUD core's LOOK button opens it over the core,
-but `HudCore` is mounted in no `app/` screen yet (only in `A5:src/styles/edges/FirstOpen.tsx`); the
-button reaches the app with US-016k. The drawer has the presets ARC, FORGE, GHOST, NOVA and SIGNAL
-(`A5:src/styles/tokens/hud-catalogue.ts`) and the saved looks ("MINE 1", "MINE 2"), ACCENT,
+**HUD's Looks drawer** (`src/styles/hud/LooksDrawer.tsx`, `drawer-model.ts`, `drawer/`). It is
+reached through **Looks →**, the page `/settings/look/hud` (`src/styles/hud/drawer/HudLookPage.tsx`),
+and from the LOOK button on HUD's home, the core (`HudHome.tsx`). The drawer has the presets ARC, FORGE, GHOST, NOVA and SIGNAL
+(`src/styles/tokens/hud-catalogue.ts`) and the saved looks ("MINE 1", "MINE 2"), ACCENT,
 BACKGROUND, TYPE, GRID (0–30), GLOW (up to the look's safe glow), SCAN / AUTO / MOTION, SAVE AS NEW
 LOOK, RESET, and a long press on a saved look for Rename or Delete (Play's sheet and words, without
 Duplicate).
-Under Reduce Motion it says "MOTION OFF · REDUCE MOTION". Copy: `A5:src/styles/strings.ts`
-`HUD_DRAWER_COPY`. HUD's HOLD TO TALK button is there but disabled until A6; VoiceOver's hint says
-"Voice comes with the voice update" (`A5:src/styles/hud/core/model.ts`, `hudButtons`;
-[voice.md](voice.md)).
+Under Reduce Motion it says "MOTION OFF · REDUCE MOTION". Copy: `src/styles/strings.ts`
+`HUD_DRAWER_COPY`. HUD's HOLD TO TALK is A6's quick-ask on the core
+(`src/styles/hud/core/model.ts`, `voiceButtons`; [voice.md](voice.md)).
 
-## Auto the mascot (A5)
+**Arcade's Options** (A8, `src/styles/arcade/look-page/`): the design kit's five knobs as rows with
+a ▶ beside the choice (Palette: Overworld, Dungeon, Neon Cabinet, Night City, Handheld; Scanlines;
+Pixel scale 2× or 3×; Window: Classic double or Thin; Text speed), a live preview, **Save look**,
+**Reset** (the palette's preset as it ships), and the save slots, one preset per palette and the
+saved looks, with a long press for Rename or Delete. The schema, presets and rules are vendored
+from the design kit's `themes/arcade` at `034fa629c` (`src/styles/arcade/look-schema.ts`,
+`src/styles/tokens/arcade-catalogue.ts`), with each source's sha256 in the file's header.
 
-`A5:src/styles/mascot/media.ts` picks how Auto shows in each state:
+## Auto the mascot
+
+`src/styles/mascot/media.ts` picks how Auto shows in each state:
 
 | Case | What plays |
 |---|---|
@@ -185,25 +236,27 @@ Under Reduce Motion it says "MOTION OFF · REDUCE MOTION". Copy: `A5:src/styles/
 | A theme that brings Auto | That theme's own files, untinted; a state not on the phone yet keeps the bundled Auto |
 | A theme with mascot mode `none` | No mascot |
 
+Arcade never shows the bundled clips (the registry's `'never'`): Auto there is the pixel sprite
+(see "The four layouts").
+
 The ring around Auto is drawn by the app. VoiceOver hears "Auto, {what he is doing}".
 `MASCOT_TINTED_CLIPS` is one constant: if a device shows a black box where Auto should be, it can be
 turned off over the air.
 
 ## When the phone reads
 
-`A5:src/styles/sync/StyleSync.tsx` mounts `ThemeSync` and `LookSync`. They read on mount and each
+`src/styles/sync/StyleSync.tsx` mounts `ThemeSync` and `LookSync`. They read on mount and each
 time the app comes back to the foreground. There are no timers and no polling
-(`A5:src/styles/sync/foreground.ts`). One read runs at a time per server and workspace, and a read
+(`src/styles/sync/foreground.ts`). One read runs at a time per server and workspace, and a read
 that finishes after the session changed is dropped.
 
-At `e4336ff` only the Style and look screen and both look pages (Play and HUD) mount `StyleSync`,
-so their data is read when they open. From `48a7365` (US-016j) the signed-in shell also mounts it
-once (`A5:src/styles/sync/ShellStyleSync.tsx`, handed in by `StyleSyncSlot` in `A5:app/_layout.tsx`),
-and a per-process guard lets only one instance read (`A5:src/styles/sync/reader-guard.ts`).
+The Style and look screen and the look pages (Play, HUD and Arcade) mount `StyleSync`, so their
+data is read when they open, and the signed-in shell mounts it once (`src/styles/sync/ShellStyleSync.tsx`, handed in by `StyleSyncSlot` in `app/_layout.tsx`),
+and a per-process guard lets only one instance read (`src/styles/sync/reader-guard.ts`).
 
 ## Routes
 
-`A5:src/styles/routes.ts`, checked by `npm run check:routes`:
+`src/styles/routes.ts`, checked by `npm run check:routes`:
 
 | Route | What the phone reads or writes |
 |---|---|
