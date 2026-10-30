@@ -38,6 +38,9 @@ import {
 import { productFiles, readRepoFile, repoRoot } from './support/tree';
 
 const files = productFiles();
+// The scans inside a test body read every product file, which outgrew vitest's 5 s default with
+// the fourth layout (#35); as eslint-rules.test.ts does for its own whole-tree work.
+const WHOLE_TREE_MS = 30_000;
 const pressables = files.flatMap((file) => pressablesOf(file, readRepoFile(file)));
 const scaling = files.flatMap((file) => scalingOf(file, readRepoFile(file)));
 const key = (file: string, rule: A11yRule, text: string) => `${file}\n${rule}\n${text}`;
@@ -169,7 +172,7 @@ describe('nothing under 11 pt (D38)', () => {
     const sizes = files.flatMap((file) => fontSizesOf(file, readRepoFile(file)));
     const small = sizes.filter((each) => each.size < MIN_TEXT_SIZE);
     expect(small.map((each) => `${at(each)} fontSize ${each.size}`)).toEqual([]);
-  });
+  }, WHOLE_TREE_MS);
 
   it('still lints colour literals out of product code (the foundation’s D38 lint half)', async () => {
     const eslint = new ESLint({ cwd: repoRoot() });
@@ -211,7 +214,7 @@ describe('every control says what it is to VoiceOver', () => {
     expect(uses.length).toBeGreaterThan(10);
     const bad = uses.filter((use) => use.value === null || ["''", '""'].includes(use.value));
     expect(bad.map(at)).toEqual([]);
-  });
+  }, WHOLE_TREE_MS);
 });
 
 describe('the ALLOWED list', () => {
