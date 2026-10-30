@@ -5,12 +5,15 @@
 // and a word ('— NOT ANSWERING', '✕ SNAG'), VoiceOver hearing the word alone. The sprite steps on
 // Arcade's clock and holds frame 1 under Reduce Motion or the pause (PixelSprite); the window's
 // scanlines sit behind its content. The bundled mascot never shows in Arcade (its style shows none).
+// The pause control sits at the window's top end (P001A-RVW-1, WCAG 2.2.2): the sprite loops for
+// as long as the screen shows, and these screens sit outside the handheld's status bar.
 
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import type { MascotName } from '../../core/frozen/lib/mascot/types';
 import { Text } from '../../ui';
+import { PauseButton } from '../arcade/PauseButton';
 import { ArcadeWindow } from '../arcade/parts/ArcadeWindow';
 import { portraitWords } from '../arcade/parts/dialogue';
 import { useArcadePaint } from '../arcade/parts/use-arcade-paint';
@@ -53,6 +56,9 @@ export function ArcadeEdgeWindow(props: ArcadeEdgeWindowProps) {
       style={styles.window}
       contentStyle={[styles.content, centred ? styles.centred : null]}
     >
+      <View style={styles.pause}>
+        <PauseButton />
+      </View>
       <EdgeSprite state={state} />
       {children}
     </ArcadeWindow>
@@ -63,5 +69,6 @@ const styles = StyleSheet.create({
   window: { alignSelf: 'stretch' },
   content: { padding: arcade.pad, gap: arcade.gap },
   centred: { alignItems: 'center' },
+  pause: { alignSelf: 'flex-end' },
   sprite: { alignSelf: 'center', alignItems: 'center' },
 });

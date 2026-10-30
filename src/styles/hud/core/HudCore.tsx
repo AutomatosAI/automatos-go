@@ -24,6 +24,9 @@
 //   Both may pass `language` (27 Oct 2026): the EN/PT switch beside HOLD TO TALK (HudButtons).
 //   HUD's home and the voice screen pass `report` (A2's useMessageReport): the transcript offers
 // Report this on Auto's saved reply (P001R-AF-1). First open and the look previews pass none.
+//   The voice screen in Arcade passes `controls` (P001A-RVW-1): Arcade's pause control, drawn at
+// the end of a row under the top bar, since its sprite, rings and waveform loop for the whole
+// session (WCAG 2.2.2). Every other caller passes none, and nothing is drawn.
 
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
@@ -124,6 +127,8 @@ export type HudCoreProps = {
   readonly quickAsk?: HudCoreQuickAsk;
   /** Report this on Auto's saved reply in the transcript; absent, nothing is offered. */
   readonly report?: ThreadReport;
+  /** Drawn at the end of a row under the top bar (Arcade's pause control); absent, nothing. */
+  readonly controls?: ReactNode;
 };
 
 /** The state Auto should show: the one held, or the controller's target. */
@@ -275,6 +280,7 @@ export function HudCore(props: HudCoreProps) {
           onMenu={onMenu}
           {...parts.bar}
         />
+        {props.controls ? <View style={styles.controls}>{props.controls}</View> : null}
         <View style={styles.middle} onLayout={core.onMiddleLayout}>
           <Core size={core.size} mascotState={mascotState} voice={voice} />
           <View onLayout={core.onWordsLayout}>
@@ -305,6 +311,7 @@ export function HudCore(props: HudCoreProps) {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   column: { flex: 1 },
+  controls: { alignItems: 'flex-end', paddingHorizontal: HUD_CORE.topBar.padX },
   /** The room between the top bar and the waveform: what does not fit is cut, not the buttons. */
   middle: { flex: 1, overflow: 'hidden' },
   core: { alignSelf: 'center' },

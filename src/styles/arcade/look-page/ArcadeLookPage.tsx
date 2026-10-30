@@ -5,7 +5,9 @@
 // phone) or a read or save failed; the knob rows with SAVE LOOK and RESET; the live preview; the
 // save slots; and the sheet a long press on a saved look opens (Rename, Delete). Every change goes
 // to the style store at once, so Arcade repaints everywhere, and the look sync sends it (US-022c;
-// the route mounts StyleSync).
+// the route mounts StyleSync). The pause control sits beside the way back, inside the page's
+// StyleScope so it reads the one stored pause (P001A-RVW-1, WCAG 2.2.2): the preview's sprite,
+// typing and cursors loop here, and a person on another style has no Arcade home to pause from.
 
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import { useState } from 'react';
@@ -20,6 +22,7 @@ import { StyleScope } from '../../provider/StyleScope';
 import { builtinChoice } from '../../registry/style-id';
 import { ARCADE_OPTIONS_COPY, LOOK_SYNC_COPY } from '../../strings';
 import { useLookSyncNotice, useLookSyncStatus } from '../../sync/LookSync';
+import { PauseButton } from '../PauseButton';
 import { useArcadePaint } from '../parts/use-arcade-paint';
 import { ARCADE_SHEET_COPY, OPTIONS_PAGE, optionRows, optionsLead, saveSlots } from './options';
 import { OptionsPreview } from './OptionsPreview';
@@ -37,7 +40,10 @@ function Heading() {
   const lead = optionsLead(useLookSyncStatus('arcade'));
   return (
     <View style={styles.head}>
-      <IconButton icon={ChevronLeft} accessibilityLabel={said.back} onPress={goBack} />
+      <View style={styles.top}>
+        <IconButton icon={ChevronLeft} accessibilityLabel={said.back} onPress={goBack} />
+        <PauseButton />
+      </View>
       <Text accessibilityRole="header" style={[type.display('screen'), { color: vars.tx }]}>
         {said.heading}
       </Text>
@@ -105,5 +111,11 @@ export function ArcadeLookPage() {
 const styles = StyleSheet.create({
   page: { gap: OPTIONS_PAGE.pageGap },
   head: { gap: OPTIONS_PAGE.headGap, alignItems: 'flex-start' },
+  top: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+  },
   notice: { gap: OPTIONS_PAGE.headGap },
 });

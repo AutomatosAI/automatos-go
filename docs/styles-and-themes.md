@@ -65,9 +65,13 @@ draws the Board's tickets on the design kit's map, with a link to the full Board
 Deliverables gallery, with a link to all of them. TYPE in the dialogue window opens A2's composer
 in a sheet; hold to talk is A6's quick-ask. Auto is the design kit's 32 × 32 pixel sprite, drawn
 with Skia from vendored source (`src/styles/arcade/sprite/`), never the bundled clips: twelve
-states on a 60 ms clock. Reduce Motion, or the pause control on the status bar, stills every loop
-(the sprite on frame 1, the ▶ / ▼ cursors, the typewriter, the voice screen's rings) and says so
-in words.
+states on a 60 ms clock. Reduce Motion, or the pause control, stills every loop (the sprite on
+frame 1, the ▶ / ▼ cursors, the typewriter, the voice screen's rings and waveform) and says so in
+words. The control (PAUSE / PLAY; none under Reduce Motion) sits wherever Arcade loops: at the
+end of the home's status bar, under the voice screen's top bar in Arcade, at the top of each edge
+screen's window (First open, Not running, Something went wrong, Lost) and beside the way back on
+Options. Every copy sets the one stored value, so one tap stills Arcade everywhere. The picker's
+Arcade card draws none and moves nothing.
 
 ## The four styles in the picker
 
