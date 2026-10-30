@@ -20,19 +20,32 @@
 // dialogue says opens the foundation's one ReportSheet.
 //   The column scrolls when the phone's text size leaves it no room; the story window keeps a share
 // of the screen and scrolls inside it.
+//   PRD-268 in Arcade (D-ARC-7), on the data and hooks every layout uses. The day's brief (US-G06,
+// only where discovery lists `brief`): the dialogue says the brief the newest reply carries, its
+// greeting and Auto's Read as plain words, with OPEN BRIEF beside TYPE and Report this kept; a brief
+// in the story is its own window; OPEN BRIEF opens the brief's own view in a Sheet beside TYPE's
+// (useArcadeBriefSheet). Auto's suggestions (US-G01, only where discovery lists `suggestions`):
+// 'IDEAS · N' under the status bar opens the sheet of them all (useIdeas().sheet), and the newest
+// is the NEXT line under it (ArcadeIdeas, ArcadeNext). An approval (US-G08,
+// src/approvals/use-hud-approval.tsx): a card waiting with an ApprovalView opens its answer sheet by
+// itself, once; closed unanswered, its way back in sits under the dialogue window.
 
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { useNeedsYou } from '../../api/needs-you';
+import { useHudApproval } from '../../approvals/use-hud-approval';
 import { Composer } from '../../chat/composer/Composer';
 import { DiscussionBar } from '../../chat/discussion/DiscussionBar';
 import { HomeMenu } from '../../chat/home/HomeMenu';
 import { menuHere } from '../../chat/home/menu';
 import { useHomeMenu } from '../../chat/home/use-home-menu';
 import { useMessageReport } from '../../chat/report/use-message-report';
+import { useIdeas } from '../../suggestions/use-ideas';
 import { ReportSheet, Screen, Sheet } from '../../ui';
 import { useArcadeHomeVoice, type ArcadeHomeVoice } from '../../voice/home/use-arcade-home-voice';
+import { useArcadeBriefSheet } from '../arcade/home/ArcadeBrief';
 import { ArcadeControls } from '../arcade/home/ArcadeControls';
+import { ArcadeIdeas } from '../arcade/home/ArcadeNext';
 import { InventoryView } from '../arcade/home/InventoryView';
 import { QuestsView } from '../arcade/home/QuestsView';
 import { StoryWindow } from '../arcade/home/StoryWindow';
@@ -63,14 +76,19 @@ export type ArcadeHomeProps = {
 type DialogueControlsProps = {
   readonly onType: () => void;
   readonly voice: Pick<ArcadeHomeVoice, 'stopEnabled' | 'stop'>;
+  /** OPEN BRIEF, while the dialogue says the day's brief; absent, none. */
+  readonly onBrief?: () => void;
 };
 
-/** TYPE, and STOP while Auto answers or the voice works. */
-function DialogueControls({ onType, voice }: DialogueControlsProps) {
+/** TYPE, OPEN BRIEF while the dialogue says the brief, and STOP while Auto answers or the voice works. */
+function DialogueControls({ onType, voice, onBrief }: DialogueControlsProps) {
   const said = ARCADE_HOME_COPY;
   return (
     <View style={styles.dialogueControls}>
       <ArcadeButton kind="primary" label={said.type} hint={said.typeHint} onPress={onType} />
+      {onBrief ? (
+        <ArcadeButton label={said.brief.open} hint={said.brief.openHint} onPress={onBrief} />
+      ) : null}
       {voice.stopEnabled ? (
         <ArcadeButton label={said.stop} hint={said.stopHint} onPress={voice.stop} />
       ) : null}
@@ -89,8 +107,12 @@ export function ArcadeHome({ chatId, ticketId = null }: ArcadeHomeProps) {
   const counters = useArcadeCounters(needsYou.query.data ? needsYou.total : null);
   const party = useArcadeParty(needsYou.rows);
   const story = useArcadeStory(home, report);
-  const say = useDialogueSay(state);
+  const say = useDialogueSay(state, story.saying);
   const handheld = useHandheld(menu.open);
+  const ideas = useIdeas();
+  const approval = useHudApproval(state, home.thread.settleCard);
+  const brief = useArcadeBriefSheet();
+  const sayingBrief = say.brief;
   const chatShown = handheld.screen === 'chat';
   useOneShotEnd(home.mascot);
   return (
@@ -98,6 +120,7 @@ export function ArcadeHome({ chatId, ticketId = null }: ArcadeHomeProps) {
       <ScrollView contentContainerStyle={styles.console} keyboardShouldPersistTaps="handled">
         <View>
           <StatusBar counters={counters} />
+          <ArcadeIdeas button={ideas.button} />
           <PartyStrip members={party} />
         </View>
         <View style={[styles.screen, styles.inset]}>
@@ -108,6 +131,7 @@ export function ArcadeHome({ chatId, ticketId = null }: ArcadeHomeProps) {
               onCard={story.onCard}
               onLink={story.onLink}
               report={report}
+              onBrief={brief.open}
             />
             <DialogueWindow
               state={portraitState(home.mascot.driver.mascot)}
@@ -115,8 +139,13 @@ export function ArcadeHome({ chatId, ticketId = null }: ArcadeHomeProps) {
               thinking={say.thinking}
               onReport={story.sayingReport}
             >
-              <DialogueControls onType={composer.open} voice={voice} />
+              <DialogueControls
+                onType={composer.open}
+                voice={voice}
+                onBrief={sayingBrief ? () => brief.open(sayingBrief) : undefined}
+              />
             </DialogueWindow>
+            {approval.line}
           </View>
           {handheld.screen === 'quests' ? (
             <QuestsView needsYou={needsYou.rows} onChat={handheld.showChat} />
@@ -139,6 +168,8 @@ export function ArcadeHome({ chatId, ticketId = null }: ArcadeHomeProps) {
           onStop={stop}
         />
       </Sheet>
+      {ideas.sheet}
+      {brief.sheet}
       <HomeMenu menu={menu} needsYou={needsYou.total} />
       <ReportSheet {...sheet} />
     </Screen>

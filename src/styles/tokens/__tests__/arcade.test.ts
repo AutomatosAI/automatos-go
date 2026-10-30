@@ -2,6 +2,7 @@
 // palette's variables and sizes, the Studio-keyed set with exactly Studio's keys as #RRGGBB, every
 // pair of design/contrast.json at or above its minimum on every palette (the vendored
 // contrastRatio), the keys the kit leaves to Studio held to AA too, and the AI label readable.
+// The status roles (PRD-268 §6.12.2, D-ARC-7) are arcade-status.test.ts's.
 
 import { describe, expect, it } from 'vitest';
 

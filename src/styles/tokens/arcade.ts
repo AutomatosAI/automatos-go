@@ -9,9 +9,13 @@
 // Source: AutomatosAI/automatos-design-kit themes/arcade/src/looks/prepaint.ts at 034fa629c
 // (sha256 f60ecf6ebf3ec1b5689730f314ca278c2baf840e72bd8e9eb50cd703ee4e69ff): studioVars gives the
 // Studio keys it sets their palette colour (ARCADE_ROLES keeps every one of them); the keys it
-// leaves to Studio take the accent (live and good), the game colours (XP gold for a warning, mana
-// blue for information and agents, HP red for the last chart series) with the ground's text on
-// them, and the highlight tinted over the page (accent2), so every key is opaque #RRGGBB. Its
+// leaves to Studio take the game colours (XP gold for the warning ink, mana blue for agents, HP red
+// for the last chart series) with the ground's text on them, and the highlight tinted over the page
+// (accent2), so every key is opaque #RRGGBB. The status roles are PRD-268 §6.12.2's, never the
+// accent (D-ARC-7): needs you the ! counter's quest yellow, working QUEST's mana blue, ready and
+// done the plain text (the ✓ and the word carry them), failed HP red, needs setup and not checked
+// the secondary text (the glyph and the word carry them), each far from the others on every
+// palette (tokens/__tests__/arcade-status.test.ts measures it). Its
 // WINDOW_STYLES and SCANLINE_SHAPES are the sizes below, px as pt; spec.ts presetOf the default
 // picks. The scanlines' colour at Off is the ink at 0, never 'transparent' (Skia greys a fade to it).
 
@@ -162,6 +166,7 @@ type ArcadeRole =
   | 'hp'
   | 'xp'
   | 'mp'
+  | 'qs'
   | 'gameInk'
   | 'hlTint';
 
@@ -169,9 +174,11 @@ type ArcadeRole =
  * Every Studio key by role, the one table. prepaint.ts studioVars first: the page and its text,
  * the windows as cards, popovers and the quiet grounds, the accent as primary and ring, the menu's
  * highlight as accent, HP red as destructive, the window border as the borders, the secondary
- * text as the faded text and hover borders. Then the keys it leaves to Studio: live, good and
- * running the accent; a warning XP gold, information and agents mana blue, each with the ground's
- * text on it (gameInk, as studioVars puts it on HP red); text on a strong fill the accent's ink.
+ * text as the faded text and hover borders. Then the keys it leaves to Studio: the status roles
+ * by §6.12.2 (warning quest yellow, running and the live dot mana blue, success and the success
+ * ink the plain text, info the secondary text: never the accent), the warning ink XP gold, agents
+ * mana blue, each with the ground's text on it (gameInk, as studioVars puts it on HP red); text on
+ * a strong fill the accent's ink.
  */
 export const ARCADE_ROLES: Readonly<Record<ColourName, ArcadeRole>> = Object.freeze({
   background: 'page',
@@ -193,20 +200,20 @@ export const ARCADE_ROLES: Readonly<Record<ColourName, ArcadeRole>> = Object.fre
   border: 'bd',
   input: 'bd',
   ring: 'ac',
-  success: 'ac',
-  successForeground: 'aci',
-  warning: 'xp',
+  success: 'tx',
+  successForeground: 'gameInk',
+  warning: 'qs',
   warningForeground: 'gameInk',
-  info: 'mp',
+  info: 'tx2',
   infoForeground: 'gameInk',
   agent: 'mp',
   agentForeground: 'gameInk',
-  olive: 'ac',
+  olive: 'tx',
   warnInk: 'xp',
   onStrong: 'aci',
   ccHover: 'win',
   ccHoverBorder: 'bd',
-  ccLiveDot: 'ac',
+  ccLiveDot: 'mp',
   chart1: 'ac',
   chart2: 'mp',
   chart3: 'xp',
@@ -221,7 +228,7 @@ export const ARCADE_ROLES: Readonly<Record<ColourName, ArcadeRole>> = Object.fre
   border2: 'tx2',
   accent2: 'hlTint',
   navy: 'mp',
-  running: 'ac',
+  running: 'mp',
 });
 
 function arcadeRoleColours(look: Pick<ArcadePaintPicks, 'palette'>): Record<ArcadeRole, string> {
@@ -240,6 +247,7 @@ function arcadeRoleColours(look: Pick<ArcadePaintPicks, 'palette'>): Record<Arca
     hp: c.hp,
     xp: c.xp,
     mp: c.mp,
+    qs: c.qs,
     // studioVars' onRed: the page under a dark palette's game colours, the window under Handheld's
     gameInk: tone === 'dark' ? c.page : c.win,
     // Studio's --accent-2 is its accent at the tone's tint alpha; here mixed over the page, opaque

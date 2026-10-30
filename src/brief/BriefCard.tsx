@@ -132,7 +132,8 @@ export type BriefCardProps = {
   readonly onLink: (target: WebLinkTarget) => void;
 };
 
-function BriefBody({ brief, onLink }: BriefCardProps) {
+/** The card's body without its frame or entrance: Arcade's OPEN BRIEF sheet frames it in a window. */
+export function BriefBody({ brief, onLink }: BriefCardProps) {
   const { spacing } = useTokens();
   const card = useBriefCard(brief, onLink);
   const { view } = card;

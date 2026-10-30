@@ -14,6 +14,10 @@
 // glyphs above: ready is ✓ in the accent on HUD, because it asks to be looked at and done does
 // not (§6.12.2). Studio, an installed theme and Play say STATE_WORDS' words (stateGlyph) and paint
 // by the state's colour role (src/ui/state-tokens.ts); HUD says its own and paints by the role here.
+// Arcade says HUD's glyph and word but paints the glyph by the state's role (GlyphPaint
+// 'state-role', D-ARC-7): a status outside the vocabulary reads as its glyph's state (glyphState:
+// in progress and live as working, review and blocked as needs you, inbox and closed as not
+// checked), so no status is ever painted in the accent there.
 
 import { PIP_TOKENS, isPipStatus, statusPip, type PipStatus } from '../../ui/variants';
 import { STATE_WORDS, STATUS_WORDS } from '../strings';
@@ -90,6 +94,32 @@ export type StatusState = keyof typeof STATE_WORDS;
 
 /** Every state, as STATE_WORDS lists them (the tests read them from there). */
 export const STATUS_STATES = Object.freeze(Object.keys(STATE_WORDS) as StatusState[]);
+
+/**
+ * How a glyph status is painted (the dress's glyphPaint): by its glyph's role (HUD:
+ * GLYPH_ROLE_TOKENS), or by the state's role (Arcade: state-tokens.ts glyphToken, never the accent).
+ */
+export type GlyphPaint = 'glyph-role' | 'state-role';
+
+/** The vocabulary state each glyph kind reads as, for a status outside the vocabulary. */
+const KIND_STATES: Readonly<Record<GlyphKind, StatusState>> = Object.freeze({
+  working: 'working',
+  running: 'working',
+  waiting: 'not_checked',
+  attention: 'needs_you',
+  done: 'done',
+  failed: 'failed',
+  stopped: 'not_checked',
+});
+
+/**
+ * The state a status reads as: itself when it is one of §6.11.1's, else its glyph's (in progress →
+ * working, review → needs you, closed → not checked); one this version doesn't know is not checked.
+ */
+export function glyphState(status: string): StatusState {
+  if (isStatusState(status)) return status;
+  return isGlyphStatus(status) ? KIND_STATES[STATUS_KINDS[status]] : 'not_checked';
+}
 
 /** The token each glyph role paints in, on every style's Studio-keyed set (HUD: the accent, text2, the error). */
 export const GLYPH_ROLE_TOKENS: Readonly<Record<GlyphRole, ColourName>> = Object.freeze({

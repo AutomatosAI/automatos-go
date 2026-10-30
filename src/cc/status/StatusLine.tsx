@@ -3,8 +3,9 @@
 // retry the role may send. StateMark is the glyph and word (a board card's and the ticket sheet's
 // kind row draw it where the board's dot would be); StatusBlock is the next step and Try again
 // under the title, with the mark first where no kind row carries it (Questions). Every layout
-// draws it: HUD its glyph role and its word in capitals (its label face), Studio, a theme and Play
-// the state's colour role (row-status.ts stateMark). What it says is row-status.ts's.
+// draws it: HUD its glyph role and its word in capitals (its label face), Arcade HUD's glyph and
+// word in the state's colour role, Studio, a theme and Play the state's colour role (row-status.ts
+// stateMark). What it says is row-status.ts's.
 
 import { StyleSheet, View, type AccessibilityActionEvent } from 'react-native';
 
@@ -26,7 +27,8 @@ export const RETRY_ACTION_NAME = 'retry';
 
 export function StateMark({ state }: { readonly state: StatusState }) {
   const { colours, scheme, spacing } = useTokens();
-  const spec = stateMark(state, useDress().status === 'glyph', scheme);
+  const dress = useDress();
+  const spec = stateMark(state, dress.status === 'glyph', scheme, dress.glyphPaint);
   return (
     <View
       style={[styles.mark, { gap: spacing.space1 }]}
