@@ -5,7 +5,9 @@
 // Instrument Serif 400 italic, Clean Geist 600, Characterful Bricolage Grotesque 700, Playful
 // Fredoka 600), Geist 400-600 (Ember draws a few labels at 700: they take 600, the heaviest Geist
 // the app bundles) and Geist Mono 400/500. HUD: looks.json's display face by its font knob
-// (Rajdhani 700, Chakra Petch 600, Geist Mono 500), Geist and Geist Mono.
+// (Rajdhani 700, Chakra Petch 600, Geist Mono 500), Geist and Geist Mono. Arcade (no font knob):
+// Press Start 2P 400, its one face, for titles, labels, counters, eyebrows and buttons; Pixelify
+// Sans 400 and 600 for running text (the design kit's two Pixelify faces); Geist Mono for code.
 
 import { TYPE_STYLES, type TypeStyleKey } from '../../core/frozen/lib/looks/catalogue';
 import {
@@ -27,9 +29,9 @@ export type FaceSpec = {
 
 /** What a style draws: a display face per font knob, its body faces and its mono faces. */
 export type StyleFaceSet = {
-  /** Titles and display slots, one face per font knob (Studio's one knob is its serif). */
+  /** Titles and display slots: a face per font knob, or one (Studio's serif, Arcade's pixel). */
   readonly display: Readonly<Record<string, FaceSpec>>;
-  /** Studio's emphasis in a title (Newsreader 500 italic); Play and HUD have none. */
+  /** Studio's emphasis in a title (Newsreader 500 italic); Play, HUD and Arcade have none. */
   readonly emphasis?: FaceSpec;
   readonly body: readonly FaceSpec[];
   readonly mono: readonly FaceSpec[];
@@ -94,7 +96,11 @@ export const STYLE_FACES = Object.freeze({
     body: weights(F.geist, 400, 500, 600),
     mono: weights(F.geistMono, 400, 500, 600),
   }),
-  arcade: STUDIO_FACES, // ARCADE_STAND_IN US-022d
+  arcade: Object.freeze({
+    display: Object.freeze({ pixel: spec(F.pressStart2p, 400) }),
+    body: weights(F.pixelifySans, 400, 600),
+    mono: weights(F.geistMono, 400, 500, 600),
+  }),
 } satisfies Readonly<Record<BuiltInStyleId, StyleFaceSet>>);
 
 /** Play's display face for the look's font knob. */

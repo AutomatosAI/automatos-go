@@ -165,7 +165,7 @@ function arcade(look: ArcadeLook): Painted {
     tone: arcadeTone(look),
     tokens: arcadeStyleTokens(look),
     radii: STYLE_RADII.arcade,
-    type: styleType({ layout: 'studio' }), // ARCADE_STAND_IN US-022d: Arcade's type
+    type: styleType({ layout: 'arcade' }),
     arcadeLook: look,
     arcade: arcadeVarsOf(look),
     mascot: 'none', // the registry's 'never': the bundled clips never show in Arcade (D-ARC-5)

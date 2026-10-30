@@ -134,8 +134,7 @@ describe("Arcade paints its look's palette, whatever the scheme says", () => {
       expect(style.arcade).toEqual(arcadeVars(look));
       expect(style.tokens.colours).toEqual(arcadeTokens(look));
       expect(style.radii).toBe(STYLE_RADII.arcade);
-      // ARCADE_STAND_IN US-022d: Arcade's own type replaces Studio's here
-      expect(style.type).toBe(styleType({ layout: 'studio' }));
+      expect(style.type).toBe(styleType({ layout: 'arcade' }));
       expect(style.mascot).toBe('none');
       expect(style).not.toHaveProperty('play');
       expect(style).not.toHaveProperty('hud');

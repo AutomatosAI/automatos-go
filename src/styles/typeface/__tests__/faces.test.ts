@@ -43,6 +43,15 @@ describe('STYLE_FACES', () => {
     expect(STYLE_FACES.hud.mono.every((item) => item.family === F.geistMono)).toBe(true);
   });
 
+  it('gives Arcade Press Start 2P for its pixel slots, Pixelify Sans 400/600 and Geist Mono', () => {
+    expect(STYLE_FACES.arcade).toEqual({
+      display: { pixel: face(F.pressStart2p, 400) },
+      body: [face(F.pixelifySans, 400), face(F.pixelifySans, 600)],
+      mono: [face(F.geistMono, 400), face(F.geistMono, 500), face(F.geistMono, 600)],
+    });
+    expect(STYLE_FACES.arcade).not.toBe(STYLE_FACES.studio);
+  });
+
   it('asks only for faces the app bundles (FONT_FACES), in every style', () => {
     for (const id of BUILT_IN_STYLE_IDS) {
       for (const item of facesOf(STYLE_FACES[id])) {
@@ -65,12 +74,18 @@ describe('STYLE_FACES', () => {
     expect(Object.isFrozen(STYLE_FACES)).toBe(true);
     expect(Object.isFrozen(STYLE_FACES.play.display)).toBe(true);
     expect(Object.isFrozen(STYLE_FACES.hud.body)).toBe(true);
+    expect(Object.isFrozen(STYLE_FACES.arcade.display)).toBe(true);
+    expect(Object.isFrozen(STYLE_FACES.arcade.body)).toBe(true);
   });
 });
 
 describe('pickFace', () => {
   it('takes the weight asked for when the role has it', () => {
     expect(pickFace(STYLE_FACES.play.body, 500)).toEqual(face(F.geist, 500));
+  });
+
+  it("draws Arcade's 500 at Pixelify 400, the heaviest lighter face", () => {
+    expect(pickFace(STYLE_FACES.arcade.body, 500)).toEqual(face(F.pixelifySans, 400));
   });
 
   it("maps Ember's Geist 700 to 600, the heaviest the app bundles", () => {
@@ -92,6 +107,8 @@ describe('faceFor', () => {
     expect(faceFor(F.chakraPetch, 600)).toBe('ChakraPetch-SemiBold');
     expect(faceFor(F.instrumentSerif, 400, 'italic')).toBe('InstrumentSerif-Italic');
     expect(faceFor(F.newsreader, 500, 'italic')).toBe('Newsreader16pt16pt-MediumItalic');
+    expect(faceFor(F.pressStart2p, 400)).toBe('PressStart2P-Regular');
+    expect(faceFor(F.pixelifySans, 600)).toBe('PixelifySans-SemiBold');
   });
 
   it('throws for a face the app does not bundle', () => {
