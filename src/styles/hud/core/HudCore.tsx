@@ -28,6 +28,7 @@
 // NEXT ▸ line under the status row (HudTopBar).
 //   HUD's home and the voice screen pass `report` (A2's useMessageReport): the transcript offers
 // Report this on Auto's saved reply (P001R-AF-1). First open and the look previews pass none.
+//   HUD's home may pass `transcriptSlot` (PRD-268 US-G06): the day's brief in the rows' place.
 //   The voice screen in Arcade passes `controls` (P001A-RVW-1): Arcade's pause control, drawn at
 // the end of a row under the top bar, since its sprite, rings and waveform loop for the whole
 // session (WCAG 2.2.2). Every other caller passes none, and nothing is drawn.
@@ -137,6 +138,8 @@ export type HudCoreProps = {
   readonly next?: ReactNode;
   /** Report this on Auto's saved reply in the transcript; absent, nothing is offered. */
   readonly report?: ThreadReport;
+  /** In the transcript's rows' place (the day's brief, US-G06); absent, the turn's rows. */
+  readonly transcriptSlot?: ReactNode;
   /** Drawn at the end of a row under the top bar (Arcade's pause control); absent, nothing. */
   readonly controls?: ReactNode;
 };
