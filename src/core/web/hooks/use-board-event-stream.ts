@@ -1,16 +1,12 @@
-// Vendored from AutomatosAI/automatos-ai frontend/hooks/use-board-event-stream.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b · extract: parseSSEFrames — do not edit — scripts/sync-core.ts
-/** One parsed SSE frame (event name + JSON-decoded data, if any). */
-interface SSEEvent {
-  event: string
-  data: unknown
-}
+// Vendored from AutomatosAI/automatos-ai frontend/hooks/use-board-event-stream.ts @ 1a8956c874dc42cff05b96f431c50b7d722a71aa · extract: parseSSEFrames — do not edit — scripts/sync-core.ts
+import { type StreamFrame } from '../lib/live/route-frame'
 
 /**
  * Parse a chunk of accumulated SSE text into complete frames, returning the
  * frames plus any trailing partial frame still in the buffer. Pure — no I/O.
  */
-export function parseSSEFrames(buffer: string): { events: SSEEvent[]; rest: string } {
-  const events: SSEEvent[] = []
+export function parseSSEFrames(buffer: string): { events: StreamFrame[]; rest: string } {
+  const events: StreamFrame[] = []
   // Frames are separated by a blank line. Keep the trailing (possibly partial)
   // segment in the buffer for the next chunk.
   const segments = buffer.split('\n\n')

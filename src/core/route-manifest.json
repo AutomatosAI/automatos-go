@@ -1,5 +1,5 @@
 {
-  "route_count": 981,
+  "route_count": 997,
   "routes": [
     {
       "method": "GET",
@@ -1811,6 +1811,10 @@
     },
     {
       "method": "POST",
+      "path": "/api/marketplace/themes/publish"
+    },
+    {
+      "method": "POST",
       "path": "/api/marketplace/themes/submit"
     },
     {
@@ -2078,6 +2082,42 @@
       "path": "/api/policy/{policy_id}/assemble"
     },
     {
+      "method": "POST",
+      "path": "/api/proactive/brief/open"
+    },
+    {
+      "method": "GET",
+      "path": "/api/proactive/me"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/proactive/me"
+    },
+    {
+      "method": "GET",
+      "path": "/api/proactive/runs"
+    },
+    {
+      "method": "GET",
+      "path": "/api/proactive/settings"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/proactive/settings"
+    },
+    {
+      "method": "GET",
+      "path": "/api/proactive/suggestions"
+    },
+    {
+      "method": "POST",
+      "path": "/api/proactive/suggestions/{suggestion_id}/hide"
+    },
+    {
+      "method": "POST",
+      "path": "/api/proactive/suggestions/{suggestion_id}/start"
+    },
+    {
       "method": "GET",
       "path": "/api/profile"
     },
@@ -2104,6 +2144,14 @@
     {
       "method": "GET",
       "path": "/api/rag/feedback/stats"
+    },
+    {
+      "method": "GET",
+      "path": "/api/readiness"
+    },
+    {
+      "method": "POST",
+      "path": "/api/readiness/check"
     },
     {
       "method": "POST",
@@ -2850,6 +2898,10 @@
       "path": "/api/v1/approval-grants/{grant_id}/revoke"
     },
     {
+      "method": "GET",
+      "path": "/api/v1/approval-grants/{grant_id}/view"
+    },
+    {
       "method": "POST",
       "path": "/api/v1/billing/checkout"
     },
@@ -3056,6 +3108,10 @@
     {
       "method": "POST",
       "path": "/api/v1/mobile/devices/{device_id}/rotate"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/mobile/digest/now"
     },
     {
       "method": "POST",
@@ -3292,6 +3348,14 @@
     {
       "method": "",
       "path": "/api/voice/retell/llm-websocket/{call_id}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/voice/speech"
+    },
+    {
+      "method": "GET",
+      "path": "/api/voice/voices"
     },
     {
       "method": "POST",

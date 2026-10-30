@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/lib/chat/chat-status.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/lib/chat/chat-status.ts @ 1a8956c874dc42cff05b96f431c50b7d722a71aa — do not edit — scripts/sync-core.ts
 /**
  * PRD-260 D5, D6; PRD-261 A-19a — the core chat's status and its newest reply, as any theme's
  * chat reads them. Pure.

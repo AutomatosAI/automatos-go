@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/lib/chat/narration.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/lib/chat/narration.ts @ 1a8956c874dc42cff05b96f431c50b7d722a71aa — do not edit — scripts/sync-core.ts
 /**
  * F186 (night 6) — what the model said before calling its tools is narration,
  * not the reply.

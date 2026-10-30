@@ -1,6 +1,6 @@
 {
   "source": "AutomatosAI/automatos-ai",
-  "sha": "8c9361687013cc31bfb7e42d5c51736116fb4b9b",
+  "sha": "1a8956c874dc42cff05b96f431c50b7d722a71aa",
   "root": "frontend",
   "notes": [
     "Vendored by scripts/sync-core.ts into src/core/web/ (K1); core.lock.json records every file written. Never edit a vendored file: fix this manifest or src/core/shims/ and re-run the sync.",
@@ -103,7 +103,6 @@
       "components/play/chat/reply.ts": "9fe6869d68b89fc23080b67288348be0b34e701701636a198aca5dda785b8e90",
       "lib/looks/__tests__/catalogue.test.ts": "aaeb0e1b4a7e6fa902d4e0069f48cfc62df46f1e11770118b4f2682b37d4ec82",
       "lib/looks/__tests__/css.test.ts": "12a255bf541877e580e3ff4bb28a7731f3f343aac2d588307fd14c127b8a8ee8",
-      "lib/looks/__tests__/studio-tokens.test.ts": "ec8be09ca2a77ed15fabfc0aaa8e98c7a4733f069ec1ef0863dd0dd16e9b6167",
       "lib/looks/__tests__/validate.test.ts": "927f36fc0c3a93e0dcd83af19aafb70699c55e86cf623bf243d23f5f64b3e640",
       "lib/looks/catalogue.ts": "dff9f2c02e6b4d1912caeadaf22489b2f7699890a085bf69031ab5474798e651",
       "lib/looks/engine.ts": "8935d2ece99697253d7eaebfc7db10e3168284dabb9f4bf92b1d2d49cda958f7",

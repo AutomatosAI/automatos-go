@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/lib/look-kit/scope.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/lib/look-kit/scope.ts @ 1a8956c874dc42cff05b96f431c50b7d722a71aa — do not edit — scripts/sync-core.ts
 /**
  * PRD-260 F5 (Gerard, 15 Oct) — looks, the active look and the seen
  * Deliverables record are kept per signed-in user and workspace, in this

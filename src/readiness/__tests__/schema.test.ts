@@ -1,8 +1,8 @@
 // Readiness@1 as the phone reads it (PRD-268 §6.11.3): core's answer parses whole; unknown fields
 // are ignored; an item the app cannot draw is dropped, never drawn as a placeholder; a fix that is
 // not an app path is dropped and its item kept; GET and Check again go through the one client to
-// core's paths, and a 429 keeps the server's code and words. The route table is pendingUpstream
-// until the core pin carries it.
+// core's paths, and a 429 keeps the server's code and words. Both routes are on the server at the
+// core pin.
 
 import { describe, expect, it } from 'vitest';
 
@@ -10,9 +10,10 @@ import { createApiClient } from '../../api/client';
 import { ApiError } from '../../api/errors';
 import { isPersistableKey } from '../../api/query-keys';
 import { SERVER, fakeTransport, jsonReply } from '../../api/__tests__/fake-transport';
+import { servedAtPin } from '../../api/__tests__/served';
 import { checkReadiness, fetchReadiness } from '../api';
 import { readinessQueryKeys } from '../query-keys';
-import { READINESS_ROUTES, READINESS_UPSTREAM } from '../routes';
+import { READINESS_ROUTES } from '../routes';
 import { ReadinessSchema, isAppPath } from '../schema';
 import { CHECKED_AT, CORE_ITEM, MODEL_ITEM, READINESS_BODY } from './fixtures';
 
@@ -145,17 +146,11 @@ describe('the calls', () => {
 });
 
 describe('routes and cache', () => {
-  it('both routes are pendingUpstream until the core pin carries them', () => {
-    expect(READINESS_ROUTES.current).toEqual({
-      method: 'GET',
-      path: '/api/readiness',
-      pendingUpstream: READINESS_UPSTREAM,
-    });
-    expect(READINESS_ROUTES.check).toEqual({
-      method: 'POST',
-      path: '/api/readiness/check',
-      pendingUpstream: READINESS_UPSTREAM,
-    });
+  it('both routes are on the server at the core pin, with no pendingUpstream mark', () => {
+    expect(READINESS_ROUTES.current).toEqual({ method: 'GET', path: '/api/readiness' });
+    expect(READINESS_ROUTES.check).toEqual({ method: 'POST', path: '/api/readiness/check' });
+    expect(servedAtPin(READINESS_ROUTES.current)).toBe(true);
+    expect(servedAtPin(READINESS_ROUTES.check)).toBe(true);
   });
 
   it('the readiness key is never persisted (memory only)', () => {

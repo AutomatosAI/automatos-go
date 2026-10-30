@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/lib/chat/deliverables.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/lib/chat/deliverables.ts @ 1a8956c874dc42cff05b96f431c50b7d722a71aa — do not edit — scripts/sync-core.ts
 import { liveReceiptsFromToolData } from './receipts'
 import { DELIVERABLE_PARAM, DELIVERABLES_HREF } from '../ticket-links'
 import type { Receipt } from '../../types'

@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/lib/theme-host/css-value.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/lib/theme-host/css-value.ts @ 1a8956c874dc42cff05b96f431c50b7d722a71aa — do not edit — scripts/sync-core.ts
 /**
  * PRD-261 A-06b — the value checks every theme validator shares, and the CSS-value grammar for a
  * theme's first-paint values (`boot/prepaint.json`).

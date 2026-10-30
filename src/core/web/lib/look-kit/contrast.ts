@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/lib/look-kit/contrast.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/lib/look-kit/contrast.ts @ 1a8956c874dc42cff05b96f431c50b7d722a71aa — do not edit — scripts/sync-core.ts
 /**
  * PRD-260 — WCAG 2.2 relative luminance and contrast ratio, plus readableOn():
  * the colour to use when an accent or the error colour is shown as text, on a

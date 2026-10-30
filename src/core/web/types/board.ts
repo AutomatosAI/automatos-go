@@ -1,8 +1,10 @@
-// Vendored from AutomatosAI/automatos-ai frontend/types/board.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/types/board.ts @ 1a8956c874dc42cff05b96f431c50b7d722a71aa — do not edit — scripts/sync-core.ts
 /**
  * Board types for the Kanban task management view (PRD-72 v2).
  * "Task" in UI = "Recipe" in backend. No backend rename.
  */
+
+import type { RowStatus } from '../lib/proactive/types'
 
 export type BoardStatus = 'inbox' | 'assigned' | 'in_progress' | 'review' | 'blocked' | 'done' | 'failed' | 'cancelled' | 'closed'
 
@@ -10,7 +12,8 @@ export type TaskPriority = 'urgent' | 'high' | 'medium' | 'low'
 
 export type ReviewMode = 'human' | 'llm' | 'auto'
 
-export interface BoardTask {
+/** PRD-268 §6.11.1 (US-C17b): a ticket carries where it stands, what happens next and what Try again does (RowStatus). */
+export interface BoardTask extends RowStatus {
   id: string
   type: 'routine' | 'playbook' | 'task' | 'mission'
   name: string
