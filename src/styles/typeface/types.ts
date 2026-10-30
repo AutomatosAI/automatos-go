@@ -2,7 +2,8 @@
 // so one screen (an edge screen, a Command Centre card) asks for 'screen' or 'card' and each style
 // draws it in its own face and size. Play's slots are Ember's phone screens; HUD's are its brand
 // line, panel labels and big numbers; Studio answers each with a role of its unchanged scale;
-// Arcade's are the handheld's Press Start 2P steps.
+// Arcade's are the handheld's Press Start 2P steps; Candy's its Outfit titles and figures and its
+// Nunito labels.
 
 import type { TypeStyleKey } from '../../core/frozen/lib/looks/catalogue';
 import type { FontWeight } from '../fonts';
@@ -65,8 +66,8 @@ export type StyleType = {
 
 /**
  * What styleType reads of a resolved style: the layout it paints and, for Play and HUD, the look's
- * font knob (Arcade's looks have none; Candy's type is Studio's until US-023d). An installed theme
- * paints the Studio layout (D58).
+ * font knob (Arcade's and Candy's looks have none). An installed theme paints the Studio layout
+ * (D58).
  */
 export type TypeSource =
   | { readonly layout: 'studio' }

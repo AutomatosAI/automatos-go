@@ -1,5 +1,5 @@
-// The ten font families every style uses (PRD-001 §4.6, D57, K6; Press Start 2P and Pixelify Sans
-// for Arcade, D-ARC-4). Each face is a static TTF in assets/fonts/<family>/, embedded natively by
+// The twelve font families every style uses (PRD-001 §4.6, D57, K6; Press Start 2P and Pixelify
+// Sans for Arcade, D-ARC-4; Outfit and Nunito for Candy, D-CAN-4). Each face is a static TTF in assets/fonts/<family>/, embedded natively by
 // the expo-font config plugin (app.json lists every file), so no font is fetched or loaded at
 // runtime. Each file is named after its PostScript name: iOS finds an embedded font by PostScript
 // name and Android by file name, so `fontFamily: face.postscriptName` selects the same face on
@@ -17,10 +17,12 @@ export const FONT_FAMILIES = {
   chakraPetch: 'Chakra Petch',
   pressStart2p: 'Press Start 2P',
   pixelifySans: 'Pixelify Sans',
+  outfit: 'Outfit',
+  nunito: 'Nunito',
 } as const;
 
 export type FontFamily = (typeof FONT_FAMILIES)[keyof typeof FONT_FAMILIES];
-export type FontWeight = 400 | 500 | 600 | 700;
+export type FontWeight = 400 | 500 | 600 | 700 | 800;
 export type FontStyle = 'normal' | 'italic';
 
 /** The families Studio's type scale uses (handoff tokens/typography.css --font-*). */
@@ -92,6 +94,11 @@ const FACE_LIST: readonly FontFace[] = [
   face(F.pressStart2p, 400, 'normal', 'press-start-2p', 'PressStart2P-Regular'),
   face(F.pixelifySans, 400, 'normal', 'pixelify-sans', 'PixelifySans-Regular'),
   face(F.pixelifySans, 600, 'normal', 'pixelify-sans', 'PixelifySans-SemiBold'),
+  face(F.outfit, 600, 'normal', 'outfit', 'Outfit-SemiBold'),
+  face(F.outfit, 700, 'normal', 'outfit', 'Outfit-Bold'),
+  face(F.nunito, 400, 'normal', 'nunito', 'Nunito-Regular'),
+  face(F.nunito, 700, 'normal', 'nunito', 'Nunito-Bold'),
+  face(F.nunito, 800, 'normal', 'nunito', 'Nunito-ExtraBold'),
 ];
 
 /** Every embedded face, keyed by family, weight and style. */

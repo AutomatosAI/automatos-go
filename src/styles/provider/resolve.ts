@@ -200,7 +200,7 @@ function candy(look: CandyLook): Painted {
     tone: candyTone(look),
     tokens: candyStyleTokens(look),
     radii: candyRadiiOf(look),
-    type: styleType({ layout: 'candy' }), // CANDY_STAND_IN US-023d: Studio's type until Candy's faces
+    type: styleType({ layout: 'candy' }),
     candyLook: look,
     candy: candyVarsOf(look),
     mascot: 'none', // the registry's 'never': Candy draws its own Auto with Skia (D-CAN-5)

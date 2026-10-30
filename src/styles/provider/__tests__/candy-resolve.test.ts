@@ -1,6 +1,6 @@
 // resolveStyle paints Candy (PRD-001 §4.6.2, D-CAN-3, D-CAN-7, D-CAN-9): layout 'candy' in its
 // look's palette whatever Studio's scheme says (Blush and Lilac light, Night bloom dark), the
-// look's tokens, corners and variables, Studio's type until Candy's faces land (US-023d), never the
+// look's tokens, corners and variables, Candy's own type (Outfit and Nunito, US-023d), never the
 // bundled Auto (D-CAN-5) and never a theme's painting; Blush while the input carries no Candy look;
 // Candy's look painted only for Candy. resolve.test.ts holds the rest of resolveStyle.
 
@@ -82,8 +82,8 @@ describe("Candy paints its look's palette, whatever the scheme says (D-CAN-7)", 
       expect(style.candy).toEqual(candyVars(look));
       expect(style.tokens.colours).toEqual(candyTokens(look));
       expect(style.radii).toEqual(candyRadii(look));
-      // Studio's type until Candy's faces land (US-023d), Candy's after: typeface/scale.ts decides
       expect(style.type).toBe(styleType({ layout: 'candy' }));
+      expect(style.type).not.toBe(styleType({ layout: 'studio' }));
       expect(style.mascot).toBe('none');
       for (const other of ['play', 'hud', 'arcade', 'playLook', 'hudLook', 'arcadeLook']) {
         expect(style).not.toHaveProperty(other);

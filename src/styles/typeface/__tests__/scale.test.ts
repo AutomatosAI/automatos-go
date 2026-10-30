@@ -27,7 +27,7 @@ const SOURCES: readonly TypeSource[] = [
 ];
 
 const ASKED_SIZES = [8, 10, 10.5, 11, 12, 13, 15, 16, 19];
-const WEIGHTS = [400, 500, 600, 700] as const;
+const WEIGHTS = [400, 500, 600, 700, 800] as const;
 
 const nameOf = (source: TypeSource) =>
   'font' in source ? `${source.layout}/${source.font}` : source.layout;
