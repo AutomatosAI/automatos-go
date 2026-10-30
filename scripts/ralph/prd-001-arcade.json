@@ -1,0 +1,412 @@
+{
+  "project": "Automatos Go — PRD-001 wave A8: Arcade, the fourth style",
+  "prd": "docs/prd/PRD-001-AUTOMATOS-GO-V1.md §4.6.1 (D-ARC-1..7) and US-022, re-cut for one session each (one phase).",
+  "backendPrd": "automatos-ai PRD-261: the looks API GET/PUT /api/themes/looks/{theme_id} (A-09a), the theme mobile block (M-04). The design kit's automatos/arcade 1.0.0 (kit PR on branch kit/arcade-official).",
+  "branchName": "feat/a8-arcade",
+  "base": "origin/main",
+  "worktree": "<workspace>/.worktrees/automatos-go/feat+a8-arcade",
+  "description": "Arcade on the phone as a fourth built-in style beside Studio, Play and HUD (D-ARC-1), built the way HUD was: the id and the theme mapping (automatos/arcade → arcade), Arcade's five palettes as tokens, its looks synced with the web through the looks API, Press Start 2P and Pixelify Sans bundled (a native build, D-ARC-4), Auto as the kit's code-drawn pixel sprite on Skia with a pause control, the handheld's parts, the Arcade home over A2's thread with the composer, hold to talk and the D-pad, the Command Centre, sheets, settings, edges and voice screen in Arcade's dress, Options (the look page) and Arcade's card in the picker, then PRD-268's slots and the docs. One phase on origin/main. Native always: no WebView, no downloaded code. THIS JSON IS THE BINDING CONTRACT.",
+  "references": {
+    "prd": "docs/prd/PRD-001-AUTOMATOS-GO-V1.md — §4.3 (src/styles layout), §4.6 Styles and §4.6.1 Arcade (D-ARC-1..7), §4.7 (Settings: Style and look; Edges), §4.11, Wave A8 (US-022).",
+    "designArcade": "<workspace>/DUMPING AREA/automatos-arcade/ — README.md (rules, Pages, Mascot: Auto as a sprite, Motion, Contrast, Gaps), looks.json (the presets, knobs, contrast pairs and phone skin), 'Automatos Arcade.dc.html' (the 390×844 handheld after the 'PHONE · 390 × 844' label, data-screen-label=\"Phone 390\": the console body, status bar, screen, D-pad grid of 64 px cells, the voice surround; drawAuto for the sprite). Read only; support.js is Claude Design's runtime, not a source.",
+    "kitArcade": "the design kit (AutomatosAI/automatos-design-kit) at 034fa629c, themes/arcade: src/looks/{catalogue,spec,colour,pairs}.ts, looks/schema.json, looks/presets/*.look.json, design/contrast.json, src/art/{grid,auto-sprite,states}.ts, src/motion/clock.ts, src/chat/{typewriter,dialogue,saying}.ts(x), src/frame/{controls,phone-menu,status-bar}.tsx, src/looks/look-editor.tsx, assets/fonts/README.md. Read with `git -C <workspace>/.worktrees/automatos-design-kit/kit-arcade-official show 034fa629c:themes/arcade/<path>` (or `gh api 'repos/AutomatosAI/automatos-design-kit/contents/themes/arcade/<path>?ref=034fa629c8ba79cff042559ca2d132f6d38f6d23'`). The web theme is the working reference for the handheld; its React DOM code is never copied (KA3-VENDOR-PIN).",
+    "hudModel": "HUD is the model for every wiring point: src/styles/registry/*, themes/follow.ts, strings.ts, nav.ts, tokens/{hud-catalogue,hud,style-tokens,index,radii,*-colours}.ts, hud/{look-schema,look-store,hud-looks}.ts, sync/{look-marks,look-themes,look-sync-run}.ts + LookSync.tsx, provider/{store,resolve}.ts, theme.tsx, typeface/{faces,hud-type,types,scale}.ts, homes/{layout,StyleHome,HudHome}.tsx, hud/core/*, dress/{dress,paints,cc-dress}.ts, ground/*, edges/*, voice/screen/*, picker/{picker,cards}.ts + previews/HudPreview.tsx, app/(app)/settings/look/hud.tsx. scripts/ralph/prd-001-styles.json holds how each was built (its DONE notes name the files and pitfalls).",
+    "prd268": "Go PRs #31 (feat/prd-268-g06-brief), #32 (feat/prd-268-g01-suggestions), #33 (feat/prd-268-g08-approval-sheet) add a brief slot, an ideas count + next line, and an under-chip approval line to HudHome and PlayHome; US-022k mirrors whatever of them is on the branch."
+  },
+  "localChecks": {
+    "allowed": "npm run typecheck, npm run lint, npx vitest run, npm run check:bundle, npm run check:core, npm run check:routes, npx expo-doctor, npx expo config --type introspect, bash scripts/ralph/acceptance-prd001-arcade.sh --no-ci | --print-base; `git -C <workspace>/.worktrees/automatos-design-kit/kit-arcade-official show 034fa629c:themes/arcade/<path>` (or `gh api 'repos/AutomatosAI/automatos-design-kit/contents/themes/arcade/<path>?ref=034fa629c8ba79cff042559ca2d132f6d38f6d23'`); `curl -fsSL` from raw.githubusercontent.com/google/fonts and raw.githubusercontent.com/eifetx/Pixelify-Sans at the commits US-022d names, ONLY in US-022d. node_modules comes from setup-worktree.sh.",
+    "never": "npm install / npx expo install / any dependency change, expo start, expo run:*, expo prebuild, any eas command, a simulator, Metro's dev server, any server, gh workflow run, git push, opening a PR, git merge (a base move is the launcher's, RALPH_BASE_MOVE=1)."
+  },
+  "decisions": [
+    {
+      "id": "D-ARC-1",
+      "text": "Arcade is a built-in style, like Play and HUD: style id and layout both 'arcade', always in the picker, and installing automatos/arcade switches the phone to it (BUILT_IN_THEME_STYLES 'automatos/arcade': 'arcade').",
+      "source": "Gerard 30 Oct, PRD-001 §4.6.1"
+    },
+    {
+      "id": "D-ARC-2",
+      "text": "The theme id is automatos/arcade, first-party; its mobile block stays as the skin a build without the Arcade layout paints on Studio.",
+      "source": "Gerard 30 Oct"
+    },
+    {
+      "id": "D-ARC-3",
+      "text": "Looks are the web's (arcade-look/v1, interface 'arcade', five knobs, five presets), saved on the phone under styles.arcade.looks and synced through GET/PUT /api/themes/looks/automatos/arcade as Play's are; not installed → kept on the phone with words.",
+      "source": "PRD-001 §4.6.1"
+    },
+    {
+      "id": "D-ARC-4",
+      "text": "Press Start 2P and Pixelify Sans are bundled as static TTF with OFL; the app.json expo-font change makes the merge a native build (accepted, one build).",
+      "source": "PRD-001 §4.6.1"
+    },
+    {
+      "id": "D-ARC-5",
+      "text": "Auto in Arcade is the kit's code-drawn 32×32 sprite (vendored pure TS, drawn with Skia), twelve states on a 60 ms clock; frame 1 under Reduce Motion or paused; a pause control stops every loop (WCAG 2.2.2). The bundled clips never show in Arcade.",
+      "source": "PRD-001 §4.6.1"
+    },
+    {
+      "id": "D-ARC-6",
+      "text": "The home is the handheld: ▲ Quests → Board, ◀ Chat → home, ▶ Inventory → Deliverables, ▼ Menu → the header menu. The shared screens are dressed, never copied. Counters only from numbers the app already fetches; no new endpoint.",
+      "source": "PRD-001 §4.6.1"
+    },
+    {
+      "id": "D-ARC-7",
+      "text": "PRD-268's brief, suggestions and approval sheet are wired into Arcade by whichever lands second.",
+      "source": "PRD-001 §4.6.1"
+    },
+    {
+      "id": "D-NO-WEBVIEW",
+      "text": "No WebView anywhere, in any style; nothing from a theme or the server is rendered as web content.",
+      "source": "FR-10, D3, D32"
+    },
+    {
+      "id": "D-NO-CODE",
+      "text": "The app never loads JavaScript, CSS or HTML from a theme or the server. Arcade's drawing is vendored into the app's own source at a pinned kit commit, never downloaded.",
+      "source": "FR-10, App Store guideline 2.5.2"
+    },
+    {
+      "id": "D-ONE-SET",
+      "text": "The Command Centre, sheets and settings are ONE set of screens dressed by each style's tokens and the shared primitives; no screen is copied per style.",
+      "source": "PRD-001 §4.6"
+    },
+    {
+      "id": "D-ONE-VOICE",
+      "text": "One voice screen, one dress per style: Arcade's rings take the palette's accent and the sprite sits in the core; colours come from the resolved style.",
+      "source": "D60"
+    },
+    {
+      "id": "D-TOKENS",
+      "text": "Layouts read tokens only. Colour literals live only in src/styles/tokens/ (the lint rule); the vendored Arcade catalogue and sprite colours live there too.",
+      "source": "PRD-001 §4.11"
+    },
+    {
+      "id": "D-AI-LABEL",
+      "text": "The AiLabel is one small muted caption that opens every thread in every style (the story window's first row) and sits on the voice screen; never a pill, never a lock. src/styles/ai-label.tsx is never edited (gate-enforced). Scanlines are never drawn over it.",
+      "source": "D73, PRD-001 §4.6"
+    },
+    {
+      "id": "D-A11Y",
+      "text": "Nothing below 11 pt (the design's small pixel labels are raised to 11); Dynamic Type with layouts that wrap; every colour status also has a word; every animated signal has a text twin; Reduce Motion and the pause control stop loops and show stills; tap targets 44 pt (the D-pad's 64).",
+      "source": "D38, PRD-001 §4.6"
+    },
+    {
+      "id": "D-SHAPE",
+      "text": "Files 200-400 lines (never over 800), functions under 50, components under 150, nesting under 4; pure logic in plain TS with vitest tests beside it (pure modules import no react, react-native, expo-* or @shopify/react-native-skia); immutability; copy in src/styles/strings.ts.",
+      "source": "PRD-001 §4.11"
+    },
+    {
+      "id": "KA1-FILES",
+      "text": "This wave may create or change ONLY: src/styles/** (never src/styles/ai-label.tsx), src/ui/Slider.tsx and src/ui/dressed.ts (additive), src/voice/home/use-arcade-home-voice.ts, src/voice/home/arcade-home-voice.ts, src/voice/screen/**, src/voice/nav.ts, app/(app)/settings/look/arcade.tsx, assets/fonts/press-start-2p/**, assets/fonts/pixelify-sans/**, assets/fonts/SOURCES.md and app.json's expo-font list (US-022d only), docs/styles-and-themes.md, docs/prd/PRD-001-AUTOMATOS-GO-V1.md (US-022 boxes), CLAUDE.md (the styles count), and in US-022k the PRD-268 folders src/brief/**, src/suggestions/** and src/approvals/** where the base carries them (additive), the tests beside each, and this kit's files under scripts/ralph/. Never: src/core/**, core.lock.json, src/api/**, src/navigation/routes.ts, package.json, package-lock.json, eas.json, .eas/**, .github/**, any other assets/fonts/** family.",
+      "source": "kit"
+    },
+    {
+      "id": "KA2-STAND-IN",
+      "text": "US-022a puts 'arcade' in every exhaustive map with Studio's value, each marked '// ARCADE_STAND_IN' naming its owner story; each later story removes its own; US-022k leaves none (gate-enforced).",
+      "source": "kit"
+    },
+    {
+      "id": "KA3-VENDOR-PIN",
+      "text": "Arcade's data and drawing come from the design kit (AutomatosAI/automatos-design-kit) at 034fa629c (themes/arcade): read with `git -C <workspace>/.worktrees/automatos-design-kit/kit-arcade-official show 034fa629c:themes/arcade/<path>` (or `gh api 'repos/AutomatosAI/automatos-design-kit/contents/themes/arcade/<path>?ref=034fa629c8ba79cff042559ca2d132f6d38f6d23'`). Each vendored file carries a header naming the kit path, the commit and the source's sha256; colour data goes under src/styles/tokens/. Never copy the kit's React/DOM code (its .tsx, CSS modules): port the behaviour.",
+      "source": "kit"
+    },
+    {
+      "id": "KA4-NO-NEW-DEP",
+      "text": "No dependency change: Skia 2.2.12, reanimated, react-native-svg and expo-font are already in package.json.",
+      "source": "kit"
+    },
+    {
+      "id": "KA5-SEAMS",
+      "text": "Every edit outside src/styles/ (src/ui/*, src/voice/**, app/**, app.json, assets/fonts/**, docs, CLAUDE.md, the PRD-268 folders) is ADDITIVE and recorded in that story's DONE note as 'SEAM EDIT: <path> — <why>' (gate-enforced).",
+      "source": "kit"
+    }
+  ],
+  "ownerTest": [
+    {
+      "id": "OT-A1",
+      "what": "On Gerard's iPhone, from the TestFlight build of this merge (a native build, D-ARC-4): Settings → Style and look → Arcade; then install automatos/arcade in the workspace and check a phone on 'Same as Studio' follows it. Screenshots of the home, the Command Centre and Settings in Overworld, Neon Cabinet and Handheld.",
+      "why": "PRD-001 §5: UI stories attach screenshots from a build, in every style the story touches."
+    },
+    {
+      "id": "OT-A2",
+      "what": "Auto the sprite: hello on entering, thinking while waiting, working on a tool, celebrate when a Deliverable lands; PAUSE stops him, the ▶ cursor and the typing; Reduce Motion shows still frames.",
+      "why": "D-ARC-5, WCAG 2.2.2"
+    },
+    {
+      "id": "OT-A3",
+      "what": "Options: change the palette on the phone, see it on the web after a reload (and the other way round); save, rename and delete a look.",
+      "why": "D-ARC-3"
+    },
+    {
+      "id": "OT-A4",
+      "what": "Hold to talk from the Arcade home and the voice screen in Arcade; the AI label reads at the top of the story and on the voice screen.",
+      "why": "D-ONE-VOICE, D-AI-LABEL"
+    },
+    {
+      "id": "OT-A5",
+      "what": "Largest Dynamic Type size in Arcade: nothing clipped, the D-pad's words wrap.",
+      "why": "D-A11Y"
+    }
+  ],
+  "userStories": [
+    {
+      "id": "US-022a",
+      "prdStory": "US-022",
+      "phase": 1,
+      "title": "Arcade's identity: the fourth style id, the theme mapping, the picker entry and its words, with Studio's paint standing in",
+      "description": "As a user, I want Arcade listed as a fourth style, and installing automatos/arcade to switch my phone to it (D-ARC-1). This story adds the id everywhere the type system demands it; every Arcade value that a later story owns is Studio's, marked ARCADE_STAND_IN, so typecheck, lint and tests stay green at every commit.",
+      "acceptanceCriteria": [
+        "src/styles/registry/style-id.ts: BUILT_IN_STYLE_IDS and LAYOUTS are ['studio', 'play', 'hud', 'arcade'] (the picker order); layoutOf and the zod enum in registry/choice.ts accept 'arcade' unchanged",
+        "src/styles/registry/registry.ts: LookPage gains 'arcade'; STYLE_REGISTRY gains entry('arcade', 'arcade', 'never') — Arcade draws its own Auto (D-ARC-5), so the bundled mascot stage never shows in it",
+        "src/styles/themes/follow.ts: BUILT_IN_THEME_STYLES gains 'automatos/arcade': 'arcade' (so installed.ts drops it from the installed-theme rows, as it does Play and HUD); follow.test.ts covers it",
+        "src/styles/strings.ts: STYLE_COPY.names.arcade 'Arcade', STYLE_COPY.taglines.arcade 'Your agents as a party, Auto in the dialogue box'; PICKER_COPY.lookLinks gains Arcade's ('Options'); every other Record<BuiltInStyleId|Layout|LookPage> copy map gains an arcade entry",
+        "src/styles/registry/picker.ts lookLinkOf (and src/styles/picker/cards.ts's) has an arcade branch; src/styles/nav.ts STYLE_SCREENS gains lookArcade: '/settings/look/arcade' and LOOK_SCREENS.arcade; app/(app)/settings/look/arcade.tsx exists with the shape of hud.tsx (StyleSync, then the look page; until US-022j the look page is a stand-in that says the page is coming, marked ARCADE_STAND_IN)",
+        "Every exhaustive map the compiler demands (tokens/index.ts STYLES, tokens/radii.ts STYLE_RADII, typeface/faces.ts STYLE_FACES, dress/dress.ts DRESSES, dress/cc-dress.ts MARK, homes/layout.ts HOME_OF, picker/previews/StylePreview.tsx PREVIEWS, and any other found by `npm run typecheck`) gains an arcade entry equal to Studio's, each line marked `// ARCADE_STAND_IN` with the story that replaces it; tokens STYLES.arcade has style: 'arcade'",
+        "The style-list tests the research names (registry.test.ts, picker.test.ts, picker/cards.test.ts, picker/nav.test.ts, follow.test.ts, style-tokens.test.ts, and every loop over STYLE_IDS such as ai-label.test.ts, radii.test.ts, faces.test.ts) pass with four styles; no test is weakened or skipped",
+        "npm run typecheck, npm run lint and npx vitest run pass"
+      ],
+      "files": [
+        "src/styles/registry/",
+        "src/styles/themes/follow.ts",
+        "src/styles/strings.ts",
+        "src/styles/picker/",
+        "src/styles/nav.ts",
+        "app/(app)/settings/look/arcade.tsx",
+        "every map typecheck names"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "The research map (kit notes, 'wiring') lists every file:line. Grep `ARCADE_STAND_IN` at the end of the story and list each with its owner story in the DONE note."
+    },
+    {
+      "id": "US-022b",
+      "prdStory": "US-022",
+      "phase": 1,
+      "title": "Arcade's palettes as tokens: the vendored catalogue, Arcade's own variables and Studio's tokens for every palette",
+      "description": "As a user in Arcade, I want the phone painted in my palette, as the web paints it (D-ARC-3, D-TOKENS).",
+      "acceptanceCriteria": [
+        "src/styles/tokens/arcade-catalogue.ts: the five palettes (overworld, dungeon, neon, nightcity, handheld) with every colour key of the design kit (AutomatosAI/automatos-design-kit) at 034fa629c's src/looks/catalogue.ts PALETTES (page, win, bar, barTx, tx, tx2, bd, ac, aci, hl, hlt, hp, xp, mp, qs, the rgba shadow and bevels sh, bevl and bevd, the map colours, tone), SPRITE_COLOURS (bronze and the Handheld shades), ICON_COLOURS, AGENT_COLOURS, SCAN_INK and SCAN_ALPHA, copied as data with a provenance header naming the kit path and commit and the file's sha256; read with `git -C <workspace>/.worktrees/automatos-design-kit/kit-arcade-official show 034fa629c:themes/arcade/<path>` (or `gh api 'repos/AutomatosAI/automatos-design-kit/contents/themes/arcade/<path>?ref=034fa629c8ba79cff042559ca2d132f6d38f6d23'`)",
+        "src/styles/tokens/arcade.ts (pure, the pattern of hud.ts): ArcadePaintPicks (palette, scanlines, windowStyle, pixelScale), ARCADE_VAR_NAMES and ArcadeVars (the palette's colours as named variables, the bevels bevl / bevd and the shadow sh kept as the catalogue's rgba; only the 24 Studio keys must be #RRGGBB), arcadeVars(look), ARCADE_ROLES mapping every Studio colour key to an Arcade role (as HUD_ROLES does), arcadeTokens(look) returning Tokens with style 'arcade', the palette's tone (Handheld light, the others dark) and radii 0",
+        "src/styles/tokens/style-tokens.ts arcadeStyleTokens (oncePerObject, as hudStyleTokens); tokens/index.ts STYLES.arcade = the default look's (Overworld) tokens; tokens/radii.ts STYLE_RADII.arcade all 0 (square windows), input 0 — the US-022a stand-ins for these three are gone",
+        "The derived-colour files gain Arcade's entries where HUD has one: dress-colours.ts (selected highlight = hl / hlt), ground-colours.ts, drawer-colours.ts, voice-colours.ts (VoiceStyle 'arcade' and voicePaint's arcade branch: rings in ac, core fill win), edge-colours.ts, preview-colours.ts, mascot-colours.ts",
+        "src/styles/tokens/__tests__/arcade.test.ts: for every palette, every pair of the design kit (AutomatosAI/automatos-design-kit) at 034fa629c's design/contrast.json (32 pairs) measures at or above its minimum with the vendored contrastRatio, and the AI label's muted text on its ground passes AA (as ai-label.test.ts does for STYLE_IDS); arcadeTokens yields all 24 Studio keys as #RRGGBB",
+        "No colour literal outside src/styles/tokens/**; npm run typecheck, npm run lint and npx vitest run pass"
+      ],
+      "files": [
+        "src/styles/tokens/"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-022c",
+      "prdStory": "US-022",
+      "phase": 1,
+      "title": "Arcade's looks: the schema, presets and rules, the phone's store, and sync through the looks API",
+      "description": "As a user, I want my Arcade palette and knobs to be the same on the phone and on the web (D-ARC-3).",
+      "acceptanceCriteria": [
+        "src/styles/arcade/look-schema.ts (pure): ARCADE_LOOK_SCHEMA from the design kit (AutomatosAI/automatos-design-kit) at 034fa629c's looks/schema.json (automatos-look-schema/v1; look schema 'arcade-look/v1', interface 'arcade'; knobs palette, scanlines (off, soft, strong), pixelScale ('2', '3'), windowStyle (classic, thin), textSpeed (instant, normal, slow) with the kit's defaults), checked at load by the vendored validateLookSchema; the five presets from looks/presets/*.look.json (ids and names as the kit has them), default overworld; isArcadeLook via the vendored validateLook",
+        "src/styles/provider/resolve.ts scopeInput tells an Arcade look by interface 'arcade' (beside HUD's 'command' and Play's), never mistaking one for another; resolve.test.ts covers all three",
+        "src/styles/arcade/look-store.ts: createArcadeLooksStore on the phone's storage under 'styles.arcade.looks' (versioned as HUD's); src/styles/arcade/arcade-looks.ts: ARCADE_THEME_ID 'automatos/arcade', max 100 saved looks, 'mine-' ids, the rules setKnob, pickLook, saveAsNew, rename, delete and reset, and ARCADE_LOOK_RULES typed LookRules (play/look-sync.ts)",
+        "Sync: sync/look-marks.ts LOOK_THEME_KEYS and LOOK_MARKS_KEYS gain arcade (and the literal at :66); sync/look-themes.ts ARCADE_LOOK_THEME (select state.arcadeLooks, apply setArcadeLooks) with Play-style not-installed words in LOOK_SYNC_COPY ('Arcade isn't installed in this workspace, so your looks stay on this phone.'); sync/look-sync-run.ts Runners and lookSyncRunners gain arcade on the one shared outbox; LookSync.tsx attaches and refreshes arcade",
+        "src/styles/provider/store.ts: StyleSources.arcadeLooks, StyleState.arcadeLooks, setArcadeLooks, appStyleSources, memory marks and hydrate gain Arcade's, exactly as hudLooks; src/styles/theme.tsx useStyleParts reads arcadeLook into the input",
+        "Tests mirror the HUD ones (hud/__tests__/*, look-sync-run.test.ts, store.test.ts): a look saved on the phone is PUT once to /api/themes/looks/automatos/arcade; a 404 'not installed' keeps it on the phone and shows the words; a look from the server that fails the schema is dropped and counted",
+        "npm run typecheck, npm run lint and npx vitest run pass"
+      ],
+      "files": [
+        "src/styles/arcade/",
+        "src/styles/sync/",
+        "src/styles/provider/",
+        "src/styles/strings.ts"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-022d",
+      "prdStory": "US-022",
+      "phase": 1,
+      "title": "Arcade's type: Press Start 2P and Pixelify Sans bundled, and the type scale over them",
+      "description": "As a user in Arcade, I want the pixel faces of the design, readable at 11 pt and above (D-ARC-4, D-A11Y).",
+      "acceptanceCriteria": [
+        "assets/fonts/press-start-2p/PressStart2P-Regular.ttf with OFL.txt, from google/fonts ofl/pressstart2p at dbd72d6ef9ebea750d33c02c7189633e972d6a40 (the same bytes as the design kit (AutomatosAI/automatos-design-kit) at 034fa629c's assets/fonts/mobile/press-start-2p-regular.ttf, sha256 034c77f1f05ec89421e4a63f0e3a4ca1ecf852cc6d2bf611f126f275728e017d)",
+        "assets/fonts/pixelify-sans/PixelifySans-Regular.ttf and PixelifySans-SemiBold.ttf with OFL.txt, the static instances from eifetx/Pixelify-Sans fonts/ttf/ at 39df74aba80df8157546034b878e8be1eb565ced (curl -fsSL from raw.githubusercontent.com at that commit); each file named after its PostScript name as SOURCES.md requires (rename and record if upstream's differs)",
+        "assets/fonts/SOURCES.md gains a section for both families (source, commit, sha256 of each file and licence), and its opening counts ten families",
+        "app.json's expo-font list gains the three files, in its order; this changes the fingerprint, so the merge ships as a native build (D-ARC-4) — no other app.json change",
+        "src/styles/fonts.ts: FONT_FAMILIES gains pressStart2p 'Press Start 2P' and pixelifySans 'Pixelify Sans', FACE_LIST their three faces; __tests__/fonts.test.ts counts ten families and ten directories and checks every new file",
+        "src/styles/typeface/faces.ts STYLE_FACES.arcade (display Press Start 2P 400; body Pixelify Sans 400 and 600) and src/styles/tokens/arcade-type.ts (or typeface/arcade-type.ts, beside hud-type.ts): title, display, body, mono (Geist Mono stays for code), label, eyebrow and button slots — Press Start 2P for titles, labels, counters, eyebrows and buttons, Pixelify Sans for running text; sizes from the handoff README and the kit's handheld (Press Start 2P is wide: titles 14–16 pt, labels 11 pt; body 17 pt), every slot at or above MIN_TEXT_SIZE 11; types.ts TypeSource and scale.ts gain arcade; scale.test.ts lists the sources per layout; the US-022a stand-in in STYLE_FACES is gone",
+        "npm run typecheck, npm run lint, npx vitest run and npx expo config --type introspect pass"
+      ],
+      "files": [
+        "assets/fonts/press-start-2p/",
+        "assets/fonts/pixelify-sans/",
+        "assets/fonts/SOURCES.md",
+        "app.json (expo-font list only)",
+        "src/styles/fonts.ts",
+        "src/styles/typeface/",
+        "src/styles/tokens/"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "The only story that may touch app.json and assets/fonts/** (gate-enforced)."
+    },
+    {
+      "id": "US-022e",
+      "prdStory": "US-022",
+      "phase": 1,
+      "title": "Auto as Arcade's pixel sprite: the vendored drawing, the 60 ms clock, Skia, the turn's states and the pause control",
+      "description": "As a user in Arcade, I want Auto drawn as the design's 32×32 pixel robot, moving through his twelve states, still under Reduce Motion or when I pause (D-ARC-5, D-A11Y).",
+      "acceptanceCriteria": [
+        "src/styles/arcade/sprite/{grid,auto-sprite,states}.ts: the design kit (AutomatosAI/automatos-design-kit) at 034fa629c's src/art/grid.ts, auto-sprite.ts and states.ts vendored as pure TypeScript with a provenance header (path, commit, sha256), the colours taken from tokens/arcade-catalogue.ts SPRITE_COLOURS (never a literal here), the state names mapped onto the app's vendored mascot state names (lib/mascot/types) — all twelve, two to four frames each",
+        "src/styles/arcade/sprite/clock.ts (pure): the kit's motion/clock.ts timing — one 60 ms tick, SPRITE_TICKS 3, CURSOR_TICKS 8 — as functions of a tick count (frameAt(state, tick), cursorOn(tick)); its test pins the frame sequence of every state against the kit's",
+        "src/styles/arcade/sprite/PixelSprite.tsx: Skia draws the frame's pixel runs as rects (no antialiasing, crisp at every scale), size 32 × the look's pixelScale (the portrait 2× that), the palette's sprite colours (Handheld's shades in Handheld); one shared ticker (reanimated or a JS interval, stopped when nothing is mounted); frame 1 when useStyle().motion.loops is false, under Reduce Motion, or while paused",
+        "The pause control: src/styles/arcade/motion-pause.ts (pure state + the store key 'styles.arcade.motionPaused') and a 44 pt PAUSE / PLAY text button component with an accessibilityLabel ('Pause the animation' / 'Play the animation'); pausing stops the sprite, the ▶ cursor and the typed line (WCAG 2.2.2)",
+        "src/styles/arcade/sprite/turn-state.ts (pure): the portrait's state from the home's turn as the handoff says — listening while the person types, thinking while waiting, working on a tool, searching on a web search, reading on documents, celebrate when a Deliverable lands, oops on an error, idle otherwise; tests per row",
+        "Every node test passes without React Native (the pure modules import no react, react-native, expo-* or Skia); npm run typecheck, npm run lint and npx vitest run pass"
+      ],
+      "files": [
+        "src/styles/arcade/sprite/",
+        "src/styles/arcade/motion-pause.ts",
+        "src/styles/tokens/arcade-catalogue.ts (read only)"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-022f",
+      "prdStory": "US-022",
+      "phase": 1,
+      "title": "Arcade's parts: the window, scanlines, status bar, D-pad, voice surround, typewriter and ▶ cursor (props only)",
+      "description": "As a user in Arcade, I want the handheld's pieces drawn as the design draws them, before they are put together (D-ARC-6). Props only: US-022g feeds them.",
+      "acceptanceCriteria": [
+        "The design source is <workspace>/DUMPING AREA/automatos-arcade/'Automatos Arcade.dc.html' — the 390×844 phone starts at the 'PHONE · 390 × 844' label (data-screen-label=\"Phone 390\"); its README 'Pages' and 'Motion' sections; the design kit (AutomatosAI/automatos-design-kit) at 034fa629c's src/frame/{controls,phone-menu,status-bar}.tsx and src/chat/{dialogue,typewriter}.tsx are the working reference for the same handheld on the web",
+        "src/styles/arcade/parts/ArcadeWindow.tsx: a square window with the look's window style (classic: a double border with a light and dark bevel; thin: one line), its ground win, an optional title tab in Press Start 2P; Scanlines.tsx inside a window only, behind its content, at the look's scanlines (off, soft, strong: the catalogue's SCAN_INK at SCAN_ALPHA), never over text it would cut below AA",
+        "src/styles/arcade/parts/StatusBar.tsx: Auto's mark and the wordmark (AUTOMATOS) and three counters as words and numbers — XP, ! and QUEST — each with an accessibilityLabel in words ('3 done today', '2 need you', '4 in progress'); a counter given null is left out, not shown as 0",
+        "src/styles/arcade/parts/DPad.tsx: four 64 pt targets in a 3 × 3 grid with words — ▲ Quests, ◀ Chat, ▶ Inventory, ▼ Menu — each accessibilityRole button, accessibilityState selected for the current one; VoiceSurround.tsx: the round arcade surround the voice button sits in (the button itself is passed in)",
+        "src/styles/arcade/typewriter.ts (pure): characters shown per 60 ms tick for textSpeed instant / normal / slow (the kit's typewriter.ts rates), instant under Reduce Motion or while paused, a skip to the end; tests; DialogueWindow.tsx: the portrait (PixelSprite at 2×), the state word under it, the typed reply with the ▶ cursor (CURSOR_TICKS) and a Skip button while typing; VoiceOver hears the whole reply once, not the typing",
+        "Copy in src/styles/strings.ts (ARCADE_COPY); every text at or above 11 pt; tokens only; npm run typecheck, npm run lint and npx vitest run pass"
+      ],
+      "files": [
+        "src/styles/arcade/parts/",
+        "src/styles/arcade/typewriter.ts",
+        "src/styles/strings.ts"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-022g",
+      "prdStory": "US-022",
+      "phase": 1,
+      "title": "Arcade's home: the handheld over A2's thread, with the composer, voice and the D-pad's ways out",
+      "description": "As a user in Arcade, I want to talk to Auto from the handheld screen: the story, the dialogue box, typing or holding to talk, and the D-pad to the rest of the app (D-ARC-6).",
+      "acceptanceCriteria": [
+        "src/styles/homes/layout.ts HomeKind and HOME_OF gain arcade; StyleHome.tsx StyledHome and StyleChat take kind 'arcade' (the US-022a stand-in is gone); src/styles/homes/ArcadeHome.tsx receives { chatId, ticketId } as HudHome does",
+        "ArcadeHome uses the same hooks HudHome does (useHomeThread, useNeedsYou, useHomeMenu, useMessageReport) and draws, top to bottom in the console body: the StatusBar, the story window (the thread's rows: the AI label as its first row via the untouched AiLabel, YOU and AUTO lines, a ★ line for what a turn did, an ITEM RECEIVED window for a Deliverable that opens it, and A2's own approval cards under '! A CHOICE AWAITS', unchanged), the DialogueWindow with Auto's newest reply, then the controls",
+        "Composer: TYPE in the dialogue window opens the same Sheet HudHome uses with DiscussionBar and A2's Composer; sending is A2's sendMessage; Stop while Auto answers",
+        "Voice: hold to talk in the VoiceSurround through a useArcadeHomeVoice beside src/voice/home/use-hud-home-voice.ts (useQuickAsk over the home's thread; HUD's pure sibling hud-home-voice.ts is reused, or Arcade's own pure part sits in src/voice/home/arcade-home-voice.ts), the same press, caption and stop as HUD's",
+        "The D-pad: ▲ Quests → routes.cc.board, ◀ Chat → the home (selected here), ▶ Inventory → routes.cc.deliverables, ▼ Menu → the header menu (useHomeMenu: New chat, Chats, Command Centre, Settings) — routes only from src/navigation/routes.ts",
+        "Counters (D-ARC-6): ! = useNeedsYou().total; QUEST = the Board's in-progress count from the query the Command Centre shell already makes; XP = tickets done today in the phone's timezone if the Board rows carry a completion time, otherwise null (left out) — no new endpoint, no fetch outside src/api; the DONE note says which ones show",
+        "The portrait's state follows the turn (turn-state.ts); the home renders in all five palettes; pure view logic in arcade-home.ts with tests; components under 150 lines each; npm run typecheck, npm run lint and npx vitest run pass"
+      ],
+      "files": [
+        "src/styles/homes/",
+        "src/voice/home/use-arcade-home-voice.ts",
+        "src/voice/home/arcade-home-voice.ts",
+        "src/styles/arcade/"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "SEAM EDIT notes for any file outside src/styles/ (src/voice/home/)."
+    },
+    {
+      "id": "US-022h",
+      "prdStory": "US-022",
+      "phase": 1,
+      "title": "The shared screens in Arcade's dress: the Command Centre, sheets, settings, grounds and controls",
+      "description": "As a user in Arcade, I want the Command Centre, sheets and settings to look like Arcade without a second copy of any screen (D-ONE-SET).",
+      "acceptanceCriteria": [
+        "src/styles/dress/dress.ts arcade(): square windows in the look's window style, Press Start 2P labels, glyph plus WORD statuses (Arcade's words in strings.ts), the selected row in hl / hlt with the ▶ cursor; DRESSES.arcade replaces the stand-in; paints.ts arcadeButtons and arcadePaints",
+        "src/styles/dress/cc-dress.ts: MARK.arcade (the stand-in is gone), shellTitle and shellTabs arcade branches (the current tab marked with ▶ and in hl), so the Command Centre shell, Board, Calendar, Questions, Deliverables and the ticket sheet render in Arcade through useDress / useShellDress with no per-screen code",
+        "src/styles/ground/ground.ts GroundPlan gains arcade (the palette's page colour; scanlines only inside windows, never a full-screen layer over the AI label) and ScreenGround / ScreenOverlay draw it; keyboardAppearanceFor follows the palette's tone",
+        "src/ui/Slider.tsx and src/ui/dressed.ts: Arcade takes the square, stepped shapes (as HUD's sliderShape); additive changes only",
+        "Tests: cc-dress.test.ts, ground.test.ts and dress tests gain Arcade's case; the Command Centre screens' view tests pass in all four styles; npm run typecheck, npm run lint and npx vitest run pass"
+      ],
+      "files": [
+        "src/styles/dress/",
+        "src/styles/ground/",
+        "src/ui/Slider.tsx",
+        "src/ui/dressed.ts"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-022i",
+      "prdStory": "US-022",
+      "phase": 1,
+      "title": "The edge screens and the voice screen in Arcade",
+      "description": "As a user in Arcade, I want First open, Not running, Something went wrong, Lost and the voice screen in Arcade, with Auto as the sprite (D-ONE-VOICE, D-ARC-5).",
+      "acceptanceCriteria": [
+        "src/styles/edges/paint.ts pick has an arcade branch; parts.tsx BrandWords and EdgeBrand give Arcade its own wordmark (not Play's words); FirstOpen.tsx shows the sprite in hello with Arcade's greeting, Not running in sleeping, Something went wrong in oops, Lost (404) in lost, each in an ArcadeWindow; EDGE_COPY gains Arcade's lines; metrics.ts covers it; edges.test.ts gains Arcade's case",
+        "src/voice/screen/dress.ts voiceDress has an arcade branch: rings in the palette's ac with the core in win, the PixelSprite in the core in place of the bundled mascot (mascotInCore), no HUD overlay; tokens/voice-colours.ts voicePaint's arcade branch (from US-022b) is used; core-props.ts and use-voice-screen.ts pass it through; LOOK on the voice screen goes to /settings/look/arcade (voice/nav.ts via styleEntry(layout).lookPage)",
+        "voice/__tests__/{dress,core-props,nav}.test.ts gain Arcade's case; the AI label on the voice screen is unchanged; npm run typecheck, npm run lint and npx vitest run pass"
+      ],
+      "files": [
+        "src/styles/edges/",
+        "src/voice/screen/",
+        "src/voice/nav.ts",
+        "src/styles/strings.ts"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "SEAM EDIT notes for src/voice/**."
+    },
+    {
+      "id": "US-022j",
+      "prdStory": "US-022",
+      "phase": 1,
+      "title": "Options, Arcade's look page, and Arcade's card in the style picker",
+      "description": "As a user, I want to change Arcade's palette and knobs on the phone with a live preview, keep my looks, and see Arcade in the picker (D-ARC-3).",
+      "acceptanceCriteria": [
+        "app/(app)/settings/look/arcade.tsx renders StyleSync then src/styles/arcade/look-page/ArcadeLookPage.tsx (the US-022a stand-in is gone): an OPTIONS window with the five knobs as rows of choices with a ▶ cursor (accessibilityRole radiogroup / radio, the choice words from the kit's schema labels), a live preview (a small dialogue window with the sprite and the palette's swatches), Save look (saveAsNew, named), Reset, and the save slots — the five presets then the person's looks: pick, rename, delete — as the design kit (AutomatosAI/automatos-design-kit) at 034fa629c's src/looks/look-editor.tsx and the handoff's Options describe",
+        "Changes apply at once through setArcadeLooks and sync as US-022c set up; the not-installed words show when the server says the theme isn't installed",
+        "src/styles/picker/previews/ArcadePreview.tsx (the stand-in in PREVIEWS is gone): a small handheld — status bar, a dialogue window with the sprite still, the D-pad — in the default palette; picker/cards.ts selectedPaint, PREVIEW numbers and chip words gain Arcade's",
+        "Pure page rules in arcade/look-page/*.ts with tests; components under 150 lines; npm run typecheck, npm run lint and npx vitest run pass"
+      ],
+      "files": [
+        "app/(app)/settings/look/arcade.tsx",
+        "src/styles/arcade/look-page/",
+        "src/styles/picker/"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-022k",
+      "prdStory": "US-022",
+      "phase": 1,
+      "title": "PRD-268's slots in Arcade, the docs, and no stand-in left",
+      "description": "As Automatos, we want Arcade to have what every layout has, and the docs to say there are four layouts (D-ARC-7).",
+      "acceptanceCriteria": [
+        "If origin/main now carries PRD-268's brief (src/brief/), suggestions (src/suggestions/) or approval sheet (src/approvals/) — Go #31, #32, #33 — the runner has merged origin/main in before this story and ArcadeHome wires each as HudHome does: the day's brief as a story-window slot, the ideas count and next line under the status bar, the approval under-chip line under the dialogue window; any of the three not on main is listed in the DONE note as 'PRD-268 SEAM OPEN: <which>' for that PR to add Arcade",
+        "docs/styles-and-themes.md describes four layouts (Studio, Play, HUD, Arcade), what each draws, that automatos/play, automatos/hud and automatos/arcade switch the phone to theirs while every other theme paints Studio through its skin, and that a build from before Arcade paints automatos/arcade's skin on Studio; CLAUDE.md's 'three styles' lines say four",
+        "docs/prd/PRD-001-AUTOMATOS-GO-V1.md US-022's boxes are ticked with the evidence that is in the code (screenshots stay Gerard's, ownerTest)",
+        "`grep -rn ARCADE_STAND_IN src app` finds nothing; no file over 800 lines; npm run typecheck, npm run lint, npx vitest run, npm run check:bundle, npm run check:routes and npx expo-doctor pass"
+      ],
+      "files": [
+        "src/styles/homes/ArcadeHome.tsx",
+        "docs/styles-and-themes.md",
+        "CLAUDE.md",
+        "docs/prd/PRD-001-AUTOMATOS-GO-V1.md"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
