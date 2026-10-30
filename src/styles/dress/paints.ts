@@ -7,8 +7,13 @@
 // with the ground's line. HUD's are its README's: primary the accent with its ink, secondary and
 // outline the 1 pt accent line, chosen things the accent fill with a 1.5 pt accent border, panels
 // the panel fill with the panel border and the brackets, and a selected panel a soft accent glow
-// ('Automatos Command Pages.dc.html': 1.5px accent, 0 0 24px -6px at .5). Every colour comes
-// from the tokens: the look's variables, and the lines and glow tokens/dress-colours.ts derives.
+// ('Automatos Command Pages.dc.html': 1.5px accent, 0 0 24px -6px at .5). Arcade's are its
+// design kit's (ui.module.css, inventory.module.css): every panel the look's window (Classic's
+// rings and bevel, or Thin's line, and the hard drop shadow; arcade-frame.ts) on the window colour,
+// a selected one in the accent's lines; primary the accent with its ink, secondary the page inside
+// the window's line; chips the window inside the 2 pt chip ring; a chosen or pressed thing the
+// palette's highlight with its ink (the menus' current row). Every colour comes from the tokens:
+// the look's variables, and the lines and glow tokens/dress-colours.ts derives.
 
 import {
   BUTTON_PAINTS,
@@ -19,10 +24,18 @@ import {
   type ButtonVariant,
   type ControlPaint,
 } from '../../ui/variants';
-import { HUD_SELECTED_GLOW, hudSelectedGlowColour, playDressLines } from '../tokens/dress-colours';
+import { windowRings } from '../arcade/parts/window-frame';
+import { arcadeWindowFrame, type ArcadePaintPicks, type ArcadeVars } from '../tokens/arcade';
+import {
+  HUD_SELECTED_GLOW,
+  arcadeSelectedColours,
+  hudSelectedGlowColour,
+  playDressLines,
+} from '../tokens/dress-colours';
 import type { HudVars } from '../tokens/hud';
 import type { PlayVars } from '../tokens/play';
 import type { Colours } from '../tokens/types';
+import { arcadePanelFrame } from './arcade-frame';
 
 const NONE = 'transparent';
 
@@ -56,13 +69,17 @@ export type SegmentPaints = {
   readonly selectedShadow: boolean;
 };
 
-/** One layer of React Native's boxShadow with a spread (the glow's negative spread). */
+/**
+ * One layer of React Native's boxShadow: HUD's glow (a negative spread, no offset) or a line of
+ * Arcade's window (an inset band, the bevel's offset band, the hard drop).
+ */
 export type GlowLayer = {
-  readonly offsetX: 0;
-  readonly offsetY: 0;
+  readonly offsetX: number;
+  readonly offsetY: number;
   readonly blurRadius: number;
   readonly spreadDistance: number;
   readonly color: string;
+  readonly inset?: boolean;
 };
 
 export type PanelPaint = { readonly background: string; readonly border: string };
@@ -73,8 +90,10 @@ export type PanelPaints = {
   readonly selected: PanelPaint;
   readonly borderWidth: number;
   readonly selectedBorderWidth: number;
-  /** A selected or live panel's glow; none where the style draws no glow. */
+  /** A selected or live panel's glow (Arcade: its window in the accent); none where the style draws no glow. */
   readonly selectedGlow: readonly GlowLayer[] | null;
+  /** The shadows every other panel wears (Arcade's window); null: the card's own shadow. */
+  readonly frame: readonly GlowLayer[] | null;
   /** The corner brackets' colour (KS12); null where the style draws none. */
   readonly bracket: string | null;
 };
@@ -91,6 +110,8 @@ export const SOLID_PRESSED_OPACITY = BUTTON_PAINTS.primary.pressedOpacity;
 /** HUD's selected or live line: 1.5 pt (its README 'Panel'). */
 export const HUD_SELECTED_BORDER = 1.5;
 export const HAIRLINE = 1;
+/** Arcade's chip ring (theme.css --arcade-chip-ring: inset 0 0 0 2px the window border). */
+export const ARCADE_CHIP_RING = 2;
 
 const paintOf = (control: Pick<ControlPaint, 'backgroundColor' | 'borderColor' | 'color'>) => ({
   background: control.backgroundColor,
@@ -148,6 +169,7 @@ export function studioPaints(colours: Colours): DressPaints {
       borderWidth: HAIRLINE,
       selectedBorderWidth: HAIRLINE,
       selectedGlow: null,
+      frame: null,
       bracket: null,
     },
   };
@@ -197,6 +219,7 @@ export function playPaints(vars: PlayVars, colours: Colours): DressPaints {
       borderWidth: HAIRLINE,
       selectedBorderWidth: HAIRLINE,
       selectedGlow: null,
+      frame: null,
       bracket: null,
     },
   };
@@ -252,7 +275,66 @@ export function hudPaints(vars: HudVars, colours: Colours): DressPaints {
       borderWidth: HAIRLINE,
       selectedBorderWidth: HUD_SELECTED_BORDER,
       selectedGlow: hudGlowLayers(vars.accent),
+      frame: null,
       bracket: vars.bracket,
+    },
+  };
+}
+
+/** Arcade's chosen thing, and a press: the palette's highlight with its ink, a pair at AA. */
+function arcadePicked(vars: ArcadeVars): Paint {
+  const { fill, ink } = arcadeSelectedColours(vars);
+  return { background: fill, border: fill, foreground: ink };
+}
+
+function arcadeButtons(vars: ArcadeVars): Record<ButtonVariant, PaintSet> {
+  const pressed = arcadePicked(vars);
+  const lit = (rest: Paint): PaintSet => ({ rest, pressed, pressedOpacity: 1 });
+  return {
+    primary: solid(vars.ac, vars.aci),
+    secondary: lit({ background: vars.page, border: vars.bd, foreground: vars.tx }),
+    outline: lit({ background: NONE, border: vars.bd, foreground: vars.tx }),
+    ghost: lit({ background: NONE, border: NONE, foreground: vars.tx2 }),
+  };
+}
+
+/** Arcade's: the palette's variables (tokens/arcade.ts arcadeVars), the window in the look's style. */
+export function arcadePaints(vars: ArcadeVars, look: ArcadePaintPicks): DressPaints {
+  const picked = arcadePicked(vars);
+  const rings = windowRings(arcadeWindowFrame(look));
+  const window = (line: string) =>
+    arcadePanelFrame(rings, {
+      line,
+      gap: vars.win,
+      bevelLight: vars.bevl,
+      bevelDark: vars.bevd,
+      shadow: vars.sh,
+    });
+  const rest = window(vars.bd);
+  return {
+    button: arcadeButtons(vars),
+    pill: {
+      rest: { background: vars.win, border: vars.bd, foreground: vars.tx },
+      pressed: { background: vars.page, border: vars.bd, foreground: vars.tx },
+      selected: picked,
+      borderWidth: ARCADE_CHIP_RING,
+      selectedBorderWidth: ARCADE_CHIP_RING,
+    },
+    segment: {
+      track: vars.win,
+      rest: { background: NONE, foreground: vars.tx2 },
+      selected: { background: picked.background, foreground: picked.foreground },
+      selectedShadow: false,
+    },
+    panel: {
+      rest: { background: vars.win, border: vars.bd },
+      pressed: { background: vars.page, border: vars.bd },
+      selected: { background: vars.win, border: vars.ac },
+      borderWidth: rest.borderWidth,
+      selectedBorderWidth: rest.borderWidth,
+      selectedGlow: window(vars.ac).layers,
+      frame: rest.layers,
+      bracket: null,
     },
   };
 }

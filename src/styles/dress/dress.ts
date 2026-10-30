@@ -1,8 +1,8 @@
 // The dress (D-ONE-SET, PRD-001 §4.6): what the shared primitives wear in each style, so the
 // Command Centre, the sheets and settings are one set of screens that look like the style chosen
 // without anyone copying a screen. dressOf(resolved) answers, for the style a subtree paints: the
-// panel (Studio's and Play's cards, HUD's bracketed panels), the status (a dot and a word, or HUD's
-// glyph plus WORD), the button (radius, height, label face, case and tracking), the small label,
+// panel (Studio's and Play's cards, HUD's bracketed panels, Arcade's windows), the status (a dot and
+// a word, or a glyph plus WORD), the button (radius, height, label face, case and tracking), the small label,
 // the filter pill, the radii, the sheet's top, the ground behind the screen and the paints.
 // Pure: src/ui reads it through useDress() (use-dress.ts) and src/ui/dressed.ts.
 //
@@ -11,23 +11,31 @@
 //           Geist 600 14, chips round and 40 high, labels Geist 500 11 in capitals at .14em
 //   HUD     its README: square panels with brackets, buttons square and at least 44 (46 in a
 //           panel) in Geist Mono 12 capitals at .14em, labels Geist Mono 500 11 at .1em
+//   Arcade  its README and design kit: every panel a square window in the look's window style,
+//           glyph plus WORD statuses, buttons and chips square and at least 44 in Press Start 2P
+//           capitals at its button step (12), labels at its label step (11, .1em), a chosen or
+//           pressed thing in the palette's highlight with its ink, on the palette's page
 
 import type { FontWeight } from '../fonts';
 import type { ResolvedStyle } from '../provider/resolve';
 import type { Layout } from '../registry/style-id';
 import type { StyleRadii } from '../tokens/radii';
 import type { SpaceName } from '../tokens/types';
+import { ARCADE_STEPS } from '../typeface/arcade-type';
 import { BUTTON_SIZES, PILL_HEIGHT } from '../../ui/variants';
 import { GRABBER } from '../../ui/overlay';
-import { hudPaints, playPaints, studioPaints, type DressPaints } from './paints';
+import { arcadePaints, hudPaints, playPaints, studioPaints, type DressPaints } from './paints';
 
-export type PanelKind = 'card' | 'bracket';
+export type PanelKind = 'card' | 'bracket' | 'window';
 export type StatusKind = 'pip' | 'glyph';
-export type GroundKind = 'plain' | 'play-glow' | 'hud-grid';
+export type GroundKind = 'plain' | 'play-glow' | 'hud-grid' | 'arcade-page';
 export type LabelCase = 'as-written' | 'capitals';
 
-/** A face by its role in the style (its sans or its mono) and a weight. */
-export type DressFace = { readonly role: 'sans' | 'mono'; readonly weight: FontWeight };
+/**
+ * A face by its role in the style (its sans, its mono, or Arcade's pixel face, which comes only at
+ * its type's own steps: typeface/arcade-type.ts) and a weight.
+ */
+export type DressFace = { readonly role: 'sans' | 'mono' | 'pixel'; readonly weight: FontWeight };
 
 export type ButtonDress = {
   readonly radius: number;
@@ -130,6 +138,33 @@ const HUD = Object.freeze({
   pill: { minHeight: DRESS_MIN_HEIGHT, paddingX: 'space7', restWeight: 500, selectedWeight: 500 },
 } as const);
 
+/** Press Start 2P has one weight. */
+const PIXEL_WEIGHT: FontWeight = 400;
+
+const ARCADE = Object.freeze({
+  button: {
+    minHeight: DRESS_MIN_HEIGHT,
+    panelMinHeight: DRESS_MIN_HEIGHT,
+    labelFace: { role: 'pixel', weight: PIXEL_WEIGHT },
+    labelSize: ARCADE_STEPS.button,
+    labelCase: 'capitals',
+    trackingEm: 0,
+  },
+  label: {
+    face: { role: 'pixel', weight: PIXEL_WEIGHT },
+    size: ARCADE_STEPS.label,
+    case: 'capitals',
+    trackingEm: 0.1,
+  },
+  // the Inventory's tabs: 44 high (--arcade-target), 16 in (inventory.module.css .tab)
+  pill: {
+    minHeight: DRESS_MIN_HEIGHT,
+    paddingX: 'space7',
+    restWeight: PIXEL_WEIGHT,
+    selectedWeight: PIXEL_WEIGHT,
+  },
+} as const);
+
 function needs<T>(vars: T | undefined, layout: Layout): T {
   if (vars === undefined) throw new Error(`a resolved ${layout} style without its variables`);
   return vars;
@@ -189,11 +224,29 @@ function hud(style: ResolvedStyle): Dress {
   };
 }
 
+function arcade(style: ResolvedStyle): Dress {
+  const { radii } = style;
+  return {
+    layout: 'arcade',
+    panel: 'window',
+    panelHeader: 'display',
+    status: 'glyph',
+    button: { ...ARCADE.button, radius: radii.control },
+    label: ARCADE.label,
+    pill: { ...ARCADE.pill, radius: radii.pill },
+    radii,
+    sheetRadius: radii.sheet,
+    grabberRadius: 0, // hard edges only (README 'Pixels')
+    ground: 'arcade-page',
+    paints: arcadePaints(needs(style.arcade, 'arcade'), needs(style.arcadeLook, 'arcade')),
+  };
+}
+
 const DRESSES: Readonly<Record<Layout, (style: ResolvedStyle) => Dress>> = Object.freeze({
   studio,
   play,
   hud,
-  arcade: studio, // ARCADE_STAND_IN US-022h
+  arcade,
 });
 
 /** What the shared primitives wear in the style this subtree paints. */

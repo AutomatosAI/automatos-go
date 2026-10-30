@@ -1,7 +1,8 @@
 // The slider (KS7): ours, on react-native-gesture-handler and react-native-reanimated, as the build
 // has no native one. A 4 pt track — the accent up to the thumb, the muted track after it, the part
-// past maxAllowed faded — and a 28 pt thumb (square under HUD, round elsewhere) in a 44 pt row. A
-// drag or a tap moves it in whole steps on the UI thread; onChange hears each new step and
+// past maxAllowed faded — and a 28 pt thumb (square under HUD and Arcade, round elsewhere) in a
+// 44 pt row. A drag or a tap moves it in whole steps on the UI thread, the thumb set on each step
+// and never gliding between (Arcade's stepped motion); onChange hears each new step and
 // onChangeEnd the value a drag or tap ends on. VoiceOver and TalkBack adjust it a step at a time
 // (role 'adjustable', increment and decrement) and read its value, in words when given. The logic
 // is slider-model.ts (pure, tested).
@@ -22,6 +23,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { useDress } from '../styles/dress/use-dress';
+import type { Layout } from '../styles/registry/style-id';
 import { useTokens } from '../styles/theme';
 import { DISABLED_OPACITY } from './paint';
 import {
@@ -45,6 +47,8 @@ const ADJUST_ACTIONS = Object.freeze([{ name: 'increment' }, { name: 'decrement'
 const TRACK_TOP = (SLIDER.rowHeight - SLIDER.trackHeight) / 2;
 const THUMB_TOP = (SLIDER.rowHeight - SLIDER.thumbSize) / 2;
 const HALF_THUMB = SLIDER.thumbSize / 2;
+/** The layouts that draw the slider square: HUD's README and Arcade's pixels round nothing. */
+const SQUARE_LAYOUTS: ReadonlySet<Layout> = new Set<Layout>(['hud', 'arcade']);
 
 export type SliderProps = {
   readonly value: number;
@@ -126,7 +130,7 @@ export function Slider({
   disabled = false,
 }: SliderProps) {
   const { colours } = useTokens();
-  const shape = sliderShape(useDress().layout === 'hud');
+  const shape = sliderShape(SQUARE_LAYOUTS.has(useDress().layout));
   const range = useMemo(
     () => sliderRange({ min, max, step, maxAllowed }),
     [min, max, step, maxAllowed],

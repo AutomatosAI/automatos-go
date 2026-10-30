@@ -1,9 +1,11 @@
 // The ground a Screen stands on (ground.ts): useGroundPlan reads the subtree's style and dress
-// once; ScreenGround draws the part under the content (Play's glow, HUD's glow and grid) and
-// ScreenOverlay the part over it (HUD's scanlines). Studio draws neither: its ground is the
-// Screen's own background colour.
+// once; ScreenGround draws the part under the content (Play's glow, HUD's glow and grid, Arcade's
+// page) and ScreenOverlay the part over it (HUD's scanlines; Arcade draws nothing over the content,
+// its scanlines are inside its windows). Studio draws neither: its ground is the Screen's own
+// background colour.
 
 import { useMemo } from 'react';
+import { StyleSheet, View } from 'react-native';
 
 import type { MascotName } from '../../core/frozen/lib/mascot/types';
 import { useDress } from '../dress/use-dress';
@@ -19,9 +21,22 @@ export function useGroundPlan(kind: ScreenKind, state: MascotName): GroundPlan {
   return useMemo(() => groundPlan({ style, ground, kind, state }), [style, ground, kind, state]);
 }
 
+/** Arcade's page: the palette's flat page colour under the content, hidden from accessibility. */
+function ArcadePage({ page }: { readonly page: string }) {
+  return (
+    <View
+      pointerEvents="none"
+      style={[StyleSheet.absoluteFill, { backgroundColor: page }]}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    />
+  );
+}
+
 export function ScreenGround({ plan }: { readonly plan: GroundPlan }) {
   if (plan.kind === 'play-glow') return <PlayGlow plan={plan.plan} />;
   if (plan.kind === 'hud-grid') return <HudOverlay plan={plan.plan} layer="ground" />;
+  if (plan.kind === 'arcade-page') return <ArcadePage page={plan.page} />;
   return null;
 }
 

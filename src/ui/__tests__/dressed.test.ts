@@ -2,8 +2,12 @@
 // installed theme) every face and paint is exactly what variants.ts gave the foundation's
 // primitives; Play's and HUD's titles, eyebrows and labels come from their own type (Play's display
 // face only at 19 and above), their controls from the dress (Play Geist 600 14, HUD Geist Mono 12
-// capitals), their heights (44, HUD's 46 in a panel) and paints from the dress; nothing is drawn
-// below 11 pt in any style.
+// capitals), their heights (44, HUD's 46 in a panel) and paints from the dress; Arcade's controls
+// and labels are its pixel face at its own steps and every panel wears its window; the Slider is
+// square under HUD and Arcade; nothing is drawn below 11 pt in any style.
+
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
@@ -11,6 +15,8 @@ import { FONT_FAMILIES } from '../../styles/fonts';
 import { dressOf } from '../../styles/dress/dress';
 import {
   ALL_STYLES,
+  ARCADE,
+  ARCADE_STYLES,
   HUD,
   HUD_STYLES,
   PLAY,
@@ -24,6 +30,7 @@ import { DISABLED_OPACITY } from '../paint';
 import {
   buttonHeight,
   controlLabel,
+  dressFaceStyle,
   dressedButtonPaint,
   dressedPanelPaint,
   dressedPillPaint,
@@ -65,8 +72,8 @@ describe('Text under a dress', () => {
     }
   });
 
-  it("gives Play's and HUD's titles, eyebrows and labels their own type", () => {
-    for (const style of [...PLAY_STYLES, ...HUD_STYLES]) {
+  it("gives Play's, HUD's and Arcade's titles, eyebrows and labels their own type", () => {
+    for (const style of [...PLAY_STYLES, ...HUD_STYLES, ...ARCADE_STYLES]) {
       for (const role of TITLE_ROLES)
         expect(dressedTextFace(style, role)).toBe(style.type.title(role));
       expect(dressedTextFace(style, 'eyebrow')).toBe(style.type.eyebrow);
@@ -112,8 +119,8 @@ describe('labels and control labels', () => {
     }
   });
 
-  it("matches Play's and HUD's own button and label type from the dress", () => {
-    for (const style of [...PLAY_STYLES, ...HUD_STYLES]) {
+  it("matches Play's, HUD's and Arcade's own button and label type from the dress", () => {
+    for (const style of [...PLAY_STYLES, ...HUD_STYLES, ...ARCADE_STYLES]) {
       const dress = dressOf(style);
       for (const level of LEVELS)
         expect(controlLabel(style, dress, level)).toEqual(style.type.button);
@@ -245,5 +252,67 @@ describe('paints', () => {
       });
       expect(dressedPillPaint(dress, false).borderWidth).toBe(1);
     }
+  });
+});
+
+describe('Arcade', () => {
+  it('writes controls and labels in its pixel face at its own steps, panel heads in its display', () => {
+    const dress = dressOf(ARCADE);
+    const pixel = faceFor(FONT_FAMILIES.pressStart2p, 400);
+    const { type } = ARCADE;
+    expect(dressFaceStyle(type, dress.label.face, 11, 'capitals', 0.1)).toBe(type.label);
+    expect(dressFaceStyle(type, dress.button.labelFace, 12, 'capitals', 0)).toBe(type.button);
+    expect(dressFaceStyle(type, dress.button.labelFace, 16, 'as-written', 0)).toBe(type.button);
+    expect(controlLabel(ARCADE, dress, 5, 600)).toBe(type.button);
+    expect(controlLabel(ARCADE, dress, 1)).toMatchObject({ fontFamily: pixel, fontSize: 12 });
+    expect(labelStyle(ARCADE, dress)).toMatchObject({ fontFamily: pixel, fontSize: 11 });
+    expect(panelHeaderStyle(ARCADE, dress)).toBe(type.display('panel'));
+    expect(panelHeaderStyle(ARCADE, dress).textTransform).toBe('uppercase');
+  });
+
+  it('raises buttons to 44 in and out of a panel', () => {
+    for (const { height } of Object.values(BUTTON_SIZES)) {
+      for (const inPanel of [false, true]) {
+        expect(buttonHeight(dressOf(ARCADE), height, inPanel)).toBe(Math.max(height, 44));
+      }
+    }
+  });
+
+  it('dresses every panel in its window, and leaves the others their own shadow', () => {
+    for (const style of ARCADE_STYLES) {
+      const dress = dressOf(style);
+      const { panel } = dress.paints;
+      expect(panel.frame).not.toBeNull();
+      expect(dressedPanelPaint(dress).glow).toBe(panel.frame);
+      expect(dressedPanelPaint(dress, { pressed: true }).glow).toBe(panel.frame);
+      expect(dressedPanelPaint(dress, { selected: true }).glow).toBe(panel.selectedGlow);
+    }
+    for (const style of [...STUDIO_STYLES, ...PLAY_STYLES, ...HUD_STYLES]) {
+      expect(dressOf(style).paints.panel.frame).toBeNull();
+      for (const pressed of [false, true]) {
+        expect(dressedPanelPaint(dressOf(style), { pressed }).glow).toBeNull();
+      }
+    }
+  });
+
+  it('presses buttons and chips into the highlight, at full opacity', () => {
+    const dress = dressOf(ARCADE);
+    const hl = ARCADE.arcade?.hl;
+    expect(dressedButtonPaint(dress, 'secondary', { pressed: true })).toMatchObject({
+      backgroundColor: hl,
+      opacity: 1,
+    });
+    expect(dressedButtonPaint(dress, 'primary', { pressed: true }).opacity).toBe(0.9);
+    expect(dressedPillPaint(dress, true)).toMatchObject({ backgroundColor: hl, borderWidth: 2 });
+    expect(dressedSegmentPaint(dress, true).background).toBe(hl);
+  });
+});
+
+describe('the Slider', () => {
+  const source = readFileSync(path.resolve(__dirname, '../Slider.tsx'), 'utf8');
+
+  it('draws its thumb and track square under HUD and Arcade, round elsewhere', () => {
+    expect(source).toContain("new Set<Layout>(['hud', 'arcade'])");
+    expect(source).toContain('sliderShape(SQUARE_LAYOUTS.has(useDress().layout))');
   });
 });

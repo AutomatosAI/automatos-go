@@ -287,6 +287,12 @@ export const ARCADE_COPY = Object.freeze({
 });
 
 /**
+ * Arcade's dress on the shared screens (US-022h): the menus' ▶ cursor beside the page on screen
+ * (the Command Centre's title; hidden from VoiceOver, which hears the page's own name).
+ */
+export const ARCADE_DRESS_COPY = Object.freeze({ cursor: '▶' });
+
+/**
  * Arcade's home (US-022g; the design kit's chat/{story,entries,cards,saying}.ts(x)): the story
  * window's title and its speakers (YOU, AUTO: the label face sets them in capitals, VoiceOver hears
  * the words), the ★ and ✕ marks of what a turn did (hidden from VoiceOver: each line says its

@@ -1,7 +1,9 @@
 // The primitives' logic under a dress (src/styles/dress, D-ONE-SET), pure: the faces, heights and
 // paints each primitive takes from the style it paints. On the Studio layout (Studio, and an
 // installed theme) every function returns exactly what variants.ts gives the foundation's
-// primitives on useTokens(); Play and HUD take their own type (styleType) and the dress's paints.
+// primitives on useTokens(); Play, HUD and Arcade take their own type (styleType) and the dress's
+// paints. Arcade's controls and labels are its pixel face at its type's own steps (the button's
+// 12, the label's 11), and every panel but a selected one wears its window (the dress's frame).
 
 import type { FontWeight } from '../styles/fonts';
 import type { Dress, DressFace, LabelCase } from '../styles/dress/dress';
@@ -45,7 +47,15 @@ export function dressedTextFace(
   return textFace(style.tokens.type, role, overrides);
 }
 
-/** A dress face at a size, case and tracking, in the style's own sans or mono. */
+/**
+ * Arcade's pixel face comes only at its type's own steps (typeface/arcade-type.ts), each with its
+ * own case and tracking: the label's, or the button's for anything larger.
+ */
+function pixelFaceStyle(type: StyleType, size: number): TypeStyle {
+  return size > type.label.fontSize ? type.button : type.label;
+}
+
+/** A dress face at a size, case and tracking, in the style's own sans or mono (or Arcade's pixel step). */
 export function dressFaceStyle(
   type: StyleType,
   face: DressFace,
@@ -53,6 +63,7 @@ export function dressFaceStyle(
   letterCase: LabelCase,
   trackingEm: number,
 ): TypeStyle {
+  if (face.role === 'pixel') return pixelFaceStyle(type, size);
   const build = face.role === 'mono' ? type.mono : type.body;
   return build(size, face.weight, {
     leading: LEADING.heading,
@@ -164,13 +175,16 @@ export type PanelState = { readonly pressed?: boolean; readonly selected?: boole
 
 export type DressedPanel = PanelPaint & {
   readonly borderWidth: number;
-  /** HUD's glow round a selected panel; null: the card's own shadow. */
+  /** HUD's glow round a selected panel, Arcade's window round any; null: the card's own shadow. */
   readonly glow: PanelGlow;
 };
 
 type PanelGlow = Dress['paints']['panel']['selectedGlow'];
 
-/** A card's or a panel's paint: pressed takes the hover, selected HUD's accent line and glow. */
+/**
+ * A card's or a panel's paint: pressed takes the hover, selected HUD's accent line and glow (Arcade:
+ * its window in the accent); the rest wear the dress's frame (Arcade's window; none elsewhere).
+ */
 export function dressedPanelPaint(dress: Dress, state: PanelState = {}): DressedPanel {
   const { panel } = dress.paints;
   if (state.selected) {
@@ -183,6 +197,6 @@ export function dressedPanelPaint(dress: Dress, state: PanelState = {}): Dressed
   return {
     ...(state.pressed ? panel.pressed : panel.rest),
     borderWidth: panel.borderWidth,
-    glow: null,
+    glow: panel.frame,
   };
 }

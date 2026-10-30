@@ -1,6 +1,6 @@
-// The Command Centre in each style (D-ONE-SET, US-016l), pure: what A3's shell (src/cc/shell: the
-// top bar, head, tabs and live word) and the Calendar's day strip draw differently under Play and
-// HUD, so they stay one set of screens that only reads this. Studio (an installed theme too, D58)
+// The Command Centre in each style (D-ONE-SET, US-016l, US-022h), pure: what A3's shell (src/cc/
+// shell: the top bar, head, tabs and live word) and the Calendar's day strip draw differently under
+// Play, HUD and Arcade, so they stay one set of screens that only reads this. Studio (an installed theme too, D58)
 // is the Command Centre as built; everything else A3 draws already goes through the primitives.
 // Two more decisions that stopped the dress: the shell's opaque grounds (the tabs and the tab's
 // screen), which hid Play's glow and HUD's grid, and A2's composer pill's 21 pt corners, which
@@ -15,11 +15,18 @@
 //           and flush, the chosen one in the accent over a 2 pt inset accent bar ('Automatos
 //           Command HUD.dc.html' nav: padding 0 16px, box-shadow inset 0 -2px 0); the chosen day
 //           HUD's chosen fill with its 1.5 pt accent line
+//   Arcade  the head title in Press Start 2P at the screen slot after the menus' ▶ cursor in the
+//           accent (the pause menu's current page, 'Phone 390'); the live word as glyph + WORD;
+//           tabs flush as HUD's, in Press Start 2P capitals, the chosen one in the palette's
+//           highlight over a 2 pt bar of it; the chosen day the highlight with its ink; the
+//           shell's grounds the page, opaque (Arcade's ground is the flat page colour)
 //
 // Under a look Studio's --accent is the consequence colour, never the look's accent (core look-kit
 // studio-tokens.ts, D-REVIEW F9); the look's accent is --primary. So a mark (the tab's rule, a day's
-// dot) takes the style's accent: --accent in Studio, --primary in Play and HUD. Words of
-// consequence (needs you, overdue, a raised priority) keep --accent, as the web paints them.
+// dot) takes the style's accent: --accent in Studio, --primary in Play and HUD. Arcade's palette
+// puts its highlight, the menus' current row, on --accent (tokens/arcade.ts ARCADE_ROLES), so its
+// marks keep --accent. Words of consequence (needs you, overdue, a raised priority) keep --accent,
+// as the web paints them.
 
 import type { LiveStatus } from '../../api/live-events';
 import type { StripCellPaint } from '../../cc/calendar/chrome';
@@ -27,11 +34,11 @@ import { TAB_STRIP, TOP_BAR } from '../../cc/shell/chrome';
 import { controlLabel } from '../../ui/dressed';
 import type { Layout } from '../registry/style-id';
 import type { ResolvedStyle } from '../provider/resolve';
-import { HUD_CORE_COPY } from '../strings';
+import { ARCADE_DRESS_COPY, HUD_CORE_COPY } from '../strings';
 import type { StyleRadii } from '../tokens/radii';
 import type { ColourName, Colours } from '../tokens/types';
 import type { TypeStyle } from '../type';
-import type { Dress } from './dress';
+import type { Dress, GroundKind } from './dress';
 import type { GlyphStatus } from './status-glyphs';
 
 const NONE = 'transparent';
@@ -71,11 +78,14 @@ export type ShellDress = {
 /** HUD's nav ('Automatos Command HUD.dc.html'): 16 in each tab, the strip 4 in, so the first word sits 20 in (the phone's inset). */
 export const HUD_TABS = Object.freeze({ tabPaddingX: 'space7', stripPaddingX: 'space1' } as const);
 
+/** The layouts whose tabs sit flush, 16 in each (HUD_TABS), the chosen word in the mark. */
+const FLUSH_TABS: ReadonlySet<Layout> = new Set<Layout>(['hud', 'arcade']);
+
 const MARK: Readonly<Record<Layout, ColourName>> = Object.freeze({
   studio: 'accent',
   play: 'primary',
   hud: 'primary',
-  arcade: 'accent', // ARCADE_STAND_IN US-022h
+  arcade: 'accent', // the palette's highlight (ARCADE_ROLES: accent is hl)
 });
 
 /** The token a mark (a tab's rule, a day's dot) takes: the style's accent. */
@@ -102,12 +112,24 @@ export const HUD_SHELL_RUNS: readonly TitleRun[] = Object.freeze([
   { text: ` ${HUD_CORE_COPY.command}`, accent: false },
 ]);
 
-/** The head's title: as built in Studio, the screen slot in Play, the brand line in HUD. */
+/** Arcade's title: the menus' ▶ cursor in the accent, then the page's name. */
+export function arcadeShellRuns(title: string): readonly TitleRun[] {
+  return Object.freeze([
+    { text: `${ARCADE_DRESS_COPY.cursor} `, accent: true },
+    { text: title, accent: false },
+  ]);
+}
+
+/** The head's title: as built in Studio, the screen slot in Play (Arcade: after its ▶), HUD's brand line. */
 export function shellTitle(style: ResolvedStyle, title: string): ShellTitle {
   const plain = Object.freeze([{ text: title, accent: false }]);
   if (style.layout === 'hud') {
     const face = style.type.display('brand');
     return Object.freeze({ face, runs: HUD_SHELL_RUNS, accessibilityLabel: title });
+  }
+  if (style.layout === 'arcade') {
+    const face = style.type.display('screen');
+    return Object.freeze({ face, runs: arcadeShellRuns(title), accessibilityLabel: title });
   }
   const face = style.layout === 'play' ? style.type.display('screen') : null;
   return Object.freeze({ face, runs: plain, accessibilityLabel: title });
@@ -116,10 +138,10 @@ export function shellTitle(style: ResolvedStyle, title: string): ShellTitle {
 function shellTabs(style: ResolvedStyle, dress: Dress): ShellTabs {
   const { spacing } = style.tokens;
   const rule = markToken(style.layout);
-  if (style.layout === 'hud') {
+  if (FLUSH_TABS.has(style.layout)) {
     return {
       face: controlLabel(style, dress, TAB_STRIP.level, TAB_STRIP.weight),
-      active: 'primary',
+      active: rule,
       rest: 'mutedForeground',
       rule,
       gap: 0,
@@ -147,18 +169,22 @@ export function shellDress(style: ResolvedStyle, dress: Dress): ShellDress {
   });
 }
 
+/** The grounds that draw nothing over the screen's own colour: Studio's plain, Arcade's page. */
+const FLAT_GROUNDS: ReadonlySet<GroundKind> = new Set<GroundKind>(['plain', 'arcade-page']);
+
 /**
- * A shell surface's ground (the tabs, the tab's screen): its own colour on Studio's plain ground;
- * clear over Play's glow and HUD's grid, so the style's ground runs under the head, the tabs and
- * the tab's screen as it does on every other screen (the Screen primitive draws it).
+ * A shell surface's ground (the tabs, the tab's screen): its own colour on a flat ground (Studio's
+ * plain, Arcade's page, where it is the page's colour); clear over Play's glow and HUD's grid, so
+ * the style's ground runs under the head, the tabs and the tab's screen as it does on every other
+ * screen (the Screen primitive draws it).
  */
 export function shellGround(dress: Dress, own: string): string {
-  return dress.ground === 'plain' ? own : NONE;
+  return FLAT_GROUNDS.has(dress.ground) ? own : NONE;
 }
 
 /**
  * A corner that rounds fully where the style rounds things (Studio and Play: the radius given)
- * and squares where it rounds nothing (HUD's full radius is 0).
+ * and squares where it rounds nothing (HUD's and Arcade's full radius is 0).
  */
 export function roundCorner(radius: number, radii: Pick<StyleRadii, 'full'>): number {
   return Math.min(radius, radii.full);
