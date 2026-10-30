@@ -1,7 +1,7 @@
 # PRD-001: Automatos Go v1, Auto in your pocket
 
 **Status:** Draft for Gerard, 20 Oct 2026. Every product decision below was taken by Gerard in the 20 Oct mobile Q&A (60 decisions, `<workspace>/reports/mobile-review-2026-10-20/decisions.md`; numbers in brackets, e.g. [D54]). · **Owner:** Gerard · **Written:** 20 Oct 2026.
-**Source:** the review `<workspace>/reports/mobile-assistant-rebuild-review-2026-10-20.md` and its evidence folder; three Claude Design specs (§4.6): `DUMPING AREA/design_handoff_automatos_mobile/` (Studio), `DUMPING AREA/automatos-play-ember/` (Play), `DUMPING AREA/automatos-play-command/` (HUD). A fourth, added 30 Oct (§4.6.1, wave A8): the Arcade handoff `DUMPING AREA/automatos-arcade/` and the design kit's `themes/arcade` (`automatos/arcade` 1.0.0).
+**Source:** the review `<workspace>/reports/mobile-assistant-rebuild-review-2026-10-20.md` and its evidence folder; three Claude Design specs (§4.6): `DUMPING AREA/design_handoff_automatos_mobile/` (Studio), `DUMPING AREA/automatos-play-ember/` (Play), `DUMPING AREA/automatos-play-command/` (HUD). A fourth, added 30 Oct (§4.6.1, wave A8): the Arcade handoff `DUMPING AREA/automatos-arcade/` and the design kit's `themes/arcade` (`automatos/arcade` 1.0.0). A fifth, added 30 Oct (§4.6.2, wave A9): the Candy handoff `DUMPING AREA/design_handoff_candy/` (its phone spec `automatos-go/CANDY-LAYOUT.md`) and the design kit's `themes/candy` (`automatos/candy` 1.0.0).
 **Scope:** the Automatos Go app, iOS first through internal TestFlight, Android testers by EAS internal link [D10]. This repo (`AutomatosAI/automatos-go`, renamed from `automotas-mobile` on 20 Oct, public, Apache-2.0 [D42]).
 **Depends on:** automatos-ai **PRD-266** (pairing, discovery, push, store duties; waves W1–W3); automatos-ai **PRD-261** stories P261-M-01..M-07 (the theme `mobile` block and `GET /api/themes/mobile/{install_id}`, PLAY session); the Clerk production cutover on Tue 27 Oct (PR #1198) and the native `azp` marker on PR #1216 (PRD-266 US-020); Retell confirming a LiveKit client may join a web call (A6).
 **Ralph config:** launch is human-only, with `RALPH_MODEL` pinned. One branch, one push, one PR and one CI run per wave. Parallelism is sized to the remaining usage budget, not a fixed number (Gerard, 20 Oct); PRD-261 and PRD-266 draw on the same budget in the same window.
@@ -47,6 +47,7 @@ Hosted Studio users sign in with Clerk. Self-hosted users pair their phone with 
 | D42–D50 | Repo, Apache-2.0, fresh from the academy template; runtime version `fingerprint`; Sentry EU; build-loop race fixed; Expo account personal; EAS free tier with batching. |
 | D45 | Social-post approvals on the phone (exact version shown, never from a notification). |
 | D-ARC-1..7 | Arcade, the fourth style (Gerard, 30 Oct; §4.6.1). |
+| D-CAN-1..9 | Candy, the fifth style (30 Oct; §4.6.2). |
 | D73 | One slim header (Back on the chat route, the sail and 'automatos', one menu button with the needs-you number); the menu lists New chat, Chats, Command Centre and Settings from one list. The AI label is a small caption at the top of every thread, never a pill by the composer or a lock on it. |
 
 ## 4. What the app is made of
@@ -133,12 +134,13 @@ A style is one of three layouts built into the app, dressed by a look. The phone
 | **HUD** | `automatos-play-command/`: `Automatos Command HUD.dc.html` phone core (390×844): AUTOMATOS // top bar, MIC LIVE, ring core with the state chip, transcript (YOU / AUTO with a block cursor), waveform, TYPE · HOLD TO TALK · STOP. Square panels with corner brackets, status as glyph plus WORD | `looks.json` (`automatos-interface-look/v0`): accent ×6, ground ×4, display font (Rajdhani, Chakra Petch, Geist Mono), grid 0–30, glow 0–40, scanlines, Auto on/off, motion; fixed text, line and error colours; presets ARC, FORGE, GHOST, NOVA, SIGNAL. Converted to the `automatos-look-schema/v1` knob shape so HUD can become a Design Kit theme later without rework. Saved on the phone [D59] | The Looks drawer as drawn |
 
 | **Arcade** | The Arcade handoff's handheld, `Automatos Arcade.dc.html` "Phone 390" (390×844): the console body, a status bar (the wordmark and the counters), the story window, the dialogue window (Auto's portrait and state word, his reply typing out), a D-pad of four named targets and the voice button in a round surround. The design kit's `themes/arcade` draws the same handheld on the web below 1024 px and is the working reference | `automatos/arcade`'s looks (`arcade-look/v1`): palette (Overworld, Dungeon, Neon Cabinet, Night City, Handheld), scanlines, pixel scale, window, text speed; one preset per palette; synced with Studio through `GET/PUT /api/themes/looks/automatos/arcade` | Options: the five knobs as rows with a ▶ cursor, a live preview, Save look, Reset, save slots |
+| **Candy** | The Candy handoff's phone layout, `automatos-go/CANDY-LAYOUT.md` and P1–P4 in `Automatos Candy.dc.html` (390×844): Today (the orb, the stat cards, Needs you), Chat (Auto's stage, the thread, the pill composer), Shelf (the Deliverables in two columns) and Team, behind a floating pill tab bar with the voice raised in its centre; every card its own gradient, big round corners, round icons. The design kit's `themes/candy` is the working reference | `automatos/candy`'s looks (`candy-look/v1`): palette (Blush, Lilac, Night bloom), card colours, gradient (Soft, Rich, Vivid), roundness 16–40, glow 0–10, motion; one preset per palette; synced with Studio through `GET/PUT /api/themes/looks/automatos/candy` | Make it sweet: presets with previews, the knobs as circles, segments, sliders and a switch, a live preview, Save look, Reset |
 
 Rules every layout follows:
 - **The Command Centre is one set of screens.** Board, Calendar, Questions, Deliverables, sheets and settings are built once and dressed by each layout's tokens (Studio radii; Play's 6/8/10/14 radii and serif display; HUD's square panels, brackets and glyph plus WORD statuses). The HUD Command pages (Agents, Missions, Vault, Analytics, Knowledge) are desktop designs and are not in v1.
 - **One voice screen, one dress per style [D60]:** the HUD voice layout is the voice screen in every style. Studio paints ink and orange rings, Play paints Ember rings with Auto in the centre, HUD keeps its accent.
 - **Tokens:** the 24 Studio tokens with `--` keys (`--background`, `--foreground`, …), normalised to hex on the device with the vendored `hsl.ts` (PRD-261's endpoint returns values as the theme wrote them). Play also uses its own `--pl-*` variables from the vendored engine; HUD derives `--bg`, `--accent`, `--accent-ink`, `--accent-line`, `--accent-fill`, `--panel-fill`, `--grid` and `--glow` as its README specifies.
-- **Fonts** bundled as TTF: Geist, Geist Mono, Newsreader, Instrument Serif, Bricolage Grotesque, Fredoka (licences in automatos-ai `frontend/app/fonts/`), Rajdhani and Chakra Petch (vendor with their licence files) [D57], and Press Start 2P and Pixelify Sans for Arcade (OFL, with their licences) [D-ARC-4].
+- **Fonts** bundled as TTF: Geist, Geist Mono, Newsreader, Instrument Serif, Bricolage Grotesque, Fredoka (licences in automatos-ai `frontend/app/fonts/`), Rajdhani and Chakra Petch (vendor with their licence files) [D57], Press Start 2P and Pixelify Sans for Arcade (OFL, with their licences) [D-ARC-4], and Outfit and Nunito for Candy (OFL, with their licences) [D-CAN-4].
 - **Auto the mascot:** the 12-state reducer (vendored); clips are HEVC-alpha `.mp4` through `expo-video` on iOS, `.png` stills on Android and under Reduce Motion; the ring is drawn by the app (mint calm, bronze busy, coral needs help, dusk asleep); Play's shell tint is a Skia colour matrix over the clip.
 - **The AI label** ("Auto is an AI" / "{agent} is an AI", the vendored `copy.ts` words) is one muted caption line at the scale's smallest body size (Body 6, 11.5 pt) in the muted text token: the first row of every thread (it scrolls away with the thread), the top line of the AI-provider consent sheet, and on the voice screen. VoiceOver also hears it on Auto's avatar ("Auto said, Auto is an AI"). It never locks the composer [D73; replaces PRD-264 EUAI-11a's composer fence on the phone].
 - **Installed marketplace themes** that declare a `mobile` block appear under Studio in the style picker: the Studio layout painted with the theme's tokens, fonts and mascot from `GET /api/themes/mobile/{install_id}` (PRD-261 M-04). Themes never bring code or layouts in v1 [D58].
@@ -157,6 +159,22 @@ Arcade is the design kit's third theme, `automatos/arcade`: Automatos as a 16-bi
 | D-ARC-5 | Auto in Arcade is the kit's code-drawn 32×32 pixel sprite, not the bundled clips: its drawing (`themes/arcade/src/art/`) is vendored as pure TypeScript with its provenance, drawn with Skia, twelve states of two to four frames on a 60 ms clock; frame 1 under Reduce Motion or while paused; a pause control stops every loop (WCAG 2.2.2). |
 | D-ARC-6 | The home is the handheld, with Arcade's own screens (Gerard, 30 Oct): the party strip (your agents, each with its state word) under the status bar, and a D-pad that switches the handheld's screen as on the web: ◀ Chat, ▲ Quests (the kit's overworld map, the Board's tickets as quests, with a link to the full Board) and ▶ Inventory (the item grid with tabs, the Deliverables as items, with a link to all of them); ▼ Menu opens the header menu (D73). The Command Centre, sheets and settings are the shared screens in Arcade's dress (square windows, the window style, Press Start 2P labels, glyph plus WORD statuses), as for HUD. Everything shows only data the app already reads: ! is the needs-you number, QUEST the Board's work in progress, XP the tickets done today when the Board's rows carry a completion time (otherwise XP is left out); no new endpoint. |
 | D-ARC-7 | What every layout gains, Arcade gains: PRD-268's brief, suggestions and approval sheet (Go #31, #32, #33) are wired into Arcade by whichever lands second (this PRD's). |
+
+### 4.6.2 Candy (added 30 Oct)
+
+Candy is the design kit's fourth theme, `automatos/candy`: Automatos bright, soft and glossy. On the phone it is a fifth built-in style, built the way Arcade was. Decisions (the Candy handoff's `CANDY-LAYOUT.md` and Gerard's 30 Oct brief; where they and the repo differ, the repo wins and the A9 kit says so):
+
+| | Decision |
+|---|---|
+| D-CAN-1 | Candy is a built-in style: the style id and the layout are both `candy`, fifth in the picker ("Bright, glossy and round", **Make it sweet →**), and installing `automatos/candy` switches the phone to it (`BUILT_IN_THEME_STYLES` gains `'automatos/candy': 'candy'`). |
+| D-CAN-2 | The theme id is `automatos/candy`, first-party; its `mobile` block (from the looks, Outfit and Nunito, Auto as stills) stays as the skin an app version without the Candy layout paints on Studio. |
+| D-CAN-3 | Looks are the web's (`candy-look/v1`: palette, card colours, gradient, roundness, glow, motion; three presets), saved on the phone (`styles.candy.looks`) and synced through `GET/PUT /api/themes/looks/automatos/candy`; not installed, they stay on the phone and the look page says so. |
+| D-CAN-4 | Outfit (600, 700) and Nunito (400, 700, 800) are bundled as TTF with their OFL licences; the merge is a native build (accepted, one build). |
+| D-CAN-5 | Auto in Candy is the kit's glossy Auto, drawn with Skia from its vendored geometry in twelve states, never the bundled clips; he floats and blinks on one clock, and is still under Reduce Motion, the look's Motion "Paused" or the phone's own pause (never synced), which sits wherever Candy moves (WCAG 2.2.2). |
+| D-CAN-6 | The home is Today, Chat, Shelf and Team, switched by a floating pill tab bar with A6's hold to talk in its raised centre. It shows only data the app already reads; the orb shows the needs-you number (the Board's rows carry no completion time); no new endpoint. |
+| D-CAN-7 | The palette sets the tone (Blush and Lilac light, Night bloom dark); Studio's Light / Dark / System does not apply while Candy is on. |
+| D-CAN-8 | PRD-268's brief, suggestions and approval sheet, on `main` since Go #31–#33, are wired into Candy as into HUD and Play. |
+| D-CAN-9 | Gradients, the band, the orb and the aura are drawn with Skia from the kit's catalogue (its AA start stops supersede the handoff's); cards and tiles take `round(r × 0.72)`; pills and icons are round. |
 
 ### 4.7 Screens
 
@@ -419,6 +437,18 @@ Every story: typecheck, lint and vitest pass in CI (nothing runs on a maintainer
 - [x] Auto as the pixel sprite in twelve states (D-ARC-5); the Command Centre, sheets, settings, the edge screens and the voice screen in Arcade's dress; nothing below 11 pt; Reduce Motion and the pause control stop every loop — the kit's `src/art/{grid,auto-sprite,states}.ts` vendored at `034fa629c` with their sha256 (`src/styles/arcade/sprite/`), drawn by Skia (`PixelSprite.tsx`) on the 60 ms clock (`clock.ts`; `sprite/__tests__/{states,clock,paint}.test.ts`); `DRESSES.arcade` and the Command Centre marks (`dress/dress.ts`, `cc-dress.ts`; `arcade-dress.test.ts`, `arcade-cc-dress.test.ts`), `ArcadeEdgeWindow` (`edges/__tests__/arcade-edges.test.ts`), the voice screen's arcade dress (`src/voice/screen/dress.ts`); Arcade's smallest step is `MIN_TEXT_SIZE` 11 (`typeface/arcade-type.ts`, `arcade-type.test.ts`); `useArcadeMotion` stills the sprite, cursors, typewriter and the voice core's loops under Reduce Motion or the status bar's PAUSE (`arcade/motion-pause.ts`, `motion-pause.test.ts`). Device screenshots and checks stay Gerard's (the A8 kit's ownerTest OT-A1..A5)
 - [x] `docs/styles-and-themes.md` describes four layouts and which theme gets each — 'The four layouts' and 'Same as Studio' (`automatos/play`, `automatos/hud`, `automatos/arcade` switch the phone to theirs; every other theme paints Studio through its skin; a build from before Arcade paints `automatos/arcade`'s skin on Studio)
 
+### Wave A9: Candy
+
+#### US-023: Candy layout and look page
+**Description:** As a user, I want the Candy style on my phone, with my palette, its gradients and Auto in his glossy shell, matching Candy on the web.
+
+**Acceptance Criteria:**
+- [ ] Candy is a fifth built-in style (D-CAN-1): in the picker with its own preview, and `automatos/candy` installed switches the phone to it
+- [ ] The Candy home from `CANDY-LAYOUT.md` §4: Today (the orb, the stat cards, Needs you), Chat (Auto's stage with his state and Pause, the thread with the AI label as its first row and the host's cards, the composer with voice), Shelf (the Deliverables grid) and Team (the agents and their states), behind the floating tab bar with hold to talk in its centre (D-CAN-6), with PRD-268's brief, suggestions and approval line (D-CAN-8)
+- [ ] Make it sweet with the six knobs and three presets; save, rename, delete; synced through the looks API (D-CAN-3)
+- [ ] Auto drawn with Skia in twelve states (D-CAN-5); the Command Centre, sheets, settings, the edge screens and the voice screen (the orb core) in Candy's dress; Candy's text never under 12 pt; Reduce Motion, the look's Motion and the pause control stop every loop. Device screenshots and checks stay Gerard's (the A9 kit's ownerTest OT-C1..C6)
+- [ ] `docs/styles-and-themes.md` describes five layouts and which theme gets each (a build from before Candy paints `automatos/candy`'s skin on Studio)
+
 ## 6. Functional requirements
 
 - FR-1: The app must offer hosted sign-in (Clerk email code, password, passkey) and "connect to your own server" by QR pairing, and nothing else.
@@ -467,6 +497,7 @@ By Gerard's decisions, not deferred by this PRD:
 | A6 Voice | US-019, US-020 | PRD-266 W1 (voice); Retell's confirmation for US-020 | Fri 6 Nov |
 | A7 Release | US-021 | PRD-266 W3 | Sat 7 Nov; freeze Sun 8 Nov |
 | A8 Arcade | US-022 | The design kit's `automatos/arcade` 1.0.0 | Gerard's call |
+| A9 Candy | US-023 | The design kit's `automatos/candy` 1.0.0 | Gerard's call |
 
 ## 10. Success metrics
 
