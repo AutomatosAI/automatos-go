@@ -11,6 +11,9 @@
 //   Studio  the sail mark, 'Talk to Auto' (Newsreader 28) and the same lede; no chips (D29); Auto
 //           only when an installed theme brings him
 //   HUD     its core with an empty transcript, 'Say or type what you need.' (HudCore, EMPTY_TURN)
+//   Arcade  the brand line; a window tabbed AUTO with his sprite waving (hello) and its word at its
+//           head, and the greeting his dialogue says before any reply (Pixelify Sans 17/1.3, the
+//           dialogue's line), which says the lede's words too; no chips (US-022i)
 
 import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -24,8 +27,10 @@ import { EMPTY_TURN } from '../hud/core/model';
 import { MASCOT_SIZES } from '../mascot/geometry';
 import { Mascot } from '../mascot/Mascot';
 import { PlayThreadCaption } from '../play/companion';
-import { EDGE_COPY } from '../strings';
+import { ARCADE_COPY, EDGE_COPY } from '../strings';
 import { useStyle } from '../theme';
+import { ARCADE_DIALOGUE } from '../typeface/arcade-type';
+import { ArcadeEdgeWindow } from './ArcadeEdgeWindow';
 import { STARTERS } from './edges';
 import { EDGE_METRICS } from './metrics';
 import { EdgeBrand, useEdgePaint } from './parts';
@@ -93,8 +98,26 @@ function Greeting() {
   );
 }
 
-/** The hello: Auto, the greeting, the lede, and Play's starters. */
-export function FirstOpenHello({ onStarter }: FirstOpenHelloProps) {
+/** Arcade's hello: Auto's window, his sprite waving at its head, and his greeting. */
+function ArcadeHello() {
+  const style = useStyle();
+  const paint = useEdgePaint();
+  const line = style.type.body(ARCADE_DIALOGUE.size);
+  return (
+    <ScrollView
+      style={styles.fill}
+      contentContainerStyle={styles.middle}
+      keyboardShouldPersistTaps="handled"
+    >
+      <ArcadeEdgeWindow state="hello" title={ARCADE_COPY.dialogue.speaker} centred>
+        <Text style={[line, styles.centred, { color: paint.text }]}>{EDGE_COPY.arcade.greeting}</Text>
+      </ArcadeEdgeWindow>
+    </ScrollView>
+  );
+}
+
+/** Studio's and Play's hello: Auto, the greeting, the lede, and Play's starters. */
+function Hello({ onStarter }: FirstOpenHelloProps) {
   const style = useStyle();
   const paint = useEdgePaint();
   const play = style.layout === 'play';
@@ -120,6 +143,12 @@ export function FirstOpenHello({ onStarter }: FirstOpenHelloProps) {
       ) : null}
     </View>
   );
+}
+
+/** The hello: Auto, the greeting, the lede, and Play's starters; Arcade's window. */
+export function FirstOpenHello({ onStarter }: FirstOpenHelloProps) {
+  if (useStyle().layout === 'arcade') return <ArcadeHello />;
+  return <Hello onStarter={onStarter} />;
 }
 
 export type FirstOpenProps = FirstOpenHelloProps & {
@@ -166,4 +195,5 @@ const styles = StyleSheet.create({
   auto: { alignSelf: 'flex-end' },
   starters: { flexDirection: 'row', flexWrap: 'wrap' },
   starter: { justifyContent: 'center', borderWidth: 1 },
+  centred: { textAlign: 'center' },
 });

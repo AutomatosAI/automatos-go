@@ -3,14 +3,15 @@
 // sharing the width. While loops run each bar breathes from its centre (scaleY 0.25 ↔ 1, its own
 // time and delay, on reanimated); while they may not, every bar stands still at its full height.
 // A6's live mic passes levels: each bar then stands at its level and the breath stops. Decoration,
-// hidden from VoiceOver: the state chip and the mic say what it shows.
+// hidden from VoiceOver: the state chip and the mic say what it shows. Loops follow useVoiceCore
+// (Arcade's pause stills the breath too, US-022i).
 
 import { StyleSheet, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle } from 'react-native-reanimated';
 
-import { useStyle } from '../../theme';
 import { CSS_EASE_IN_OUT } from './ring-specs';
 import { useLoop } from './use-loop';
+import { useVoiceCore } from './use-voice-core';
 import { WAVE, levelScales, waveBars, type WaveBar } from './waveform';
 
 const BREATH_EASING = Easing.bezier(...CSS_EASE_IN_OUT);
@@ -62,7 +63,7 @@ export function Waveform({
   bars = WAVE.phone.bars,
   height = WAVE.phone.height,
 }: WaveformProps) {
-  const loops = useStyle().motion.loops;
+  const { loops } = useVoiceCore();
   const scales = levelScales(levels, bars);
   return (
     <View

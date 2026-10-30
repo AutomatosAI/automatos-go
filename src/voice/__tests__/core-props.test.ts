@@ -1,7 +1,8 @@
 // The voice screen on A5's core (US-019j), pure: the view-model's words as HudCore's props — Auto's
 // state per phase, the transcript with the AI notice as its own line, HOLD TO TALK's words, hold
-// and toggle, the waveform's run of levels, the dress's paint, and the line under the chip. Views
-// come from the real reducer and voiceView (voice-view-fixtures.ts), styles from A5's resolveStyle.
+// and toggle, the waveform's run of levels, the dress's paint (Arcade's sprite and window-filled
+// core, US-022i), and the line under the chip. Views come from the real reducer and voiceView
+// (voice-view-fixtures.ts), styles from A5's resolveStyle.
 
 import { describe, expect, it, vi } from 'vitest';
 
@@ -202,6 +203,31 @@ describe('voiceCoreProps', () => {
       true,
     );
     expect(voiceCoreProps({ view: view(), phase: 'idle', dress: hud, hold }).overlay).toBe(true);
+  });
+
+  it('passes Arcade’s dress through: its accent, the sprite on its window, no overlay', () => {
+    const style = resolve(builtinChoice('arcade'));
+    const props = voiceCoreProps({ view: view(), phase: 'idle', dress: voiceDress(style), hold });
+    expect(style.arcade).toBeDefined();
+    expect(props).toMatchObject({
+      ringLine: style.arcade?.ac,
+      overlay: false,
+      mascotInCore: true,
+      sprite: true,
+      coreFill: style.arcade?.win,
+    });
+  });
+
+  it('draws the Mascot, never the sprite, in every other style', () => {
+    for (const id of ['studio', 'play', 'hud'] as const) {
+      const dress = voiceDress(resolve(builtinChoice(id)));
+      const props = voiceCoreProps({ view: view(), phase: 'idle', dress, hold });
+      expect({ id, sprite: props.sprite, coreFill: props.coreFill }).toEqual({
+        id,
+        sprite: false,
+        coreFill: dress.coreFill,
+      });
+    }
   });
 
   it('carries the view’s words and switches, and names the close and LOOK', () => {

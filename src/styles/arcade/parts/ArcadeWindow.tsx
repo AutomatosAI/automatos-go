@@ -4,7 +4,8 @@
 // a 6 pt drop shadow; Thin one 2 pt line and a 4 pt shadow (window-frame.ts) — on its ground (the
 // window colour, or the page for an inset), with the look's scanlines behind its content only.
 // An optional title tab in Press Start 2P sits over the top edge in the accent, as the dialogue's
-// AUTO tag does; it is a header for VoiceOver. The rings and shadow are part of the window's own
+// AUTO tag does; it is a header for VoiceOver (titleLabel, when given, is what it hears: a tab
+// with a glyph, as the edge screens' '— NOT ANSWERING', US-022i). The rings and shadow are part of the window's own
 // box, so a layout spacing windows measures them. A `fill` window (the home's story, US-022g) is as
 // tall as the box its style gives it, its content bounded by it, so a list inside it scrolls.
 
@@ -24,6 +25,8 @@ export type ArcadeWindowProps = {
   readonly children?: ReactNode;
   /** The title tab's words ('AUTO'); no tab when omitted. */
   readonly title?: string;
+  /** What VoiceOver hears for the tab; its words when omitted. */
+  readonly titleLabel?: string;
   /** The window's ground: 'win' (the default) or 'page'. */
   readonly ground?: WindowGround;
   /** The window's own box: margins, flex. */
@@ -45,11 +48,15 @@ function bevel(width: number, vars: ArcadeVars): ViewStyle {
   };
 }
 
-function TitleTab({ title }: { readonly title: string }) {
+function TitleTab({ title, label }: { readonly title: string; readonly label?: string }) {
   const { vars, type } = useArcadePaint();
   return (
     <View style={[styles.tab, { backgroundColor: vars.win, borderColor: vars.bd }]}>
-      <Text accessibilityRole="header" style={[type.label, { color: vars.ac }]}>
+      <Text
+        accessibilityRole="header"
+        accessibilityLabel={label}
+        style={[type.label, { color: vars.ac }]}
+      >
         {title}
       </Text>
     </View>
@@ -59,6 +66,7 @@ function TitleTab({ title }: { readonly title: string }) {
 export function ArcadeWindow({
   children,
   title,
+  titleLabel,
   ground = 'win',
   style,
   contentStyle,
@@ -71,7 +79,7 @@ export function ArcadeWindow({
   const titled = title !== undefined && title.length > 0;
   return (
     <View style={style}>
-      {titled ? <TitleTab title={title} /> : null}
+      {titled ? <TitleTab title={title} label={titleLabel} /> : null}
       <View
         style={[
           box,

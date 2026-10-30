@@ -583,10 +583,14 @@ export const HUD_STATE_WORDS = Object.freeze<Record<MascotName, string>>({
  * here points at making an account (D63), and nothing commercial (D8).
  */
 export const EDGE_COPY = Object.freeze({
-  /** The line over an edge screen: Play's 'Automatos Play', HUD's 'AUTOMATOS //' (none in Studio). */
+  /**
+   * The line over an edge screen: Play's 'Automatos Play', HUD's 'AUTOMATOS //', Arcade's
+   * 'AUTOMATOS ARCADE' (the design kit's wordmark; none in Studio).
+   */
   brand: Object.freeze({
     play: Object.freeze({ name: 'Automatos', mark: 'Play', label: 'Automatos Play' }),
     hud: Object.freeze({ name: 'AUTOMATOS', mark: '//', label: 'Automatos' }),
+    arcade: Object.freeze({ name: 'AUTOMATOS', mark: 'ARCADE', label: 'Automatos Arcade' }),
   }),
   firstOpen: Object.freeze({
     /** Play's greeting, the second line in the accent text. */
@@ -626,5 +630,14 @@ export const EDGE_COPY = Object.freeze({
     title: 'This page wandered off.',
     message: "Auto looked everywhere. It's not here.",
     back: 'Back to chat',
+  }),
+  /**
+   * Arcade's own lines (US-022i): First open's greeting, the one its dialogue says before any
+   * reply (the design kit's chat/saying.ts), and Lost's, the kit's edges/not-found.tsx.
+   */
+  arcade: Object.freeze({
+    greeting: ARCADE_HOME_COPY.greeting,
+    lostTitle: 'You wandered off the map',
+    lostMessage: "This page isn't here. The link may be old, or the page may have moved.",
   }),
 });

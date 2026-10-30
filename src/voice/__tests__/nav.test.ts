@@ -102,6 +102,11 @@ describe('voiceLookPath (LOOK)', () => {
     expect(voiceLookPath('hud')).toBe(STYLE_SCREENS.lookHud);
   });
 
+  it("opens Arcade's Options at '/settings/look/arcade' (its registry entry's look page)", () => {
+    expect(voiceLookPath('arcade')).toBe(STYLE_SCREENS.lookArcade);
+    expect(voiceLookPath('arcade')).toBe('/settings/look/arcade');
+  });
+
   it('opens the style picker for Studio (and a theme, on the Studio layout)', () => {
     expect(voiceLookPath('studio')).toBe(STYLE_SCREENS.settingsStyle);
   });

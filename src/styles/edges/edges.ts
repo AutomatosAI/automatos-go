@@ -9,7 +9,8 @@
 //                  with the command that starts it (the connect kit's SELF_HOSTED_START_COMMAND,
 //                  so the app shows one command), selectable because there is no clipboard (KS7)
 //   Something went wrong   the taxonomy's words for the error (userMessage), never internals
-//   First open, Lost       their fixed words; a Play starter fills the composer, never sends (KS13)
+//   First open, Lost       their fixed words; a Play starter fills the composer, never sends (KS13);
+//                  Arcade says its own greeting, its own 404 lines and its own wordmark (US-022i)
 
 import { isApiError, userMessage, type ApiErrorKind } from '../../api/errors';
 import type { Server } from '../../api/server';
@@ -17,6 +18,7 @@ import { serverLabel } from '../../app-state/account';
 import { SELF_HOSTED_START_COMMAND } from '../../connect/config';
 import { isNotRunning } from '../../connect/server-support';
 import { GLYPHS } from '../dress/status-glyphs';
+import type { Layout } from '../registry/style-id';
 import { EDGE_COPY, HUD_STATE_WORDS, PLAY_STATUS } from '../strings';
 import { NOT_RUNNING_RECHECK_MS } from './recheck';
 
@@ -118,3 +120,29 @@ export const STARTERS: readonly Starter[] = Object.freeze(
 );
 
 export const LOST_EDGE = EDGE_COPY.lost;
+
+/** Lost's words: the '404', the title, the line and the way back. */
+export type LostEdge = {
+  readonly number: string;
+  readonly title: string;
+  readonly message: string;
+  readonly back: string;
+};
+
+/** Lost's words in a style: Arcade's own title and line (the kit's 404), the shared ones elsewhere. */
+export function lostEdge(layout: Layout): LostEdge {
+  if (layout !== 'arcade') return LOST_EDGE;
+  const { lostTitle, lostMessage } = EDGE_COPY.arcade;
+  return Object.freeze({ ...LOST_EDGE, title: lostTitle, message: lostMessage });
+}
+
+// ── The brand line ──────────────────────────────────────────────────────────────────────────
+
+export type BrandWords = (typeof EDGE_COPY.brand)[keyof typeof EDGE_COPY.brand];
+
+/** The brand line's words: HUD's and Arcade's own; Play's otherwise (Studio draws none). */
+export function brandWords(layout: Layout): BrandWords {
+  if (layout === 'hud') return EDGE_COPY.brand.hud;
+  if (layout === 'arcade') return EDGE_COPY.brand.arcade;
+  return EDGE_COPY.brand.play;
+}

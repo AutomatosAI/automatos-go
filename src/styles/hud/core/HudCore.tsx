@@ -14,7 +14,8 @@
 //   A6's voice screen (US-019j, D-ONE-VOICE) passes `voice`: the core then draws in every style,
 // painted by voiceDress — on the style's own background, with HUD's ground and scanlines only where
 // the dress says, the rings' structure in its line colour, Auto in the core only where the dress
-// puts him — with the voice view-model's chip and status words, its line under the chip, HOLD TO
+// puts him (in Arcade as its pixel sprite on the core's disc, filled with the window, US-022i) —
+// with the voice view-model's chip and status words, its line under the chip, HOLD TO
 // TALK's hold, STOP and TYPE as the voice says, the menu square named for closing the screen, and
 // LOOK going to the style's look page (onLook) instead of opening HUD's drawer here.
 //   A6's quick-ask on HUD's home (US-019k) passes `quickAsk` instead: HUD's home as A5 built it, with
@@ -30,6 +31,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { ThreadReport } from '../../../chat/report/report';
 import type { MascotName } from '../../../core/frozen/lib/mascot/types';
+import { useArcadePaint } from '../../arcade/parts/use-arcade-paint';
+import { PixelSprite } from '../../arcade/sprite/PixelSprite';
 import { hudGroundPlan, type HudGroundPlan } from '../../ground/hud-ground';
 import { HudOverlay } from '../../ground/HudOverlay';
 import { useLayoutSize } from '../../ground/use-size';
@@ -42,6 +45,7 @@ import {
   HUD_CORE,
   coreSizeFor,
   coreSizeIn,
+  coreSpritePlace,
   mascotPlace,
   type ChipView,
   type HudLanguage,
@@ -62,6 +66,10 @@ export type HudCoreVoice = {
   readonly overlay: boolean;
   /** Auto (the Mascot) in the centre of the rings. */
   readonly mascotInCore: boolean;
+  /** Auto in the core is Arcade's pixel sprite, not the Mascot; absent, the Mascot. */
+  readonly sprite?: boolean;
+  /** The disc inside the rings, filled flat (Arcade's window); absent, none. */
+  readonly coreFill?: string;
   /** The chip's words, and the status row's word (chip.label). */
   readonly chip: ChipView;
   readonly talk: HudTalk;
@@ -125,17 +133,40 @@ function stateOf(state: MascotName | MascotController): MascotName {
 
 type CoreProps = Pick<HudCoreProps, 'mascotState' | 'voice'> & { readonly size: number };
 
+/** Arcade: Auto's pixel sprite centred on the core's disc, as large as fits across it. */
+function CoreSprite({ size, state }: { readonly size: number; readonly state: MascotName }) {
+  const { look } = useArcadePaint();
+  const place = coreSpritePlace(size, look);
+  return (
+    <View pointerEvents="none" style={[styles.mascot, { left: place.left, top: place.top }]}>
+      <PixelSprite state={state} view={place.view} />
+    </View>
+  );
+}
+
+/** Auto in the core: none where the dress keeps him out, the sprite in Arcade, else the Mascot. */
+function CoreAuto({ size, mascotState, voice }: CoreProps) {
+  const place = useMemo(() => mascotPlace(size), [size]);
+  if (voice && !voice.mascotInCore) return null;
+  if (voice?.sprite) return <CoreSprite size={size} state={stateOf(mascotState)} />;
+  return (
+    <View pointerEvents="none" style={[styles.mascot, { left: place.left, top: place.top }]}>
+      <Mascot size={place.size} state={mascotState} />
+    </View>
+  );
+}
+
 function Core({ size, mascotState, voice }: CoreProps) {
   const { paint } = useVoiceCore();
-  const place = useMemo(() => mascotPlace(size), [size]);
   return (
     <View style={[styles.core, { width: size, height: size, marginTop: HUD_CORE.core.marginTop }]}>
-      <RingCore size={size} colour={paint.accent} lineColour={voice?.ringLine} />
-      {voice && !voice.mascotInCore ? null : (
-        <View pointerEvents="none" style={[styles.mascot, { left: place.left, top: place.top }]}>
-          <Mascot size={place.size} state={mascotState} />
-        </View>
-      )}
+      <RingCore
+        size={size}
+        colour={paint.accent}
+        lineColour={voice?.ringLine}
+        fill={voice?.coreFill}
+      />
+      <CoreAuto size={size} mascotState={mascotState} voice={voice} />
     </View>
   );
 }
