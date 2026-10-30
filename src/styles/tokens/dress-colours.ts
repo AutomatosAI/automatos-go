@@ -2,9 +2,12 @@
 // they carry, built with the vendored rgba as tokens/hud.ts builds its own, so every colour the
 // shared primitives paint comes from this directory (D-TOKENS). Play: Ember's outline button, a
 // 1 pt line of the ground's text at 24 %, and 04's filter chips at 20 %. HUD: the soft accent glow
-// round a selected or live panel ('Automatos Command Pages.dc.html': 0 0 24px -6px at .5).
+// round a selected or live panel ('Automatos Command Pages.dc.html': 0 0 24px -6px at .5). Arcade:
+// a selected row or choice in the palette's highlight with its ink (the kit's looks.module.css
+// '.radio:checked + .choiceFace': --arcade-hl under --arcade-hlt), a pair the kit holds at AA.
 
 import { rgba } from '../../core/web/lib/look-kit/css';
+import type { ArcadeVars } from './arcade';
 import type { PlayVars } from './play';
 
 /** Ember's outline button: a 1 pt line of the ground's text at 24 %. */
@@ -22,6 +25,13 @@ export function playDressLines(vars: Pick<PlayVars, 'groundText'>): PlayDressLin
     outline: rgba(vars.groundText, PLAY_OUTLINE_ALPHA),
     chip: rgba(vars.groundText, PLAY_CHIP_LINE_ALPHA),
   });
+}
+
+export type ArcadeSelectedColours = { readonly fill: string; readonly ink: string };
+
+/** Arcade's selected row or choice: the highlight, and the text on it. */
+export function arcadeSelectedColours(vars: Pick<ArcadeVars, 'hl' | 'hlt'>): ArcadeSelectedColours {
+  return Object.freeze({ fill: vars.hl, ink: vars.hlt });
 }
 
 /** The colour of HUD's glow round a selected panel, in the look's accent. */

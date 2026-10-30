@@ -6,7 +6,13 @@
 import { describe, expect, it } from 'vitest';
 
 import { EMBER } from '../../../core/frozen/lib/looks/presets';
-import { EDGE_ALPHAS, edgeColours, type EdgeColourSource } from '../edge-colours';
+import { ARCADE_DEFAULT_PICKS, arcadeVars } from '../arcade';
+import {
+  EDGE_ALPHAS,
+  arcadeEdgeSource,
+  edgeColours,
+  type EdgeColourSource,
+} from '../edge-colours';
 import { playVars } from '../play';
 
 function emberSource(shade: boolean): EdgeColourSource {
@@ -47,5 +53,22 @@ describe('the edge colours', () => {
       commandLine: 0.16,
       commandShade: 0.58,
     });
+  });
+});
+
+describe("Arcade's edge ground", () => {
+  it('is the window, its text, the page sunk in as the command box and HP red', () => {
+    const source = arcadeEdgeSource(arcadeVars(ARCADE_DEFAULT_PICKS));
+    expect(source).toEqual({
+      ground: '#15291B',
+      text: '#EEE7D2',
+      surface: '#0D1710',
+      error: '#FF6E61',
+      shade: false,
+    });
+    const colours = edgeColours(source);
+    expect(colours.commandFill).toBe('#0D1710');
+    expect(colours.snagLine).toBe('rgba(255,110,97,0.4)');
+    expect(colours.commandLine).toBe('rgba(238,231,210,0.16)');
   });
 });

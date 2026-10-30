@@ -8,11 +8,17 @@
 //           text2 and the line
 //   Play    the look's --pl-* variables: the accent, its line and fill, the capped glow, the
 //           ground's text, text2 and line
+//   Arcade  the palette's: the rings in ac at the vendored line and fill alphas, the core filled
+//           with the window (win) for the sprite to sit in, tx and tx2, the window border bd; no
+//           glow (Arcade draws none)
 //   Studio  ink and orange (D60): the accent (--accent) at the vendored line and fill alphas, the
 //   themes  foreground, the muted foreground and the border; no glow (Studio draws none)
+//
+// Only Arcade fills the core; every other style leaves it clear (the accent at 0).
 
 import { ACCENT_FILL_ALPHA, ACCENT_LINE_ALPHA, rgba } from '../../core/web/lib/look-kit/css';
 import type { ResolvedStyle } from '../provider/resolve';
+import type { ArcadeVars } from './arcade';
 import type { HudVars } from './hud';
 import type { PlayVars } from './play';
 import { oncePerObject } from './style-tokens';
@@ -35,10 +41,12 @@ export type VoicePaint = {
   readonly text2: string;
   /** TYPE's and STOP's 1 pt borders. */
   readonly line: string;
+  /** The disc inside the rings: Arcade's window; the accent at 0 where the style fills none. */
+  readonly coreFill: string;
 };
 
 /** What the paint reads of the resolved style. */
-export type VoiceStyle = Pick<ResolvedStyle, 'tokens' | 'hud' | 'play'>;
+export type VoiceStyle = Pick<ResolvedStyle, 'tokens' | 'hud' | 'play' | 'arcade'>;
 
 function fromHud(vars: HudVars): VoicePaint {
   return Object.freeze({
@@ -50,6 +58,7 @@ function fromHud(vars: HudVars): VoicePaint {
     text: vars.text,
     text2: vars.text2,
     line: vars.line,
+    coreFill: clearOf(vars.accent),
   });
 }
 
@@ -63,6 +72,21 @@ function fromPlay(vars: PlayVars): VoicePaint {
     text: vars.groundText,
     text2: vars.groundText2,
     line: vars.groundLine,
+    coreFill: clearOf(vars.accent),
+  });
+}
+
+function fromArcade(vars: ArcadeVars): VoicePaint {
+  return Object.freeze({
+    accent: vars.ac,
+    accentInk: vars.aci,
+    accentLine: rgba(vars.ac, ACCENT_LINE_ALPHA),
+    accentFill: rgba(vars.ac, ACCENT_FILL_ALPHA),
+    glow: clearOf(vars.ac),
+    text: vars.tx,
+    text2: vars.tx2,
+    line: vars.bd,
+    coreFill: vars.win,
   });
 }
 
@@ -76,6 +100,7 @@ function fromStudio(colours: Colours): VoicePaint {
     text: colours.foreground,
     text2: colours.mutedForeground,
     line: colours.border,
+    coreFill: clearOf(colours.accent),
   });
 }
 
@@ -86,11 +111,13 @@ export function clearOf(colour: string): string {
 
 const hudPaint = oncePerObject(fromHud);
 const playPaint = oncePerObject(fromPlay);
+const arcadePaint = oncePerObject(fromArcade);
 const studioPaint = oncePerObject(fromStudio);
 
 /** The core's colours under the resolved style (once per variables object). */
 export function voicePaint(style: VoiceStyle): VoicePaint {
   if (style.hud) return hudPaint(style.hud);
   if (style.play) return playPaint(style.play);
+  if (style.arcade) return arcadePaint(style.arcade);
   return studioPaint(style.tokens.colours);
 }

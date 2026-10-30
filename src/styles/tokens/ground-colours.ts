@@ -11,11 +11,14 @@
 //         went wrong's coral and the snag layer are the error, never past snagGlowAlpha (glowSnag).
 //   HUD   its variables' glow (the accent at the capped glow) with the accent at 0 for the edge,
 //         the grid and the README's scanline.
+//   Arcade  the palette's page, flat (no glow, no grid), and the scanlines' colour, which Arcade
+//         draws inside its windows only, behind their content: never a layer over the AI label.
 
 import { GLOW_SCALE, rgba } from '../../core/web/lib/look-kit/css';
 import { safeGlow, safeGlowAlpha, snagGlowAlpha } from '../../core/frozen/lib/looks/engine';
 import { EMBER } from '../../core/frozen/lib/looks/presets';
 import type { Look } from '../../core/frozen/lib/looks/types';
+import type { ArcadeVars } from './arcade';
 import type { HudVars } from './hud';
 import type { PlayVars } from './play';
 
@@ -78,4 +81,14 @@ export function hudGroundColours(vars: HudVars): HudGroundColours {
     grid: vars.grid,
     scanline: vars.scanline,
   });
+}
+
+export type ArcadeGroundColours = {
+  readonly page: string;
+  readonly scanline: string;
+};
+
+/** Arcade's ground: the page behind a screen, and the scanlines a window draws behind its text. */
+export function arcadeGroundColours(vars: Pick<ArcadeVars, 'page' | 'scan'>): ArcadeGroundColours {
+  return Object.freeze({ page: vars.page, scanline: vars.scan });
 }

@@ -4,8 +4,11 @@ import { rgba } from '../../../core/web/lib/look-kit/css';
 import { safeGlowAlpha, snagGlowAlpha } from '../../../core/frozen/lib/looks/engine';
 import { AURORA, DAYLIGHT, EMBER, PRESETS } from '../../../core/frozen/lib/looks/presets';
 import { HUD_PRESET_LOOKS } from '../../hud/look-schema';
+import { ARCADE_DEFAULT_PICKS, arcadeVars } from '../arcade';
+import { PALETTE_IDS } from '../arcade-catalogue';
 import {
   EMBER_GLOW_ALPHA,
+  arcadeGroundColours,
   hudGroundColours,
   playGlowAlpha,
   playLightStops,
@@ -80,5 +83,18 @@ describe('hudGroundColours', () => {
         scanline: vars.scanline,
       });
     }
+  });
+});
+
+describe('arcadeGroundColours', () => {
+  it("is the palette's page and its scanlines' colour, for every palette", () => {
+    for (const palette of PALETTE_IDS) {
+      const vars = arcadeVars({ ...ARCADE_DEFAULT_PICKS, palette });
+      expect(arcadeGroundColours(vars), palette).toEqual({ page: vars.page, scanline: vars.scan });
+    }
+    expect(arcadeGroundColours(arcadeVars(ARCADE_DEFAULT_PICKS))).toEqual({
+      page: '#0D1710',
+      scanline: 'rgba(0,0,0,0.14)',
+    });
   });
 });

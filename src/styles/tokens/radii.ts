@@ -2,7 +2,8 @@
 // the input field's, which Ember rounds past its buttons. Studio is the handoff's set unchanged
 // (6 buttons and inputs); Play is Ember's (6 paper · 8 tool line · 10 button · 14 card · pill
 // chips) with its 12 pt message field; HUD is square everywhere (its README: circles only for the
-// core, gauges and the donut, which Skia draws).
+// core, gauges and the donut, which Skia draws); Arcade is square everywhere too (its windows,
+// chips and buttons are pixel boxes; the voice core's rings are Skia's).
 
 import type { BuiltInStyleId } from '../registry/style-id';
 import { STUDIO_RADII } from './studio';
@@ -45,9 +46,22 @@ const HUD: StyleRadii = Object.freeze({
   full: 0,
 });
 
+const ARCADE: StyleRadii = Object.freeze({
+  tag: 0,
+  chip: 0,
+  segment: 0,
+  control: 0,
+  input: 0,
+  card: 0,
+  panel: 0,
+  pill: 0,
+  sheet: 0,
+  full: 0,
+});
+
 export const STYLE_RADII = Object.freeze({
   studio: STUDIO,
   play: PLAY,
   hud: HUD,
-  arcade: STUDIO, // ARCADE_STAND_IN US-022b
+  arcade: ARCADE,
 }) satisfies Readonly<Record<BuiltInStyleId, StyleRadii>>;

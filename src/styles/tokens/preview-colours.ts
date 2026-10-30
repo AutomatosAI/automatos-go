@@ -3,9 +3,11 @@
 // so every colour the previews paint comes from this directory (D-TOKENS): Auto's ring glow (his
 // light at 0.35, Mascot.dc.html), the clear far stop of Play's page glow (the accent at 0) and
 // HUD's core() rings in the look's accent (the outer ring at 0.22, the dashed at 0.4, the disc at
-// 0.28).
+// 0.28) and Arcade's small handheld (the page, a window in its border with the palette's shadow,
+// a line of text and the accent's ▶ cursor).
 
 import { rgba } from '../../core/web/lib/look-kit/css';
+import type { ArcadeVars } from './arcade';
 
 /** The previews' alphas, each named for what it paints. */
 export const PREVIEW_ALPHAS = Object.freeze({
@@ -44,5 +46,28 @@ export function coreRingColours(accent: string): CoreRingColours {
     outer: rgba(accent, a.coreOuter),
     dashed: rgba(accent, a.coreDashed),
     disc: rgba(accent, a.coreDisc),
+  });
+}
+
+export type ArcadePreviewColours = {
+  readonly screen: string;
+  readonly window: string;
+  readonly frame: string;
+  readonly shadow: string;
+  readonly text: string;
+  readonly cursor: string;
+};
+
+/** Arcade's card in the picker, in the palette's own colours. */
+export function arcadePreviewColours(
+  vars: Pick<ArcadeVars, 'page' | 'win' | 'bd' | 'sh' | 'tx' | 'ac'>,
+): ArcadePreviewColours {
+  return Object.freeze({
+    screen: vars.page,
+    window: vars.win,
+    frame: vars.bd,
+    shadow: vars.sh,
+    text: vars.tx,
+    cursor: vars.ac,
   });
 }

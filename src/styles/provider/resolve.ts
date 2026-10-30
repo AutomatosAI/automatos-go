@@ -8,7 +8,7 @@
 //   Studio  the scheme's tokens (System → the phone's appearance)
 //   Play    the look's ground decides the tone; the scheme does not apply (as on the web)
 //   HUD     always dark
-//   Arcade  Studio's paint until Arcade's palettes and looks land (US-022b, US-022c)
+//   Arcade  Studio's paint until Arcade's look reaches the input (US-022c; its palettes are tokens)
 //   theme   the Studio layout with the theme's painting, or Studio's own while none is cached; its
 //           fonts once they are loaded (themes/fonts.ts), Studio's faces until then
 
@@ -17,6 +17,7 @@ import { HUD_INTERFACE, type HudLook } from '../hud/look-schema';
 import { styleEntry } from '../registry/registry';
 import { layoutOf, type BuiltInStyleId, type Layout, type StyleChoice } from '../registry/style-id';
 import { resolveScheme, type SystemScheme, type ThemeChoice } from '../theme-choice';
+import type { ArcadeVars } from '../tokens/arcade';
 import { HUD_TONE, hudVars, type HudVars } from '../tokens/hud';
 import { playTone, playVars, type PlayVars } from '../tokens/play';
 import { STYLE_RADII, type StyleRadii } from '../tokens/radii';
@@ -78,6 +79,8 @@ export type ResolvedStyle = {
   /** HUD only: the look, and the README's derived variables for HUD's own components. */
   readonly hudLook?: HudLook;
   readonly hud?: HudVars;
+  /** Arcade only: the palette's variables for Arcade's own components (painted from US-022c). */
+  readonly arcade?: ArcadeVars;
   readonly motion: StyleMotion;
   readonly mascot: MascotSource;
 };
