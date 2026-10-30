@@ -14,8 +14,10 @@ import { CHAT_TURN_CONNECT_TIMEOUT_MS, STREAM_CONNECT_TIMEOUT_MS } from '../../a
 import { ApiError } from '../../api/errors';
 import type { StreamingResponse, TransportRequest } from '../../api/transport-types';
 import type { Frame } from '../../core/ai-sdk-stream';
+import { queryKeys } from '../../api/query-keys';
 import {
   HISTORY_PAGE_SIZE,
+  agentsQuery,
   cancelTurn,
   fetchAgents,
   fetchChat,
@@ -216,6 +218,19 @@ describe('fetchAgents', () => {
     });
     await expect(fetchAgents(client)).resolves.toEqual([
       { id: 1, name: 'Auto', agent_type: null, description: null, is_default: true },
+    ]);
+    expect(firstCall(transport).url).toBe(`${API}/api/chat/agents`);
+  });
+});
+
+describe('agentsQuery', () => {
+  it('reads the agents under the chat’s own key', async () => {
+    const { transport, client } = answering({ agents: [{ id: 4, name: 'Scout' }] });
+    const query = agentsQuery(client);
+    expect(query.queryKey).toEqual(queryKeys.chat.agents());
+    const queryFn = query.queryFn as (context: { signal: AbortSignal }) => Promise<unknown>;
+    await expect(queryFn({ signal: new AbortController().signal })).resolves.toEqual([
+      { id: 4, name: 'Scout', agent_type: null, description: null, is_default: false },
     ]);
     expect(firstCall(transport).url).toBe(`${API}/api/chat/agents`);
   });

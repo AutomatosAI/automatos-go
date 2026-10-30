@@ -1,10 +1,11 @@
 // Arcade's home (PRD-001 §4.6.1 D-ARC-6, US-022g; README 'Pages', the 'Phone 390' handheld and the
 // design kit's chat/chat-view.tsx): the handheld over A2's one thread, talking to the same Auto as
 // Studio's home, with the hooks HUD's home uses. Top to bottom in the console body: the status bar
-// (Auto's mark, today's counters, the pause control), the story window (the AI label, then YOU and
-// AUTO lines, ★ for what a turn did, ITEM RECEIVED for a Deliverable, A2's own cards under '! A
-// choice awaits'), the dialogue window (Auto's portrait in his turn's state, his newest reply typing
-// out), then the controls: the D-pad and the voice surround.
+// (Auto's mark, today's counters, the pause control), the party strip right under it (US-022l: the
+// chat's agents, each its robot, name and state; nothing with no agents), the story window (the AI
+// label, then YOU and AUTO lines, ★ for what a turn did, ITEM RECEIVED for a Deliverable, A2's own
+// cards under '! A choice awaits'), the dialogue window (Auto's portrait in his turn's state, his
+// newest reply typing out), then the controls: the D-pad and the voice surround.
 //   TYPE in the dialogue window opens the Sheet HUD's home uses: A2's discussion bar for a ticket and
 // A2's Composer (the viewer's read-only copy comes with it, D17); sending is A2's sendMessage and
 // closes the sheet; Auto listens while it is open. STOP shows while Auto answers or the voice
@@ -29,12 +30,13 @@ import { ReportSheet, Screen, Sheet } from '../../ui';
 import { useArcadeHomeVoice, type ArcadeHomeVoice } from '../../voice/home/use-arcade-home-voice';
 import { ArcadeControls } from '../arcade/home/ArcadeControls';
 import { StoryWindow } from '../arcade/home/StoryWindow';
-import { ArcadeButton, DialogueWindow, StatusBar } from '../arcade/parts';
+import { ArcadeButton, DialogueWindow, PartyStrip, StatusBar } from '../arcade/parts';
 import { portraitState } from '../arcade/sprite/turn-state';
 import { ARCADE_HOME_COPY } from '../strings';
 import {
   useArcadeComposer,
   useArcadeCounters,
+  useArcadeParty,
   useArcadeStory,
   useDialogueSay,
   useOneShotEnd,
@@ -79,6 +81,7 @@ export function ArcadeHome({ chatId, ticketId = null }: ArcadeHomeProps) {
   const { report, sheet } = useMessageReport();
   const composer = useArcadeComposer(home, voice.typed);
   const counters = useArcadeCounters(needsYou.query.data ? needsYou.total : null);
+  const party = useArcadeParty(needsYou.rows);
   const story = useArcadeStory(home, report);
   const say = useDialogueSay(state);
   const onPad = usePadPress(menu.open);
@@ -86,7 +89,10 @@ export function ArcadeHome({ chatId, ticketId = null }: ArcadeHomeProps) {
   return (
     <Screen ground="chat">
       <ScrollView contentContainerStyle={styles.console} keyboardShouldPersistTaps="handled">
-        <StatusBar counters={counters} />
+        <View>
+          <StatusBar counters={counters} />
+          <PartyStrip members={party} />
+        </View>
         <View style={styles.screen}>
           <StoryWindow
             entries={story.entries}

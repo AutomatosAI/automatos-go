@@ -1,14 +1,32 @@
-// What PixelSprite draws (D-ARC-5, D-TOKENS): the catalogue's sprite colours by the palette's art
-// (Handheld's shades in Handheld, the bronze robot on the four dark palettes), 32 sprite pixels at
-// the look's pixelScale (the portrait twice that), and a frame's runs as whole-point rects grouped
-// by colour that cover every drawn pixel exactly once.
+// What PixelSprite and AgentAvatar draw (D-ARC-5, D-ARC-6, D-TOKENS): the catalogue's sprite
+// colours by the palette's art (Handheld's shades in Handheld, the bronze robot on the four dark
+// palettes), 32 sprite pixels at the look's pixelScale (the portrait twice that), a frame's runs as
+// whole-point rects grouped by colour that cover every drawn pixel exactly once, and the party's
+// robots in AGENT_COLOURS by their place in the roster, 32 points at every scale.
 
 import { describe, expect, it } from 'vitest';
 
-import { PALETTE_IDS, SPRITE_COLOURS, SPRITE_KEYS } from '../../../tokens/arcade-catalogue';
+import {
+  AGENT_COLOURS,
+  PALETTE_IDS,
+  SPRITE_COLOURS,
+  SPRITE_KEYS,
+} from '../../../tokens/arcade-catalogue';
+import { AGENT_ART } from '../agents-icons';
 import { AUTO_SIZE } from '../auto-sprite';
 import { frameAt } from '../clock';
-import { spriteColours, spriteLayers, spritePixel, spriteSide } from '../paint';
+import {
+  AGENT_KEYS,
+  AGENT_PIXEL,
+  AGENT_SIDE,
+  agentColours,
+  agentLayers,
+  agentLook,
+  spriteColours,
+  spriteLayers,
+  spritePixel,
+  spriteSide,
+} from '../paint';
 import { SPRITE_STATES } from '../states';
 
 describe("the sprite's colours", () => {
@@ -70,4 +88,41 @@ describe("a frame's layers", () => {
       });
     },
   );
+});
+
+describe('the party’s robots (D-ARC-6)', () => {
+  it('cycle the four robots by place in the roster', () => {
+    expect([0, 1, 2, 3, 4, 5, 9].map(agentLook)).toEqual([0, 1, 2, 3, 0, 1, 1]);
+    expect(agentLook(-1)).toBe(0);
+  });
+
+  it('take AGENT_COLOURS by place, the rest the palette’s sprite colours', () => {
+    const sprite = SPRITE_COLOURS.bronze;
+    expect(agentColours({ palette: 'overworld' }, 5)).toEqual({
+      body: AGENT_COLOURS.bronze[1][0],
+      shade: AGENT_COLOURS.bronze[1][1],
+      crest: sprite.c,
+      o: sprite.o,
+      v: sprite.v,
+      e: sprite.e,
+    });
+    expect(agentColours({ palette: 'handheld' }, 2).body).toBe(AGENT_COLOURS.shades[2][0]);
+  });
+
+  it('are 32 points at every scale, every drawn pixel covered once on whole points', () => {
+    expect(AGENT_SIDE).toBe(32);
+    [0, 1, 2, 3].forEach((index) => {
+      const runs = AGENT_ART[index];
+      const layers = agentLayers({ palette: 'neon' }, index);
+      const drawn = runs.reduce((sum, run) => sum + run.width, 0);
+      const rects = layers.flatMap((layer) => layer.rects);
+      const area = rects.reduce((sum, rect) => sum + rect.width * rect.height, 0);
+      expect(area).toBe(drawn * AGENT_PIXEL * AGENT_PIXEL);
+      expect(layers.map((layer) => layer.key)).toEqual(
+        AGENT_KEYS.filter((key) => runs.some((run) => run.key === key)),
+      );
+      const colours = agentColours({ palette: 'neon' }, index);
+      layers.forEach((layer) => expect(layer.colour).toBe(colours[layer.key]));
+    });
+  });
 });

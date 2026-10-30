@@ -99,6 +99,7 @@ describe('the pure modules (D-SHAPE)', () => {
     'clock.ts',
     'turn-state.ts',
     'paint.ts',
+    'agents-icons.ts',
     '../motion-pause.ts',
   ];
   const IMPURE = /from '(react|react-native[^']*|expo[^']*|@shopify\/react-native-skia)'/;

@@ -1,25 +1,30 @@
 // Arcade's home in React (US-022g): the wiring arcade-home.ts and arcade-story.ts decide for. The
 // counters read numbers the app already fetches (needs-you's one number, the Board's query the
-// Command Centre makes; no new endpoint, no fetch outside src/api); the dialogue remembers which
-// turns typed on this screen (withTyped, as useShelf remembers the Deliverables); the D-pad pushes
-// the routes padAction names; TYPE's sheet is the composer, so opening it is Auto's composer focus
-// (typingEvent) and closing it the blur; a sprite has no clip boundary, so a one-shot (hello,
-// celebrate) ends on its timer (turn-state.ts oneShotEndMs); the story is A2's rows with the
-// Deliverables this conversation made placed in them (shelf.ts), A2's Try again, cards and links.
+// Command Centre makes; no new endpoint, no fetch outside src/api); the party (US-022l, party.ts)
+// is the chat's agents read (its own query, GET /api/chat/agents) with needs-you's rows and the
+// same Board query; the dialogue remembers which turns typed on this screen (withTyped, as useShelf
+// remembers the Deliverables); the D-pad pushes the routes padAction names; TYPE's sheet is the
+// composer, so opening it is Auto's composer focus (typingEvent) and closing it the blur; a sprite
+// has no clip boundary, so a one-shot (hello, celebrate) ends on its timer (turn-state.ts
+// oneShotEndMs); the story is A2's rows with the Deliverables this conversation made placed in
+// them (shelf.ts), A2's Try again, cards and links.
 
 import { useQuery } from '@tanstack/react-query';
 import { usePathname, useRouter } from 'expo-router';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
+import type { NeedsYouRows } from '../../api/needs-you';
 import { useApiClient } from '../../app-state/session';
 import { useFollowLink, type FollowLink } from '../../chat/components/follow-link';
 import type { SettleCard } from '../../chat/cards/model';
 import { reportTarget, type ThreadReport } from '../../chat/report/report';
 import type { ChatFile } from '../../chat/request';
+import { agentsQuery } from '../../chat/api';
 import { LIVE_AUTO_KEY, retryInput, threadRows } from '../../chat/view-model';
 import { boardQuery } from '../../cc/board/api';
 import type { ThreadState } from '../../chat/controller/thread';
 import type { ThreadView } from '../../chat/controller/use-thread';
+import { partyOf, type PartyMember } from '../arcade/home/party';
 import type { CounterValues } from '../arcade/parts/counters';
 import type { DPadId } from '../arcade/parts/pad-grid';
 import { oneShotEndMs, oneShotEnded, portraitState, typingEvent } from '../arcade/sprite/turn-state';
@@ -35,6 +40,14 @@ export function useArcadeCounters(needs: number | null): CounterValues {
   const client = useApiClient();
   const board = useQuery(boardQuery(client)).data?.tasks ?? null;
   return useMemo(() => arcadeCounters({ needs, board }), [needs, board]);
+}
+
+/** The party under the status bar: the chat's agents, each in its state; none before the read. */
+export function useArcadeParty(needsYou: NeedsYouRows): readonly PartyMember[] {
+  const client = useApiClient();
+  const agents = useQuery(agentsQuery(client)).data ?? null;
+  const board = useQuery(boardQuery(client)).data?.tasks ?? null;
+  return useMemo(() => partyOf({ agents, needsYou, board }), [agents, needsYou, board]);
 }
 
 /** What the dialogue says, remembering the turns this screen saw live. */

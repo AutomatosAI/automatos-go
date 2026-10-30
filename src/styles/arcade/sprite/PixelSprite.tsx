@@ -1,11 +1,12 @@
 // Auto as Arcade's pixel sprite on screen (PRD-001 §4.6.1, D-ARC-5; the kit's art/pixel-art.tsx
-// AutoSprite, ported): Skia draws the frame's runs as rects, one path per colour, with no
-// antialiasing, so every sprite pixel is a whole number of points and stays crisp at every scale.
-// 32 sprite pixels at the look's pixelScale (the portrait twice that), in the palette's sprite
-// colours (Handheld's shades in Handheld). The state's loop steps on the shared Arcade clock
-// (SPRITE_TICKS) while Arcade moves; under Reduce Motion, while paused (use-arcade-motion.ts) or
-// when `still`, it shows frame 1 and does not listen to the clock. With a label it is an image with
-// that name; without one it is decoration VoiceOver skips (the words around it say the state).
+// AutoSprite and PixelArt, ported): Skia draws a picture's runs as rects, one path per colour, with
+// no antialiasing, so every pixel is a whole number of points and stays crisp at every scale
+// (PixelArt, which the party's robots share: AgentAvatar.tsx). 32 sprite pixels at the look's
+// pixelScale (the portrait twice that), in the palette's sprite colours (Handheld's shades in
+// Handheld). The state's loop steps on the shared Arcade clock (SPRITE_TICKS) while Arcade moves;
+// under Reduce Motion, while paused (use-arcade-motion.ts) or when `still`, it shows frame 1 and
+// does not listen to the clock. With a label a picture is an image with that name; without one it
+// is decoration VoiceOver skips (the words around it say what it shows).
 
 import { Canvas, Path, Skia, type SkPath } from '@shopify/react-native-skia';
 import { memo, useMemo } from 'react';
@@ -21,13 +22,13 @@ import {
   spriteLayers,
   spritePixel,
   spriteSide,
-  type SpriteLayer,
+  type ArtLayer,
   type SpriteView,
 } from './paint';
 import { useTicks } from './use-ticks';
 
 /** One path of filled rects: a Skia path is built imperatively, once per layer. */
-function layerPath(layer: SpriteLayer): SkPath {
+function layerPath(layer: ArtLayer): SkPath {
   const path = Skia.Path.Make();
   layer.rects.forEach((rect) =>
     path.addRect(Skia.XYWHRect(rect.x, rect.y, rect.width, rect.height)),
@@ -35,9 +36,41 @@ function layerPath(layer: SpriteLayer): SkPath {
   return path;
 }
 
-const Layer = memo(function Layer({ layer }: { readonly layer: SpriteLayer }) {
+const Layer = memo(function Layer({ layer }: { readonly layer: ArtLayer }) {
   const path = useMemo(() => layerPath(layer), [layer]);
   return <Path path={path} color={layer.colour} antiAlias={false} />;
+});
+
+export type PixelArtProps = {
+  /** The picture by colour, in points (paint.ts). */
+  readonly layers: readonly ArtLayer[];
+  /** The square's side in points. */
+  readonly side: number;
+  /** Its name for VoiceOver; leave it out where the words around it say it. */
+  readonly label?: string;
+};
+
+/** A pixel picture, crisp: Auto's frames here, the party's robots in AgentAvatar. */
+export const PixelArt = memo(function PixelArt({ layers, side, label }: PixelArtProps) {
+  const size = { width: side, height: side };
+  const named = label !== undefined;
+  return (
+    <View
+      style={size}
+      pointerEvents="none"
+      accessible={named}
+      accessibilityRole={named ? 'image' : undefined}
+      accessibilityLabel={label}
+      accessibilityElementsHidden={!named}
+      importantForAccessibility={named ? 'yes' : 'no-hide-descendants'}
+    >
+      <Canvas style={size}>
+        {layers.map((layer) => (
+          <Layer key={layer.key} layer={layer} />
+        ))}
+      </Canvas>
+    </View>
+  );
 });
 
 export type PixelSpriteProps = {
@@ -60,24 +93,5 @@ export function PixelSprite({ state, view = 'sprite', label, still = false }: Pi
   const pixel = spritePixel(look, view);
   const colours = spriteColours(look);
   const layers = useMemo(() => spriteLayers(frame, colours, pixel), [frame, colours, pixel]);
-  const length = spriteSide(look, view);
-  const side = { width: length, height: length };
-  const named = label !== undefined;
-  return (
-    <View
-      style={side}
-      pointerEvents="none"
-      accessible={named}
-      accessibilityRole={named ? 'image' : undefined}
-      accessibilityLabel={label}
-      accessibilityElementsHidden={!named}
-      importantForAccessibility={named ? 'yes' : 'no-hide-descendants'}
-    >
-      <Canvas style={side}>
-        {layers.map((layer) => (
-          <Layer key={layer.key} layer={layer} />
-        ))}
-      </Canvas>
-    </View>
-  );
+  return <PixelArt layers={layers} side={spriteSide(look, view)} label={label} />;
 }

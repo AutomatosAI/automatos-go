@@ -364,6 +364,21 @@ export const ARCADE_HOME_COPY = Object.freeze({
 });
 
 /**
+ * The party strip under Arcade's status bar (US-022l; the kit's chat/party-rows.ts STATE_WORDS and
+ * the 'Phone 390' PARTY row): each state a glyph and a word, the label face drawing both in
+ * capitals; VoiceOver hears each agent's name and state.
+ */
+export const ARCADE_PARTY_COPY = Object.freeze({
+  title: 'Party',
+  states: Object.freeze({
+    needs: Object.freeze({ glyph: '!', word: 'Needs you' }),
+    working: Object.freeze({ glyph: '●', word: 'Working' }),
+    ready: Object.freeze({ glyph: '—', word: 'Ready' }),
+  }),
+  memberLabel: (name: string, word: string) => `${name}, ${word.toLowerCase()}`,
+});
+
+/**
  * HUD's Looks drawer (US-018c, 'Automatos Command HUD.dc.html'): what it draws, in the drawing's
  * capitals, and the option names its script gives; what VoiceOver hears, in sentence case. The
  * sheet a long press opens, the refusals and the glow's words are Play's (PLAY_LOOK_COPY).
