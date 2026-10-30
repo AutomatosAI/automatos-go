@@ -1,13 +1,15 @@
 // Each style's whole token set (Tokens, types.ts): the colours a look paints (play.ts, hud.ts,
-// arcade.ts, or an installed theme's, US-016i) with that style's radii (radii.ts), the foundation's spacing,
-// shadows and type scale, and the chat thread's paint derived from those colours (thread.ts), so
-// every shared screen reads Play, HUD and Arcade through the same accessor it reads Studio by. One frozen
+// arcade.ts, candy.ts, or an installed theme's, US-016i) with that style's radii (radii.ts, or
+// Candy's from the look's Roundness), the foundation's spacing, shadows and type scale, and the
+// chat thread's paint derived from those colours (thread.ts), so every shared screen reads Play,
+// HUD, Arcade and Candy through the same accessor it reads Studio by. One frozen
 // value per look (or painting) object, so a screen's memoised styles hold until the look changes.
 // Studio's own two sets stay studio.ts's (studioTokens), unchanged.
 
 import type { Look } from '../../core/frozen/lib/looks/types';
 import { STUDIO_TYPE } from '../type';
 import { arcadeTokens, arcadeTone, type ArcadePaintPicks } from './arcade';
+import { candyRadii, candyTokens, candyTone, type CandyPaintPicks } from './candy';
 import { HUD_TONE, hudTokens, type HudPaintPicks } from './hud';
 import { playTokens, playTone } from './play';
 import { STYLE_RADII } from './radii';
@@ -57,6 +59,12 @@ export const hudStyleTokens: (look: HudPaintPicks) => Tokens = oncePerObject(
 export const arcadeStyleTokens: (look: ArcadePaintPicks) => Tokens = oncePerObject(
   (look: ArcadePaintPicks) =>
     assemble('arcade', arcadeTone(look), arcadeTokens(look), STYLE_RADII.arcade),
+);
+
+/** A Candy look's set: the palette's tone (Night bloom dark, the others light), its Roundness's corners. */
+export const candyStyleTokens: (look: CandyPaintPicks) => Tokens = oncePerObject(
+  (look: CandyPaintPicks) =>
+    assemble('candy', candyTone(look), candyTokens(look), candyRadii(look)),
 );
 
 const painted = new WeakMap<Colours, Partial<Record<ColourScheme, Tokens>>>();

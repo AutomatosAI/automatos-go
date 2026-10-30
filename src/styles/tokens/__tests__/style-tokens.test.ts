@@ -1,4 +1,4 @@
-// Each style's whole token set: Play, HUD and Arcade in the foundation's Tokens shape (Studio's keys, the
+// Each style's whole token set: Play, HUD, Arcade and Candy in the foundation's Tokens shape (Studio's keys, the
 // style's radii, the foundation's spacing, shadows and type, the thread paint from the look's
 // colours), through the same tokensFor accessor as Studio, one object per look.
 
@@ -8,6 +8,7 @@ import { DAYLIGHT, DEFAULT_LOOK, EMBER } from '../../../core/frozen/lib/looks/pr
 import { HUD_DEFAULT_LOOK, HUD_PRESET_LOOKS } from '../../hud/look-schema';
 import { STUDIO_TYPE } from '../../type';
 import { ARCADE_DEFAULT_PICKS, arcadeTokens } from '../arcade';
+import { CANDY_DEFAULT_PICKS, candyRadii, candyTokens } from '../candy';
 import { HUD_TONE, hudTokens } from '../hud';
 import { STYLE_IDS, tokensFor } from '../index';
 import { playTokens } from '../play';
@@ -21,6 +22,7 @@ import {
 } from '../studio';
 import {
   arcadeStyleTokens,
+  candyStyleTokens,
   hudStyleTokens,
   paintedStudioTokens,
   playStyleTokens,
@@ -35,13 +37,14 @@ describe('the accessor knows every built-in style', () => {
     expect([...STYLE_IDS].sort()).toEqual(['arcade', 'candy', 'hud', 'play', 'studio']);
   });
 
-  // CANDY_STAND_IN US-023b: Candy's own palettes replace Studio's set here
-  it("gives Candy Studio's set under Candy's name, the same object each time", () => {
+  it("gives Candy its default look, Blush, in the palette's tone whatever the scheme", () => {
     for (const scheme of ['light', 'dark'] as const) {
       const tokens = tokensFor('candy', scheme);
+      expect(tokens).toBe(candyStyleTokens(CANDY_DEFAULT_PICKS));
       expect(tokens.style).toBe('candy');
-      expect(tokens.colours).toBe(studioTokens(scheme).colours);
-      expect(tokensFor('candy', scheme)).toBe(tokens);
+      expect(tokens.scheme).toBe('light');
+      expect(tokens.colours).toEqual(candyTokens(CANDY_DEFAULT_PICKS));
+      expect(tokens.colours).not.toEqual(studioTokens(scheme).colours);
       expect(Object.isFrozen(tokens)).toBe(true);
     }
   });
@@ -73,7 +76,7 @@ describe('the accessor knows every built-in style', () => {
   });
 });
 
-describe("Play's, HUD's and Arcade's sets have the foundation's shape", () => {
+describe("Play's, HUD's, Arcade's and Candy's sets have the foundation's shape", () => {
   it.each([EMBER, DAYLIGHT])('$name', (look) => {
     const tokens = playStyleTokens(look);
     expect(Object.keys(tokens).sort()).toEqual(STUDIO_KEYS);
@@ -105,6 +108,18 @@ describe("Play's, HUD's and Arcade's sets have the foundation's shape", () => {
     expect(tokens.radii).toBe(STYLE_RADII.arcade);
     expect(tokens.type).toBe(STUDIO_TYPE);
     expect(tokens.thread).toEqual(threadPaint(tokens.colours, STUDIO_THREAD.dark.sail));
+  });
+
+  it("gives Candy the same shape, its corners from the look's Roundness", () => {
+    const tokens = candyStyleTokens(CANDY_DEFAULT_PICKS);
+    expect(Object.keys(tokens).sort()).toEqual(STUDIO_KEYS);
+    expect(Object.keys(tokens.colours).sort()).toEqual(COLOUR_KEYS);
+    expect(tokens.radii).toEqual(STYLE_RADII.candy);
+    expect(candyStyleTokens({ ...CANDY_DEFAULT_PICKS, roundness: '40' }).radii).toEqual(
+      candyRadii({ roundness: '40' }),
+    );
+    expect(tokens.type).toBe(STUDIO_TYPE);
+    expect(tokens.thread).toEqual(threadPaint(tokens.colours, STUDIO_THREAD.light.sail));
   });
 
   it('builds one set per look object', () => {

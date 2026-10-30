@@ -13,12 +13,15 @@
 //         the grid and the README's scanline.
 //   Arcade  the palette's page, flat (no glow, no grid), and the scanlines' colour, which Arcade
 //         draws inside its windows only, behind their content: never a layer over the AI label.
+//   Candy   the palette's page, and on Vivid the aura's three blobs (tokens/candy-paint.ts
+//         auraCircles places them); none on Soft and Rich.
 
 import { GLOW_SCALE, rgba } from '../../core/web/lib/look-kit/css';
 import { safeGlow, safeGlowAlpha, snagGlowAlpha } from '../../core/frozen/lib/looks/engine';
 import { EMBER } from '../../core/frozen/lib/looks/presets';
 import type { Look } from '../../core/frozen/lib/looks/types';
 import type { ArcadeVars } from './arcade';
+import { candyPalette, type CandyPaintPicks } from './candy';
 import type { HudVars } from './hud';
 import type { PlayVars } from './play';
 
@@ -91,4 +94,18 @@ export type ArcadeGroundColours = {
 /** Arcade's ground: the page behind a screen, and the scanlines a window draws behind its text. */
 export function arcadeGroundColours(vars: Pick<ArcadeVars, 'page' | 'scan'>): ArcadeGroundColours {
   return Object.freeze({ page: vars.page, scanline: vars.scan });
+}
+
+export type CandyGroundColours = {
+  readonly page: string;
+  /** Vivid's blobs at top-right, right-middle and bottom-left; empty on Soft and Rich. */
+  readonly aura: readonly string[];
+};
+
+/** Candy's ground: the page behind a screen, and the aura's blobs behind the home on Vivid. */
+export function candyGroundColours(
+  look: Pick<CandyPaintPicks, 'palette' | 'gradient'>,
+): CandyGroundColours {
+  const { page, blobs } = candyPalette(look.palette).colours;
+  return Object.freeze({ page, aura: look.gradient === 'vivid' ? blobs : Object.freeze([]) });
 }

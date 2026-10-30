@@ -4,10 +4,13 @@
 // light at 0.35, Mascot.dc.html), the clear far stop of Play's page glow (the accent at 0) and
 // HUD's core() rings in the look's accent (the outer ring at 0.22, the dashed at 0.4, the disc at
 // 0.28) and Arcade's small handheld (the page, a window in its border with the palette's shadow,
-// a line of text and the accent's ▶ cursor).
+// a line of text and the accent's ▶ cursor) and Candy's small Today (the page, a window with its
+// hairline, the text, the white figures on the orb and the cards, and the accent; the gradients
+// are tokens/candy-paint.ts's).
 
 import { rgba } from '../../core/web/lib/look-kit/css';
 import type { ArcadeVars } from './arcade';
+import type { CandyVars } from './candy';
 
 /** The previews' alphas, each named for what it paints. */
 export const PREVIEW_ALPHAS = Object.freeze({
@@ -69,5 +72,28 @@ export function arcadePreviewColours(
     shadow: vars.sh,
     text: vars.tx,
     cursor: vars.ac,
+  });
+}
+
+export type CandyPreviewColours = {
+  readonly screen: string;
+  readonly window: string;
+  readonly line: string;
+  readonly text: string;
+  readonly figure: string;
+  readonly accent: string;
+};
+
+/** Candy's card in the picker, in the palette's own colours. */
+export function candyPreviewColours(
+  vars: Pick<CandyVars, 'page' | 'win' | 'line' | 'text' | 'cardInk' | 'accent'>,
+): CandyPreviewColours {
+  return Object.freeze({
+    screen: vars.page,
+    window: vars.win,
+    line: vars.line,
+    text: vars.text,
+    figure: vars.cardInk,
+    accent: vars.accent,
   });
 }

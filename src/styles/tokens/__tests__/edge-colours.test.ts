@@ -7,9 +7,11 @@ import { describe, expect, it } from 'vitest';
 
 import { EMBER } from '../../../core/frozen/lib/looks/presets';
 import { ARCADE_DEFAULT_PICKS, arcadeVars } from '../arcade';
+import { CANDY_DEFAULT_PICKS, candyTokens, candyVars } from '../candy';
 import {
   EDGE_ALPHAS,
   arcadeEdgeSource,
+  candyEdgeSource,
   edgeColours,
   type EdgeColourSource,
 } from '../edge-colours';
@@ -70,5 +72,30 @@ describe("Arcade's edge ground", () => {
     expect(colours.commandFill).toBe('#0D1710');
     expect(colours.snagLine).toBe('rgba(255,110,97,0.4)');
     expect(colours.commandLine).toBe('rgba(238,231,210,0.16)');
+  });
+});
+
+describe("Candy's edge ground", () => {
+  it("is the window, its text, the chip as the command box and Candy's red", () => {
+    const source = candyEdgeSource(candyVars(CANDY_DEFAULT_PICKS), candyTokens(CANDY_DEFAULT_PICKS));
+    expect(source).toEqual({
+      ground: '#FFFFFF',
+      text: '#2A1830',
+      surface: '#FCE8F1',
+      error: '#C02436',
+      shade: false,
+    });
+    const colours = edgeColours(source);
+    expect(colours.commandFill).toBe('#FCE8F1');
+    expect(colours.snagLine).toBe('rgba(192,36,54,0.4)');
+    expect(colours.commandLine).toBe('rgba(42,24,48,0.16)');
+  });
+
+  it("takes Night bloom's dark window and its lighter red", () => {
+    const night = { ...CANDY_DEFAULT_PICKS, palette: 'nightbloom' as const };
+    expect(candyEdgeSource(candyVars(night), candyTokens(night))).toMatchObject({
+      ground: '#22142F',
+      error: '#FF7A88',
+    });
   });
 });

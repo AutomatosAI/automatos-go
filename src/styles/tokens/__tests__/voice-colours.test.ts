@@ -8,12 +8,19 @@ import { rgba } from '../../../core/web/lib/look-kit/css';
 import { HUD, PLAY, PLAY_STYLES, STUDIO_DARK, STUDIO_LIGHT } from '../../dress/__tests__/fixtures';
 import { ARCADE_DEFAULT_PICKS, arcadeVars, type ArcadePaintPicks } from '../arcade';
 import { PALETTE_IDS } from '../arcade-catalogue';
-import { arcadeStyleTokens } from '../style-tokens';
+import { CANDY_DEFAULT_PICKS, candyVars, type CandyPaintPicks } from '../candy';
+import { PALETTE_IDS as CANDY_PALETTE_IDS } from '../candy-catalogue';
+import { arcadeStyleTokens, candyStyleTokens } from '../style-tokens';
 import { clearOf, voicePaint, type VoiceStyle } from '../voice-colours';
 
 /** Arcade as the voice core reads it: the palette's set and its variables. */
 function arcadeStyle(look: ArcadePaintPicks): VoiceStyle {
   return { tokens: arcadeStyleTokens(look), arcade: arcadeVars(look) };
+}
+
+/** Candy as the voice core reads it: the palette's set and its variables. */
+function candyStyle(look: CandyPaintPicks): VoiceStyle {
+  return { tokens: candyStyleTokens(look), candy: candyVars(look) };
 }
 
 describe('the voice core paint', () => {
@@ -75,6 +82,32 @@ describe('the voice core paint', () => {
     expect(paint.coreFill).toBe('#15291B');
   });
 
+  it.each(CANDY_PALETTE_IDS)("takes Candy's palette in Candy: the accent, the cards' starts, a clear core (%s)", (id) => {
+    const look = { ...CANDY_DEFAULT_PICKS, palette: id };
+    const vars = candyVars(look);
+    expect(voicePaint(candyStyle(look))).toEqual({
+      accent: vars.accent,
+      accentInk: vars.accentInk,
+      accentLine: rgba(vars.accent, 0.45),
+      accentFill: rgba(vars.accent, 0.12),
+      glow: clearOf(vars.accent),
+      text: vars.text,
+      text2: vars.quiet,
+      line: vars.line,
+      coreFill: clearOf(vars.accent),
+      gradient: [vars.g1a, vars.g2a, vars.g3a],
+    });
+  });
+
+  it("strokes Lilac's rings violet, blue and pink, or violet three times with One colour", () => {
+    const lilac = { ...CANDY_DEFAULT_PICKS, palette: 'lilac' as const };
+    expect(voicePaint(candyStyle(lilac)).gradient).toEqual(['#8E4AE8', '#2675D3', '#D73178']);
+    const single = { ...lilac, cards: 'single' as const };
+    expect(voicePaint(candyStyle(single)).gradient).toEqual(['#8E4AE8', '#8E4AE8', '#8E4AE8']);
+    expect(voicePaint(arcadeStyle(ARCADE_DEFAULT_PICKS)).gradient).toBeUndefined();
+    expect(voicePaint(STUDIO_LIGHT).gradient).toBeUndefined();
+  });
+
   it.each([STUDIO_LIGHT, STUDIO_DARK])("paints Studio's orange with no glow (%#)", (style) => {
     const { colours } = style.tokens;
     const paint = voicePaint(style);
@@ -96,6 +129,8 @@ describe('the voice core paint', () => {
     expect(voicePaint(HUD)).toBe(voicePaint(HUD));
     const arcade = arcadeStyle(ARCADE_DEFAULT_PICKS);
     expect(voicePaint(arcade)).toBe(voicePaint({ ...arcade }));
+    const candy = candyStyle(CANDY_DEFAULT_PICKS);
+    expect(voicePaint(candy)).toBe(voicePaint({ ...candy }));
   });
 
   it('fades a colour to 0 in its own hue', () => {

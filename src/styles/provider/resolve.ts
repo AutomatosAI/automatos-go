@@ -21,6 +21,7 @@ import { styleEntry } from '../registry/registry';
 import { layoutOf, type BuiltInStyleId, type Layout, type StyleChoice } from '../registry/style-id';
 import { resolveScheme, type SystemScheme, type ThemeChoice } from '../theme-choice';
 import { arcadeTone, arcadeVars, type ArcadeVars } from '../tokens/arcade';
+import type { CandyVars } from '../tokens/candy';
 import { HUD_TONE, hudVars, type HudVars } from '../tokens/hud';
 import { playTone, playVars, type PlayVars } from '../tokens/play';
 import { STYLE_RADII, type StyleRadii } from '../tokens/radii';
@@ -88,6 +89,8 @@ export type ResolvedStyle = {
   /** Arcade only: the look, and its palette's variables for Arcade's own components. */
   readonly arcadeLook?: ArcadeLook;
   readonly arcade?: ArcadeVars;
+  /** Candy only: its palette's variables and card stops for Candy's own components (US-023c fills it). */
+  readonly candy?: CandyVars;
   readonly motion: StyleMotion;
   readonly mascot: MascotSource;
 };

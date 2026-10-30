@@ -36,11 +36,27 @@ describe('STYLE_RADII', () => {
     expect(STYLE_RADII.arcade.input).toBe(0);
   });
 
+  it("rounds Candy by its default look's Roundness: rs 20 for cards, windows and the field, pills round", () => {
+    expect(STYLE_RADII.candy).toEqual({
+      tag: 999,
+      chip: 999,
+      segment: 999,
+      control: 999,
+      input: 20,
+      card: 20,
+      panel: 20,
+      pill: 999,
+      sheet: 20,
+      full: 999,
+    });
+  });
+
   it('names the same radii in every style (Play adds paper), frozen', () => {
     expect(Object.keys(STYLE_RADII).sort()).toEqual([...BUILT_IN_STYLE_IDS].sort());
     expect(Object.keys(STYLE_RADII.studio).sort()).toEqual(NAMES);
     expect(Object.keys(STYLE_RADII.hud).sort()).toEqual(NAMES);
     expect(Object.keys(STYLE_RADII.arcade).sort()).toEqual(NAMES);
+    expect(Object.keys(STYLE_RADII.candy).sort()).toEqual(NAMES);
     expect(Object.keys(STYLE_RADII.play).sort()).toEqual([...NAMES, 'paper'].sort());
     expect(Object.isFrozen(STYLE_RADII)).toBe(true);
     for (const id of BUILT_IN_STYLE_IDS) expect(Object.isFrozen(STYLE_RADII[id])).toBe(true);

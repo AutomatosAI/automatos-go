@@ -3,9 +3,12 @@
 // (6 buttons and inputs); Play is Ember's (6 paper · 8 tool line · 10 button · 14 card · pill
 // chips) with its 12 pt message field; HUD is square everywhere (its README: circles only for the
 // core, gauges and the donut, which Skia draws); Arcade is square everywhere too (its windows,
-// chips and buttons are pixel boxes; the voice core's rings are Skia's).
+// chips and buttons are pixel boxes; the voice core's rings are Skia's); Candy's follow the look's
+// Roundness (tokens/candy.ts candyRadii: rs for cards, windows, sheets and the field, pills round),
+// here its default look's, Blush at 28 (rs 20).
 
 import type { BuiltInStyleId } from '../registry/style-id';
+import { CANDY_DEFAULT_PICKS, candyRadii } from './candy';
 import { STUDIO_RADII } from './studio';
 import type { Radii } from './types';
 
@@ -64,5 +67,5 @@ export const STYLE_RADII = Object.freeze({
   play: PLAY,
   hud: HUD,
   arcade: ARCADE,
-  candy: STUDIO, // CANDY_STAND_IN US-023b
+  candy: candyRadii(CANDY_DEFAULT_PICKS),
 }) satisfies Readonly<Record<BuiltInStyleId, StyleRadii>>;

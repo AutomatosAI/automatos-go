@@ -5,9 +5,12 @@
 // round a selected or live panel ('Automatos Command Pages.dc.html': 0 0 24px -6px at .5). Arcade:
 // a selected row or choice in the palette's highlight with its ink (the kit's looks.module.css
 // '.radio:checked + .choiceFace': --arcade-hl under --arcade-hlt), a pair the kit holds at AA.
+// Candy: a selected row or choice in the palette's accent with its ink (the kit's looks.module.css
+// '.hiddenInput:checked + .segmentFace'), a pair the kit holds at AA too.
 
 import { rgba } from '../../core/web/lib/look-kit/css';
 import type { ArcadeVars } from './arcade';
+import type { CandyVars } from './candy';
 import type { PlayVars } from './play';
 
 /** Ember's outline button: a 1 pt line of the ground's text at 24 %. */
@@ -32,6 +35,15 @@ export type ArcadeSelectedColours = { readonly fill: string; readonly ink: strin
 /** Arcade's selected row or choice: the highlight, and the text on it. */
 export function arcadeSelectedColours(vars: Pick<ArcadeVars, 'hl' | 'hlt'>): ArcadeSelectedColours {
   return Object.freeze({ fill: vars.hl, ink: vars.hlt });
+}
+
+export type CandySelectedColours = { readonly fill: string; readonly ink: string };
+
+/** Candy's selected row or choice: the accent, and the text on it. */
+export function candySelectedColours(
+  vars: Pick<CandyVars, 'accent' | 'accentInk'>,
+): CandySelectedColours {
+  return Object.freeze({ fill: vars.accent, ink: vars.accentInk });
 }
 
 /** The colour of HUD's glow round a selected panel, in the look's accent. */

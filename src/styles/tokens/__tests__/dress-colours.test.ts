@@ -6,11 +6,13 @@ import { describe, expect, it } from 'vitest';
 
 import { EMBER } from '../../../core/frozen/lib/looks/presets';
 import { ARCADE_DEFAULT_PICKS, arcadeVars } from '../arcade';
+import { CANDY_DEFAULT_PICKS, candyVars } from '../candy';
 import {
   HUD_SELECTED_GLOW,
   PLAY_CHIP_LINE_ALPHA,
   PLAY_OUTLINE_ALPHA,
   arcadeSelectedColours,
+  candySelectedColours,
   hudSelectedGlowColour,
   playDressLines,
 } from '../dress-colours';
@@ -43,5 +45,13 @@ describe('the dress colours', () => {
     const selected = arcadeSelectedColours(arcadeVars(ARCADE_DEFAULT_PICKS));
     expect(selected).toEqual({ fill: '#7FE35C', ink: '#0B1A07' });
     expect(Object.isFrozen(selected)).toBe(true);
+  });
+
+  it("selects in Candy's accent with its ink: Blush's pink under white, Night bloom's under plum", () => {
+    const selected = candySelectedColours(candyVars(CANDY_DEFAULT_PICKS));
+    expect(selected).toEqual({ fill: '#D62F7A', ink: '#FFFFFF' });
+    expect(Object.isFrozen(selected)).toBe(true);
+    const night = candyVars({ ...CANDY_DEFAULT_PICKS, palette: 'nightbloom' });
+    expect(candySelectedColours(night)).toEqual({ fill: '#FF6FB5', ink: '#2A0618' });
   });
 });

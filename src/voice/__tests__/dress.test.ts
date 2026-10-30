@@ -206,7 +206,8 @@ describe('no colour of its own (D-TOKENS)', () => {
         ...Object.values(style.play ?? {}),
         ...Object.values(style.hud ?? {}),
         ...Object.values(style.arcade ?? {}),
-        ...Object.values(voicePaint(style)),
+        // Candy's gradient is a list of colours: each one counts
+        ...Object.values(voicePaint(style)).flat(),
       ]);
       const dress = voiceDress(style);
       const colours = [dress.ringLine, ...accentOnly(dress), dress.chipLine, dress.coreFill];
