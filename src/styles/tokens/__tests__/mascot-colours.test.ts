@@ -3,7 +3,8 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { RING_GLOW_ALPHA, ringColours } from '../mascot-colours';
+import { SPRITE_COLOURS } from '../arcade-catalogue';
+import { RING_GLOW_ALPHA, arcadeSpriteColours, ringColours } from '../mascot-colours';
 
 describe('ringColours', () => {
   it('glows at 0.35 of the ring colour', () => {
@@ -19,5 +20,15 @@ describe('ringColours', () => {
     const paints = ringColours('#5E578F');
     expect(paints.glow).toBe('rgba(94,87,143,0.35)');
     expect(Object.isFrozen(paints)).toBe(true);
+  });
+});
+
+describe('arcadeSpriteColours', () => {
+  it("draws the bronze robot on the dark palettes and Handheld's four shades on Handheld", () => {
+    for (const palette of ['overworld', 'dungeon', 'neon', 'nightcity'] as const) {
+      expect(arcadeSpriteColours({ palette }), palette).toBe(SPRITE_COLOURS.bronze);
+    }
+    expect(arcadeSpriteColours({ palette: 'handheld' })).toBe(SPRITE_COLOURS.shades);
+    expect(arcadeSpriteColours({ palette: 'overworld' }).s).toBe('#D86A2B');
   });
 });

@@ -1,19 +1,26 @@
 // resolveStyle (PRD-001 §4.6, D54, D58, D59): Studio by Light / Dark / System and the phone's
-// appearance; Play by its look's ground whatever the scheme; HUD always dark; a theme choice on the
-// Studio layout with its cached painting, or Studio's own while none is; the motion rules
-// (Reduce Motion, HUD's motion knob); where Auto comes from; StyleScope's input.
+// appearance; Play by its look's ground whatever the scheme; HUD always dark; Arcade by its look's
+// palette whatever the scheme; a theme choice on the Studio layout with its cached painting, or
+// Studio's own while none is; the motion rules (Reduce Motion, HUD's motion knob); where Auto
+// comes from; StyleScope's input, which tells a Play, HUD and Arcade look apart.
 
 import { describe, expect, it } from 'vitest';
 
 import { DAYLIGHT, EMBER, OBSIDIAN, PRESETS } from '../../../core/frozen/lib/looks/presets';
+import {
+  ARCADE_DEFAULT_LOOK,
+  ARCADE_PRESET_LOOKS,
+  type ArcadeLook,
+} from '../../arcade/look-schema';
 import { HUD_DEFAULT_LOOK, HUD_PRESET_LOOKS, type HudLook } from '../../hud/look-schema';
 import { builtinChoice, themeChoice, type StyleChoice } from '../../registry/style-id';
 import { THEME_CHOICES, type SystemScheme } from '../../theme-choice';
+import { arcadeTokens, arcadeVars } from '../../tokens/arcade';
 import { hudTokens, hudVars } from '../../tokens/hud';
 import { playTokens, playVars } from '../../tokens/play';
 import { STYLE_RADII } from '../../tokens/radii';
 import { studioTokens } from '../../tokens/studio';
-import { hudStyleTokens, playStyleTokens } from '../../tokens/style-tokens';
+import { arcadeStyleTokens, hudStyleTokens, playStyleTokens } from '../../tokens/style-tokens';
 import type { ColourScheme } from '../../tokens/types';
 import { styleType } from '../../typeface/scale';
 import {
@@ -28,6 +35,7 @@ import {
 const STUDIO = builtinChoice('studio');
 const PLAY = builtinChoice('play');
 const HUD = builtinChoice('hud');
+const ARCADE = builtinChoice('arcade');
 const INSTALL_ID = '3f2b6c1e-9d4a-4b7e-8c21-5a6f0e9d1b42';
 const THEME = themeChoice(INSTALL_ID);
 
@@ -38,6 +46,8 @@ const SCHEME_GRID = THEME_CHOICES.flatMap((studioScheme) =>
 
 const GHOST = HUD_PRESET_LOOKS.find((look) => look.id === 'ghost') as HudLook;
 const HUD_STILL: HudLook = Object.freeze({ ...HUD_DEFAULT_LOOK, motion: 'off' });
+const NEON = ARCADE_PRESET_LOOKS.find((look) => look.id === 'neon') as ArcadeLook;
+const HANDHELD = ARCADE_PRESET_LOOKS.find((look) => look.id === 'handheld') as ArcadeLook;
 
 function input(choice: StyleChoice, overrides: Partial<StyleInput> = {}): StyleInput {
   return Object.freeze({
@@ -81,12 +91,75 @@ describe('Studio follows Light / Dark / System (D59)', () => {
     expect(style.mascot).toBe('none');
     expect(style).not.toHaveProperty('play');
     expect(style).not.toHaveProperty('hud');
+    expect(style).not.toHaveProperty('arcade');
   });
 
   it('keeps the choice it was given and freezes what it returns', () => {
     const style = resolveStyle(input(STUDIO));
     expect(style.choice).toBe(STUDIO);
     expect(Object.isFrozen(style)).toBe(true);
+  });
+});
+
+describe("Arcade paints its look's palette, whatever the scheme says", () => {
+  it.each(SCHEME_GRID)(
+    'Overworld is dark under Studio %s on a %s phone',
+    (studioScheme, systemScheme) => {
+      const style = resolveStyle(
+        input(ARCADE, { studioScheme, systemScheme, arcadeLook: ARCADE_DEFAULT_LOOK }),
+      );
+      expect(style.choice).toBe(ARCADE);
+      expect(style.layout).toBe('arcade');
+      expect(style.tone).toBe('dark');
+      expect(style.tokens).toBe(arcadeStyleTokens(ARCADE_DEFAULT_LOOK));
+      expect(style.tokens.scheme).toBe('dark');
+    },
+  );
+
+  it.each(SCHEME_GRID)(
+    'Handheld is light under Studio %s on a %s phone',
+    (studioScheme, systemScheme) => {
+      const handheld = input(ARCADE, { studioScheme, systemScheme, arcadeLook: HANDHELD });
+      const style = resolveStyle(handheld);
+      expect(style.tone).toBe('light');
+      expect(style.tokens.colours).toEqual(arcadeTokens(HANDHELD));
+    },
+  );
+
+  it.each(ARCADE_PRESET_LOOKS)(
+    "$name carries its look, its palette's variables, its radii and never the bundled Auto",
+    (look) => {
+      const style = resolveStyle(input(ARCADE, { arcadeLook: look, studioScheme: 'light' }));
+      expect(style.arcadeLook).toBe(look);
+      expect(style.arcade).toEqual(arcadeVars(look));
+      expect(style.tokens.colours).toEqual(arcadeTokens(look));
+      expect(style.radii).toBe(STYLE_RADII.arcade);
+      expect(style.type).toBe(styleType({ layout: 'arcade' }));
+      expect(style.mascot).toBe('none');
+      expect(style).not.toHaveProperty('play');
+      expect(style).not.toHaveProperty('hud');
+    },
+  );
+
+  it('paints Overworld while the input carries no Arcade look', () => {
+    const style = resolveStyle(input(ARCADE));
+    expect(style.arcadeLook).toBe(ARCADE_DEFAULT_LOOK);
+    expect(style.tokens).toBe(arcadeStyleTokens(ARCADE_DEFAULT_LOOK));
+  });
+
+  it('hands back the same tokens and variables for the same look object', () => {
+    const first = resolveStyle(input(ARCADE, { arcadeLook: NEON }));
+    const second = resolveStyle(input(ARCADE, { arcadeLook: NEON, studioScheme: 'dark' }));
+    expect(second.tokens).toBe(first.tokens);
+    expect(second.arcade).toBe(first.arcade);
+  });
+
+  it("paints Arcade's look only for Arcade", () => {
+    for (const choice of [STUDIO, PLAY, HUD, THEME]) {
+      const style = resolveStyle(input(choice, { arcadeLook: NEON }));
+      expect(style).not.toHaveProperty('arcade');
+      expect(style).not.toHaveProperty('arcadeLook');
+    }
   });
 });
 
@@ -213,15 +286,18 @@ describe('an installed theme paints the Studio layout (D58)', () => {
     expect(resolveStyle(input(THEME, { themePaint: painting() })).mascot).toBe('none');
   });
 
-  it('never paints a theme over Play or HUD', () => {
+  it('never paints a theme over Play, HUD or Arcade', () => {
     const paint = painting({ mascot: true });
     expect(resolveStyle(input(PLAY, { themePaint: paint })).tokens).toBe(playStyleTokens(EMBER));
     expect(resolveStyle(input(HUD, { themePaint: paint })).mascot).toBe('bundled');
+    const arcade = resolveStyle(input(ARCADE, { themePaint: paint }));
+    expect(arcade.tokens).toBe(arcadeStyleTokens(ARCADE_DEFAULT_LOOK));
+    expect(arcade.mascot).toBe('none');
   });
 });
 
 describe('motion (D-A11Y)', () => {
-  const CHOICES = [STUDIO, PLAY, HUD, THEME];
+  const CHOICES = [STUDIO, PLAY, HUD, ARCADE, THEME];
 
   it.each(CHOICES)('Reduce Motion stops every loop: %o', (choice) => {
     expect(resolveStyle(input(choice, { reduceMotion: true })).motion).toEqual({
@@ -241,6 +317,7 @@ describe('motion (D-A11Y)', () => {
     });
     expect(resolveStyle(input(PLAY, { hudLook: HUD_STILL })).motion.loops).toBe(true);
     expect(resolveStyle(input(STUDIO, { hudLook: HUD_STILL })).motion.loops).toBe(true);
+    expect(resolveStyle(input(ARCADE, { hudLook: HUD_STILL })).motion.loops).toBe(true);
   });
 
   it('names Reduce Motion first when both stop the loops', () => {
@@ -257,9 +334,23 @@ describe("StyleScope's input", () => {
     expect(scopeInput(app, PLAY)).toEqual({ ...app, choice: PLAY });
   });
 
-  it('swaps the Play look for a Play look and the HUD look for a HUD look', () => {
+  it("swaps in a Play, HUD or Arcade look as that style's look", () => {
     expect(scopeInput(app, PLAY, DAYLIGHT)).toEqual({ ...app, choice: PLAY, playLook: DAYLIGHT });
     expect(scopeInput(app, HUD, GHOST)).toEqual({ ...app, choice: HUD, hudLook: GHOST });
+    expect(scopeInput(app, ARCADE, NEON)).toEqual({ ...app, choice: ARCADE, arcadeLook: NEON });
+  });
+
+  it('tells the three looks apart by their interface, never mistaking one for another', () => {
+    const interfaces = [DAYLIGHT.interface, GHOST.interface, NEON.interface];
+    expect(interfaces).toEqual(['play', 'command', 'arcade']);
+    const onArcade = scopeInput(app, ARCADE, NEON);
+    expect(onArcade.playLook).toBe(app.playLook);
+    expect(onArcade.hudLook).toBe(app.hudLook);
+    for (const look of [DAYLIGHT, GHOST]) {
+      expect(scopeInput(app, ARCADE, look)).not.toHaveProperty('arcadeLook');
+    }
+    expect(scopeInput(app, HUD, GHOST).playLook).toBe(app.playLook);
+    expect(scopeInput(app, PLAY, DAYLIGHT).hudLook).toBe(app.hudLook);
   });
 
   it("paints a preview in its own style and leaves the app's input alone", () => {
@@ -269,5 +360,9 @@ describe("StyleScope's input", () => {
     expect(preview.hudLook).toBe(GHOST);
     expect(JSON.stringify(app)).toBe(before);
     expect(resolveStyle(app).layout).toBe('studio');
+    const arcade = resolveStyle(scopeInput(app, ARCADE, HANDHELD));
+    expect(arcade.layout).toBe('arcade');
+    expect(arcade.arcadeLook).toBe(HANDHELD);
+    expect(arcade.tone).toBe('light');
   });
 });

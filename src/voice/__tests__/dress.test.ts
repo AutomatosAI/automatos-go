@@ -1,17 +1,19 @@
 // The voice screen's dress (US-019i, KV9, D-ONE-VOICE) over styles resolved by A5's own
 // resolveStyle, never hand-written colours: Studio light and dark (ink structure, orange motion),
 // Play (its look's accent, Auto in the core), HUD with Auto on and off (its accent, its overlay),
-// an installed theme with and without a mascot, and Reduce Motion. Every colour equals the
-// resolved style's own.
+// Arcade in every preset (its palette's accent, the core filled with its window, Auto as its
+// sprite, US-022i), an installed theme with and without a mascot, and Reduce Motion. Every colour
+// equals the resolved style's own.
 
 import { describe, expect, it } from 'vitest';
 
 import { DAYLIGHT, EMBER, OBSIDIAN, PRESETS } from '../../core/frozen/lib/looks/presets';
+import { ARCADE_PRESET_LOOKS } from '../../styles/arcade/look-schema';
 import { HUD_DEFAULT_LOOK, HUD_PRESET_LOOKS, type HudLook } from '../../styles/hud/look-schema';
 import { resolveStyle, type ResolvedStyle, type StyleInput } from '../../styles/provider/resolve';
 import { builtinChoice, themeChoice, type StyleChoice } from '../../styles/registry/style-id';
 import { playTokens } from '../../styles/tokens/play';
-import { voicePaint } from '../../styles/tokens/voice-colours';
+import { clearOf, voicePaint } from '../../styles/tokens/voice-colours';
 import { voiceDress, type VoiceDress } from '../screen/dress';
 
 const INSTALL_ID = '6a1f3c2e-8b7d-4e5f-9a0b-1c2d3e4f5a6b';
@@ -32,6 +34,7 @@ function resolve(choice: StyleChoice, overrides: Partial<StyleInput> = {}): Reso
 const studio = builtinChoice('studio');
 const play = builtinChoice('play');
 const hud = builtinChoice('hud');
+const arcade = builtinChoice('arcade');
 const theme = themeChoice(INSTALL_ID);
 
 /** A theme's painting as US-016i caches it, its colours from the vendored look engine. */
@@ -55,6 +58,7 @@ const HUD_AUTO_ON = resolve(hud, { hudLook: hudLook({ auto: 'on' }) });
 const HUD_AUTO_OFF = resolve(hud, { hudLook: hudLook({ auto: 'off' }) });
 const THEME_WITH_MASCOT = resolve(theme, painted(true));
 const THEME_WITHOUT = resolve(theme, painted(false));
+const ARCADE_STYLES = ARCADE_PRESET_LOOKS.map((look) => resolve(arcade, { arcadeLook: look }));
 
 const STYLES: readonly ResolvedStyle[] = [
   STUDIO_LIGHT,
@@ -64,6 +68,7 @@ const STYLES: readonly ResolvedStyle[] = [
   HUD_AUTO_ON,
   HUD_AUTO_OFF,
   ...HUD_PRESET_LOOKS.map((look) => resolve(hud, { hudLook: look })),
+  ...ARCADE_STYLES,
   THEME_WITH_MASCOT,
   THEME_WITHOUT,
   resolve(theme),
@@ -148,9 +153,41 @@ describe('HUD: its accent, its overlay, Auto by the look', () => {
   });
 });
 
+describe('Arcade: the palette’s accent, its window in the core, Auto as the sprite', () => {
+  it('every preset: ac for both rings and the chip, the core in win, no HUD overlay', () => {
+    expect(ARCADE_STYLES).toHaveLength(5);
+    ARCADE_STYLES.forEach((style) => {
+      const vars = style.arcade;
+      const dress = voiceDress(style);
+      expect(vars).toBeDefined();
+      expect(dress.ringLine).toBe(vars?.ac);
+      expect(accentOnly(dress)).toEqual(Array(4).fill(vars?.ac));
+      expect(dress.chipLine).toBe(voicePaint(style).accentLine);
+      expect(dress.coreFill).toBe(vars?.win);
+      expect(dress).toMatchObject({ overlay: false, mascotInCore: true, sprite: true });
+    });
+  });
+
+  it('puts the sprite in the core in place of the bundled mascot, which Arcade never shows', () => {
+    const style = ARCADE_STYLES[0];
+    expect(style.mascot).toBe('none');
+    expect(voiceDress(style).mascotInCore).toBe(true);
+    expect(voiceDress(style).sprite).toBe(true);
+  });
+
+  it('is the only style that fills the core or draws the sprite', () => {
+    STYLES.filter((style) => style.layout !== 'arcade').forEach((style) => {
+      const dress = voiceDress(style);
+      expect(dress.sprite).toBe(false);
+      expect(dress.coreFill).toBe(clearOf(voicePaint(style).accent));
+      expect(dress.coreFill).toMatch(/,0\)$/);
+    });
+  });
+});
+
 describe('motion', () => {
   it('Reduce Motion stills every style; HUD’s motion off stills HUD', () => {
-    const choices = [studio, play, hud, theme];
+    const choices = [studio, play, hud, arcade, theme];
     choices.forEach((choice) => {
       expect(voiceDress(resolve(choice)).motion).toBe(true);
       expect(voiceDress(resolve(choice, { reduceMotion: true })).motion).toBe(false);
@@ -168,10 +205,11 @@ describe('no colour of its own (D-TOKENS)', () => {
         ...Object.values(style.tokens.colours),
         ...Object.values(style.play ?? {}),
         ...Object.values(style.hud ?? {}),
+        ...Object.values(style.arcade ?? {}),
         ...Object.values(voicePaint(style)),
       ]);
       const dress = voiceDress(style);
-      const colours = [dress.ringLine, ...accentOnly(dress), dress.chipLine];
+      const colours = [dress.ringLine, ...accentOnly(dress), dress.chipLine, dress.coreFill];
       colours.forEach((colour) => expect(own.has(colour)).toBe(true));
       expect(Object.isFrozen(dress)).toBe(true);
     });

@@ -1,11 +1,15 @@
 // The themes whose looks the phone keeps in step with the web (US-017d, D-PHONE-CHOICE): Play
-// ('automatos/play', the vendored validateLook) and HUD ('automatos/hud', validateLook with
+// ('automatos/play', the vendored validateLook), HUD ('automatos/hud', validateLook with
 // HUD_LOOK_SPEC; Gerard, 24 Oct: 'when you change on web or local the mobile picks up and changes
-// also'). Each binds its rules to its part of the style store: Play's looks (play/look-store.ts)
-// and HUD's (hud/look-store.ts). Where the theme is not installed in the workspace (404) its looks
-// stay on the phone: Play's look page says how to change that, HUD says nothing.
+// also') and Arcade ('automatos/arcade', validateLook with ARCADE_LOOK_SPEC; D-ARC-3). Each binds
+// its rules to its part of the style store: Play's looks (play/look-store.ts), HUD's
+// (hud/look-store.ts) and Arcade's (arcade/look-store.ts). Where the theme is not installed in the
+// workspace (404) its looks stay on the phone: Play's look page says how to change that, Arcade's
+// says the looks stay on this phone, HUD says nothing.
 
 import type { Look } from '../../core/frozen/lib/looks/types';
+import { ARCADE_LOOK_RULES } from '../arcade/arcade-looks';
+import type { ArcadeLook } from '../arcade/look-schema';
 import { HUD_LOOK_RULES } from '../hud/hud-looks';
 import type { HudLook } from '../hud/look-schema';
 import type { LookDoc, LookRules, LookSet } from '../play/look-sync';
@@ -41,8 +45,17 @@ export const HUD_LOOK_THEME: LookTheme<HudLook> = Object.freeze({
   notInstalled: null,
 });
 
+export const ARCADE_LOOK_THEME: LookTheme<ArcadeLook> = Object.freeze({
+  key: 'arcade',
+  rules: ARCADE_LOOK_RULES,
+  select: (state: StyleState) => state.arcadeLooks,
+  apply: (store: StyleStore, looks: LookSet<ArcadeLook>) => store.setArcadeLooks(looks),
+  notInstalled: LOOK_SYNC_COPY.arcadeNotInstalled,
+});
+
 /** Each theme's words for a look page while it is not installed. */
 export const NOT_INSTALLED_COPY: Readonly<Record<LookThemeKey, string | null>> = Object.freeze({
   play: PLAY_LOOK_THEME.notInstalled,
   hud: HUD_LOOK_THEME.notInstalled,
+  arcade: ARCADE_LOOK_THEME.notInstalled,
 });

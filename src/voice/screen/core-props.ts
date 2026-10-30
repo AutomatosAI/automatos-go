@@ -10,7 +10,8 @@
 //   The waveform stands at the recognizer's levels while the mic is open, newest last, the most
 //   A5's phone waveform has bars for; null otherwise (the idle shimmer while Auto speaks).
 //   Auto in the core shows what the voice is doing: listening, thinking (working while a tool runs),
-//   at rest while he answers (as the chat's own reducer rests him once his words start), a snag.
+//   at rest while he answers (as the chat's own reducer rests him once his words start), a snag;
+//   in Arcade as its pixel sprite on the window-filled core (the dress's sprite and coreFill).
 //   The line under the chip: the view-model's message, with its button (Open Settings, Download)
 //   or, for 'See it in the chat', the button alone.
 
@@ -113,6 +114,10 @@ export type VoiceCoreProps = {
   readonly ringLine: string;
   readonly overlay: boolean;
   readonly mascotInCore: boolean;
+  /** Auto in the core is Arcade's pixel sprite (the dress's). */
+  readonly sprite: boolean;
+  /** The disc inside the rings (the dress's): Arcade's window, clear elsewhere. */
+  readonly coreFill: string;
   readonly chip: ChipView;
   readonly talk: HudTalk;
   readonly stopEnabled: boolean;
@@ -133,6 +138,8 @@ export function voiceCoreProps({ view, phase, dress, hold }: VoiceCoreInput): Vo
     ringLine: dress.ringLine,
     overlay: dress.overlay,
     mascotInCore: dress.mascotInCore,
+    sprite: dress.sprite,
+    coreFill: dress.coreFill,
     chip: voiceChip(view),
     talk: talkProps(view, phase, hold),
     stopEnabled: view.stop.enabled,

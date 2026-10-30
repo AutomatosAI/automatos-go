@@ -1,23 +1,26 @@
 // The edge screens' decisions and words (US-017f): which edge each error kind is, what Not running
 // says for the hosted server and for a self-hosted one (the command only for the latter), that
 // Something went wrong shows the taxonomy's words and never what the server sent, First open's
-// starters, and Check again's button per style.
+// starters, and Check again's button per style; and Arcade's own (US-022i): its wordmark, its
+// greeting, its 404 lines and its window's numbers.
 
 import { describe, expect, it } from 'vitest';
 
 import { ApiError, type ApiErrorKind } from '../../../api/errors';
 import { API_ERROR_COPY } from '../../../api/strings';
 import { SELF_HOSTED_START_COMMAND } from '../../../connect/config';
-import { EDGE_COPY } from '../../strings';
+import { ARCADE_HOME_COPY, EDGE_COPY } from '../../strings';
 import {
   LOST_EDGE,
   STARTERS,
+  brandWords,
   edgeFor,
+  lostEdge,
   notRunningEdge,
   somethingWrongEdge,
   type EdgeKind,
 } from '../edges';
-import { checkAgainVariant } from '../metrics';
+import { EDGE_METRICS, checkAgainVariant } from '../metrics';
 import { NOT_RUNNING_RECHECK_MS } from '../recheck';
 
 const HOSTED = { apiUrl: 'https://api.automatos.app', source: 'hosted' } as const;
@@ -152,5 +155,50 @@ describe('First open and Lost', () => {
     expect(checkAgainVariant('play')).toBe('secondary');
     expect(checkAgainVariant('studio')).toBe('primary');
     expect(checkAgainVariant('hud')).toBe('primary');
+    expect(checkAgainVariant('arcade')).toBe('primary');
+  });
+});
+
+describe('the brand line', () => {
+  it("gives arcade its own wordmark, 'AUTOMATOS ARCADE', never Play's words", () => {
+    const arcade = brandWords('arcade');
+    expect(arcade).toEqual({ name: 'AUTOMATOS', mark: 'ARCADE', label: 'Automatos Arcade' });
+    expect(arcade).not.toEqual(EDGE_COPY.brand.play);
+    expect(arcade.label).not.toMatch(/Play/);
+  });
+
+  it("keeps HUD's and Play's (Studio draws none, so it never reads one)", () => {
+    expect(brandWords('hud')).toBe(EDGE_COPY.brand.hud);
+    expect(brandWords('play')).toBe(EDGE_COPY.brand.play);
+    expect(brandWords('studio')).toBe(EDGE_COPY.brand.play);
+  });
+});
+
+describe('Arcade’s edge screens (US-022i)', () => {
+  it("greets with the dialogue's own words before any reply (the kit's saying.ts)", () => {
+    expect(EDGE_COPY.arcade.greeting).toBe(ARCADE_HOME_COPY.greeting);
+    expect(EDGE_COPY.arcade.greeting).toBe(
+      "Hi, I'm Auto. Tell me what you need, and I'll get the party moving.",
+    );
+  });
+
+  it("says the kit's 404 lines in arcade, with the shared number and way back", () => {
+    expect(lostEdge('arcade')).toEqual({
+      number: '404',
+      title: 'You wandered off the map',
+      message: "This page isn't here. The link may be old, or the page may have moved.",
+      back: 'Back to chat',
+    });
+    expect(Object.isFrozen(lostEdge('arcade'))).toBe(true);
+  });
+
+  it("keeps Ember's lines in every other style", () => {
+    for (const layout of ['studio', 'play', 'hud'] as const) {
+      expect(lostEdge(layout)).toBe(LOST_EDGE);
+    }
+  });
+
+  it("lays the window out at 16 inside, 14 between rows and 6 under Auto's sprite", () => {
+    expect(EDGE_METRICS.arcade).toEqual({ pad: 16, gap: 14, spriteGap: 6, brandGap: 8 });
   });
 });

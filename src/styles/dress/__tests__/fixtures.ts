@@ -1,11 +1,14 @@
 // Resolved styles for the dress tests: Studio Light and Dark, an installed theme's painting on the
-// Studio layout, Play at every preset and every type knob, HUD at every preset and every font knob.
+// Studio layout, Play at every preset and every type knob, HUD at every preset and every font knob,
+// Arcade at every preset and in each window style.
 
 import { TYPE_STYLE_KEYS } from '../../../core/frozen/lib/looks/catalogue';
 import { DAYLIGHT, EMBER, OBSIDIAN, PRESETS } from '../../../core/frozen/lib/looks/presets';
+import { ARCADE_DEFAULT_LOOK, ARCADE_PRESET_LOOKS } from '../../arcade/look-schema';
 import { HUD_DEFAULT_LOOK, HUD_PRESET_LOOKS, type HudLook } from '../../hud/look-schema';
 import { resolveStyle, type ResolvedStyle, type StyleInput } from '../../provider/resolve';
 import { builtinChoice, themeChoice, type StyleChoice } from '../../registry/style-id';
+import { ARCADE_WINDOW_STYLES } from '../../tokens/arcade';
 import { HUD_FONT_KEYS } from '../../tokens/hud-catalogue';
 import { playTokens } from '../../tokens/play';
 
@@ -56,11 +59,21 @@ export const HUD_STYLES: readonly ResolvedStyle[] = [
   ),
 ];
 
+export const ARCADE_STYLES: readonly ResolvedStyle[] = [
+  ...ARCADE_PRESET_LOOKS.map((look) => resolve(builtinChoice('arcade'), { arcadeLook: look })),
+  ...ARCADE_WINDOW_STYLES.map((windowStyle) =>
+    resolve(builtinChoice('arcade'), { arcadeLook: { ...ARCADE_DEFAULT_LOOK, windowStyle } }),
+  ),
+];
+
 export const PLAY = PLAY_STYLES[0];
 export const HUD = HUD_STYLES[0];
+/** Overworld, Classic windows. */
+export const ARCADE = ARCADE_STYLES[0];
 
 export const ALL_STYLES: readonly ResolvedStyle[] = [
   ...STUDIO_STYLES,
   ...PLAY_STYLES,
   ...HUD_STYLES,
+  ...ARCADE_STYLES,
 ];

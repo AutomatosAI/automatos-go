@@ -1,12 +1,13 @@
-// Each style's whole token set (Tokens, types.ts): the colours a look paints (play.ts, hud.ts, or
-// an installed theme's, US-016i) with that style's radii (radii.ts), the foundation's spacing,
+// Each style's whole token set (Tokens, types.ts): the colours a look paints (play.ts, hud.ts,
+// arcade.ts, or an installed theme's, US-016i) with that style's radii (radii.ts), the foundation's spacing,
 // shadows and type scale, and the chat thread's paint derived from those colours (thread.ts), so
-// every shared screen reads Play and HUD through the same accessor it reads Studio by. One frozen
+// every shared screen reads Play, HUD and Arcade through the same accessor it reads Studio by. One frozen
 // value per look (or painting) object, so a screen's memoised styles hold until the look changes.
 // Studio's own two sets stay studio.ts's (studioTokens), unchanged.
 
 import type { Look } from '../../core/frozen/lib/looks/types';
 import { STUDIO_TYPE } from '../type';
+import { arcadeTokens, arcadeTone, type ArcadePaintPicks } from './arcade';
 import { HUD_TONE, hudTokens, type HudPaintPicks } from './hud';
 import { playTokens, playTone } from './play';
 import { STYLE_RADII } from './radii';
@@ -50,6 +51,12 @@ export const playStyleTokens: (look: Look) => Tokens = oncePerObject((look: Look
 /** A HUD look's set: always dark, square everywhere. */
 export const hudStyleTokens: (look: HudPaintPicks) => Tokens = oncePerObject(
   (look: HudPaintPicks) => assemble('hud', HUD_TONE, hudTokens(look), STYLE_RADII.hud),
+);
+
+/** An Arcade look's set: the palette's tone (Handheld light, the others dark), square everywhere. */
+export const arcadeStyleTokens: (look: ArcadePaintPicks) => Tokens = oncePerObject(
+  (look: ArcadePaintPicks) =>
+    assemble('arcade', arcadeTone(look), arcadeTokens(look), STYLE_RADII.arcade),
 );
 
 const painted = new WeakMap<Colours, Partial<Record<ColourScheme, Tokens>>>();

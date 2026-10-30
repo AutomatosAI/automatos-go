@@ -1,8 +1,8 @@
 // 'Same as Studio' (D-PHONE-CHOICE, D58, Gerard 24 Oct): the phone follows the theme Studio shows
 // this member (GET /api/themes/active) until a style is picked on the phone. Pure.
 //
-//   active.theme is Play's or HUD's web theme  → the phone's built-in style of that id: installing
-//                                                 Play or HUD in Studio flips the phone's layout
+//   active.theme is Play's, HUD's or Arcade's  → the phone's built-in style of that id: installing
+//   web theme                                    Play, HUD or Arcade in Studio flips the phone's layout
 //   any other theme with a phone painting      → that theme over the Studio layout (D-THEMES)
 //   'studio' / 'classic', no theme, a revoked
 //   theme or no painting                       → Studio
@@ -22,10 +22,11 @@ import {
 import { DEFAULT_CHOICE } from '../registry/registry';
 import type { Active, MobileTheme } from './schemas';
 
-/** The web themes that ARE a built-in phone style: the phone paints its own Play or HUD. */
+/** The web themes that ARE a built-in phone style: the phone paints its own Play, HUD or Arcade. */
 export const BUILT_IN_THEME_STYLES: Readonly<Record<string, BuiltInStyleId>> = Object.freeze({
   'automatos/play': 'play',
   'automatos/hud': 'hud',
+  'automatos/arcade': 'arcade',
 });
 
 export function builtInStyleOf(themeId: string): BuiltInStyleId | null {

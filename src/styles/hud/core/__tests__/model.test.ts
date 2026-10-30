@@ -1,6 +1,6 @@
 // HUD's phone core in words (US-018b): the chip, the transcript (and First open's hint, US-017f),
 // the top bar's mic, status row, clock, command row and menu square, the buttons (HOLD TO TALK
-// inert), and where the core and Auto sit.
+// inert), and where the core and Auto sit (Arcade's sprite on the core's disc, US-022i).
 
 import { describe, expect, it } from 'vitest';
 
@@ -8,6 +8,7 @@ import { REPORT_TARGET_ID_MAX_CHARS } from '../../../../api/reports';
 import { MENU_HINT } from '../../../../chat/home/menu';
 import { captionFor } from '../../../../core/frozen/lib/mascot/media';
 import { MASCOT_STATES } from '../../../../core/frozen/lib/mascot/types';
+import { spriteSide } from '../../../arcade/sprite/paint';
 import { mascotGeometry } from '../../../mascot/geometry';
 import { HUD_CORE_COPY, HUD_STATE_WORDS } from '../../../strings';
 import {
@@ -16,8 +17,10 @@ import {
   agentName,
   chipView,
   commandView,
+  coreDiscRadius,
   coreSizeFor,
   coreSizeIn,
+  coreSpritePlace,
   elapsedText,
   hudButtons,
   mascotPlace,
@@ -291,5 +294,37 @@ describe('the core and Auto', () => {
     expect(place.left).toBeCloseTo(145 - stage.width / 2, 9);
     expect(place.top).toBeCloseTo(145 - 104 * 0.46, 9);
     expect(mascotPlace(229).size).toBe(Math.round((104 * 229) / 290));
+  });
+});
+
+describe("Arcade's sprite in the core (US-022i)", () => {
+  const SCALE_2 = { pixelScale: '2' } as const;
+  const SCALE_3 = { pixelScale: '3' } as const;
+
+  it("fills the pulse's circle: 116 across in the 290 core", () => {
+    expect(coreDiscRadius(290)).toBeCloseTo(58, 9);
+    expect(coreDiscRadius(120)).toBeCloseTo(24, 9);
+  });
+
+  it("stands at the look's pixel scale, centred on whole points, in the drawn core", () => {
+    expect(coreSpritePlace(290, SCALE_3)).toEqual({ view: 'sprite', left: 97, top: 97 });
+    expect(coreSpritePlace(290, SCALE_2)).toEqual({ view: 'sprite', left: 113, top: 113 });
+    expect(spriteSide(SCALE_3, 'sprite')).toBeLessThanOrEqual(2 * coreDiscRadius(290));
+  });
+
+  it('falls back to the 32 pt mark when the shrunk core cannot hold the sprite', () => {
+    expect(coreSpritePlace(200, SCALE_3).view).toBe('mark');
+    expect(coreSpritePlace(200, SCALE_2).view).toBe('sprite');
+    expect(coreSpritePlace(120, SCALE_2)).toEqual({ view: 'mark', left: 44, top: 44 });
+  });
+
+  it('always fits the disc down to the least core, every pixel on a whole point', () => {
+    for (const look of [SCALE_2, SCALE_3]) {
+      for (let size = HUD_CORE.core.minSize; size <= 290; size += 1) {
+        const place = coreSpritePlace(size, look);
+        expect(spriteSide(look, place.view)).toBeLessThanOrEqual(2 * coreDiscRadius(size));
+        expect(Number.isInteger(place.left) && place.left === place.top).toBe(true);
+      }
+    }
   });
 });

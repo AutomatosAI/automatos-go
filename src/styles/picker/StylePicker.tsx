@@ -1,12 +1,12 @@
-// Settings → Style and look (US-016h, FR-7, D54): US-016a's pickerState as three large cards, each
+// Settings → Style and look (US-016h, FR-7, D54): US-016a's pickerState as four large cards, each
 // a live preview in its own style. A tap flips the whole app at once (useSetStyle: the haptic, the
 // crossfade, the choice kept on the phone); Studio's card sets Light / Dark / System (the
-// foundation's scheme setter); Play's and HUD's open their look pages. The screen's own frame is
-// painted by the app's style, so it repaints with the flip. Under Studio, 'Same as Studio' comes
-// first (D-PHONE-CHOICE), then the installed themes, listed only when the server offers mobile
-// themes (the last read's offered installs, US-016i); the screen asks for a read each time it
-// opens (useThemeRefresh). Nothing here points at making an account (D-NO-SIGNUP) or mentions
-// plans (D8).
+// foundation's scheme setter); Play's, HUD's and Arcade's open their look pages. The screen's own
+// frame is painted by the app's style, so it repaints with the flip. Under Studio, 'Same as
+// Studio' comes first (D-PHONE-CHOICE), then the installed themes, listed only when the server
+// offers mobile themes (the last read's offered installs, US-016i); the screen asks for a read
+// each time it opens (useThemeRefresh). Nothing here points at making an account (D-NO-SIGNUP) or
+// mentions plans (D8).
 
 import { useFocusEffect, useRouter } from 'expo-router';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';

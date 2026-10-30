@@ -9,12 +9,15 @@
 // Until A2's home thread is chosen (KC4) the screen waits, and opens no thread.
 // Report this (D15, P001R-AF-1): a long-press or the accessible action on Auto's saved reply in the
 // transcript opens the foundation's one ReportSheet (A2's useMessageReport), beside TYPE's Sheet.
+// In Arcade (the dress's sprite) the core draws Arcade's one pause control under its top bar
+// (P001A-RVW-1, WCAG 2.2.2): the sprite, the rings and the waveform loop for the whole session.
 
 import { StatusBar } from 'expo-status-bar';
 
 import { Composer } from '../../chat/composer/Composer';
 import { canStop } from '../../chat/controller/thread';
 import { useMessageReport } from '../../chat/report/use-message-report';
+import { PauseButton } from '../../styles/arcade/PauseButton';
 import { statusBarStyle } from '../../styles/ground/ground';
 import { HudCore } from '../../styles/hud/core/HudCore';
 import { useStyle } from '../../styles/theme';
@@ -77,6 +80,7 @@ function VoiceThread({ chatId }: { readonly chatId: string | null }) {
         levels={model.levels}
         voice={{ ...model.core, line: <VoiceLine line={model.line} onAction={on.lineAction} /> }}
         report={report}
+        controls={model.core.sprite ? <PauseButton /> : undefined}
       />
       <TypeSheet model={model} />
       <ReportSheet {...sheet} />

@@ -5,7 +5,9 @@
 // ring stands still at rest and the disc at full size. Decoration: no touches, hidden from
 // VoiceOver (the state chip under it says what it shows). A6's voice screen may paint the rings'
 // structure (the outer ring, the ticks, the dashed ring and the crosshair) in a line colour of its
-// own, Studio's ink (KV9); their motion (the arcs, the segments, the pulse) keeps the colour.
+// own, Studio's ink (KV9); their motion (the arcs, the segments, the pulse) keeps the colour. It may
+// also fill the disc at the centre (the pulse's circle) over the pulse and the crosshair: Arcade's
+// window, flat, for its sprite to stand on (US-022i). Loops follow useVoiceCore (Arcade's pause too).
 
 import {
   BlurMask,
@@ -25,7 +27,6 @@ import { useMemo } from 'react';
 import { Easing, useDerivedValue } from 'react-native-reanimated';
 
 import { blurSigma } from '../../mascot/geometry';
-import { useStyle } from '../../theme';
 import { clearOf } from '../../tokens/voice-colours';
 import {
   CSS_EASE_IN_OUT,
@@ -39,6 +40,7 @@ import {
   type RingStroke,
 } from './ring-specs';
 import { useLoop } from './use-loop';
+import { useVoiceCore } from './use-voice-core';
 
 const FULL_CIRCLE = 360;
 /** The rings that are structure, not motion: lineColour paints them (and the crosshair). */
@@ -164,10 +166,12 @@ export type RingCoreProps = {
   readonly colour: string;
   /** A6: the structure's colour (Studio's ink, #rrggbb); absent, the structure is `colour` too. */
   readonly lineColour?: string;
+  /** The disc at the centre, filled flat (Arcade's window); absent, the pulse shows through. */
+  readonly fill?: string;
 };
 
-export function RingCore({ size, colour, lineColour = colour }: RingCoreProps) {
-  const loops = useStyle().motion.loops;
+export function RingCore({ size, colour, lineColour = colour, fill }: RingCoreProps) {
+  const { loops } = useVoiceCore();
   const specs = useMemo(() => ringSpecs(size), [size]);
   return (
     <Canvas
@@ -187,6 +191,9 @@ export function RingCore({ size, colour, lineColour = colour }: RingCoreProps) {
       ))}
       <Pulse pulse={specs.pulse} centre={specs.centre} colour={colour} loops={loops} />
       <CrosshairLines crosshair={specs.crosshair} colour={lineColour} />
+      {fill === undefined ? null : (
+        <Circle cx={specs.centre} cy={specs.centre} r={specs.pulse.radius} color={fill} />
+      )}
     </Canvas>
   );
 }

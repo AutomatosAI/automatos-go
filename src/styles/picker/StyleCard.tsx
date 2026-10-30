@@ -1,7 +1,8 @@
 // One style's card on the Style and look screen, painted in that style (StyleScope): the live
 // preview and the name, tagline and 'Selected' are ONE button ('Studio style', its selected
 // state); under it, still inside the frame, the style's look controls — Studio's Light / Dark /
-// System, 'Same as Studio' and the installed theme rows, Play's 'Make it yours →', HUD's 'Looks →'.
+// System, 'Same as Studio' and the installed theme rows, Play's 'Make it yours →', HUD's 'Looks →',
+// Arcade's 'Options →'.
 // The chosen card's frame is a 2 pt ring in its style's accent, its check and 'Selected' that
 // accent as text (cards.ts cardFrame, selectedPaint).
 

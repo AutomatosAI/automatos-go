@@ -3,9 +3,12 @@
 // sendTurn only stops the read; Stop is cancelTurn as well (D-STOP). Auto's card actions live with
 // their cards (src/chat/cards/). Failures are the client's ApiError taxonomy (src/api/errors.ts).
 
+import { queryOptions } from '@tanstack/react-query';
+
 import type { Frame } from '../core/ai-sdk-stream';
 import type { ApiClient } from '../api/client';
 import { CHAT_TURN_CONNECT_TIMEOUT_MS } from '../api/config';
+import { queryKeys } from '../api/query-keys';
 import { streamTurn, type StreamOutcome } from '../api/stream';
 import type { ChatRequestBody } from './request';
 import { CHAT_ROUTES } from './routes';
@@ -97,4 +100,12 @@ export function fetchHistory(
 export async function fetchAgents(client: ApiClient, signal?: AbortSignal): Promise<ChatAgent[]> {
   const { agents } = await client.request(CHAT_ROUTES.agents, { schema: ChatAgentsSchema, signal });
   return agents;
+}
+
+/** The agents' query, under the chat's own key (queryKeys.chat.agents): Arcade's party reads it. */
+export function agentsQuery(client: ApiClient) {
+  return queryOptions({
+    queryKey: queryKeys.chat.agents(),
+    queryFn: ({ signal }) => fetchAgents(client, signal),
+  });
 }

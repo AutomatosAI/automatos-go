@@ -31,10 +31,16 @@ describe('STYLE_RADII', () => {
     expect(Object.values(STYLE_RADII.hud).every((radius) => radius === 0)).toBe(true);
   });
 
+  it('squares every Arcade corner, its message field too', () => {
+    expect(Object.values(STYLE_RADII.arcade).every((radius) => radius === 0)).toBe(true);
+    expect(STYLE_RADII.arcade.input).toBe(0);
+  });
+
   it('names the same radii in every style (Play adds paper), frozen', () => {
     expect(Object.keys(STYLE_RADII).sort()).toEqual([...BUILT_IN_STYLE_IDS].sort());
     expect(Object.keys(STYLE_RADII.studio).sort()).toEqual(NAMES);
     expect(Object.keys(STYLE_RADII.hud).sort()).toEqual(NAMES);
+    expect(Object.keys(STYLE_RADII.arcade).sort()).toEqual(NAMES);
     expect(Object.keys(STYLE_RADII.play).sort()).toEqual([...NAMES, 'paper'].sort());
     expect(Object.isFrozen(STYLE_RADII)).toBe(true);
     for (const id of BUILT_IN_STYLE_IDS) expect(Object.isFrozen(STYLE_RADII[id])).toBe(true);

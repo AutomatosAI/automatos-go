@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { TYPE_STYLE_KEYS, type TypeStyleKey } from '../../../core/frozen/lib/looks/catalogue';
 import { BUTTON_LABEL_WEIGHT, BUTTON_SIZES, textRole } from '../../../ui/variants';
 import { FONT_FACES } from '../../fonts';
+import { LAYOUTS } from '../../registry/style-id';
 import { HUD_FONT_KEYS, type HudFontKey } from '../../tokens/hud-catalogue';
 import { MIN_TEXT_SIZE, STUDIO_TYPE, TEXT_SCALING, typeStyle, type TypeStyle } from '../../type';
 import { PLAY_DISPLAY_MIN, PLAY_SLOTS, playSlotSize } from '../play-type';
@@ -16,17 +17,19 @@ import {
 } from '../scale';
 import { STUDIO_SLOT_ROLES } from '../studio-type';
 
+/** Every source, per layout: Studio and Arcade have no font knob, Play and HUD one per font. */
 const SOURCES: readonly TypeSource[] = [
   { layout: 'studio' },
   ...TYPE_STYLE_KEYS.map((font) => ({ layout: 'play' as const, font })),
   ...HUD_FONT_KEYS.map((font) => ({ layout: 'hud' as const, font })),
+  { layout: 'arcade' },
 ];
 
 const ASKED_SIZES = [8, 10, 10.5, 11, 12, 13, 15, 16, 19];
 const WEIGHTS = [400, 500, 600, 700] as const;
 
 const nameOf = (source: TypeSource) =>
-  source.layout === 'studio' ? 'studio' : `${source.layout}/${source.font}`;
+  'font' in source ? `${source.layout}/${source.font}` : source.layout;
 
 /** Every text style a style can hand a layout. */
 function everyStyle(type: StyleType): [string, TypeStyle][] {
@@ -52,6 +55,15 @@ const studio = styleType({ layout: 'studio' });
 const sizeOf = (type: StyleType, slot: DisplaySlot) => type.display(slot).fontSize;
 
 describe('every style, font option and slot', () => {
+  it('lists the sources per layout: every layout the app builds in, each font knob once', () => {
+    const layouts = (layout: string) => SOURCES.filter((source) => source.layout === layout);
+    expect(new Set(SOURCES.map((source) => source.layout))).toEqual(new Set(LAYOUTS));
+    expect(layouts('studio')).toHaveLength(1);
+    expect(layouts('play')).toHaveLength(TYPE_STYLE_KEYS.length);
+    expect(layouts('hud')).toHaveLength(HUD_FONT_KEYS.length);
+    expect(layouts('arcade')).toHaveLength(1);
+  });
+
   it('is never below 11 pt (D38), even when a layout asks for less', () => {
     for (const source of SOURCES) {
       for (const [what, style] of everyStyle(styleType(source))) {

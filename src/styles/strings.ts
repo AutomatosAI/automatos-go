@@ -12,11 +12,13 @@ export const STYLE_COPY = Object.freeze({
     studio: 'Studio',
     play: 'Play',
     hud: 'HUD',
+    arcade: 'Arcade',
   }),
   taglines: Object.freeze<Record<BuiltInStyleId, string>>({
     studio: 'Cream paper or Studio Dark',
     play: 'Auto and the Ember look',
     hud: 'Voice first, glow and grid',
+    arcade: 'Your agents as a party, Auto in the dialogue box',
   }),
 });
 
@@ -32,7 +34,7 @@ export const PICKER_COPY = Object.freeze({
   themeLabel: (name: string, version: string, selected: boolean) =>
     selected ? `${name} theme, version ${version}, selected` : `${name} theme, version ${version}`,
   /** The link from a style card to its look page (Studio's look is the scheme, on its card). */
-  lookLinks: Object.freeze({ play: 'Make it yours', hud: 'Looks' }),
+  lookLinks: Object.freeze({ play: 'Make it yours', hud: 'Looks', arcade: 'Options' }),
   /** Studio's Light / Dark / System control and its name for VoiceOver. */
   schemes: Object.freeze<Record<ThemeChoice, string>>({
     light: 'Light',
@@ -70,13 +72,15 @@ export const THEME_COPY = Object.freeze({
 });
 
 /**
- * Play's and HUD's looks in step with the web (US-017d): what Play's look page says while Play is
- * not installed in the workspace (a 404 from the looks route). HUD's looks stay on the phone then
- * with no words. A failed read or save shows the API taxonomy's own words.
+ * Play's, HUD's and Arcade's looks in step with the web (US-017d, US-022c): what Play's and Arcade's
+ * look pages say while the theme is not installed in the workspace (a 404 from the looks route).
+ * HUD's looks stay on the phone then with no words. A failed read or save shows the API taxonomy's
+ * own words.
  */
 export const LOOK_SYNC_COPY = Object.freeze({
   localOnly: 'Kept on this phone only',
   playNotInstalled: 'Install Play in Studio to keep your looks in step with the web.',
+  arcadeNotInstalled: "Arcade isn't installed in this workspace, so your looks stay on this phone.",
 });
 
 /**
@@ -213,6 +217,232 @@ export const HUD_LOOK_COPY = Object.freeze({
   edited: (name: string) => `${name} · EDITED`,
   /** A look saved with 'Save as new look': 'MINE 1', 'MINE 2'. */
   savedName: (n: number) => `MINE ${n}`,
+});
+
+/**
+ * Arcade's looks (US-022c; the Options page is US-022j): the name and line 'Save look' gives a
+ * saved look, as the design kit's spec.ts asNewLook writes them ('Save slot 1', 'From Overworld').
+ * Each knob's label is the kit's looks/schema.json's (arcade/look-schema.ts).
+ */
+export const ARCADE_LOOK_COPY = Object.freeze({
+  savedName: (n: number) => `Save slot ${n}`,
+  savedSub: (name: string) => `From ${name}`,
+});
+
+/**
+ * Arcade's Options (US-022j; the design kit's looks/look-editor.tsx, look-controls.tsx,
+ * look-preview.tsx, look-transfer.tsx and spec.ts at 034fa629c): the heading and its line, each
+ * choice's word as spec.ts KNOBS gives it (a palette's is the catalogue's name), what VoiceOver
+ * hears for a sign ('2×'), the motion note, SAVE LOOK and RESET with what they say after, the
+ * preview's sample words, the save slots and the toast after a delete. The ▶ glyph is hidden from
+ * VoiceOver, which hears a choice's checked state and a slot's selected state.
+ */
+export const ARCADE_OPTIONS_COPY = Object.freeze({
+  back: 'Back',
+  heading: 'Options',
+  lead: 'Saved per person, per workspace.',
+  cursor: '▶',
+  choices: Object.freeze({
+    scanlines: Object.freeze<Record<string, string>>({ off: 'Off', soft: 'Soft', strong: 'Strong' }),
+    pixelScale: Object.freeze<Record<string, string>>({ '2': '2×', '3': '3×' }),
+    windowStyle: Object.freeze<Record<string, string>>({ classic: 'Classic double', thin: 'Thin' }),
+    textSpeed: Object.freeze<Record<string, string>>({
+      instant: 'Instant',
+      normal: 'Normal',
+      slow: 'Slow',
+    }),
+  }),
+  spoken: Object.freeze<Record<string, string>>({ '2×': '2 times', '3×': '3 times' }),
+  motionNote:
+    'Under reduced motion, text speed is instant and sprites hold their first frame, whatever is chosen here.',
+  saveLook: 'Save look',
+  reset: 'Reset',
+  resetHint: "Back to the palette's preset",
+  saved: (name: string) => `Saved ${name}.`,
+  backTo: (name: string) => `Back to ${name}.`,
+  slots: 'Save slots',
+  /** VoiceOver's name for a slot: 'Overworld, Night forest, grass-green accent, selected'. */
+  slot: (name: string, sub: string, selected: boolean) =>
+    [name, sub, selected ? 'selected' : ''].filter((part) => part !== '').join(', '),
+  slotHint: 'Touch and hold to rename or delete',
+  preview: Object.freeze({
+    title: (name: string) => `Preview · ${name}`,
+    line: 'Text types out at this speed. Press on, hero.',
+    gameColours: Object.freeze({ hp: 'HP', xp: 'XP', mp: 'Mana', qs: '! Quest' }),
+    selectedItem: 'Selected menu item',
+    menuItem: 'Menu item',
+    accentLine: 'Accent text on the page ground reads here.',
+    cursor: '▼',
+  }),
+  /** The toast after a delete: '… Arcade is back to Overworld.' when the look deleted was on. */
+  deleted: (name: string, backTo: string | null) =>
+    backTo === null ? `Deleted ${name}.` : `Deleted ${name}. Arcade is back to ${backTo}.`,
+});
+
+/**
+ * Arcade's pause control (US-022e, WCAG 2.2.2; the kit's motion/pause-toggle.tsx): the word it
+ * shows, in the design's capitals, and what VoiceOver hears, the action a tap takes.
+ */
+export const ARCADE_PAUSE_COPY = Object.freeze({
+  pause: 'PAUSE',
+  play: 'PLAY',
+  pauseLabel: 'Pause the animation',
+  playLabel: 'Play the animation',
+});
+
+/**
+ * Arcade's handheld (US-022f; the design kit's frame/{controls,status-bar,today}.tsx and
+ * chat/dialogue.tsx): the status bar's wordmark and today's counters, each a game word and a
+ * number on screen and words for VoiceOver ('3 done today'); the D-pad's four targets with what
+ * each opens (D-ARC-6); the voice surround's word; the dialogue window's tab, Skip, the thinking
+ * dots and the ▼ cursor, the design's dialogue cursor. Glyphs on screen are hidden from VoiceOver.
+ */
+export const ARCADE_COPY = Object.freeze({
+  brand: 'AUTOMATOS',
+  brandLabel: 'Automatos',
+  counters: Object.freeze({
+    xp: Object.freeze({ game: 'XP', words: (n: number) => `${n} done today` }),
+    needs: Object.freeze({
+      game: '!',
+      words: (n: number) => (n === 1 ? '1 needs you' : `${n} need you`),
+    }),
+    quest: Object.freeze({ game: 'QUEST', words: (n: number) => `${n} in progress` }),
+  }),
+  dpad: Object.freeze({
+    quests: Object.freeze({ arrow: '▲', word: 'Quests', hint: 'Shows your quests on the map' }),
+    chat: Object.freeze({ arrow: '◀', word: 'Chat', hint: "Auto's chat" }),
+    inventory: Object.freeze({
+      arrow: '▶',
+      word: 'Inventory',
+      hint: 'Shows your Deliverables as items',
+    }),
+    menu: Object.freeze({ arrow: '▼', word: 'Menu', hint: 'Opens the menu' }),
+  }),
+  voice: 'VOICE',
+  dialogue: Object.freeze({
+    speaker: 'AUTO',
+    /** Under the portrait, for VoiceOver: 'Auto: thinking'. */
+    stateLabel: (state: string) => `Auto: ${state.toLowerCase()}`,
+    thinking: '…',
+    thinkingLabel: 'Auto is thinking',
+    cursor: '▼',
+    skip: 'Skip',
+    skipHint: "Shows Auto's whole reply",
+  }),
+});
+
+/**
+ * Arcade's dress on the shared screens (US-022h): the menus' ▶ cursor beside the page on screen
+ * (the Command Centre's title; hidden from VoiceOver, which hears the page's own name).
+ */
+export const ARCADE_DRESS_COPY = Object.freeze({ cursor: '▶' });
+
+/**
+ * Arcade's home (US-022g; the design kit's chat/{story,entries,cards,saying}.ts(x)): the story
+ * window's title and its speakers (YOU, AUTO: the label face sets them in capitals, VoiceOver hears
+ * the words), the ★ and ✕ marks of what a turn did (hidden from VoiceOver: each line says its
+ * words), the ITEM RECEIVED window and its OPEN, the headings over A2's own cards, what the
+ * dialogue says before any reply, and TYPE and STOP under it.
+ */
+export const ARCADE_HOME_COPY = Object.freeze({
+  story: 'Story',
+  storyLabel: 'Story so far',
+  you: 'You',
+  auto: 'Auto',
+  event: '★',
+  failed: '✕',
+  itemReceived: 'Item received!',
+  itemMeta: (kind: string) => `${kind} · made in this chat`,
+  itemLabel: (title: string, kind: string) => `Item received: ${title}, ${kind}`,
+  open: 'Open',
+  openHint: 'Opens the Deliverable',
+  choiceAwaits: '! A choice awaits',
+  choiceMade: 'A choice was made',
+  looseChoices: 'Choices still open',
+  greeting: "Hi, I'm Auto. Tell me what you need, and I'll get the party moving.",
+  yourMove: 'Your move.',
+  type: 'Type',
+  typeHint: 'Opens the message box',
+  stop: 'Stop',
+  stopHint: 'Stops Auto’s reply',
+});
+
+/**
+ * The party strip under Arcade's status bar (US-022l; the kit's chat/party-rows.ts STATE_WORDS and
+ * the 'Phone 390' PARTY row): each state a glyph and a word, the label face drawing both in
+ * capitals; VoiceOver hears each agent's name and state.
+ */
+export const ARCADE_PARTY_COPY = Object.freeze({
+  title: 'Party',
+  states: Object.freeze({
+    needs: Object.freeze({ glyph: '!', word: 'Needs you' }),
+    working: Object.freeze({ glyph: '●', word: 'Working' }),
+    ready: Object.freeze({ glyph: '—', word: 'Ready' }),
+  }),
+  memberLabel: (name: string, word: string) => `${name}, ${word.toLowerCase()}`,
+});
+
+/**
+ * Arcade's Quests on the handheld (US-022m; the kit's quests/{quests,map-view,quest-window,
+ * quests-page}.ts(x)): the map window's label and count, each region's name and its state (a glyph
+ * and a word, never the colour alone), a quest's state words, the quest window's OPEN and BOARD,
+ * and the map's loading, failed and quiet lines. VoiceOver hears 'Compare three laptops, in
+ * progress' for a marker.
+ */
+export const ARCADE_QUESTS_COPY = Object.freeze({
+  worldMap: 'World map',
+  count: (shown: number, total: number) =>
+    shown < total ? `${shown} of ${total} quests` : `${total} ${total === 1 ? 'quest' : 'quests'}`,
+  regions: Object.freeze({
+    active: Object.freeze({ name: 'Greenwood', glyph: '◆', word: 'Active' }),
+    needs: Object.freeze({ name: 'Storm Peaks', glyph: '!', word: 'Needs you' }),
+    done: Object.freeze({ name: 'Hearth Village', glyph: '✓', word: 'Done' }),
+  }),
+  regionLabel: (name: string, word: string) => `${name}: ${word.toLowerCase()}`,
+  glyphs: Object.freeze({ active: '◆', needs: '!', failed: '✕', done: '✓', closed: '—' }),
+  needsYou: 'Needs you',
+  failed: 'Failed',
+  markerLabel: (title: string, word: string) => `${title}, ${word.toLowerCase()}`,
+  markerHint: 'Shows this quest under the map',
+  quest: 'Quest',
+  statusLabel: (word: string, region: string) => `${word}, ${region}`,
+  open: 'Open',
+  openHint: 'Opens the ticket',
+  board: 'Board',
+  boardHint: 'Opens the whole Board',
+  loading: 'Unfolding the map…',
+  loadFailed: "Couldn't load the map.",
+  retry: 'Try again',
+  quietTitle: 'The map is quiet.',
+  quietLine: 'Start a quest from the chat.',
+  goToChat: 'Go to chat',
+  goToChatHint: "Shows Auto's chat",
+});
+
+/** Arcade's Inventory on the handheld (US-022n; the kit's deliverables/{inventory.ts,bag.tsx}). */
+export const ARCADE_INVENTORY_COPY = Object.freeze({
+  tabs: Object.freeze({ all: 'All', reports: 'Reports', documents: 'Documents', images: 'Images' }),
+  tabsLabel: 'Inventory filters',
+  bag: 'Inventory',
+  count: (n: number) => `${n} ${n === 1 ? 'item' : 'items'} · newest first`,
+  post: 'Post',
+  today: 'Today',
+  yesterday: 'Yesterday',
+  slotHint: 'Names this item under the bag',
+  emptyInfo: 'Nothing in the bag yet.',
+  open: 'Open',
+  openHint: 'Opens this Deliverable',
+  more: 'More',
+  moreHint: 'Loads older items',
+  all: 'All Deliverables',
+  allHint: 'Opens the Deliverables page',
+  loading: 'Opening your bag…',
+  loadFailed: "Couldn't open your bag.",
+  retry: 'Try again',
+  emptyTitle: 'Your bag is empty.',
+  emptyLine: 'Ask Auto for something and it lands here.',
+  goToChat: 'Go to chat',
+  goToChatHint: "Shows Auto's chat",
 });
 
 /**
@@ -476,10 +706,14 @@ export const HUD_STATE_WORDS = Object.freeze<Record<MascotName, string>>({
  * here points at making an account (D63), and nothing commercial (D8).
  */
 export const EDGE_COPY = Object.freeze({
-  /** The line over an edge screen: Play's 'Automatos Play', HUD's 'AUTOMATOS //' (none in Studio). */
+  /**
+   * The line over an edge screen: Play's 'Automatos Play', HUD's 'AUTOMATOS //', Arcade's
+   * 'AUTOMATOS ARCADE' (the design kit's wordmark; none in Studio).
+   */
   brand: Object.freeze({
     play: Object.freeze({ name: 'Automatos', mark: 'Play', label: 'Automatos Play' }),
     hud: Object.freeze({ name: 'AUTOMATOS', mark: '//', label: 'Automatos' }),
+    arcade: Object.freeze({ name: 'AUTOMATOS', mark: 'ARCADE', label: 'Automatos Arcade' }),
   }),
   firstOpen: Object.freeze({
     /** Play's greeting, the second line in the accent text. */
@@ -519,5 +753,14 @@ export const EDGE_COPY = Object.freeze({
     title: 'This page wandered off.',
     message: "Auto looked everywhere. It's not here.",
     back: 'Back to chat',
+  }),
+  /**
+   * Arcade's own lines (US-022i): First open's greeting, the one its dialogue says before any
+   * reply (the design kit's chat/saying.ts), and Lost's, the kit's edges/not-found.tsx.
+   */
+  arcade: Object.freeze({
+    greeting: ARCADE_HOME_COPY.greeting,
+    lostTitle: 'You wandered off the map',
+    lostMessage: "This page isn't here. The link may be old, or the page may have moved.",
   }),
 });

@@ -17,9 +17,11 @@ import { captionFor } from '../../../core/frozen/lib/mascot/media';
 import type { MascotName } from '../../../core/frozen/lib/mascot/types';
 import { badgeText, commandCentreLabel } from '../../../ui/variants';
 import type { AiLabelAgent } from '../../ai-label-state';
+import { spriteSide, type SpriteView } from '../../arcade/sprite/paint';
 import { mascotGeometry } from '../../mascot/geometry';
 import { EDGE_COPY, HUD_CORE_COPY, HUD_STATE_WORDS } from '../../strings';
-import { CORE_SIZE } from './ring-specs';
+import type { ArcadePaintPicks } from '../../tokens/arcade';
+import { CORE_RINGS, CORE_SIZE, boxRadius } from './ring-specs';
 import { WAVE } from './waveform';
 
 /** The drawing's phone core (390 x 844), in points. */
@@ -95,6 +97,34 @@ export function mascotPlace(coreSize: number): MascotPlace {
     left: centre - stage.width / 2,
     top: centre - stage.height * HUD_CORE.mascot.lift,
   });
+}
+
+export type CoreSpritePlace = {
+  readonly view: SpriteView;
+  readonly left: number;
+  readonly top: number;
+};
+
+/** The sprite's views from the largest; the mark (32 pt) fits the least core. */
+const CORE_SPRITE_VIEWS: readonly SpriteView[] = ['sprite', 'mark'];
+
+/** The disc Arcade's window fills inside the rings: the pulse's circle (RingCore's fill). */
+export function coreDiscRadius(coreSize: number): number {
+  return boxRadius(coreSize, CORE_RINGS.pulse.inset);
+}
+
+/**
+ * Arcade's sprite in a core of this side (US-022i): the largest view whose side fits across the
+ * disc (at the look's pixel scale; else the 32 pt mark), centred on whole points so no pixel blurs.
+ */
+export function coreSpritePlace(
+  coreSize: number,
+  look: Pick<ArcadePaintPicks, 'pixelScale'>,
+): CoreSpritePlace {
+  const across = 2 * coreDiscRadius(coreSize);
+  const view = CORE_SPRITE_VIEWS.find((each) => spriteSide(look, each) <= across) ?? 'mark';
+  const offset = Math.round((coreSize - spriteSide(look, view)) / 2);
+  return Object.freeze({ view, left: offset, top: offset });
 }
 
 // ── The turn ─────────────────────────────────────────────────────────────────────────────────

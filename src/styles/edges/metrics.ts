@@ -1,6 +1,8 @@
 // The edge screens' numbers (US-017f), pure: Ember's 390 pt phones 06-09 ('Automatos Play
 // Ember.dc.html'), in points, and which button each style draws a screen's one action as. Every
 // style lays the same screen out with these; the style changes the faces, colours and grounds.
+// Arcade (US-022i) puts each screen's words in a window with Auto's sprite at its head
+// (ArcadeEdgeWindow.tsx), so it adds the window's padding and gaps.
 
 import type { ButtonVariant } from '../../ui/variants';
 import type { Layout } from '../registry/style-id';
@@ -30,11 +32,17 @@ export const EDGE_METRICS = Object.freeze({
   lostStage: 200,
   /** Studio's sail mark over 'Talk to Auto'. */
   brandMark: 40,
+  /**
+   * Arcade's edge window: 16 inside its rings (the kit's 404 window draws 28 at 560 wide), 14
+   * between its rows (the story window's), 6 between the sprite and its state word, and 8 between
+   * the brand line's pieces when they wrap.
+   */
+  arcade: Object.freeze({ pad: 16, gap: 14, spriteGap: 6, brandGap: 8 }),
 });
 
 /**
  * Not running's Check again: Ember's cream button under Play (the glow is out, so no accent on the
- * screen), the solid primary in Studio and HUD.
+ * screen), the solid primary in Studio, HUD and Arcade (the palette's accent, as its OPEN).
  */
 export function checkAgainVariant(layout: Layout): ButtonVariant {
   return layout === 'play' ? 'secondary' : 'primary';

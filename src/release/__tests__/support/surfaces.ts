@@ -60,6 +60,8 @@ const TRANSCRIPT = 'src/styles/hud/core/Transcript.tsx';
 export const CHAT_SCREEN = 'src/chat/screens/ChatScreen.tsx';
 export const PLAY_HOME = 'src/styles/homes/PlayHome.tsx';
 export const HUD_HOME = 'src/styles/homes/HudHome.tsx';
+export const ARCADE_HOME = 'src/styles/homes/ArcadeHome.tsx';
+const STORY_WINDOW = 'src/styles/arcade/home/StoryWindow.tsx';
 export const VOICE_SCREEN = 'src/voice/screen/VoiceScreen.tsx';
 export const FIRST_OPEN = 'src/styles/edges/FirstOpen.tsx';
 export const FIRST_OPEN_THREAD = 'src/styles/homes/FirstOpenThread.tsx';
@@ -91,6 +93,13 @@ export const SEND_SURFACES: readonly SendSurface[] = [
       "HUD's home (US-016k, US-019k): the core's Transcript opens with the caption; TYPE's Sheet and HOLD TO TALK sit over that core",
   },
   {
+    file: ARCADE_HOME,
+    sends: ['composer'],
+    labels: [[STORY_WINDOW]],
+    reason:
+      "Arcade's home (US-022g): the story window's first row is the caption, above every entry; TYPE's Sheet and hold to talk sit under that window",
+  },
+  {
     file: VOICE_SCREEN,
     sends: ['composer', 'hud-core'],
     labels: [[HUD_CORE, TRANSCRIPT]],
@@ -109,6 +118,12 @@ export const SEND_SURFACES: readonly SendSurface[] = [
     sends: ['speech'],
     inside: [HUD_HOME],
     reason: "HOLD TO TALK on HUD's home (US-019k): a hook, used only by HudHome",
+  },
+  {
+    file: 'src/voice/home/use-arcade-home-voice.ts',
+    sends: ['speech'],
+    inside: [ARCADE_HOME],
+    reason: "Hold to talk on Arcade's home (US-022g): a hook, used only by ArcadeHome",
   },
   {
     file: 'src/voice/screen/use-voice-screen.ts',
@@ -155,6 +170,13 @@ export const REPORT_MOUNTS: readonly ReportMount[] = [
       "HUD's home (P001R-AF-1): a long-press or the accessible action on Auto's saved reply in the core's Transcript (HudTurn's autoMessageId)",
   },
   {
+    file: ARCADE_HOME,
+    target: 'message',
+    opener: MESSAGE_REPORT,
+    reason:
+      "Arcade's home (US-022g): a long-press or the accessible action on Auto's saved replies in the story window, and on the one the dialogue window says",
+  },
+  {
     file: VOICE_SCREEN,
     target: 'message',
     opener: MESSAGE_REPORT,
@@ -185,6 +207,7 @@ export const AUTO_MESSAGES: Readonly<Record<string, AutoMessages>> = {
   [CHAT_SCREEN]: { kind: 'report' },
   [PLAY_HOME]: { kind: 'report' },
   [HUD_HOME]: { kind: 'report' },
+  [ARCADE_HOME]: { kind: 'report' },
   [VOICE_SCREEN]: { kind: 'report' },
   [FIRST_OPEN]: {
     kind: 'none',

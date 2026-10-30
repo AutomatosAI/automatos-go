@@ -6,6 +6,7 @@ import type { ComponentType } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import type { BuiltInStyleId } from '../../registry/style-id';
+import { ArcadePreview } from './ArcadePreview';
 import { HudPreview } from './HudPreview';
 import { PlayPreview } from './PlayPreview';
 import { StudioPreview } from './StudioPreview';
@@ -16,6 +17,7 @@ const PREVIEWS: Readonly<Record<BuiltInStyleId, ComponentType<PreviewProps>>> = 
   studio: StudioPreview,
   play: PlayPreview,
   hud: HudPreview,
+  arcade: ArcadePreview,
 });
 
 export function StylePreview({ id, animate }: PreviewProps & { readonly id: BuiltInStyleId }) {

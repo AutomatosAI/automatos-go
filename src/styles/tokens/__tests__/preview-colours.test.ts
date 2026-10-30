@@ -7,9 +7,16 @@ import { describe, expect, it } from 'vitest';
 import { rgba } from '../../../core/web/lib/look-kit/css';
 import { EMBER } from '../../../core/frozen/lib/looks/presets';
 import { HUD_PRESET_LOOKS } from '../../hud/look-schema';
+import { ARCADE_DEFAULT_PICKS, arcadeVars } from '../arcade';
 import { hudVars } from '../hud';
 import { playVars } from '../play';
-import { PREVIEW_ALPHAS, autoRingGlow, coreRingColours, glowFade } from '../preview-colours';
+import {
+  PREVIEW_ALPHAS,
+  arcadePreviewColours,
+  autoRingGlow,
+  coreRingColours,
+  glowFade,
+} from '../preview-colours';
 
 describe('the preview colours', () => {
   it("keeps the previews' alphas", () => {
@@ -42,5 +49,21 @@ describe('the preview colours', () => {
       });
       expect(Object.isFrozen(rings)).toBe(true);
     }
+  });
+});
+
+describe("Arcade's preview", () => {
+  it("paints the small handheld in the palette's own colours", () => {
+    const vars = arcadeVars({ ...ARCADE_DEFAULT_PICKS, palette: 'neon' });
+    const colours = arcadePreviewColours(vars);
+    expect(colours).toEqual({
+      screen: vars.page,
+      window: vars.win,
+      frame: vars.bd,
+      shadow: 'rgba(255,82,217,.28)',
+      text: vars.tx,
+      cursor: vars.ac,
+    });
+    expect(Object.isFrozen(colours)).toBe(true);
   });
 });

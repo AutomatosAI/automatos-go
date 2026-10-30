@@ -4,10 +4,12 @@
 // (D-TOKENS): the snag card's 1 pt error line at 0.4, Lost's '404' (the ground mixed toward the
 // text at 0.1) and Not running's command box — Ember's #080706 on Graphite, the ground shaded
 // toward black on Play's and HUD's dark grounds and the raised surface everywhere else, under a
-// 1 pt line of the text at 0.16.
+// 1 pt line of the text at 0.16. Arcade draws its edge screens inside a window, so the window is
+// its ground and the command box is the page sunk into it (the kit's '.previewSay').
 
 import { mixHex } from '../../core/web/lib/look-kit/contrast';
 import { rgba } from '../../core/web/lib/look-kit/css';
+import type { ArcadeVars } from './arcade';
 
 /** Ember's alphas and mixes, each named for what it paints. */
 export const EDGE_ALPHAS = Object.freeze({
@@ -50,5 +52,18 @@ export function edgeColours(source: EdgeColourSource): EdgeColours {
     lostNumber: mixHex(source.ground, source.text, a.lostNumber),
     commandFill: source.shade ? mixHex(source.ground, SHADE, a.commandShade) : source.surface,
     commandLine: rgba(source.text, a.commandLine),
+  });
+}
+
+/** Arcade's edge ground: the window, its text, the page as the command box, HP red the error. */
+export function arcadeEdgeSource(
+  vars: Pick<ArcadeVars, 'win' | 'tx' | 'page' | 'hp'>,
+): EdgeColourSource {
+  return Object.freeze({
+    ground: vars.win,
+    text: vars.tx,
+    surface: vars.page,
+    error: vars.hp,
+    shade: false,
   });
 }

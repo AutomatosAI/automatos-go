@@ -1,9 +1,10 @@
-// The eight font families every style uses (PRD-001 §4.6, D57, K6). Each face is a static
-// TTF in assets/fonts/<family>/, embedded natively by the expo-font config plugin (app.json
-// lists every file), so no font is fetched or loaded at runtime. Each file is named after its
-// PostScript name: iOS finds an embedded font by PostScript name and Android by file name, so
-// `fontFamily: face.postscriptName` selects the same face on both. assets/fonts/SOURCES.md
-// records where each file came from; __tests__/fonts.test.ts reads every TTF against this map.
+// The ten font families every style uses (PRD-001 §4.6, D57, K6; Press Start 2P and Pixelify Sans
+// for Arcade, D-ARC-4). Each face is a static TTF in assets/fonts/<family>/, embedded natively by
+// the expo-font config plugin (app.json lists every file), so no font is fetched or loaded at
+// runtime. Each file is named after its PostScript name: iOS finds an embedded font by PostScript
+// name and Android by file name, so `fontFamily: face.postscriptName` selects the same face on
+// both. assets/fonts/SOURCES.md records where each file came from; __tests__/fonts.test.ts reads
+// every TTF against this map.
 
 export const FONT_FAMILIES = {
   geist: 'Geist',
@@ -14,6 +15,8 @@ export const FONT_FAMILIES = {
   fredoka: 'Fredoka',
   rajdhani: 'Rajdhani',
   chakraPetch: 'Chakra Petch',
+  pressStart2p: 'Press Start 2P',
+  pixelifySans: 'Pixelify Sans',
 } as const;
 
 export type FontFamily = (typeof FONT_FAMILIES)[keyof typeof FONT_FAMILIES];
@@ -86,6 +89,9 @@ const FACE_LIST: readonly FontFace[] = [
   face(F.rajdhani, 700, 'normal', 'rajdhani', 'Rajdhani-Bold'),
   face(F.chakraPetch, 500, 'normal', 'chakra-petch', 'ChakraPetch-Medium'),
   face(F.chakraPetch, 600, 'normal', 'chakra-petch', 'ChakraPetch-SemiBold'),
+  face(F.pressStart2p, 400, 'normal', 'press-start-2p', 'PressStart2P-Regular'),
+  face(F.pixelifySans, 400, 'normal', 'pixelify-sans', 'PixelifySans-Regular'),
+  face(F.pixelifySans, 600, 'normal', 'pixelify-sans', 'PixelifySans-SemiBold'),
 ];
 
 /** Every embedded face, keyed by family, weight and style. */

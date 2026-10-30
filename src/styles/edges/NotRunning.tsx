@@ -2,7 +2,8 @@
 // ground for the screen (Play's dusk light, the glow out; HUD's grid), the brand line dimmed with
 // 'Not connected' beside it, Auto asleep at 150 (Play; HUD when the look's auto is on; Studio only
 // with a theme's mascot), the title and what to do — for a self-hosted server the command that
-// starts it, selectable (KS7) — in HUD's bracket panel under '— NOT ANSWERING'. Check again (48,
+// starts it, selectable (KS7) — in HUD's bracket panel under '— NOT ANSWERING' (Arcade: a window
+// tabbed so, Auto's sprite asleep at its head, US-022i). Check again (48,
 // full width) re-runs the step; a quiet re-check runs every 5 s while the screen is shown
 // (useRecheck) and stops when it goes. The words are edges.ts notRunningEdge's.
 
@@ -43,7 +44,12 @@ export function NotRunning({ server, onRetry, onRecheck, secondary }: NotRunning
       <EdgeBrand status={view.status} dimmed />
       <View style={[styles.middle, { gap: EDGE_METRICS.notRunningGap }]}>
         <Mascot size={MASCOT_SIZES.notRunning} state="sleeping" />
-        <EdgePanel line={view.panel} label={view.panelLabel} gap={EDGE_METRICS.notRunningGap}>
+        <EdgePanel
+          line={view.panel}
+          label={view.panelLabel}
+          gap={EDGE_METRICS.notRunningGap}
+          auto="sleeping"
+        >
           <Text
             accessibilityRole="header"
             style={[style.type.display('notRunning'), { color: paint.text }]}

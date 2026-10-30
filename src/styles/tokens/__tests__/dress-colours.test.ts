@@ -5,10 +5,12 @@
 import { describe, expect, it } from 'vitest';
 
 import { EMBER } from '../../../core/frozen/lib/looks/presets';
+import { ARCADE_DEFAULT_PICKS, arcadeVars } from '../arcade';
 import {
   HUD_SELECTED_GLOW,
   PLAY_CHIP_LINE_ALPHA,
   PLAY_OUTLINE_ALPHA,
+  arcadeSelectedColours,
   hudSelectedGlowColour,
   playDressLines,
 } from '../dress-colours';
@@ -35,5 +37,11 @@ describe('the dress colours', () => {
     expect(accent).toBe('#3FE0FF');
     expect(HUD_SELECTED_GLOW).toEqual({ blurRadius: 24, spreadDistance: -6, alpha: 0.5 });
     expect(hudSelectedGlowColour(accent)).toBe('rgba(63,224,255,0.5)');
+  });
+
+  it("selects in Arcade's highlight with its ink: Overworld's green under its dark green", () => {
+    const selected = arcadeSelectedColours(arcadeVars(ARCADE_DEFAULT_PICKS));
+    expect(selected).toEqual({ fill: '#7FE35C', ink: '#0B1A07' });
+    expect(Object.isFrozen(selected)).toBe(true);
   });
 });

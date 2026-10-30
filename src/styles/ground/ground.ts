@@ -1,8 +1,11 @@
 // What a screen stands on (D54), pure: the Screen primitive paints the dress's ground behind its
 // content — Studio's plain background (an installed theme's too), Play's page glow, HUD's glow,
-// grid and scanlines — and sets the status bar to the style's tone, so the clock reads on Play's
-// Paper as on HUD's black. ScreenGround.tsx draws the plan. The text inputs take the keyboard's
-// appearance from the same tone under Play and HUD (keyboardAppearanceFor).
+// grid and scanlines, Arcade's page — and sets the status bar to the style's tone, so the clock
+// reads on Play's Paper as on HUD's black and Arcade's Handheld green. ScreenGround.tsx draws the
+// plan. Arcade's ground is the palette's page colour and nothing over it: its scanlines live only
+// inside its windows (arcade/parts/Scanlines.tsx), never a layer over the screen and the AI label
+// (D-AI-LABEL). The text inputs take the keyboard's appearance from the same tone under Play, HUD
+// and Arcade (keyboardAppearanceFor).
 
 import type { MascotName } from '../../core/frozen/lib/mascot/types';
 import type { GroundKind } from '../dress/dress';
@@ -15,7 +18,8 @@ import type { ScreenKind } from './spots';
 export type GroundPlan =
   | { readonly kind: 'plain' }
   | { readonly kind: 'play-glow'; readonly plan: PlayGlowPlan | null }
-  | { readonly kind: 'hud-grid'; readonly plan: HudGroundPlan };
+  | { readonly kind: 'hud-grid'; readonly plan: HudGroundPlan }
+  | { readonly kind: 'arcade-page'; readonly page: string };
 
 const PLAIN: GroundPlan = Object.freeze({ kind: 'plain' });
 
@@ -30,9 +34,9 @@ export function statusBarStyle(tone: ColourScheme): StatusBarStyle {
 export type KeyboardAppearance = 'default' | 'light' | 'dark';
 
 /**
- * The keyboard under this style: Play's look and HUD paint their own tone, so the keyboard takes
- * it; Studio and an installed theme keep 'default', the window's appearance theme.tsx sets from
- * Studio's choice.
+ * The keyboard under this style: Play's look, HUD and Arcade's palette paint their own tone (Arcade:
+ * Handheld light, the others dark), so the keyboard takes it; Studio and an installed theme keep
+ * 'default', the window's appearance theme.tsx sets from Studio's choice.
  */
 export function keyboardAppearanceFor(style: ResolvedStyle): KeyboardAppearance {
   return style.layout === 'studio' ? 'default' : style.tone;
@@ -60,6 +64,9 @@ export function groundPlan({ style, ground, kind, state }: GroundInput): GroundP
   }
   if (ground === 'hud-grid' && style.hudLook && style.hud) {
     return Object.freeze({ kind: 'hud-grid', plan: hudGroundPlan(style.hudLook, style.hud) });
+  }
+  if (ground === 'arcade-page' && style.arcade) {
+    return Object.freeze({ kind: 'arcade-page', page: style.arcade.page });
   }
   return PLAIN;
 }

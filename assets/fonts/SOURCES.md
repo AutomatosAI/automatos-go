@@ -1,8 +1,9 @@
 # Font sources
 
-The eight families every style uses, as static TTF instances embedded by the `expo-font`
-config plugin (PRD-001 §4.6, D57, K6). All eight are licensed under the SIL Open Font
-License 1.1; each family directory carries its licence file. No font is fetched at runtime.
+The ten families every style uses, as static TTF instances embedded by the `expo-font`
+config plugin (PRD-001 §4.6, D57, K6; Press Start 2P and Pixelify Sans for Arcade, D-ARC-4).
+All ten are licensed under the SIL Open Font License 1.1; each family directory carries its
+licence file. No font is fetched at runtime.
 
 Each file is named after its PostScript name (nameID 6): iOS finds an embedded font by its
 PostScript name and Android by its file name in `assets/fonts/`, so one `fontFamily` string
@@ -22,6 +23,15 @@ are (the fontsource builds in automatos-ai name Newsreader `Newsreader16pt16pt-*
   `47d54ca1ebb14fd864695f1d39dc734f39017c33`, downloaded unchanged (each file's git blob
   matches that commit). Rajdhani 500/600/700 and Chakra Petch 500/600 are the weights
   `Automatos Command HUD.dc.html` loads and its font presets use.
+- **google/fonts** — `ofl/pressstart2p` at `dbd72d6ef9ebea750d33c02c7189633e972d6a40`,
+  downloaded unchanged (each file's git blob matches that commit). The TTF is the same bytes
+  as the design kit's `themes/arcade/assets/fonts/mobile/press-start-2p-regular.ttf` at
+  `034fa629c8ba79cff042559ca2d132f6d38f6d23` (AutomatosAI/automatos-design-kit).
+- **eifetx/Pixelify-Sans** — the family's upstream repository at
+  `39df74aba80df8157546034b878e8be1eb565ced`: the static instances in `fonts/ttf/` and the root
+  `OFL.txt`, downloaded unchanged (each file's git blob matches that commit). Arcade sets its
+  running text at 400 and 600 (the design kit's two Pixelify faces); the kit's phone file is the
+  variable font, which the app does not bundle (static faces only, K6).
 
 Every output was copied into `assets/fonts/<family>/` with `cp`. In the commands below:
 
@@ -29,6 +39,8 @@ Every output was copied into `assets/fonts/<family>/` with `cp`. In the commands
 export SOURCE_DATE_EPOCH=1792520117
 FT="uvx --from fonttools[woff]==4.67.0 fonttools"
 GF=https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl
+PS=https://raw.githubusercontent.com/google/fonts/dbd72d6ef9ebea750d33c02c7189633e972d6a40/ofl/pressstart2p
+PX=https://raw.githubusercontent.com/eifetx/Pixelify-Sans/39df74aba80df8157546034b878e8be1eb565ced
 ```
 
 ## Geist — `geist/`
@@ -115,3 +127,25 @@ Downloaded unchanged from google/fonts, so each file's sha256 equals its source'
 | `ChakraPetch-Medium.ttf`   | https://github.com/google/fonts/blob/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/chakrapetch/ChakraPetch-Medium.ttf   | `curl -fsSL -o ChakraPetch-Medium.ttf $GF/chakrapetch/ChakraPetch-Medium.ttf`     | `d480f4f97405fac3600652e2e14fd0b14339031c0af4da11582994878f04d919` |
 | `ChakraPetch-SemiBold.ttf` | https://github.com/google/fonts/blob/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/chakrapetch/ChakraPetch-SemiBold.ttf | `curl -fsSL -o ChakraPetch-SemiBold.ttf $GF/chakrapetch/ChakraPetch-SemiBold.ttf` | `45264de3204ddbd5fb3e14a2402acd5c630d16650ae5fc221d2c52da46a6734b` |
 | `OFL.txt`                  | https://github.com/google/fonts/blob/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/chakrapetch/OFL.txt                  | `curl -fsSL -o OFL.txt $GF/chakrapetch/OFL.txt`                                   | `13831d02389d917d22fcfa6c79f98f8acbf61d230add0e73a4d4dc5f3bfb9e56` |
+
+## Press Start 2P — `press-start-2p/`
+
+Downloaded unchanged from google/fonts, so each file's sha256 equals its source's. The one face
+the family has (400); Arcade's titles, labels, counters, eyebrows and buttons.
+
+| File                       | Source (google/fonts @ dbd72d6e)                                                                                        | Command                                                               | sha256                                                             |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `PressStart2P-Regular.ttf` | https://github.com/google/fonts/blob/dbd72d6ef9ebea750d33c02c7189633e972d6a40/ofl/pressstart2p/PressStart2P-Regular.ttf | `curl -fsSL -o PressStart2P-Regular.ttf $PS/PressStart2P-Regular.ttf` | `034c77f1f05ec89421e4a63f0e3a4ca1ecf852cc6d2bf611f126f275728e017d` |
+| `OFL.txt`                  | https://github.com/google/fonts/blob/dbd72d6ef9ebea750d33c02c7189633e972d6a40/ofl/pressstart2p/OFL.txt                  | `curl -fsSL -o OFL.txt $PS/OFL.txt`                                   | `705960c3281a5765ecc0b59bd4ed7ca59eed165748076bc2fc3e8fdbfeb944b0` |
+
+## Pixelify Sans — `pixelify-sans/`
+
+Downloaded unchanged from eifetx/Pixelify-Sans, so each file's sha256 equals its source's. The
+upstream file names are the PostScript names already (`PixelifySans-Regular`,
+`PixelifySans-SemiBold`), so nothing is renamed. Arcade's running text.
+
+| File                        | Source (eifetx/Pixelify-Sans @ 39df74ab)                                                                                  | Command                                                                           | sha256                                                             |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `PixelifySans-Regular.ttf`  | https://github.com/eifetx/Pixelify-Sans/blob/39df74aba80df8157546034b878e8be1eb565ced/fonts/ttf/PixelifySans-Regular.ttf  | `curl -fsSL -o PixelifySans-Regular.ttf $PX/fonts/ttf/PixelifySans-Regular.ttf`   | `5436d485d1713afa376e1744911cbbcc0849eae1eb55ec9bc34c0753993ffef9` |
+| `PixelifySans-SemiBold.ttf` | https://github.com/eifetx/Pixelify-Sans/blob/39df74aba80df8157546034b878e8be1eb565ced/fonts/ttf/PixelifySans-SemiBold.ttf | `curl -fsSL -o PixelifySans-SemiBold.ttf $PX/fonts/ttf/PixelifySans-SemiBold.ttf` | `a4b54982991cd47450df317a451a7f066bf6b91aa033e105643aba2cf7bd35c3` |
+| `OFL.txt`                   | https://github.com/eifetx/Pixelify-Sans/blob/39df74aba80df8157546034b878e8be1eb565ced/OFL.txt                             | `curl -fsSL -o OFL.txt $PX/OFL.txt`                                               | `b66ba46f511a851ab09998b5a5a9fdbb102545a3864cb993095e1745996873a7` |

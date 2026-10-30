@@ -7,10 +7,13 @@
 // accessibilityState, so it is said once; on screen the chosen card carries a 2 pt ring in its
 // style's accent AND the word 'Selected' (never colour alone, D-A11Y). The accent is the style's
 // own (selectedPaint): under Play and HUD the Studio-keyed 'accent' is the look's error colour.
+// Arcade's ring and word are its palette's accent (ac), which reads at AA on its window ground.
 
 import { toolLineLabel } from '../../core/frozen/components/play/chat/labels';
 import { captionFor } from '../../core/frozen/lib/mascot/media';
 import type { HostToolCall } from '../../core/frozen/lib/theme-sdk';
+import type { CounterValues } from '../arcade/parts/counters';
+import { stateWord } from '../arcade/sprite/states';
 import { lookScreen, type StyleScreenPath } from '../nav';
 import type { ResolvedStyle, StyleMotion } from '../provider/resolve';
 import type {
@@ -21,10 +24,10 @@ import type {
   SchemeOption,
 } from '../registry/picker';
 import type { BuiltInStyleId, StyleChoice } from '../registry/style-id';
-import { PICKER_COPY, PREVIEW_COPY } from '../strings';
+import { ARCADE_HOME_COPY, PICKER_COPY, PREVIEW_COPY } from '../strings';
 
 export type LookLink = {
-  /** On screen: 'Make it yours →', 'Looks →'. */
+  /** On screen: 'Make it yours →', 'Looks →', 'Options →'. */
   readonly label: string;
   /** For VoiceOver: the words without the arrow. */
   readonly accessibilityLabel: string;
@@ -52,7 +55,7 @@ export type PickerCard = {
   /** Studio only: Light / Dark / System; empty for Play and HUD. */
   readonly schemes: readonly SchemeOption[];
   readonly schemeGroup: string;
-  /** Play's 'Make it yours →', HUD's 'Looks →'; null for Studio. */
+  /** Play's 'Make it yours →', HUD's 'Looks →', Arcade's 'Options →'; null for Studio. */
   readonly lookLink: LookLink | null;
   /** Studio only, when US-016i lists installed themes with a phone look. */
   readonly themes: readonly PickerCardTheme[];
@@ -101,7 +104,7 @@ function card(section: PickerSection): PickerCard {
   });
 }
 
-/** One card per section, in the registry's order (Studio, Play, HUD). */
+/** One card per section, in the registry's order (Studio, Play, HUD, Arcade). */
 export function pickerCards(state: PickerState): readonly PickerCard[] {
   return Object.freeze(state.sections.map(card));
 }
@@ -117,17 +120,19 @@ export type SelectedPaint = {
   readonly word: string;
 };
 
-type SelectedSource = Pick<ResolvedStyle, 'layout' | 'tokens' | 'play' | 'hud'>;
+type SelectedSource = Pick<ResolvedStyle, 'layout' | 'tokens' | 'play' | 'hud' | 'arcade'>;
 
 /**
  * The Studio-keyed 'accent' is the look's consequence (error) colour under Play and HUD (the
  * vendored studio-tokens.ts), so the chosen card reads its style's own: Play's look accent with its
- * accentText, HUD's accent (AA on its ground already), Studio's accent (there the two are one).
+ * accentText, HUD's accent (AA on its ground already), Arcade's palette accent (tuned to read on
+ * its window, the card's ground), Studio's accent (there the two are one).
  */
 export function selectedPaint(style: SelectedSource): SelectedPaint {
-  const { play, hud } = style;
+  const { play, hud, arcade } = style;
   if (style.layout === 'play' && play) return { ring: play.accent, word: play.accentText };
   if (style.layout === 'hud' && hud) return { ring: hud.accent, word: hud.accent };
+  if (style.layout === 'arcade' && arcade) return { ring: arcade.ac, word: arcade.ac };
   const { accent } = style.tokens.colours;
   return { ring: accent, word: accent };
 }
@@ -159,7 +164,13 @@ export function previewAnimates(focused: boolean, motion: StyleMotion): boolean 
   return focused && motion.loops;
 }
 
-/** The previews' numbers: Auto at 84 (Play's Auto row), HUD's ring core at 120. */
+/** Arcade's preview: today's counters as a home shows them (no XP: no completion times, D-ARC-6). */
+const ARCADE_PREVIEW_COUNTERS: CounterValues = Object.freeze({ xp: null, needs: 2, quest: 3 });
+
+/**
+ * The previews' numbers: Auto at 84 (Play's Auto row), HUD's ring core at 120, Arcade's handheld
+ * (its sprite at the default look's pixel scale, a D-pad of 24 pt cells beside the dialogue).
+ */
 export const PREVIEW = Object.freeze({
   minHeight: 196,
   autoSize: 84,
@@ -172,6 +183,17 @@ export const PREVIEW = Object.freeze({
   toolLineSize: 12,
   /** HUD's state chip: a 1 pt accentLine border, 5 x 12 pad, Geist Mono 500 11 at .16em. */
   chip: Object.freeze({ size: 11, weight: 500, trackingEm: 0.16, padX: 12, padY: 5, border: 1 }),
+  /** Arcade's handheld: the console's 12 pt pad, 8 pt gaps, the portrait's box, the mini D-pad. */
+  arcade: Object.freeze({
+    pad: 12,
+    gap: 8,
+    windowPad: 8,
+    portraitPad: 4,
+    ring: 2,
+    padCell: 24,
+    lineSize: 15,
+    counters: ARCADE_PREVIEW_COUNTERS,
+  }),
 });
 
 /** Play's tool chip: the vendored words for a finished web search ('✓ Searched the web · …'). */
@@ -191,4 +213,9 @@ export function playToolLine(): string {
 /** HUD's chip: Auto at rest, in capitals as the state chip says every state. */
 export function hudChipWords(): string {
   return captionFor('idle').toUpperCase();
+}
+
+/** Arcade's dialogue: Auto at rest, his state word as the window says it, and the home's line. */
+export function arcadePreviewWords(): { readonly state: string; readonly line: string } {
+  return Object.freeze({ state: stateWord('idle'), line: ARCADE_HOME_COPY.yourMove });
 }
