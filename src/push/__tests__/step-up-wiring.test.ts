@@ -1,5 +1,5 @@
 // Face ID before approve or answer in A2's and A3's buttons (D19, KP13; US-015e), and before a
-// row's Try again (PRD-268). Through the real
+// row's Try again and a suggestion's Start (PRD-268). Through the real
 // gate (createStepUp over a fake LocalAuthentication, the switch on), each of the gated writes
 // sends nothing on a cancelled, missed, locked-out or failed check, and on a pass sends one request,
 // exactly what A2's or A3's sender sent before. Read from the source: each gated route is named by
@@ -98,7 +98,11 @@ const relative = (file: string) => path.relative(ROOT, file).split(path.sep).joi
 /** The code without its comments, so a comment naming a sender proves nothing either way. */
 const code = (text: string) =>
   text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/.*$/gm, '$1');
-const MODULES = [...sources(path.join(ROOT, 'src/chat')), ...sources(path.join(ROOT, 'src/cc'))]
+const MODULES = [
+  ...sources(path.join(ROOT, 'src/chat')),
+  ...sources(path.join(ROOT, 'src/cc')),
+  ...sources(path.join(ROOT, 'src/suggestions')),
+]
   .filter(({ file }) => !/__tests__|\.test\.tsx?$/.test(file))
   .map(({ file, text }) => ({ file: relative(file), text, code: code(text) }));
 const names = (text: string, name: string) =>
@@ -159,9 +163,16 @@ const GATED_ROUTES = [
     '/api/missions/{mission_id}/replan',
     'src/cc/routes.ts',
   ],
+  // PRD-268's Start on a suggestion (US-G01)
+  [
+    'SUGGESTION_ROUTES.start',
+    'src/suggestions/api.ts',
+    '/api/proactive/suggestions/{suggestion_id}/start',
+    'src/suggestions/routes.ts',
+  ],
 ] as const;
 /** The route tables: they declare the routes (a sender's name may be a key there). */
-const ROUTE_TABLES = ['src/chat/routes.ts', 'src/cc/routes.ts'];
+const ROUTE_TABLES = ['src/chat/routes.ts', 'src/cc/routes.ts', 'src/suggestions/routes.ts'];
 /** A2's and A3's functions that send a gated write, and those that wrap one. */
 const SENDERS = [
   'approveMission',
@@ -172,6 +183,7 @@ const SENDERS = [
   'approvePost',
   'approveShown',
   'sendRetry',
+  'startSuggestion',
 ];
 /** The modules that declare the senders: A2's and A3's, their tests pin their signatures. */
 const SENDER_MODULES = [
@@ -181,6 +193,7 @@ const SENDER_MODULES = [
   'src/cc/status/api.ts',
   'src/chat/cards/api.ts',
   'src/chat/cards/grants.ts',
+  'src/suggestions/api.ts',
 ];
 /** A4's gated senders, each with the actions it asks for. */
 const GATED_MODULES: Readonly<Record<string, readonly string[]>> = {
@@ -189,6 +202,7 @@ const GATED_MODULES: Readonly<Record<string, readonly string[]>> = {
   'src/cc/status/gated.ts': ['retry'],
   'src/cc/ticket/gated.ts': ['approve_ticket'],
   'src/chat/cards/gated.ts': ['approve_plan', 'grant_tool'],
+  'src/suggestions/gated.ts': ['start_suggestion'],
 };
 const GATED_FUNCTIONS = [
   'approvePlanGated',
@@ -197,6 +211,7 @@ const GATED_FUNCTIONS = [
   'approveTicketGated',
   'approvePostGated',
   'retryGated',
+  'startGated',
 ];
 /** KP13: the safe direction never asks. */
 const UNGATED_SENDERS = [
@@ -207,6 +222,7 @@ const UNGATED_SENDERS = [
   'dismissQuestion',
   'sendBack',
   'requestChanges',
+  'hideSuggestion',
 ];
 
 /** A module's top-level declarations: [its name, its code]. */
@@ -286,6 +302,7 @@ describe('every gated write goes through src/step-up (read from the source)', ()
       'src/cc/ticket/use-ticket.ts',
       'src/chat/cards/PlanApprovalCard.tsx',
       'src/chat/cards/ToolApprovalCard.tsx',
+      'src/suggestions/use-suggestions.ts',
     ]);
     for (const file of users) {
       const text = MODULES.find((m) => m.file === file)?.text ?? '';

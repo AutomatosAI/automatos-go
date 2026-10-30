@@ -10,7 +10,10 @@
 // Auto's cards sit inside the reply that raised them (cards/view.ts places them), and the tickets a
 // reply filed or checked are its own (a saved task_card part, or the live turn's). Auto's answer is
 // kept as its markdown (OT-C8), lexed by markdown/blocks.ts where it is drawn; the user's words stay
-// plain. The components only draw these rows.
+// plain. A saved message carrying the day's brief (a brief@1 part, PRD-268 §6.11.2) keeps it on its
+// row where the caller says briefs are drawn (discovery lists `brief`): the layouts then draw the
+// brief card in place of the answer, which stays the row's text for everything else (Report this,
+// HUD's transcript, an older server). The components only draw these rows.
 
 import { ApiError } from '../api/errors';
 import {
@@ -26,6 +29,8 @@ import { receiptsOf } from '../core/web/lib/chat/receipts';
 import { lastTurn } from '../core/web/lib/chat/retry';
 import { joinLabel } from '../ui/paint';
 import { errorCopy } from '../ui/variants';
+import { briefOf } from '../brief/model';
+import type { Brief } from '../brief/schema';
 import { placedCards, type CardRow, type PlacedCards, type TicketRow } from './cards/view';
 import { ticketRows } from './cards/view-tools';
 import { canSend, shownMessages, type ThreadFailure, type ThreadState } from './controller/thread';
@@ -85,6 +90,8 @@ export type AutoRow = {
   readonly tickets: readonly TicketRow[];
   /** Auto's cards this reply raised (a Mission suggestion, a plan or a tool to approve, …). */
   readonly cards: readonly CardRow[];
+  /** The day's brief this message carries, where briefs are drawn (ViewOptions.briefs); else null. */
+  readonly brief: Brief | null;
 };
 
 export type ChatRow =
@@ -95,7 +102,10 @@ export type ChatRow =
   /** Cards whose reply was never saved (a stopped or failed turn): after the saved messages. */
   | { readonly type: 'cards'; readonly key: string; readonly cards: readonly CardRow[] };
 
-export type ViewOptions = LineOptions;
+export type ViewOptions = LineOptions & {
+  /** Draw the brief@1 card (discovery lists `brief`, canBrief); off, the text part as before. */
+  readonly briefs?: boolean;
+};
 
 export const LIVE_USER_KEY = 'live-user';
 export const LIVE_AUTO_KEY = 'live-auto';
@@ -196,7 +206,8 @@ function autoRow(row: Omit<AutoRow, 'type'>): AutoRow | null {
     row.receipts === null &&
     row.notices.length === 0 &&
     row.tickets.length === 0 &&
-    row.cards.length === 0;
+    row.cards.length === 0 &&
+    row.brief === null;
   return empty ? null : { type: 'auto', ...row };
 }
 
@@ -213,10 +224,11 @@ function storedRow(
     const copy = savedFailureCopy(message);
     const kind = failureKind(message.source?.code ?? null);
     const note = notice(`${message.id}-${kind}`, kind, copy.text, newest && copy.canRetry);
-    return autoRow({ ...base, answer: '', notices: [note], tickets: [] });
+    return autoRow({ ...base, answer: '', notices: [note], tickets: [], brief: null });
   }
   return autoRow({
     ...base,
+    brief: options.briefs ? briefOf(message) : null,
     tickets: ticketRows(
       message.parts.flatMap((part) => (part.type === 'task_card' ? [part.card] : [])),
     ),
@@ -253,6 +265,7 @@ function liveAutoRow(
     notices: turnNotices(turn),
     tickets: ticketRows(turn.taskCards),
     cards,
+    brief: null,
   });
 }
 

@@ -21,6 +21,7 @@ const SAMPLES: Readonly<Record<KeyFamilyName, readonly unknown[]>> = {
   schedule: queryKeys.schedule('7d'),
   questions: queryKeys.questions('pending', 'question'),
   socialPost: queryKeys.socialPost(WS, 'post-1'),
+  suggestions: queryKeys.suggestions('open'),
   deliverables: queryKeys.deliverables(WS, { kind: 'document' }),
   deliverable: queryKeys.deliverable(WS, 'd-1', true),
   'chat.thread': queryKeys.chat.thread('chat-1'),

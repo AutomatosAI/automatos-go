@@ -112,9 +112,37 @@ describe('DiscoverySchema', () => {
     ).toBe(false);
   });
 
-  it('knows exactly the six capabilities of PRD-266 §4.1, then tts and digest_now', () => {
-    expect([...CAPABILITIES]).toEqual([...SAAS_DOCUMENT.capabilities, 'tts', 'digest_now']);
+  it('knows exactly the six capabilities of PRD-266 §4.1, then tts, digest_now, PRD-268 W2 and readiness', () => {
+    expect([...CAPABILITIES]).toEqual([
+      ...SAAS_DOCUMENT.capabilities,
+      'tts',
+      'digest_now',
+      'brief',
+      'suggestions',
+      'readiness',
+    ]);
   });
+
+  it('keeps readiness when a server lists it, and nothing without it (PRD-268 K20)', () => {
+    const listed = DiscoverySchema.parse({
+      ...SAAS_DOCUMENT,
+      capabilities: [...SAAS_DOCUMENT.capabilities, 'readiness'],
+    });
+    expect(listed.capabilities).toContain('readiness');
+    expect(DiscoverySchema.parse(SAAS_DOCUMENT).capabilities).not.toContain('readiness');
+  });
+
+  it.each(['brief', 'suggestions'] as const)(
+    'keeps %s when a server lists it, and nothing without it (an older server)',
+    (capability) => {
+      const listed = DiscoverySchema.parse({
+        ...SAAS_DOCUMENT,
+        capabilities: [...SAAS_DOCUMENT.capabilities, capability],
+      });
+      expect(listed.capabilities).toContain(capability);
+      expect(DiscoverySchema.parse(SAAS_DOCUMENT).capabilities).not.toContain(capability);
+    },
+  );
 
   it('keeps digest_now when a server lists it, and nothing without it', () => {
     const listed = DiscoverySchema.parse({

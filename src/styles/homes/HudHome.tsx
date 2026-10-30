@@ -11,23 +11,36 @@
 // dress; a blank draft is already New chat (menuHere), so that row only closes the menu. First open
 // is the core with an empty transcript and 'Say or type what you need.' (a blank draft's turn is
 // EMPTY_TURN).
+//   Auto's suggestions (PRD-268 US-G01, src/suggestions): 'IDEAS · N' in the command row opens the
+// sheet of them all, and the newest is the NEXT ▸ line under the status row, never above the
+// buttons; only where discovery lists `suggestions`.
 //   HOLD TO TALK is A6's quick-ask in place (US-019k, useHudHomeVoice over this thread): MIC LIVE,
 // the waveform, the voice's turn in the transcript from a press until a typed send, the voice's chip
 // and line while it works, and STOP stopping the speech too (and A2's turn, typed or spoken).
+//   An approval (PRD-268 US-G08, src/approvals/use-hud-approval.tsx): HUD draws no thread cards, so
+// a card waiting with an ApprovalView opens its answer sheet by itself, once; closed unanswered,
+// '◆ WAITING FOR YOU · OPEN' under the state chip opens it again.
 //   Report this (D15, P001R-AF-1): a long-press or the accessible action on Auto's saved reply in the
 // transcript opens the foundation's one ReportSheet (A2's useMessageReport), mounted once beside
 // TYPE's Sheet, never inside it.
+//   The day's brief (PRD-268 US-G06, src/brief/use-hud-brief.tsx): while it is the newest message it
+// fills the transcript slot, and OPEN BRIEF opens its numbered rows in a Sheet beside TYPE's.
 
 import { useCallback, useMemo, useState } from 'react';
 
 import { useNeedsYou } from '../../api/needs-you';
+import { useHudBrief } from '../../brief/use-hud-brief';
 import { Composer } from '../../chat/composer/Composer';
 import { DiscussionBar } from '../../chat/discussion/DiscussionBar';
 import { HomeMenu } from '../../chat/home/HomeMenu';
+import { useHudApproval } from '../../approvals/use-hud-approval';
 import { menuHere } from '../../chat/home/menu';
 import { useHomeMenu } from '../../chat/home/use-home-menu';
 import { useMessageReport } from '../../chat/report/use-message-report';
 import type { ChatFile } from '../../chat/request';
+import { HudNext } from '../../suggestions/HudNext';
+import { SUGGESTION_COPY } from '../../suggestions/strings';
+import { useIdeas, type IdeasCount } from '../../suggestions/use-ideas';
 import { ReportSheet, Sheet } from '../../ui';
 import { useHudHomeVoice } from '../../voice/home/use-hud-home-voice';
 import { VoiceLine } from '../../voice/screen/VoiceLine';
@@ -42,15 +55,28 @@ export type HudHomeProps = {
   readonly ticketId?: string | null;
 };
 
+/** 'IDEAS · N' in HUD's words, while one is open. */
+function hudIdeas({ button }: IdeasCount) {
+  if (!button) return undefined;
+  return {
+    text: SUGGESTION_COPY.hud.count(button.count),
+    label: button.label,
+    onPress: button.onPress,
+  };
+}
+
 export function HudHome({ chatId, ticketId = null }: HudHomeProps) {
   const home = useHomeThread(chatId, ticketId);
   const { total } = useNeedsYou();
+  const ideas = useIdeas();
   const [typing, setTyping] = useState(false);
   const { state, stop } = home.thread;
   const menu = useHomeMenu(menuHere(state, ticketId));
+  const approval = useHudApproval(state, home.thread.settleCard);
   const turn = useMemo(() => hudTurn(state), [state]);
   const voice = useHudHomeVoice(home, turn);
   const { report, sheet } = useMessageReport();
+  const brief = useHudBrief(state, report);
   const { sendMessage } = home;
   const { typed } = voice;
   const close = useCallback(() => setTyping(false), []);
@@ -71,13 +97,17 @@ export function HudHome({ chatId, ticketId = null }: HudHomeProps) {
         onType={() => setTyping(true)}
         onStop={voice.stop}
         needsYou={total}
+        ideas={hudIdeas(ideas)}
+        next={<HudNext />}
         onMenu={menu.open}
         levels={voice.levels}
+        underChip={approval.line}
         quickAsk={{
           ...voice.core,
           line: <VoiceLine line={voice.line} onAction={voice.lineAction} />,
         }}
         report={report}
+        transcriptSlot={brief.slot}
       />
       <Sheet visible={typing} onClose={close}>
         <DiscussionBar state={home.discussion} messages={state.messages} />
@@ -90,8 +120,10 @@ export function HudHome({ chatId, ticketId = null }: HudHomeProps) {
           onStop={stop}
         />
       </Sheet>
+      {ideas.sheet}
       <HomeMenu menu={menu} needsYou={total} />
       <ReportSheet {...sheet} />
+      {brief.sheet}
     </>
   );
 }

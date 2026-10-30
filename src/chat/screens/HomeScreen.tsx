@@ -3,9 +3,12 @@
 // useHomeChat); until the list answers, the frame shows loading (or the list's error with Retry)
 // and no composer, so nothing is typed into a thread that is not yet chosen. `firstOpen` shows in
 // the thread's place while home's conversation is a draft with nothing in it (A5's First open).
+// The thread and the strip share whether the brief card is on screen (PRD-268 US-G06): the strip
+// then shrinks to its count.
 
 import type { ReactNode } from 'react';
 
+import { BriefOnScreenProvider } from '../../brief/on-screen';
 import { ErrorState, LoadingState } from '../../ui';
 import { HomeHeader } from '../home/HomeHeader';
 import { NeedsStrip } from '../home/NeedsStrip';
@@ -21,7 +24,11 @@ export type HomeScreenProps = {
 export function HomeScreen({ firstOpen }: HomeScreenProps = {}) {
   const { chatId, error, retry } = useHomeChat();
   if (chatId !== undefined)
-    return <ChatScreen chatId={chatId} above={<NeedsStrip />} empty={firstOpen} />;
+    return (
+      <BriefOnScreenProvider>
+        <ChatScreen chatId={chatId} above={<NeedsStrip />} empty={firstOpen} />
+      </BriefOnScreenProvider>
+    );
   return (
     <ChatFrame header={<HomeHeader />} above={<NeedsStrip />}>
       {error ? <ErrorState error={error} onRetry={retry} /> : <LoadingState />}

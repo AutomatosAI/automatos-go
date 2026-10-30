@@ -5,6 +5,7 @@
 // card for its requests, each settled on its own. A ticket the reply filed or checked reads as the
 // handoff's '#0431: filed to Inbox' and opens on the board through the foundation's cc.ticket.
 
+import type { ApprovalView } from '../../core/approval-view';
 import { BOARD_COLUMNS } from '../../core/web/types/board';
 import { clip } from '../../core/frozen/components/play/chat/labels';
 import { UNNAMED_ACTION } from '../../core/web/lib/chat/approvals';
@@ -44,6 +45,8 @@ export type ToolApprovalRow = {
   readonly line: GrantLine;
   /** The buttons are gone: the click went through (Approve & run, Deny, or a Withdraw). */
   readonly decided: boolean;
+  /** ApprovalView@1 (PRD-268 US-G08): the card then opens the answer sheet; null, today's card. */
+  readonly view: ApprovalView | null;
 };
 
 export type WithdrawRequestRow = {
@@ -91,7 +94,7 @@ export function paramRows(params: Readonly<Record<string, unknown>> | undefined)
   return Object.entries(params ?? {}).map(([key, value]) => ({ key, value: paramText(value) }));
 }
 
-export function toolRow(card: FiledCard, tool: Tool): ToolApprovalRow {
+export function toolRow(card: FiledCard, tool: Tool, view?: ApprovalView): ToolApprovalRow {
   return {
     kind: 'tool',
     key: card.key,
@@ -104,6 +107,7 @@ export function toolRow(card: FiledCard, tool: Tool): ToolApprovalRow {
     outcome: card.outcome,
     line: toolLine(card.outcome),
     decided: card.outcome.state !== 'open',
+    view: view ?? null,
   };
 }
 

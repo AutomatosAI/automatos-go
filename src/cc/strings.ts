@@ -38,6 +38,12 @@ export const BOARD_COPY = Object.freeze({
   }),
   /** A status this version does not know, once its last ticket has moved on. */
   emptyOther: 'No ticket has this status now.',
+  /** PRD-268: the tickets a suggestion's Start filed. */
+  fromSuggestions: 'From suggestions',
+  emptySuggestions: Object.freeze({
+    title: 'Nothing from suggestions',
+    message: "Tickets show here when you start one of Auto's ideas.",
+  }),
 });
 
 /** The Command Centre's frame (handoff §2): the top bar, the head and the tabs. */

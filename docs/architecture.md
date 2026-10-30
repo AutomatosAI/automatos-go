@@ -264,6 +264,9 @@ If the hosted server answers 404, the app uses built-in defaults with no capabil
 | `digest` | Daily digest time (A4) | yes, since #1300 (W2, 24 Oct) |
 | `tts` | Auto's server voice: quick-ask's replies and Settings → Voice's list ([voice.md](voice.md#autos-server-voice)) | no: built on automatos-ai `feat/voice-tts` (27 Oct), listed only when the server has a voice |
 | `digest_now` | **Send today's brief now** under the digest time (A4, `POST /api/v1/mobile/digest/now`) | no: built on automatos-ai `feat/digest-now` (28 Oct) |
+| `brief` | PRD-268's brief: the on-open call (`POST /api/proactive/brief/open`) and the `brief@1` card in the thread (US-G06) | no: core W2 (PRD-268 K20, `feat/prd-268-w2-delivery`) |
+| `suggestions` | PRD-268's suggestions: the pinned card, the header count, Start and Hide (US-G01) | no: core W2 (PRD-268 K20, `feat/prd-268-w2-delivery`) |
+| `readiness` | PRD-268's **What Auto depends on** in Settings: `GET /api/readiness`, Check again (`POST /api/readiness/check`), and this phone's push, microphone, speech recognition and server voice rows (US-G07) | no: the routes are on core `main` (W1, US-C18); the capability is core W2's (PRD-268 K20) |
 
 The server side is automatos-ai `orchestrator/services/mobile/discovery.py` (`CAPABILITY_ROUTES`).
 

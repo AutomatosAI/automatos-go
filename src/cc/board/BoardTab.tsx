@@ -9,7 +9,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { FlatList, RefreshControl, View, type ListRenderItem } from 'react-native';
 
-import { useApiClient } from '../../app-state/session';
+import { canSuggestions } from '../../api/capabilities';
+import { useApiClient, useAppSession } from '../../app-state/session';
 import { useTokens } from '../../styles/theme';
 import { EmptyState, ErrorState, LoadingState } from '../../ui';
 import { TabFrame, TabHead } from '../shell/TabHead';
@@ -35,7 +36,11 @@ function useBoardTab() {
   const [chosen, setChosen] = useState<BoardFilter>('all');
   const pull = usePullRefresh(query.refetch);
   const tickets = query.data?.tasks;
-  const view = useMemo(() => (tickets ? boardView(tickets, chosen) : null), [tickets, chosen]);
+  const suggestions = canSuggestions(useAppSession().discovery);
+  const view = useMemo(
+    () => (tickets ? boardView(tickets, chosen, { suggestions }) : null),
+    [tickets, chosen, suggestions],
+  );
   return { query, view, pull, choose: setChosen };
 }
 

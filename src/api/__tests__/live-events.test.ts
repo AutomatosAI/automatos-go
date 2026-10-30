@@ -24,6 +24,7 @@ const SAMPLES: Readonly<Record<KeyFamilyName, readonly unknown[]>> = {
   schedule: queryKeys.schedule('7d'),
   questions: queryKeys.questions('pending', 'question'),
   socialPost: queryKeys.socialPost(WS, 'post-1'),
+  suggestions: queryKeys.suggestions('open'),
   deliverables: queryKeys.deliverables(WS),
   deliverable: queryKeys.deliverable(WS, 'd-1', true),
   'chat.thread': queryKeys.chat.thread('chat-1'),
@@ -71,6 +72,15 @@ describe('live frames (zod; unknown events ignored)', () => {
     expect(parseLiveEvent({ event: 'chat_changed', data })).toEqual({ type: 'chat_changed', data });
   });
 
+  it('reads suggestion_changed with its suggestion, person and status (ids only)', () => {
+    const data = { workspace_id: WS, suggestion_id: 's-1', user_id: 12, status: 'started' };
+    expect(parseLiveEvent({ event: 'suggestion_changed', data: { ...data, title: 'x' } })).toEqual({
+      type: 'suggestion_changed',
+      data,
+    });
+    expect(parseLiveEvent({ event: 'suggestion_changed', data: { workspace_id: WS } })).toBeNull();
+  });
+
   it('ignores an unknown event and a frame that does not fit', () => {
     expect(parseLiveEvent({ event: 'agent_moved', data: { workspace_id: WS } })).toBeNull();
     expect(parseLiveEvent({ event: 'message', data: 'hello' })).toBeNull();
@@ -92,7 +102,13 @@ describe('the event → invalidation map', () => {
   });
 
   it('a resume refetches every family any event would have', () => {
-    expect([...RESUME_INVALIDATIONS].sort()).toEqual(['board', 'needsYou', 'questions', 'ticket']);
+    expect([...RESUME_INVALIDATIONS].sort()).toEqual(
+      ['board', 'needsYou', 'questions', 'suggestions', 'ticket'].sort(),
+    );
+  });
+
+  it('suggestion_changed refetches the open suggestions only', () => {
+    expect(LIVE_INVALIDATIONS.suggestion_changed).toEqual(['suggestions']);
   });
 
   it("marks exactly those families' queries stale, and no other", async () => {
