@@ -287,6 +287,36 @@ export const ARCADE_COPY = Object.freeze({
 });
 
 /**
+ * Arcade's home (US-022g; the design kit's chat/{story,entries,cards,saying}.ts(x)): the story
+ * window's title and its speakers (YOU, AUTO: the label face sets them in capitals, VoiceOver hears
+ * the words), the ★ and ✕ marks of what a turn did (hidden from VoiceOver: each line says its
+ * words), the ITEM RECEIVED window and its OPEN, the headings over A2's own cards, what the
+ * dialogue says before any reply, and TYPE and STOP under it.
+ */
+export const ARCADE_HOME_COPY = Object.freeze({
+  story: 'Story',
+  storyLabel: 'Story so far',
+  you: 'You',
+  auto: 'Auto',
+  event: '★',
+  failed: '✕',
+  itemReceived: 'Item received!',
+  itemMeta: (kind: string) => `${kind} · made in this chat`,
+  itemLabel: (title: string, kind: string) => `Item received: ${title}, ${kind}`,
+  open: 'Open',
+  openHint: 'Opens the Deliverable',
+  choiceAwaits: '! A choice awaits',
+  choiceMade: 'A choice was made',
+  looseChoices: 'Choices still open',
+  greeting: "Hi, I'm Auto. Tell me what you need, and I'll get the party moving.",
+  yourMove: 'Your move.',
+  type: 'Type',
+  typeHint: 'Opens the message box',
+  stop: 'Stop',
+  stopHint: 'Stops Auto’s reply',
+});
+
+/**
  * HUD's Looks drawer (US-018c, 'Automatos Command HUD.dc.html'): what it draws, in the drawing's
  * capitals, and the option names its script gives; what VoiceOver hears, in sentence case. The
  * sheet a long press opens, the refusals and the glow's words are Play's (PLAY_LOOK_COPY).

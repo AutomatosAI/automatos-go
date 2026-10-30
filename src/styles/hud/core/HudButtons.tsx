@@ -82,8 +82,11 @@ type TalkHandlers = Pick<
   'onPressIn' | 'onPressOut' | 'onPress' | 'accessibilityActions' | 'onAccessibilityAction'
 >;
 
-/** A6's hold, or under a screen reader its toggle; none without A6 (HUD's home: inert). */
-function talkHandlers(voice: HudTalk | undefined): TalkHandlers {
+/**
+ * A6's hold, or under a screen reader its toggle; none without A6 (HUD's home: inert). Arcade's
+ * talk button (US-022g) holds the same way.
+ */
+export function talkHandlers(voice: HudTalk | undefined): TalkHandlers {
   if (!voice) return {};
   if (!voice.toggle) return { onPressIn: voice.onPressIn, onPressOut: voice.onPressOut };
   return {

@@ -5,7 +5,8 @@
 // window colour, or the page for an inset), with the look's scanlines behind its content only.
 // An optional title tab in Press Start 2P sits over the top edge in the accent, as the dialogue's
 // AUTO tag does; it is a header for VoiceOver. The rings and shadow are part of the window's own
-// box, so a layout spacing windows measures them.
+// box, so a layout spacing windows measures them. A `fill` window (the home's story, US-022g) is as
+// tall as the box its style gives it, its content bounded by it, so a list inside it scrolls.
 
 import { useMemo, type ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
@@ -29,6 +30,8 @@ export type ArcadeWindowProps = {
   readonly style?: StyleProp<ViewStyle>;
   /** The content inside the rings: padding, gap. */
   readonly contentStyle?: StyleProp<ViewStyle>;
+  /** Its height is its box's, never its content's: a list inside scrolls. */
+  readonly fill?: boolean;
 };
 
 /** The bevel inside the border: light on the top and left, dark on the bottom and right. */
@@ -59,8 +62,10 @@ export function ArcadeWindow({
   ground = 'win',
   style,
   contentStyle,
+  fill = false,
 }: ArcadeWindowProps) {
   const { look, vars } = useArcadePaint();
+  const box = fill ? styles.bounded : styles.fill;
   const rings = windowRings(arcadeWindowFrame(look));
   const plan = useMemo(() => scanPlan(look, ground), [look, ground]);
   const titled = title !== undefined && title.length > 0;
@@ -69,7 +74,7 @@ export function ArcadeWindow({
       {titled ? <TitleTab title={title} /> : null}
       <View
         style={[
-          styles.fill,
+          box,
           { paddingRight: rings.drop, paddingBottom: rings.drop },
           titled ? styles.overTab : null,
         ]}
@@ -80,21 +85,21 @@ export function ArcadeWindow({
         />
         <View
           style={[
-            styles.fill,
+            box,
             { borderWidth: rings.outer, padding: rings.gap },
             { borderColor: vars.bd, backgroundColor: vars.win },
           ]}
         >
           <View
             style={[
-              styles.fill,
+              box,
               { borderWidth: rings.border },
               { borderColor: vars.bd, backgroundColor: vars[ground] },
             ]}
           >
             <View
               style={[
-                styles.fill,
+                box,
                 bevel(rings.bevel, vars),
                 titled ? styles.underTab : null,
                 contentStyle,
@@ -120,6 +125,7 @@ const styles = StyleSheet.create({
     borderWidth: TAB.ring,
   },
   fill: { flexGrow: 1 },
+  bounded: { flex: 1 },
   shadow: { position: 'absolute', right: 0, bottom: 0 },
   overTab: { marginTop: -TAB.overlap },
   underTab: { paddingTop: TAB.overlap },

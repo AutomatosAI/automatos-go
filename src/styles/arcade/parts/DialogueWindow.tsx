@@ -8,18 +8,21 @@
 // already there when the chat opened shows whole and is not said again. Below the words, the home
 // places its own controls (`children`: TYPE, the composer) on the window. The line scrolls past
 // 22 % of the screen's height; when the window is too narrow for words beside a large portrait,
-// the words wrap under it.
+// the words wrap under it. Where the home offers Report this on the reply (`onReport`, US-022g), a
+// long-press on the words opens it and the line carries it as an accessible action, as A2's thread.
 
 import { useEffect, useRef, type ReactNode } from 'react';
 import {
   AccessibilityInfo,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   View,
   useWindowDimensions,
 } from 'react-native';
 
+import type { ReportAccessibility } from '../../../chat/report/report';
 import type { MascotName } from '../../../core/frozen/lib/mascot/types';
 import { Text } from '../../../ui';
 import { ARCADE_COPY } from '../../strings';
@@ -32,6 +35,7 @@ import { ArcadeButton } from './ArcadeButton';
 import { ArcadeWindow } from './ArcadeWindow';
 import { dialogueView, portraitWords, type DialogueReply, type DialogueView } from './dialogue';
 import { useArcadePaint } from './use-arcade-paint';
+import { useReportActions } from './use-report-actions';
 
 /** The phone's dialogue (dialogue.module.css [data-layout=phone]): padding, gaps, the line's room. */
 const DIALOGUE = Object.freeze({
@@ -72,7 +76,9 @@ function useAnnounceOnce(id: string | null, text: string, ready: boolean) {
   }, [id, text, ready]);
 }
 
-function Line({ view }: { readonly view: DialogueView }) {
+type LineProps = { readonly view: DialogueView; readonly report: ReportAccessibility };
+
+function Line({ view, report }: LineProps) {
   const { vars, type } = useArcadePaint();
   // on (and not listening to the clock) while the line types or Arcade is still
   const cursorOn = useCursorOn(view.blinking);
@@ -80,6 +86,7 @@ function Line({ view }: { readonly view: DialogueView }) {
   const minHeight = lineStyle.lineHeight * DIALOGUE.minLines;
   return (
     <Text
+      {...(view.hidden ? null : report)}
       accessibilityElementsHidden={view.hidden}
       importantForAccessibility={view.hidden ? 'no-hide-descendants' : 'auto'}
       accessibilityLabel={view.label}
@@ -105,10 +112,14 @@ export type DialogueWindowProps = {
   readonly thinking?: boolean;
   /** The home's controls under the words (TYPE, the composer). */
   readonly children?: ReactNode;
+  /** Opens Report this on the reply; none where it is not offered (report.ts reportTarget). */
+  readonly onReport?: () => void;
 };
 
-export function DialogueWindow({ state, reply, thinking = false, children }: DialogueWindowProps) {
+export function DialogueWindow(props: DialogueWindowProps) {
+  const { state, reply, thinking = false, children, onReport } = props;
   const { look } = useArcadePaint();
+  const report = useReportActions(thinking ? undefined : onReport);
   const { moving } = useArcadeMotion();
   const { height } = useWindowDimensions();
   const typed = useTypewriter(reply.id, reply.text, {
@@ -125,7 +136,9 @@ export function DialogueWindow({ state, reply, thinking = false, children }: Dia
         <Portrait state={state} />
         <View style={styles.say}>
           <ScrollView style={{ maxHeight: height * DIALOGUE.maxShare }}>
-            <Line view={view} />
+            <Pressable accessible={false} onLongPress={thinking ? undefined : onReport}>
+              <Line view={view} report={report} />
+            </Pressable>
           </ScrollView>
           {view.skip ? (
             <ArcadeButton
