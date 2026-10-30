@@ -9,12 +9,15 @@
 // none for a viewer), and the EN/PT switch just before it (LanguageChip, none for a viewer). The frame is First open's: the ground's light where the
 // screen kind puts it, everything lifted over the keyboard on iOS. Report this opens A2's one
 // ReportSheet. Chats goes back on the chat route, else to the history; Shelf to the Deliverables.
+// Where discovery lists `brief`, the day's brief draws as Play's brief card in the thread (US-G06).
 
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaFrame } from 'react-native-safe-area-context';
 
+import { canBrief } from '../../api/capabilities';
+import { useAppSession } from '../../app-state/session';
 import { roleCan } from '../../auth/role';
 import { AttachMenu } from '../../chat/attachments/AttachMenu';
 import { AttachmentChips } from '../../chat/attachments/AttachmentChips';
@@ -23,6 +26,8 @@ import { DiscussionBar } from '../../chat/discussion/DiscussionBar';
 import { useMessageReport } from '../../chat/report/use-message-report';
 import { LIVE_AUTO_KEY, retryInput, threadRows } from '../../chat/view-model';
 import { routes } from '../../navigation/routes';
+import { PinnedSuggestion } from '../../suggestions/PinnedSuggestion';
+import { useIdeas } from '../../suggestions/use-ideas';
 import { ReportSheet, Screen } from '../../ui';
 import { LanguageChip } from '../../voice/language/LanguageChip';
 import { EdgeBrand } from '../edges/parts';
@@ -86,7 +91,8 @@ function Thread({ home, shelf }: ThreadProps) {
   const { state, send, settleCard } = home.thread;
   const follow = useFollowLink();
   const { report, sheet } = useMessageReport();
-  const rows = useMemo(() => threadRows(state), [state]);
+  const briefs = canBrief(useAppSession().discovery);
+  const rows = useMemo(() => threadRows(state, { briefs }), [state, briefs]);
   const reports = useMemo(
     () => placeReports(shelf, state, LIVE_AUTO_KEY, new Set(rows.map((row) => row.key))),
     [shelf, state, rows],
@@ -111,9 +117,29 @@ function Thread({ home, shelf }: ThreadProps) {
   );
 }
 
+type BottomProps = ComposerProps & {
+  /** Past First open: the newest open suggestion sits above the box (US-G01). */
+  readonly pinned: boolean;
+};
+
+/**
+ * Under the thread: Auto's row (not on First open), the newest of Auto's open suggestions pinned above
+ * the message box (PRD-268 US-G01; the header's 'Ideas · N' opens them all), then the box.
+ */
+function Bottom({ home, composer, firstOpen, pinned }: BottomProps) {
+  const { spacing } = useTokens();
+  const pad = { paddingHorizontal: spacing.space7, paddingBottom: spacing.space5 };
+  return (
+    <View style={[pad, { gap: spacing.space5 }]}>
+      {firstOpen ? null : <AutoRow state={home.mascot} facts={captionFactsOf(home.thread.state)} />}
+      {pinned ? <PinnedSuggestion /> : null}
+      <Composer home={home} composer={composer} firstOpen={firstOpen} />
+    </View>
+  );
+}
+
 export function PlayHome({ chatId, ticketId = null, onBack, home: isHome = false }: PlayHomeProps) {
   const router = useRouter();
-  const { spacing } = useTokens();
   const { y: stackTop } = useSafeAreaFrame();
   const home = useHomeThread(chatId, ticketId);
   const composer = usePlayComposer(home);
@@ -122,7 +148,7 @@ export function PlayHome({ chatId, ticketId = null, onBack, home: isHome = false
   const shelf = useShelf(state);
   const firstOpen = isHome && showsFirstOpen(state, ticketId);
   const toChats = onBack ?? (() => router.push(routes.chats));
-  const pad = { paddingHorizontal: spacing.space7, paddingBottom: spacing.space5 };
+  const ideas = useIdeas();
   return (
     <Screen ground={firstOpen ? 'first-open' : 'chat'} autoState={home.mascot.driver.mascot.mascot}>
       {firstOpen ? (
@@ -130,6 +156,7 @@ export function PlayHome({ chatId, ticketId = null, onBack, home: isHome = false
       ) : (
         <PlayHeader
           title={title}
+          ideas={ideas.button ?? undefined}
           shelfCount={shelfCount(shelf)}
           onChats={toChats}
           onShelf={() => router.push(routes.cc.deliverables)}
@@ -146,11 +173,9 @@ export function PlayHome({ chatId, ticketId = null, onBack, home: isHome = false
         ) : (
           <Thread home={home} shelf={shelf} />
         )}
-        <View style={[pad, { gap: spacing.space5 }]}>
-          {firstOpen ? null : <AutoRow state={home.mascot} facts={captionFactsOf(state)} />}
-          <Composer home={home} composer={composer} firstOpen={firstOpen} />
-        </View>
+        <Bottom home={home} composer={composer} firstOpen={firstOpen} pinned={!firstOpen} />
       </KeyboardAvoidingView>
+      {ideas.sheet}
     </Screen>
   );
 }

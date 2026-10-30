@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  canBrief,
   canDigest,
   canDigestNow,
   canMobileTheme,
@@ -9,6 +10,7 @@ import {
   canReportContent,
   canServerVoice,
   canSpokenMode,
+  canSuggestions,
   canVoiceLive,
   type GateInput,
 } from '../capabilities';
@@ -28,6 +30,8 @@ const GATES: readonly [Capability, (discovery: GateInput) => boolean][] = [
   ['digest', canDigest],
   ['tts', canServerVoice],
   ['digest_now', canDigestNow],
+  ['brief', canBrief],
+  ['suggestions', canSuggestions],
   ['readiness', canReadiness],
 ];
 

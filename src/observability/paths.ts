@@ -6,12 +6,14 @@
 // route tables are plain data.
 
 import { routes } from '../api/routes';
+import { BRIEF_ROUTES } from '../brief/routes';
 import { CC_ROUTES } from '../cc/routes';
 import { CHAT_ROUTES } from '../chat/routes';
 import { CONNECT_ROUTES } from '../connect/routes';
 import { PUSH_ROUTES } from '../push/routes';
 import { READINESS_ROUTES } from '../readiness/routes';
 import { STYLE_ROUTES } from '../styles/routes';
+import { SUGGESTION_ROUTES } from '../suggestions/routes';
 import { VOICE_ROUTES } from '../voice/routes';
 import { MAX_INPUT_LENGTH, MAX_TEXT_LENGTH } from './redact';
 
@@ -21,12 +23,14 @@ export const ID_SEGMENT = ':id';
 /** Every route table the app calls the server through (a table may nest: STYLE_ROUTES does). */
 export const ROUTE_TABLES: readonly object[] = Object.freeze([
   routes,
+  BRIEF_ROUTES,
   CC_ROUTES,
   CHAT_ROUTES,
   CONNECT_ROUTES,
   PUSH_ROUTES,
   READINESS_ROUTES,
   STYLE_ROUTES,
+  SUGGESTION_ROUTES,
   VOICE_ROUTES,
 ]);
 

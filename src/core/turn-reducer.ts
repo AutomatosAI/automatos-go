@@ -12,7 +12,7 @@ import type {
   LiveReceipts,
   ToolEndFrame,
 } from './ai-sdk-stream';
-import type { ApprovalCard } from './web/lib/chat/approvals';
+import type { ViewedApproval } from './approval-view';
 import { mergeDeliverables, type DeliverableRef } from './web/lib/chat/deliverables';
 import { withoutNarration } from './web/lib/chat/narration';
 import type { MissionSuggestion } from './web/lib/chat/suggestion';
@@ -81,8 +81,8 @@ export type TurnState = {
   readonly receipts: Receipt[] | undefined;
   readonly receiptsAbove: string[] | undefined;
   readonly taskCards: TaskCardData[];
-  /** mission_approval and tool_approval cards, one per key, first seen kept. */
-  readonly approvals: readonly ApprovalCard[];
+  /** mission_approval and tool_approval cards, one per key, first seen kept (with any view). */
+  readonly approvals: readonly ViewedApproval[];
   readonly deliverables: readonly DeliverableRef[];
   readonly missionSuggestion: MissionSuggestion | null;
   readonly withdrawOffer: WithdrawOffer | null;
@@ -162,7 +162,7 @@ function endedCall(frame: ToolEndFrame, at: string | undefined): ToolCall {
   };
 }
 
-function withApprovals(known: readonly ApprovalCard[], raised: readonly ApprovalCard[]) {
+function withApprovals(known: readonly ViewedApproval[], raised: readonly ViewedApproval[]) {
   const keys = new Set(known.map((card) => card.key));
   const fresh = raised.filter((card) => !keys.has(card.key));
   return fresh.length === 0 ? known : [...known, ...fresh];

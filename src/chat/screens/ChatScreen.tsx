@@ -10,15 +10,20 @@
 // included, shows the discussion bar under `above`, and holds the send until the ticket is in.
 // Files go with the words they were attached to (useAttachments, US-009b); Try again resends both.
 // Report this on Auto's messages opens the foundation's one ReportSheet (useMessageReport, US-009c).
+// Directly above the composer, inside the keyboard lift, sits the newest of Auto's open suggestions
+// (PRD-268 US-G01, src/suggestions/PinnedSuggestion.tsx), where discovery lists `suggestions`.
 // Beside the send sits A6's voice button (US-019k): the voice screen on this conversation, by its id
 // once it has one; not there for a viewer.
 // `empty` takes the thread's place while it is a draft with nothing in it (A5's First open on home).
+// Where discovery lists `brief`, a message carrying the day's brief draws the brief card (US-G06).
 
 import { useCallback, useMemo, type ReactNode } from 'react';
 
+import { canBrief } from '../../api/capabilities';
 import { useAppSession } from '../../app-state/session';
 import { roleCan } from '../../auth/role';
 import { isBlankDraft } from '../../styles/homes/layout';
+import { PinnedSuggestion } from '../../suggestions/PinnedSuggestion';
 import { ErrorState, LoadingState, ReportSheet } from '../../ui';
 import { VoiceButton } from '../../voice/entry/VoiceButton';
 import { useAttachments } from '../attachments/use-attachments';
@@ -56,7 +61,8 @@ function Thread({ thread, empty }: ThreadProps) {
   const { state, send, settleCard, loadError, retry } = thread;
   const follow = useFollowLink();
   const { report, sheet } = useMessageReport();
-  const rows = useMemo(() => threadRows(state), [state]);
+  const briefs = canBrief(useAppSession().discovery);
+  const rows = useMemo(() => threadRows(state, { briefs }), [state, briefs]);
   const askAgain = useCallback(() => {
     const again = retryInput(state);
     if (again) send(again);
@@ -105,17 +111,20 @@ export function ChatScreen({ chatId, above, onBack, ticketId = null, empty }: Ch
         </>
       }
       composer={
-        <Composer
-          role={workspace.role}
-          streaming={working}
-          loading={state.status === 'loading' || state.settling || discussion.holds}
-          files={files}
-          onSend={onSend}
-          onStop={stop}
-          accessory={
-            <VoiceButton roleCanChat={roleCan(workspace.role, 'chat')} chatId={state.chatId} />
-          }
-        />
+        <>
+          <PinnedSuggestion inset="space7" />
+          <Composer
+            role={workspace.role}
+            streaming={working}
+            loading={state.status === 'loading' || state.settling || discussion.holds}
+            files={files}
+            onSend={onSend}
+            onStop={stop}
+            accessory={
+              <VoiceButton roleCanChat={roleCan(workspace.role, 'chat')} chatId={state.chatId} />
+            }
+          />
+        </>
       }
     >
       <Thread thread={thread} empty={ticketId === null ? empty : undefined} />

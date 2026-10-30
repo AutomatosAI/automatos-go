@@ -5,9 +5,15 @@
 // tool line does, never failed. A role that cannot decide reads it with the D17 words; a click on a
 // card someone already decided says what it was decided as (grantRefusalText). Approve & run asks
 // for Face ID first (gated.ts, A4); Deny never does (KP13).
+// Where the card carries ApprovalView@1 (PRD-268 US-G08) it stays the record (D30) and a tap opens the
+// answer sheet (src/approvals/ApprovalSheet.tsx) with the same two answers in today's words; HUD,
+// which draws no thread cards, mounts the sheet alone (`sheet`). Without a view it is today's card.
 
-import { StyleSheet, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 
+import { ApprovalSheet } from '../../approvals/ApprovalSheet';
+import { APPROVAL_SHEET_COPY } from '../../approvals/strings';
 import { useStepUp } from '../../step-up/use-step-up';
 import { useTokens } from '../../styles/theme';
 import { Button, Text } from '../../ui';
@@ -126,25 +132,112 @@ function ToolFooter({ card, access, request }: FooterProps) {
   );
 }
 
+/** HUD's sheet alone: shown while `open`, closed through `onClose`. */
+export type SheetOnly = { readonly open: boolean; readonly onClose: () => void };
+
 export type ToolApprovalCardProps = {
   readonly card: ToolApprovalRow;
   readonly onSettled: SettleCard;
+  /** Draw only the answer sheet (HUD); absent, the card in the thread. */
+  readonly sheet?: SheetOnly;
 };
 
-export function ToolApprovalCard({ card, onSettled }: ToolApprovalCardProps) {
-  const access = useCardAccess('approve');
-  const request = useCardRequest(card.key, onSettled, grantRefusalText);
+/** The card answers in its sheet: it carries a view, waits, and the role may decide. */
+export function answersInSheet(card: Pick<ToolApprovalRow, 'view' | 'decided'>, canAct: boolean) {
+  return card.view !== null && !card.decided && canAct;
+}
+
+type SheetProps = {
+  readonly card: ToolApprovalRow;
+  readonly request: CardRequest;
+  readonly visible: boolean;
+  readonly onClose: () => void;
+};
+
+/** The answer sheet: Approve & run behind Face ID, Deny never gated (KP13). */
+function ToolSheet({ card, request, visible, onClose }: SheetProps) {
+  const { guard } = useStepUp();
+  if (!card.view) return null;
+  return (
+    <ApprovalSheet
+      visible={visible}
+      onClose={onClose}
+      view={card.view}
+      kind="tool"
+      busy={request.busy}
+      error={request.error}
+      onAllow={() => request.run(grantToolGated(guard, card.grantId))}
+      onRefuse={() => request.run(denyCall(card.grantId))}
+    />
+  );
+}
+
+function ToolFrame({
+  card,
+  footer,
+}: {
+  readonly card: ToolApprovalRow;
+  readonly footer: ReactNode;
+}) {
   return (
     <MissionFrame
       eyebrow={GRANT_COPY.toolEyebrow}
       chip={card.permission}
       title={card.question ?? card.action}
       meta={card.question ? card.action : null}
-      footer={<ToolFooter card={card} access={access} request={request} />}
+      footer={footer}
     >
       {card.oversight ? <OversightNote view={card.oversight} /> : null}
       <ParamLines card={card} />
     </MissionFrame>
+  );
+}
+
+/** The record in the thread (D30): a tap, or Review and answer, opens the sheet. */
+function ReviewableCard({
+  card,
+  request,
+}: {
+  readonly card: ToolApprovalRow;
+  readonly request: CardRequest;
+}) {
+  const { spacing } = useTokens();
+  const [open, setOpen] = useState(false);
+  const footer = (
+    <View style={{ gap: spacing.space3 }}>
+      <GrantStatusLine line={card.line} />
+      <View style={styles.start}>
+        <Button
+          label={APPROVAL_SHEET_COPY.review}
+          onPress={() => setOpen(true)}
+          size="sm"
+          accessibilityHint={APPROVAL_SHEET_COPY.reviewHint}
+        />
+      </View>
+    </View>
+  );
+  return (
+    <>
+      {/* a tap anywhere opens the sheet; VoiceOver keeps the card's parts and its own button */}
+      <Pressable accessible={false} onPress={() => setOpen(true)}>
+        <ToolFrame card={card} footer={footer} />
+      </Pressable>
+      <ToolSheet card={card} request={request} visible={open} onClose={() => setOpen(false)} />
+    </>
+  );
+}
+
+export function ToolApprovalCard({ card, onSettled, sheet }: ToolApprovalCardProps) {
+  const access = useCardAccess('approve');
+  const request = useCardRequest(card.key, onSettled, grantRefusalText);
+  const inSheet = answersInSheet(card, access.canAct);
+  if (sheet) {
+    if (!inSheet) return null;
+    return <ToolSheet card={card} request={request} visible={sheet.open} onClose={sheet.onClose} />;
+  }
+  if (inSheet) return <ReviewableCard card={card} request={request} />;
+  return (
+    <ToolFrame card={card} footer={<ToolFooter card={card} access={access} request={request} />} />
   );
 }
 
@@ -154,4 +247,5 @@ const styles = StyleSheet.create({
   mark: { width: MARK_WIDTH },
   fill: { flex: 1, minWidth: 0 },
   actions: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
+  start: { alignSelf: 'flex-start' },
 });

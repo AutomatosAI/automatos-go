@@ -2,12 +2,15 @@
 // accent and 'Command Centre →', over a sideways row of 214 pt cards (8 pt radius): the status as
 // a dot and a word, the serif title clamped to two lines, the mono meta. needsStrip (pure) decides
 // every word and target from the foundation's useNeedsYou(), the same cached answer the header's
-// button counts; nothing here counts. Hidden when the server's total is zero.
+// button counts; nothing here counts. Hidden when the server's total is zero. While the day's brief
+// card is on screen in the thread below (PRD-268 US-G06, src/brief/on-screen.tsx) the strip shrinks
+// to its count: the heading and 'Command Centre →', without the cards the brief already lists.
 
 import { useMemo } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { useNeedsYou } from '../../api/needs-you';
+import { useBriefOnScreen } from '../../brief/on-screen';
 import { useTokens } from '../../styles/theme';
 import { Button, Card, StatusPip, Text } from '../../ui';
 import { useFollowLink, type FollowLink } from '../components/follow-link';
@@ -60,6 +63,7 @@ export function NeedsStrip() {
   const { total, rows } = useNeedsYou();
   const follow = useFollowLink();
   const strip = useMemo(() => needsStrip({ total, rows }), [total, rows]);
+  const compact = useBriefOnScreen();
   if (!strip) return null;
   return (
     <View
@@ -80,7 +84,7 @@ export function NeedsStrip() {
           size="sm"
         />
       </View>
-      {strip.cards.length > 0 ? (
+      {strip.cards.length > 0 && !compact ? (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}

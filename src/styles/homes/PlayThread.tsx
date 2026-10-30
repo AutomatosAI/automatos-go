@@ -7,13 +7,15 @@
 // primitives. 'Auto is thinking' is not a row here: Auto's row under the thread says it (its text
 // twin). Report this long-presses Auto's message and is each block's accessible action, as on A2's
 // thread (AutoMessage.tsx is the reference). The list scrolls to the end only when a row is added
-// (A2's shouldScrollToEnd).
+// (A2's shouldScrollToEnd). A message carrying the day's brief (row.brief, PRD-268 US-G06) draws
+// Play's brief card in place of its words: the card holds the same words (Auto's Read).
 
 import { useRouter } from 'expo-router';
 import { useCallback, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { FlatList, Pressable, View, type ListRenderItem } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
+import { PlayBriefCard } from '../../brief/BriefCard';
 import { ThreadCards } from '../../chat/cards/ThreadCards';
 import type { SettleCard } from '../../chat/cards/model';
 import { TicketCards } from '../../chat/cards/TaskCard';
@@ -111,7 +113,9 @@ function PlayAuto({ row, caret, refs, onLink, onRetry, onCard, report }: PlayAut
       {toolChipsOf(row.toolLines).map((chip) => (
         <ToolChip key={chip.key} chip={chip} />
       ))}
-      {words || caret ? (
+      {row.brief ? (
+        <PlayBriefCard brief={row.brief} onLink={onLink} />
+      ) : words || caret ? (
         <AutoMessage text="" streaming={caret} rise={risesIn(row.key)}>
           {words}
         </AutoMessage>
