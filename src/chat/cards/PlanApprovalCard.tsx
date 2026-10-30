@@ -5,10 +5,15 @@
 // already decided elsewhere says so when the server refuses (planRefusalText). A role that
 // cannot decide reads it with the D17 words. No cost or ceiling is shown (D8); plan edits are not
 // here. Approve & run asks for Face ID first (gated.ts, A4); Reject never does (KP13).
+// Where the card carries ApprovalView@1 (PRD-268 US-G08) it stays the record (D30) and a tap opens the
+// answer sheet (src/approvals/ApprovalSheet.tsx), where Reject asks its reason in place; HUD, which
+// draws no thread cards, mounts the sheet alone (`sheet`). Without a view it is today's card.
 
-import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 
+import { ApprovalSheet } from '../../approvals/ApprovalSheet';
+import { APPROVAL_SHEET_COPY } from '../../approvals/strings';
 import { useStepUp } from '../../step-up/use-step-up';
 import { useTokens } from '../../styles/theme';
 import { Button, Text, TextField } from '../../ui';
@@ -20,6 +25,7 @@ import { approvePlanGated } from './gated';
 import type { SettleCard } from './model';
 import { MissionFrame } from './MissionFrame';
 import { OversightNote } from './OversightNote';
+import type { SheetOnly } from './ToolApprovalCard';
 import { useCardAccess, useCardRequest, type CardRequest } from './use-card-request';
 import type { PlanRow, PlanTaskRow } from './view';
 
@@ -147,11 +153,48 @@ function PlanFooter({ card, access, request, onApprove, onReject }: FooterProps)
 export type PlanApprovalCardProps = {
   readonly card: PlanRow;
   readonly onSettled: SettleCard;
+  /** Draw only the answer sheet (HUD); absent, the card in the thread. */
+  readonly sheet?: SheetOnly;
 };
 
-export function PlanApprovalCard({ card, onSettled }: PlanApprovalCardProps) {
-  const access = useCardAccess('approve');
-  const request = useCardRequest(card.key, onSettled, planRefusalText);
+type PlanSheetProps = {
+  readonly card: PlanRow;
+  readonly request: CardRequest;
+  readonly visible: boolean;
+  readonly onClose: () => void;
+  readonly onApprove: () => void;
+  readonly onReject: (reason: string) => void;
+};
+
+/** The plan's answer sheet: Approve & run, or Reject with its reason asked in place. */
+function PlanSheet({ card, request, visible, onClose, onApprove, onReject }: PlanSheetProps) {
+  const [rejecting, setRejecting] = useState(false);
+  if (!card.view) return null;
+  const close = () => {
+    setRejecting(false);
+    onClose();
+  };
+  return (
+    <ApprovalSheet
+      visible={visible}
+      onClose={close}
+      view={card.view}
+      kind="plan"
+      busy={request.busy}
+      error={request.error}
+      onAllow={onApprove}
+      onRefuse={() => setRejecting(true)}
+      refuseForm={
+        rejecting ? (
+          <RejectForm request={request} onCancel={() => setRejecting(false)} onReject={onReject} />
+        ) : undefined
+      }
+    />
+  );
+}
+
+/** The plan's two writes: Approve & run behind Face ID, Reject with its reason (never gated). */
+function usePlanAnswers(card: PlanRow, request: CardRequest) {
   const { guard } = useStepUp();
   const approve = () => request.run(approvePlanGated(guard, card.missionId));
   const reject = (reason: string) => {
@@ -162,20 +205,16 @@ export function PlanApprovalCard({ card, onSettled }: PlanApprovalCardProps) {
       return { state: 'rejected' };
     });
   };
+  return { approve, reject };
+}
+
+function PlanFrame({ card, footer }: { readonly card: PlanRow; readonly footer: ReactNode }) {
   return (
     <MissionFrame
       eyebrow={CARD_COPY.planEyebrow}
       title={card.goal}
       meta={card.summary}
-      footer={
-        <PlanFooter
-          card={card}
-          access={access}
-          request={request}
-          onApprove={approve}
-          onReject={reject}
-        />
-      }
+      footer={footer}
     >
       {card.oversight ? <OversightNote view={card.oversight} /> : null}
       {card.tasks.map((task) => (
@@ -185,10 +224,79 @@ export function PlanApprovalCard({ card, onSettled }: PlanApprovalCardProps) {
   );
 }
 
+type ReviewableProps = {
+  readonly card: PlanRow;
+  readonly request: CardRequest;
+  readonly answers: ReturnType<typeof usePlanAnswers>;
+};
+
+/** The record in the thread (D30): a tap, or Review and answer, opens the sheet. */
+function ReviewablePlan({ card, request, answers }: ReviewableProps) {
+  const [open, setOpen] = useState(false);
+  const footer = (
+    <View style={styles.start}>
+      <Button
+        label={APPROVAL_SHEET_COPY.review}
+        onPress={() => setOpen(true)}
+        size="sm"
+        accessibilityHint={APPROVAL_SHEET_COPY.reviewHint}
+      />
+    </View>
+  );
+  return (
+    <>
+      {/* a tap anywhere opens the sheet; VoiceOver keeps the card's parts and its own button */}
+      <Pressable accessible={false} onPress={() => setOpen(true)}>
+        <PlanFrame card={card} footer={footer} />
+      </Pressable>
+      <PlanSheet
+        card={card}
+        request={request}
+        visible={open}
+        onClose={() => setOpen(false)}
+        onApprove={answers.approve}
+        onReject={answers.reject}
+      />
+    </>
+  );
+}
+
+export function PlanApprovalCard({ card, onSettled, sheet }: PlanApprovalCardProps) {
+  const access = useCardAccess('approve');
+  const request = useCardRequest(card.key, onSettled, planRefusalText);
+  const answers = usePlanAnswers(card, request);
+  const inSheet = card.view !== null && card.decided === null && access.canAct;
+  if (sheet) {
+    if (!inSheet) return null;
+    return (
+      <PlanSheet
+        card={card}
+        request={request}
+        visible={sheet.open}
+        onClose={sheet.onClose}
+        onApprove={answers.approve}
+        onReject={answers.reject}
+      />
+    );
+  }
+  if (inSheet) return <ReviewablePlan card={card} request={request} answers={answers} />;
+  const footer = (
+    <PlanFooter
+      card={card}
+      access={access}
+      request={request}
+      onApprove={answers.approve}
+      onReject={answers.reject}
+    />
+  );
+  return <PlanFrame card={card} footer={footer} />;
+}
+
 const styles = StyleSheet.create({
   task: { borderTopWidth: 1 },
   row: { flexDirection: 'row', alignItems: 'baseline' },
   number: { width: NUMBER_WIDTH },
   title: { flex: 1, minWidth: 0 },
   actions: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
+  start: { alignSelf: 'flex-start' },
 });

@@ -7,6 +7,7 @@
 // (D8). A dismissed suggestion is not drawn at all (the web returns null). The tool approval, the
 // withdraw offer (an offer's requests drawn as one card) and the ticket card are view-tools.ts's.
 
+import type { ApprovalView } from '../../core/approval-view';
 import type { MissionApprovalTask } from '../../core/web/components/widgets/types';
 import {
   CONTEXT_MESSAGES_KEPT,
@@ -67,6 +68,8 @@ export type PlanRow = {
   readonly outcome: CardOutcome;
   /** 'Plan approved. …' or 'Plan rejected.' once decided; null while open. */
   readonly decided: string | null;
+  /** ApprovalView@1 (PRD-268 US-G08): the card then opens the answer sheet; null, today's card. */
+  readonly view: ApprovalView | null;
 };
 
 export type CardRow = SuggestionRow | PlanRow | ToolApprovalRow | WithdrawRow;
@@ -131,7 +134,7 @@ const DECIDED: Readonly<Partial<Record<CardOutcome['state'], string>>> = Object.
   rejected: CARD_COPY.rejected,
 });
 
-function planRow(card: FiledCard, plan: Plan): PlanRow {
+function planRow(card: FiledCard, plan: Plan, view?: ApprovalView): PlanRow {
   return {
     kind: 'plan',
     key: card.key,
@@ -142,6 +145,7 @@ function planRow(card: FiledCard, plan: Plan): PlanRow {
     oversight: oversightView(plan),
     outcome: card.outcome,
     decided: DECIDED[card.outcome.state] ?? null,
+    view: view ?? null,
   };
 }
 
@@ -166,9 +170,9 @@ function suggestionRow(
 function cardRow(card: FiledCard, context: CardContext): CardRow | null {
   switch (card.card.kind) {
     case 'plan':
-      return planRow(card, card.card.plan);
+      return planRow(card, card.card.plan, card.card.view);
     case 'tool':
-      return toolRow(card, card.card.tool);
+      return toolRow(card, card.card.tool, card.card.view);
     case 'suggestion':
       return suggestionRow(card, card.card.suggestion, context);
     case 'withdraw':
