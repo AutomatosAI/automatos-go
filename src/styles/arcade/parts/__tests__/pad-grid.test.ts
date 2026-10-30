@@ -35,7 +35,7 @@ describe('the grid (README Pages)', () => {
     expect(DPAD_IDS.map((id) => ARCADE_COPY.dpad[id].hint)).toEqual([
       'Shows your quests on the map',
       "Auto's chat",
-      'Opens Deliverables',
+      'Shows your Deliverables as items',
       'Opens the menu',
     ]);
   });

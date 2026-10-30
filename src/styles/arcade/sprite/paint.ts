@@ -6,18 +6,31 @@
 // and a picture's runs as rects grouped by colour, so Skia draws one path per colour. A party
 // robot (agents-icons.ts) takes its body and shade from AGENT_COLOURS by its place in the roster,
 // cycled over the four robots, and its outline, crest, visor and eyes from the sprite's colours, as
-// the kit's art.module.css fills them; it is 32 points at every scale (the kit's 'agent-small').
+// the kit's art.module.css fills them; it is 32 points at every scale (the kit's 'agent-small'). An
+// Inventory item's icon (12 pixels) takes the catalogue's ICON_COLOURS by the palette's art, at the
+// look's pixel scale plus one point a pixel (the kit's 'icon': 36 or 48 points).
 // Every rect sits on whole points, so a pixel never blurs. Pure: no React, React Native, Expo or
 // Skia.
 
 import {
   AGENT_COLOURS,
+  ICON_COLOURS,
+  ICON_KEYS,
   SPRITE_COLOURS,
   SPRITE_KEYS,
+  type IconKey,
   type SpriteKey,
 } from '../../tokens/arcade-catalogue';
 import { arcadePalette, arcadePixelScale, type ArcadePaintPicks } from '../../tokens/arcade';
-import { AGENT_ART, AGENT_LOOKS, AGENT_SIZE, type AgentKey } from './agents-icons';
+import {
+  AGENT_ART,
+  AGENT_LOOKS,
+  AGENT_SIZE,
+  ICON_ART,
+  ICON_SIZE,
+  type AgentKey,
+  type ItemKind,
+} from './agents-icons';
 import { AUTO_SIZE } from './auto-sprite';
 import type { Run } from './grid';
 import type { SpriteFrame } from './states';
@@ -139,4 +152,31 @@ export function agentLayers(
 ): readonly ArtLayer<AgentKey>[] {
   const runs = AGENT_ART[agentLook(index)];
   return artLayers(runs, AGENT_KEYS, agentColours(look, index), AGENT_PIXEL);
+}
+
+// ── The Inventory's item icons ───────────────────────────────────────────────────────────────
+
+export type IconColours = Readonly<Record<IconKey, string>>;
+
+/** Points per icon pixel: the look's pixel scale plus one (art.module.css 'icon'). */
+export function iconPixel(look: Pick<ArcadePaintPicks, 'pixelScale'>): number {
+  return arcadePixelScale(look) + 1;
+}
+
+/** An icon's side in points: 36 at pixel scale 2, 48 at 3. */
+export function iconSide(look: Pick<ArcadePaintPicks, 'pixelScale'>): number {
+  return ICON_SIZE * iconPixel(look);
+}
+
+/** The icons' colours: ICON_COLOURS by the palette's art (Handheld's shades in Handheld). */
+export function iconColours(look: Pick<ArcadePaintPicks, 'palette'>): IconColours {
+  return ICON_COLOURS[arcadePalette(look.palette).art];
+}
+
+/** An item's icon by its kind, as layers at iconPixel points a pixel. */
+export function iconLayers(
+  look: Pick<ArcadePaintPicks, 'palette' | 'pixelScale'>,
+  kind: ItemKind,
+): readonly ArtLayer<IconKey>[] {
+  return artLayers(ICON_ART[kind], ICON_KEYS, iconColours(look), iconPixel(look));
 }

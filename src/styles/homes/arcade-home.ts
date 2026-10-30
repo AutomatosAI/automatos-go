@@ -17,9 +17,9 @@
 //   created_at and updated_at only), so XP is left out (null), never guessed from updated_at. A
 //   number the app has not had yet is null and left out too, never shown as 0.
 //   The D-pad (D-ARC-6) switches the handheld's screen, as the web handheld does: ▲ Quests shows
-//   the overworld map in the screen (US-022m, no route), ◀ Chat the chat again (on the chat, the
-//   home: here already on home, else back to it); ▶ Inventory the Deliverables, ▼ Menu the header
-//   menu. Routes only from routes.ts.
+//   the overworld map in the screen (US-022m), ▶ Inventory the Deliverables as items (US-022n),
+//   neither a route; ◀ Chat the chat again (on the chat, the home: here already on home, else back
+//   to it); ▼ Menu the header menu. Routes only from routes.ts.
 // Pure: no React, React Native, Expo or Skia.
 
 import type { ThreadState } from '../../chat/controller/thread';
@@ -118,14 +118,12 @@ export function arcadeCounters({ needs, board }: CounterSources): CounterValues 
 
 // ── The D-pad ────────────────────────────────────────────────────────────────────────────────
 
-/** What the handheld's screen shows: the chat, or the Quests map (US-022m). */
-export type HandheldScreen = 'chat' | 'quests';
+/** What the handheld's screen shows: the chat, the Quests map (US-022m) or the bag (US-022n). */
+export type HandheldScreen = 'chat' | 'quests' | 'inventory';
 
 export type PadAction =
   /** Show this in the handheld's screen, in place (no route). */
   | { readonly kind: 'screen'; readonly screen: HandheldScreen }
-  /** Push this screen. */
-  | { readonly kind: 'go'; readonly route: string }
   /** Back to the home (from a conversation's own route). */
   | { readonly kind: 'home'; readonly route: string }
   /** Open the header menu. */
@@ -135,7 +133,7 @@ export type PadAction =
 
 const QUESTS: PadAction = Object.freeze({ kind: 'screen', screen: 'quests' });
 const CHAT: PadAction = Object.freeze({ kind: 'screen', screen: 'chat' });
-const INVENTORY: PadAction = Object.freeze({ kind: 'go', route: routes.cc.deliverables });
+const INVENTORY: PadAction = Object.freeze({ kind: 'screen', screen: 'inventory' });
 const HOME: PadAction = Object.freeze({ kind: 'home', route: routes.home });
 const MENU: PadAction = Object.freeze({ kind: 'menu' });
 const HERE: PadAction = Object.freeze({ kind: 'here' });

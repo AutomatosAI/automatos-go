@@ -82,9 +82,9 @@ export function useOneShotEnd(mascot: MascotController): void {
 export type ArcadeHandheld = {
   /** What the handheld's screen shows. */
   readonly screen: HandheldScreen;
-  /** A D-pad press: Quests or the chat in the screen, the Deliverables, the menu, or home. */
+  /** A D-pad press: Quests, the bag or the chat in the screen, the menu, or home. */
   readonly onPad: (id: DPadId) => void;
-  /** Shows the chat again (a quiet map's GO TO CHAT). */
+  /** Shows the chat again (GO TO CHAT on a quiet map or an empty bag). */
   readonly showChat: () => void;
 };
 
@@ -97,7 +97,6 @@ export function useHandheld(openMenu: () => void): ArcadeHandheld {
     (id: DPadId) => {
       const action = padAction(id, pathname, screen);
       if (action.kind === 'screen') setScreen(action.screen);
-      else if (action.kind === 'go') router.push(action.route);
       else if (action.kind === 'home') router.dismissTo(action.route);
       else if (action.kind === 'menu') openMenu();
     },

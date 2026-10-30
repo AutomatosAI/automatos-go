@@ -311,7 +311,11 @@ export const ARCADE_COPY = Object.freeze({
   dpad: Object.freeze({
     quests: Object.freeze({ arrow: '▲', word: 'Quests', hint: 'Shows your quests on the map' }),
     chat: Object.freeze({ arrow: '◀', word: 'Chat', hint: "Auto's chat" }),
-    inventory: Object.freeze({ arrow: '▶', word: 'Inventory', hint: 'Opens Deliverables' }),
+    inventory: Object.freeze({
+      arrow: '▶',
+      word: 'Inventory',
+      hint: 'Shows your Deliverables as items',
+    }),
     menu: Object.freeze({ arrow: '▼', word: 'Menu', hint: 'Opens the menu' }),
   }),
   voice: 'VOICE',
@@ -411,6 +415,32 @@ export const ARCADE_QUESTS_COPY = Object.freeze({
   retry: 'Try again',
   quietTitle: 'The map is quiet.',
   quietLine: 'Start a quest from the chat.',
+  goToChat: 'Go to chat',
+  goToChatHint: "Shows Auto's chat",
+});
+
+/** Arcade's Inventory on the handheld (US-022n; the kit's deliverables/{inventory.ts,bag.tsx}). */
+export const ARCADE_INVENTORY_COPY = Object.freeze({
+  tabs: Object.freeze({ all: 'All', reports: 'Reports', documents: 'Documents', images: 'Images' }),
+  tabsLabel: 'Inventory filters',
+  bag: 'Inventory',
+  count: (n: number) => `${n} ${n === 1 ? 'item' : 'items'} · newest first`,
+  post: 'Post',
+  today: 'Today',
+  yesterday: 'Yesterday',
+  slotHint: 'Names this item under the bag',
+  emptyInfo: 'Nothing in the bag yet.',
+  open: 'Open',
+  openHint: 'Opens this Deliverable',
+  more: 'More',
+  moreHint: 'Loads older items',
+  all: 'All Deliverables',
+  allHint: 'Opens the Deliverables page',
+  loading: 'Opening your bag…',
+  loadFailed: "Couldn't open your bag.",
+  retry: 'Try again',
+  emptyTitle: 'Your bag is empty.',
+  emptyLine: 'Ask Auto for something and it lands here.',
   goToChat: 'Go to chat',
   goToChatHint: "Shows Auto's chat",
 });

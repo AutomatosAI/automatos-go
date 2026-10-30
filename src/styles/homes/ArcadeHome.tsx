@@ -11,10 +11,11 @@
 // closes the sheet; Auto listens while it is open. STOP shows while Auto answers or the voice
 // works: quick-ask's stop, and A2's for a typed turn (HUD's). Hold to talk is A6's quick-ask in
 // place (useArcadeHomeVoice). The D-pad switches the handheld's screen, as the web handheld does:
-// ▲ Quests shows the overworld map in place of the story and the dialogue (QuestsView, US-022m; no
-// route), ◀ Chat the chat again (kept mounted while hidden, so the story's place and the typing
-// hold); ▶ Inventory the Deliverables, ▼ Menu the header menu (HomeMenu over A2's MENU_ITEMS: New
-// chat, Chats, the Command Centre with the needs-you number, Settings). The page on screen is
+// ▲ Quests shows the overworld map in place of the story and the dialogue (QuestsView, US-022m),
+// ▶ Inventory the Deliverables as items (InventoryView, US-022n), neither a route; ◀ Chat the chat
+// again (kept mounted while hidden, so the story's place and the typing hold); ▼ Menu the header
+// menu (HomeMenu over A2's MENU_ITEMS: New chat, Chats, the Command Centre with the needs-you
+// number, Settings). The page on screen is
 // selected on the D-pad. Report this (D15) on Auto's saved replies in the story and on the one the
 // dialogue says opens the foundation's one ReportSheet.
 //   The column scrolls when the phone's text size leaves it no room; the story window keeps a share
@@ -32,6 +33,7 @@ import { useMessageReport } from '../../chat/report/use-message-report';
 import { ReportSheet, Screen, Sheet } from '../../ui';
 import { useArcadeHomeVoice, type ArcadeHomeVoice } from '../../voice/home/use-arcade-home-voice';
 import { ArcadeControls } from '../arcade/home/ArcadeControls';
+import { InventoryView } from '../arcade/home/InventoryView';
 import { QuestsView } from '../arcade/home/QuestsView';
 import { StoryWindow } from '../arcade/home/StoryWindow';
 import { ArcadeButton, DialogueWindow, PartyStrip, StatusBar } from '../arcade/parts';
@@ -119,6 +121,7 @@ export function ArcadeHome({ chatId, ticketId = null }: ArcadeHomeProps) {
           {handheld.screen === 'quests' ? (
             <QuestsView needsYou={needsYou.rows} onChat={handheld.showChat} />
           ) : null}
+          {handheld.screen === 'inventory' ? <InventoryView onChat={handheld.showChat} /> : null}
         </View>
         <ArcadeControls
           pad={{ current: handheld.screen, menuOpen: menu.visible, onPress: handheld.onPad }}

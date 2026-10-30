@@ -1,18 +1,21 @@
 // What PixelSprite and AgentAvatar draw (D-ARC-5, D-ARC-6, D-TOKENS): the catalogue's sprite
 // colours by the palette's art (Handheld's shades in Handheld, the bronze robot on the four dark
 // palettes), 32 sprite pixels at the look's pixelScale (the portrait twice that), a frame's runs as
-// whole-point rects grouped by colour that cover every drawn pixel exactly once, and the party's
-// robots in AGENT_COLOURS by their place in the roster, 32 points at every scale.
+// whole-point rects grouped by colour that cover every drawn pixel exactly once, the party's
+// robots in AGENT_COLOURS by their place in the roster, 32 points at every scale, and the
+// Inventory's item icons in ICON_COLOURS at the look's pixel scale plus one.
 
 import { describe, expect, it } from 'vitest';
 
 import {
   AGENT_COLOURS,
+  ICON_COLOURS,
+  ICON_KEYS,
   PALETTE_IDS,
   SPRITE_COLOURS,
   SPRITE_KEYS,
 } from '../../../tokens/arcade-catalogue';
-import { AGENT_ART } from '../agents-icons';
+import { AGENT_ART, ICON_ART, ICON_SIZE, type ItemKind } from '../agents-icons';
 import { AUTO_SIZE } from '../auto-sprite';
 import { frameAt } from '../clock';
 import {
@@ -22,6 +25,10 @@ import {
   agentColours,
   agentLayers,
   agentLook,
+  iconColours,
+  iconLayers,
+  iconPixel,
+  iconSide,
   spriteColours,
   spriteLayers,
   spritePixel,
@@ -124,5 +131,39 @@ describe('the party’s robots (D-ARC-6)', () => {
       const colours = agentColours({ palette: 'neon' }, index);
       layers.forEach((layer) => expect(layer.colour).toBe(colours[layer.key]));
     });
+  });
+});
+
+describe('the Inventory’s item icons (D-ARC-6)', () => {
+  const KINDS: readonly ItemKind[] = ['report', 'document', 'image', 'post'];
+
+  it('are 12 pixels at the look’s pixel scale plus one: 36 or 48 points', () => {
+    expect(iconPixel({ pixelScale: '2' })).toBe(3);
+    expect(iconPixel({ pixelScale: '3' })).toBe(4);
+    expect(iconSide({ pixelScale: '2' })).toBe(ICON_SIZE * 3);
+    expect(iconSide({ pixelScale: '3' })).toBe(48);
+  });
+
+  it('take ICON_COLOURS by the palette’s art: Handheld’s shades in Handheld', () => {
+    expect(iconColours({ palette: 'handheld' })).toBe(ICON_COLOURS.shades);
+    PALETTE_IDS.filter((id) => id !== 'handheld').forEach((id) =>
+      expect(iconColours({ palette: id })).toBe(ICON_COLOURS.bronze),
+    );
+  });
+
+  it.each(KINDS)('draw the %s, every pixel covered once on whole points', (kind) => {
+    const look = { palette: 'dungeon', pixelScale: '3' } as const;
+    const runs = ICON_ART[kind];
+    const layers = iconLayers(look, kind);
+    const pixel = iconPixel(look);
+    const drawn = runs.reduce((sum, run) => sum + run.width, 0);
+    const rects = layers.flatMap((layer) => layer.rects);
+    const area = rects.reduce((sum, rect) => sum + rect.width * rect.height, 0);
+    expect(area).toBe(drawn * pixel * pixel);
+    rects.forEach((rect) => [rect.x, rect.y, rect.width].forEach((n) => expect(n % 1).toBe(0)));
+    expect(layers.map((layer) => layer.key)).toEqual(
+      ICON_KEYS.filter((key) => runs.some((run) => run.key === key)),
+    );
+    layers.forEach((layer) => expect(layer.colour).toBe(ICON_COLOURS.bronze[layer.key]));
   });
 });
