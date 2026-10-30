@@ -141,8 +141,12 @@ describe('the status bar’s counters (D-ARC-6)', () => {
 });
 
 describe('the D-pad (D-ARC-6)', () => {
-  it('▲ Quests opens the Board, ▶ Inventory the Deliverables, ▼ Menu the header menu', () => {
-    expect(padAction('quests', routes.home)).toEqual({ kind: 'go', route: routes.cc.board });
+  it('▲ Quests shows the map in the screen, ▶ Inventory the Deliverables, ▼ Menu the header menu', () => {
+    expect(padAction('quests', routes.home)).toEqual({ kind: 'screen', screen: 'quests' });
+    expect(padAction('quests', routes.chat(CHAT_ID), 'quests')).toEqual({
+      kind: 'screen',
+      screen: 'quests',
+    });
     expect(padAction('inventory', routes.home)).toEqual({
       kind: 'go',
       route: routes.cc.deliverables,
@@ -153,6 +157,13 @@ describe('the D-pad (D-ARC-6)', () => {
   it('◀ Chat is the home: here already on home, back to it from a conversation', () => {
     expect(padAction('chat', routes.home)).toEqual({ kind: 'here' });
     expect(padAction('chat', routes.chat(CHAT_ID))).toEqual({ kind: 'home', route: routes.home });
+  });
+
+  it('◀ Chat shows the chat again in the screen over Quests, on home or in a conversation', () => {
+    const chat = { kind: 'screen', screen: 'chat' };
+    expect(padAction('chat', routes.home, 'quests')).toEqual(chat);
+    expect(padAction('chat', routes.chat(CHAT_ID), 'quests')).toEqual(chat);
+    expect(padAction('chat', routes.home, 'chat')).toEqual({ kind: 'here' });
   });
 });
 

@@ -33,7 +33,7 @@ describe('the grid (README Pages)', () => {
 
   it('says where each target goes (D-ARC-6)', () => {
     expect(DPAD_IDS.map((id) => ARCADE_COPY.dpad[id].hint)).toEqual([
-      'Opens the Board',
+      'Shows your quests on the map',
       "Auto's chat",
       'Opens Deliverables',
       'Opens the menu',

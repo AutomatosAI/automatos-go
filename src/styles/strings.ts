@@ -309,7 +309,7 @@ export const ARCADE_COPY = Object.freeze({
     quest: Object.freeze({ game: 'QUEST', words: (n: number) => `${n} in progress` }),
   }),
   dpad: Object.freeze({
-    quests: Object.freeze({ arrow: '▲', word: 'Quests', hint: 'Opens the Board' }),
+    quests: Object.freeze({ arrow: '▲', word: 'Quests', hint: 'Shows your quests on the map' }),
     chat: Object.freeze({ arrow: '◀', word: 'Chat', hint: "Auto's chat" }),
     inventory: Object.freeze({ arrow: '▶', word: 'Inventory', hint: 'Opens Deliverables' }),
     menu: Object.freeze({ arrow: '▼', word: 'Menu', hint: 'Opens the menu' }),
@@ -376,6 +376,43 @@ export const ARCADE_PARTY_COPY = Object.freeze({
     ready: Object.freeze({ glyph: '—', word: 'Ready' }),
   }),
   memberLabel: (name: string, word: string) => `${name}, ${word.toLowerCase()}`,
+});
+
+/**
+ * Arcade's Quests on the handheld (US-022m; the kit's quests/{quests,map-view,quest-window,
+ * quests-page}.ts(x)): the map window's label and count, each region's name and its state (a glyph
+ * and a word, never the colour alone), a quest's state words, the quest window's OPEN and BOARD,
+ * and the map's loading, failed and quiet lines. VoiceOver hears 'Compare three laptops, in
+ * progress' for a marker.
+ */
+export const ARCADE_QUESTS_COPY = Object.freeze({
+  worldMap: 'World map',
+  count: (shown: number, total: number) =>
+    shown < total ? `${shown} of ${total} quests` : `${total} ${total === 1 ? 'quest' : 'quests'}`,
+  regions: Object.freeze({
+    active: Object.freeze({ name: 'Greenwood', glyph: '◆', word: 'Active' }),
+    needs: Object.freeze({ name: 'Storm Peaks', glyph: '!', word: 'Needs you' }),
+    done: Object.freeze({ name: 'Hearth Village', glyph: '✓', word: 'Done' }),
+  }),
+  regionLabel: (name: string, word: string) => `${name}: ${word.toLowerCase()}`,
+  glyphs: Object.freeze({ active: '◆', needs: '!', failed: '✕', done: '✓', closed: '—' }),
+  needsYou: 'Needs you',
+  failed: 'Failed',
+  markerLabel: (title: string, word: string) => `${title}, ${word.toLowerCase()}`,
+  markerHint: 'Shows this quest under the map',
+  quest: 'Quest',
+  statusLabel: (word: string, region: string) => `${word}, ${region}`,
+  open: 'Open',
+  openHint: 'Opens the ticket',
+  board: 'Board',
+  boardHint: 'Opens the whole Board',
+  loading: 'Unfolding the map…',
+  loadFailed: "Couldn't load the map.",
+  retry: 'Try again',
+  quietTitle: 'The map is quiet.',
+  quietLine: 'Start a quest from the chat.',
+  goToChat: 'Go to chat',
+  goToChatHint: "Shows Auto's chat",
 });
 
 /**

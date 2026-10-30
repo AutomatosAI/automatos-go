@@ -3,7 +3,8 @@
 // Command Centre makes; no new endpoint, no fetch outside src/api); the party (US-022l, party.ts)
 // is the chat's agents read (its own query, GET /api/chat/agents) with needs-you's rows and the
 // same Board query; the dialogue remembers which turns typed on this screen (withTyped, as useShelf
-// remembers the Deliverables); the D-pad pushes the routes padAction names; TYPE's sheet is the
+// remembers the Deliverables); the D-pad switches the handheld's screen (the chat or the Quests
+// map, US-022m) or pushes the routes padAction names; TYPE's sheet is the
 // composer, so opening it is Auto's composer focus (typingEvent) and closing it the blur; a sprite
 // has no clip boundary, so a one-shot (hello, celebrate) ends on its timer (turn-state.ts
 // oneShotEndMs); the story is A2's rows with the Deliverables this conversation made placed in
@@ -29,7 +30,14 @@ import type { CounterValues } from '../arcade/parts/counters';
 import type { DPadId } from '../arcade/parts/pad-grid';
 import { oneShotEndMs, oneShotEnded, portraitState, typingEvent } from '../arcade/sprite/turn-state';
 import type { MascotController } from '../mascot/use-mascot';
-import { arcadeCounters, dialogueSay, padAction, withTyped, type DialogueSay } from './arcade-home';
+import {
+  arcadeCounters,
+  dialogueSay,
+  padAction,
+  withTyped,
+  type DialogueSay,
+  type HandheldScreen,
+} from './arcade-home';
 import { sayingRowKey, storyEntries, type StoryEntry } from './arcade-story';
 import { placeReports } from './shelf';
 import type { HomeThread } from './use-home-thread';
@@ -71,19 +79,32 @@ export function useOneShotEnd(mascot: MascotController): void {
   }, [state, send]);
 }
 
-/** A D-pad press: the Board, the Deliverables, the header menu, or back to the home. */
-export function usePadPress(openMenu: () => void): (id: DPadId) => void {
+export type ArcadeHandheld = {
+  /** What the handheld's screen shows. */
+  readonly screen: HandheldScreen;
+  /** A D-pad press: Quests or the chat in the screen, the Deliverables, the menu, or home. */
+  readonly onPad: (id: DPadId) => void;
+  /** Shows the chat again (a quiet map's GO TO CHAT). */
+  readonly showChat: () => void;
+};
+
+/** The handheld's screen and the D-pad over it; the chat first. */
+export function useHandheld(openMenu: () => void): ArcadeHandheld {
+  const [screen, setScreen] = useState<HandheldScreen>('chat');
   const router = useRouter();
   const pathname = usePathname();
-  return useCallback(
+  const onPad = useCallback(
     (id: DPadId) => {
-      const action = padAction(id, pathname);
-      if (action.kind === 'go') router.push(action.route);
+      const action = padAction(id, pathname, screen);
+      if (action.kind === 'screen') setScreen(action.screen);
+      else if (action.kind === 'go') router.push(action.route);
       else if (action.kind === 'home') router.dismissTo(action.route);
       else if (action.kind === 'menu') openMenu();
     },
-    [router, pathname, openMenu],
+    [router, pathname, screen, openMenu],
   );
+  const showChat = useCallback(() => setScreen('chat'), []);
+  return { screen, onPad, showChat };
 }
 
 export type ArcadeComposer = {

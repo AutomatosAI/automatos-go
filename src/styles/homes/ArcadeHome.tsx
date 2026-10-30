@@ -10,10 +10,13 @@
 // A2's Composer (the viewer's read-only copy comes with it, D17); sending is A2's sendMessage and
 // closes the sheet; Auto listens while it is open. STOP shows while Auto answers or the voice
 // works: quick-ask's stop, and A2's for a typed turn (HUD's). Hold to talk is A6's quick-ask in
-// place (useArcadeHomeVoice). The D-pad: ▲ Quests the Board, ▶ Inventory the Deliverables, ▼ Menu
-// the header menu (HomeMenu over A2's MENU_ITEMS: New chat, Chats, the Command Centre with the
-// needs-you number, Settings), ◀ Chat the home, selected here. Report this (D15) on Auto's saved
-// replies in the story and on the one the dialogue says opens the foundation's one ReportSheet.
+// place (useArcadeHomeVoice). The D-pad switches the handheld's screen, as the web handheld does:
+// ▲ Quests shows the overworld map in place of the story and the dialogue (QuestsView, US-022m; no
+// route), ◀ Chat the chat again (kept mounted while hidden, so the story's place and the typing
+// hold); ▶ Inventory the Deliverables, ▼ Menu the header menu (HomeMenu over A2's MENU_ITEMS: New
+// chat, Chats, the Command Centre with the needs-you number, Settings). The page on screen is
+// selected on the D-pad. Report this (D15) on Auto's saved replies in the story and on the one the
+// dialogue says opens the foundation's one ReportSheet.
 //   The column scrolls when the phone's text size leaves it no room; the story window keeps a share
 // of the screen and scrolls inside it.
 
@@ -29,6 +32,7 @@ import { useMessageReport } from '../../chat/report/use-message-report';
 import { ReportSheet, Screen, Sheet } from '../../ui';
 import { useArcadeHomeVoice, type ArcadeHomeVoice } from '../../voice/home/use-arcade-home-voice';
 import { ArcadeControls } from '../arcade/home/ArcadeControls';
+import { QuestsView } from '../arcade/home/QuestsView';
 import { StoryWindow } from '../arcade/home/StoryWindow';
 import { ArcadeButton, DialogueWindow, PartyStrip, StatusBar } from '../arcade/parts';
 import { portraitState } from '../arcade/sprite/turn-state';
@@ -39,8 +43,8 @@ import {
   useArcadeParty,
   useArcadeStory,
   useDialogueSay,
+  useHandheld,
   useOneShotEnd,
-  usePadPress,
 } from './use-arcade-home';
 import { useHomeThread } from './use-home-thread';
 
@@ -84,7 +88,8 @@ export function ArcadeHome({ chatId, ticketId = null }: ArcadeHomeProps) {
   const party = useArcadeParty(needsYou.rows);
   const story = useArcadeStory(home, report);
   const say = useDialogueSay(state);
-  const onPad = usePadPress(menu.open);
+  const handheld = useHandheld(menu.open);
+  const chatShown = handheld.screen === 'chat';
   useOneShotEnd(home.mascot);
   return (
     <Screen ground="chat">
@@ -93,25 +98,30 @@ export function ArcadeHome({ chatId, ticketId = null }: ArcadeHomeProps) {
           <StatusBar counters={counters} />
           <PartyStrip members={party} />
         </View>
-        <View style={styles.screen}>
-          <StoryWindow
-            entries={story.entries}
-            onRetry={story.onRetry}
-            onCard={story.onCard}
-            onLink={story.onLink}
-            report={report}
-          />
-          <DialogueWindow
-            state={portraitState(home.mascot.driver.mascot)}
-            reply={say.reply}
-            thinking={say.thinking}
-            onReport={story.sayingReport}
-          >
-            <DialogueControls onType={composer.open} voice={voice} />
-          </DialogueWindow>
+        <View style={[styles.screen, styles.inset]}>
+          <View style={[styles.screen, chatShown ? null : styles.hidden]}>
+            <StoryWindow
+              entries={story.entries}
+              onRetry={story.onRetry}
+              onCard={story.onCard}
+              onLink={story.onLink}
+              report={report}
+            />
+            <DialogueWindow
+              state={portraitState(home.mascot.driver.mascot)}
+              reply={say.reply}
+              thinking={say.thinking}
+              onReport={story.sayingReport}
+            >
+              <DialogueControls onType={composer.open} voice={voice} />
+            </DialogueWindow>
+          </View>
+          {handheld.screen === 'quests' ? (
+            <QuestsView needsYou={needsYou.rows} onChat={handheld.showChat} />
+          ) : null}
         </View>
         <ArcadeControls
-          pad={{ current: 'chat', menuOpen: menu.visible, onPress: onPad }}
+          pad={{ current: handheld.screen, menuOpen: menu.visible, onPress: handheld.onPad }}
           voice={voice}
         />
       </ScrollView>
@@ -134,6 +144,8 @@ export function ArcadeHome({ chatId, ticketId = null }: ArcadeHomeProps) {
 
 const styles = StyleSheet.create({
   console: { flexGrow: 1, gap: CONSOLE.gap, paddingBottom: CONSOLE.padBottom },
-  screen: { flex: 1, gap: CONSOLE.gap, paddingHorizontal: CONSOLE.padH },
+  screen: { flex: 1, gap: CONSOLE.gap },
+  inset: { paddingHorizontal: CONSOLE.padH },
+  hidden: { display: 'none' },
   dialogueControls: { flexDirection: 'row', flexWrap: 'wrap', gap: CONSOLE.gap },
 });

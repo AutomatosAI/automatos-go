@@ -36,7 +36,8 @@ function layerPath(layer: ArtLayer): SkPath {
   return path;
 }
 
-const Layer = memo(function Layer({ layer }: { readonly layer: ArtLayer }) {
+/** One colour of a picture as one crisp path (the Quests map's terrain draws its layers with it). */
+export const ArtPath = memo(function ArtPath({ layer }: { readonly layer: ArtLayer }) {
   const path = useMemo(() => layerPath(layer), [layer]);
   return <Path path={path} color={layer.colour} antiAlias={false} />;
 });
@@ -66,7 +67,7 @@ export const PixelArt = memo(function PixelArt({ layers, side, label }: PixelArt
     >
       <Canvas style={size}>
         {layers.map((layer) => (
-          <Layer key={layer.key} layer={layer} />
+          <ArtPath key={layer.key} layer={layer} />
         ))}
       </Canvas>
     </View>
