@@ -39,8 +39,8 @@ warn()  { local name="$1" body="$2"; echo ""; echo "── $name"; if ( eval "$b
 KIT=scripts/ralph/prd-001-candy.json
 CI_JOBS=("typecheck · lint · test" "expo-doctor · iOS bundle")
 MASCOT_STATES="hello idle listening thinking working searching reading celebrate oops sleeping lost loading"
-KIT_PIN=310a31723cf61f52a9d835afbd6b32a73fba0978   # the design kit (AutomatosAI/automatos-design-kit), themes/candy (KA3): the lead fills it in
-KIT_SHORT=310a31723
+KIT_PIN=3920359d5350960471aca1b7111f6243be537cc0   # the design kit (AutomatosAI/automatos-design-kit), themes/candy (KA3): the lead fills it in
+KIT_SHORT=3920359d5
 # US-023d: the five static instances (fonts.gstatic.com) and the two licences (google/fonts at a pinned commit).
 FONT_SHA256="outfit/Outfit-SemiBold.ttf=8900df5726b5a6f23e723594f11d5ea27e695bd85c884f18d88ed080544fe205
 outfit/Outfit-Bold.ttf=49dcdf653a004a2575b3de649f5e4c549d774fecddf317812330edd0ad70685a
