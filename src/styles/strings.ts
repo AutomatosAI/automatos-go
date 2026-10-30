@@ -88,6 +88,7 @@ export const LOOK_SYNC_COPY = Object.freeze({
   localOnly: 'Kept on this phone only',
   playNotInstalled: 'Install Play in Studio to keep your looks in step with the web.',
   arcadeNotInstalled: "Arcade isn't installed in this workspace, so your looks stay on this phone.",
+  candyNotInstalled: "Candy isn't installed in this workspace, so your looks stay on this phone.",
 });
 
 /**

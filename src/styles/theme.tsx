@@ -5,13 +5,13 @@
 // in the encrypted MMKV store; the logic is in theme-choice.ts with its tests.
 //
 // A5 (D54-D59) adds the phone's style beside it: the one style store (provider/store.ts: the style
-// choice, Play's, HUD's and Arcade's looks, the cached theme painting, read from MMKV before the
-// first frame, so a phone on Play never flashes Studio at launch), resolved by provider/resolve.ts
-// into the ResolvedStyle useStyle() returns. useTokens() keeps its type and returns that style's
-// tokens, so every screen repaints the moment the style flips (provider/flip.ts, crossfaded by
-// provider/Crossfade.tsx). Light / Dark / System still drive Studio; Play paints its look's tone,
-// HUD is always dark and Arcade paints its palette's tone. StyleScope (provider/StyleScope.tsx)
-// paints a preview in another style.
+// choice, Play's, HUD's, Arcade's and Candy's looks, the cached theme painting, read from MMKV
+// before the first frame, so a phone on Play never flashes Studio at launch), resolved by
+// provider/resolve.ts into the ResolvedStyle useStyle() returns. useTokens() keeps its type and
+// returns that style's tokens, so every screen repaints the moment the style flips
+// (provider/flip.ts, crossfaded by provider/Crossfade.tsx). Light / Dark / System still drive
+// Studio; Play paints its look's tone, HUD is always dark and Arcade and Candy paint their
+// palette's tone. StyleScope (provider/StyleScope.tsx) paints a preview in another style.
 // US-016i: the phone's choice may be 'Same as Studio' (the default), which paints what the
 // workspace's active theme maps to (the store's followed, kept by ThemeSync); the cached theme
 // painting's fonts are loaded here from their copies on the phone (themes/fonts.ts), so a theme's
@@ -62,10 +62,11 @@ function useStyleParts(store: StyleStoreApi) {
   const playLook = useStore(store, (state) => state.playLook);
   const hudLook = useStore(store, (state) => state.hudLooks.active);
   const arcadeLook = useStore(store, (state) => state.arcadeLooks.active);
+  const candyLook = useStore(store, (state) => state.candyLooks.active);
   const themePaint = useStore(store, (state) => state.themePaint);
   const themeFonts = useStore(store, (state) => state.themeFonts);
   const choice = useMemo(() => paintedChoice(phoneChoice, followed), [phoneChoice, followed]);
-  return { choice, playLook, hudLook, arcadeLook, themePaint, themeFonts };
+  return { choice, playLook, hudLook, arcadeLook, candyLook, themePaint, themeFonts };
 }
 
 export function ThemeProvider({ children, storage }: ThemeProviderProps) {
@@ -78,6 +79,7 @@ export function ThemeProvider({ children, storage }: ThemeProviderProps) {
     playLook,
     hudLook,
     arcadeLook,
+    candyLook,
     themePaint,
     themeFonts,
   } = useStyleParts(styleStore);
@@ -105,6 +107,7 @@ export function ThemeProvider({ children, storage }: ThemeProviderProps) {
       playLook,
       hudLook,
       arcadeLook,
+      candyLook,
       themePaint,
       themeFonts,
       reduceMotion,
@@ -116,6 +119,7 @@ export function ThemeProvider({ children, storage }: ThemeProviderProps) {
       playLook,
       hudLook,
       arcadeLook,
+      candyLook,
       themePaint,
       themeFonts,
       reduceMotion,

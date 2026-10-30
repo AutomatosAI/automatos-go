@@ -1,5 +1,5 @@
-// The look sync running (US-017d, D-PHONE-CHOICE; Arcade's from US-022c): one runner per style
-// store and theme (Play, HUD, Arcade), over the pure reducer (play/look-sync.ts). It reads the
+// The look sync running (US-017d, D-PHONE-CHOICE; Arcade's from US-022c, Candy's from US-023c):
+// one runner per style store and theme (Play, HUD, Arcade, Candy), over the pure reducer (play/look-sync.ts). It reads the
 // member's looks (GET /api/themes/looks/{themeId}) when LookSync asks (mount, every foreground, a
 // look page opening) and writes the result to the style store, which repaints the style and keeps
 // the copy on the phone; it watches the style store for a change made on the phone (the look page,
@@ -31,6 +31,7 @@ import type { StyleState, StyleStoreApi } from '../provider/store';
 import { createLookOutbox, type LookOutbox } from './look-outbox';
 import {
   ARCADE_LOOK_THEME,
+  CANDY_LOOK_THEME,
   HUD_LOOK_THEME,
   PLAY_LOOK_THEME,
   type LookTheme,
@@ -235,11 +236,12 @@ type Runners = {
   readonly play: LookSyncRunner;
   readonly hud: LookSyncRunner;
   readonly arcade: LookSyncRunner;
+  readonly candy: LookSyncRunner;
 };
 
 const runners = new WeakMap<StyleStoreApi, Runners>();
 
-/** Play's, HUD's and Arcade's runners for this store, made once (one outbox between them). */
+/** Play's, HUD's, Arcade's and Candy's runners for this store, made once (one outbox between them). */
 export function lookSyncRunners(store: StyleStoreApi): Runners {
   const made = runners.get(store);
   if (made) return made;
@@ -248,6 +250,7 @@ export function lookSyncRunners(store: StyleStoreApi): Runners {
     play: createRunner(store, PLAY_LOOK_THEME, outbox),
     hud: createRunner(store, HUD_LOOK_THEME, outbox),
     arcade: createRunner(store, ARCADE_LOOK_THEME, outbox),
+    candy: createRunner(store, CANDY_LOOK_THEME, outbox),
   });
   runners.set(store, next);
   return next;

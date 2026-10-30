@@ -89,7 +89,7 @@ afterEach(() => {
 
 describe('Arcade in step with the web', () => {
   it('is one of the themes the phone keeps in step, its marks beside its looks', () => {
-    expect(LOOK_THEME_KEYS).toEqual(['play', 'hud', 'arcade']);
+    expect(LOOK_THEME_KEYS).toEqual(['play', 'hud', 'arcade', 'candy']);
     expect(LOOK_MARKS_KEYS.arcade).toBe('styles.arcade.looks.sync');
   });
 

@@ -1,16 +1,17 @@
-// The phone's one style store (PRD-001 §4.6, D54, D59): the style choice, Play's look, HUD's and
-// Arcade's looks and the cached theme painting, read synchronously from the encrypted MMKV store
-// when the store is made, so the first frame paints the chosen style (no flash of Studio at
-// launch). Each part lives in its own MMKV store: the choice in US-016a's (styles.choice; nothing
-// stored is 'Same as Studio'), HUD's looks in US-018a's (styles.hud.looks), Arcade's in US-022c's
-// (styles.arcade.looks) with Arcade's pause beside them (US-022e, styles.arcade.motionPaused,
-// arcade/motion-pause.ts), what 'Same as Studio' painted and the theme painting in US-016i's
-// (styles.theme.followed, styles.theme.paint, themes/cache.ts), Play's looks in US-017d's
-// (styles.play.looks, play/look-store.ts) with each theme's look sync marks beside them
-// (styles.*.looks.sync, sync/look-marks.ts). The installs the last read offered, the
-// fonts loaded for the painting and the look sync's standing with the server are this launch's
-// only (ThemeSync, themes/fonts.ts and LookSync fill them). Pure over zustand's vanilla store and
-// the KeyValueStorage port, so it runs in vitest; theme.tsx hands it the foundation's appStorage.
+// The phone's one style store (PRD-001 §4.6, D54, D59): the style choice, Play's look, HUD's,
+// Arcade's and Candy's looks and the cached theme painting, read synchronously from the encrypted
+// MMKV store when the store is made, so the first frame paints the chosen style (no flash of Studio
+// at launch). Each part lives in its own MMKV store: the choice in US-016a's (styles.choice;
+// nothing stored is 'Same as Studio'), HUD's looks in US-018a's (styles.hud.looks), Arcade's in
+// US-022c's (styles.arcade.looks) with Arcade's pause beside them (US-022e,
+// styles.arcade.motionPaused, arcade/motion-pause.ts), Candy's in US-023c's (styles.candy.looks),
+// what 'Same as Studio' painted and the theme painting in US-016i's (styles.theme.followed,
+// styles.theme.paint, themes/cache.ts), Play's looks in US-017d's (styles.play.looks,
+// play/look-store.ts) with each theme's look sync marks beside them (styles.*.looks.sync,
+// sync/look-marks.ts). The installs the last read offered, the fonts loaded for the painting and
+// the look sync's standing with the server are this launch's only (ThemeSync, themes/fonts.ts and
+// LookSync fill them). Pure over zustand's vanilla store and the KeyValueStorage port, so it runs
+// in vitest; theme.tsx hands it the foundation's appStorage.
 
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
@@ -19,6 +20,8 @@ import type { KeyValueStorage } from '../../storage/encrypted-storage';
 import type { ArcadeLooks } from '../arcade/arcade-looks';
 import { createArcadeLooksStore, type ArcadeLooksStore } from '../arcade/look-store';
 import { createMotionPauseSource } from '../arcade/motion-pause';
+import type { CandyLooks } from '../candy/candy-looks';
+import { createCandyLooksStore, type CandyLooksStore } from '../candy/look-store';
 import type { HudLooks } from '../hud/hud-looks';
 import { createHudLooksStore, type HudLooksStore } from '../hud/look-store';
 import { NO_MARKS, statusFromMarks, type LookMarks, type LookSyncStatus } from '../play/look-sync';
@@ -42,6 +45,7 @@ export type StyleSources = {
   readonly choice: StyleChoiceStore;
   readonly hudLooks: HudLooksStore;
   readonly arcadeLooks: ArcadeLooksStore;
+  readonly candyLooks: CandyLooksStore;
   readonly playLooks: StyleSource<PlayLooks>;
   readonly themePaint: StyleSource<ThemePaint | null>;
   /** What 'Same as Studio' painted at the last read; Studio when none is kept. */
@@ -65,6 +69,7 @@ export type StyleState = {
   readonly playLooks: PlayLooks;
   readonly hudLooks: HudLooks;
   readonly arcadeLooks: ArcadeLooks;
+  readonly candyLooks: CandyLooks;
   /** Arcade's animation paused by the person: the sprite, cursor and typing hold still. */
   readonly arcadeMotionPaused: boolean;
   readonly themePaint: ThemePaint | null;
@@ -94,6 +99,7 @@ export type StyleActions = {
   readonly setPlayLooks: (looks: PlayLooks) => boolean;
   readonly setHudLooks: (looks: HudLooks) => boolean;
   readonly setArcadeLooks: (looks: ArcadeLooks) => boolean;
+  readonly setCandyLooks: (looks: CandyLooks) => boolean;
   /** Arcade's pause, kept on the phone; false when the save failed (it still applies). */
   readonly setArcadeMotionPaused: (paused: boolean) => boolean;
   /** One theme's look sync standing; its marks are kept on the phone (false: not saved). */
@@ -129,6 +135,7 @@ export function appStyleSources(storage: () => KeyValueStorage): StyleSources {
     choice: createStyleChoiceStore(storage),
     hudLooks: createHudLooksStore(storage),
     arcadeLooks: createArcadeLooksStore(storage),
+    candyLooks: createCandyLooksStore(storage),
     playLooks: createPlayLooksStore(storage),
     themePaint: themePaintPart(storage),
     followed: themeFollowedPart(storage),
@@ -143,7 +150,7 @@ function marksSources(sources: StyleSources) {
   const kept = sources.lookMarks;
   if (kept) return kept;
   const memory = () => memorySource<LookMarks>(NO_MARKS);
-  return Object.freeze({ play: memory(), hud: memory(), arcade: memory() });
+  return Object.freeze({ play: memory(), hud: memory(), arcade: memory(), candy: memory() });
 }
 
 function lookSyncOf(marks: Readonly<Record<LookThemeKey, StyleSource<LookMarks>>>) {
@@ -161,6 +168,7 @@ export function hydrateStyleState(sources: StyleSources): StyleState {
     playLooks,
     hudLooks: sources.hudLooks.get(),
     arcadeLooks: sources.arcadeLooks.get(),
+    candyLooks: sources.candyLooks.get(),
     arcadeMotionPaused: sources.arcadeMotionPaused?.get() ?? false,
     themePaint: sources.themePaint.get(),
     themes: NO_THEMES,
@@ -191,6 +199,17 @@ function arcadeActions(
     setArcadeMotionPaused: (paused) => {
       const saved = pause.set(paused);
       set({ arcadeMotionPaused: pause.get() });
+      return saved;
+    },
+  };
+}
+
+/** Candy's looks, saved through their source first. */
+function candyActions(sources: StyleSources, set: SetStyle): Pick<StyleActions, 'setCandyLooks'> {
+  return {
+    setCandyLooks: (looks) => {
+      const saved = sources.candyLooks.set(looks);
+      set({ candyLooks: sources.candyLooks.get() });
       return saved;
     },
   };
@@ -233,6 +252,7 @@ export function createStyleStore(sources: StyleSources): StyleStoreApi {
       return saved;
     },
     ...arcadeActions(sources, set),
+    ...candyActions(sources, set),
     setThemePaint: (paint) => {
       const saved = sources.themePaint.set(paint);
       set({ themePaint: sources.themePaint.get() });
