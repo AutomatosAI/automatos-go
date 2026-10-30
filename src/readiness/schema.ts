@@ -21,11 +21,18 @@ export type NeededBy = (typeof NEEDED_BY)[number];
 
 const APP_PATH_ROOT = '/';
 const OTHER_HOST_PREFIXES = ['//', '/\\'] as const;
+/** Whitespace or a control character: not a path anyone built (web-links.ts's rule). */
+const UNSAFE_CHARACTERS = /[\s\u0000-\u001f\u007f]/;
 
-/** An app path: '/settings?tab=…', never another host ('//host', '/\host') or a scheme. */
+/**
+ * An app path: '/settings?tab=…', never another host ('//host', '/\host'), a scheme, or a path
+ * with whitespace or a control character in it ('/\n/host').
+ */
 export function isAppPath(href: string): boolean {
   return (
-    href.startsWith(APP_PATH_ROOT) && !OTHER_HOST_PREFIXES.some((prefix) => href.startsWith(prefix))
+    href.startsWith(APP_PATH_ROOT) &&
+    !OTHER_HOST_PREFIXES.some((prefix) => href.startsWith(prefix)) &&
+    !UNSAFE_CHARACTERS.test(href)
   );
 }
 

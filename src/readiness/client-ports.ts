@@ -18,12 +18,17 @@ import { permissions } from '../voice/permissions/permissions';
 import { phoneLocale } from '../voice/quick-ask/locale';
 import { recognizer } from '../voice/quick-ask/recognizer';
 import { serverVoices } from '../voice/server/use-server-voices';
-import { voiceSetting } from '../voice/settings/use-voice-setting';
+import type { VoiceSetting } from '../voice/settings/voice-setting';
 import type { ClientPorts } from './client-facts';
 
-export type ClientPortsInput = Readonly<{ discovery: Discovery; client: ApiClient }>;
+export type ClientPortsInput = Readonly<{
+  discovery: Discovery;
+  client: ApiClient;
+  /** The voice setting as the screen holds it (useVoiceSetting): I speak and the voice chosen. */
+  setting: VoiceSetting;
+}>;
 
-export function clientPorts({ discovery, client }: ClientPortsInput): ClientPorts {
+export function clientPorts({ discovery, client, setting }: ClientPortsInput): ClientPorts {
   return Object.freeze({
     pushStatus: () =>
       phoneStatusOf({
@@ -36,8 +41,8 @@ export function clientPorts({ discovery, client }: ClientPortsInput): ClientPort
       }),
     checkPermission: permissions.check,
     recognitionPolicy: recognizer.policy,
-    listeningLocale: () => listeningLocale(voiceSetting.get(), phoneLocale()),
-    voiceSource: () => voiceSetting.get().source,
+    listeningLocale: () => listeningLocale(setting, phoneLocale()),
+    voiceSource: () => setting.source,
     serverVoices: canServerVoice(discovery)
       ? async (fresh: boolean) => (await serverVoices.get(client, fresh)) !== null
       : null,

@@ -65,6 +65,7 @@ describe('ReadinessSchema', () => {
       'https://evil.example/x',
       '//evil.example/x',
       '/\\evil.example',
+      '/\n/evil.example',
       'settings',
     ]) {
       const [item] = parse([{ ...MODEL_ITEM, fix: { label: 'Fix', href } }]).items;
@@ -94,6 +95,9 @@ describe('ReadinessSchema', () => {
     expect(isAppPath('//evil.example')).toBe(false);
     expect(isAppPath('/\\evil.example')).toBe(false);
     expect(isAppPath('javascript:alert(1)')).toBe(false);
+    expect(isAppPath('/\n/evil.example')).toBe(false);
+    expect(isAppPath('/\t/evil.example')).toBe(false);
+    expect(isAppPath('/settings?tab=a b')).toBe(false);
   });
 });
 
