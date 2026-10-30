@@ -4,9 +4,10 @@
 // a07d3dc8e22345ac605c3842800f7dbe779e0408c1a0cf7301d5058f56d263e9): four named targets in a
 // 3 × 3 grid of 64 pt cells, ▲ Quests over the hub, ◀ Chat and ▶ Inventory beside it, ▼ Menu
 // under it, the corners empty. The current page's target is selected (and Menu's while the menu
-// is open); every cell grows with Dynamic Type, so the word inside keeps its room. The word is
-// Pixelify Sans at 11 pt (typeface/arcade-type.ts ARCADE_PAD_WORD): the design's 13 px does not
-// fit 'Inventory' (5.17 em in Pixelify Sans Regular, 67 pt at 13) inside a cell's 60 pt between
+// is open); every cell grows with Dynamic Type, so the word inside keeps its room, up to a third
+// of the controls row, past which the grid stops growing and the word wraps (D-A11Y, OT-A5). The
+// word is Pixelify Sans at 11 pt (typeface/arcade-type.ts ARCADE_PAD_WORD): the design's 13 px does
+// not fit 'Inventory' (5.17 em in Pixelify Sans Regular, 67 pt at 13) inside a cell's 60 pt between
 // its 2 pt borders, and D38 floors it at 11. Pure: no React, React Native, Expo or Skia.
 
 export const DPAD_IDS = Object.freeze(['quests', 'chat', 'inventory', 'menu'] as const);
@@ -25,10 +26,24 @@ export const DPAD_GRID: readonly (readonly DPadCell[])[] = Object.freeze([
 /** handheld.module.css: 64 px cells, a 2 px ring, 4 px between arrow and word, a 2 px press. */
 export const DPAD_METRICS = Object.freeze({ cell: 64, ring: 2, gap: 4, press: 2 });
 
-/** A cell's side: 64 pt, grown by the phone's text size so its word keeps its room. */
-export function padSide(fontScale: number): number {
+/** The controls row's padding (ArcadeControls): the D-pad's row is the window less this each side. */
+export const CONTROLS_PAD_H = 8;
+
+/** The width the D-pad's row has on a window of `windowWidth`. */
+export function padRowWidth(windowWidth: number): number {
+  return windowWidth - CONTROLS_PAD_H * 2;
+}
+
+/**
+ * A cell's side: 64 pt, grown by the phone's text size so its word keeps its room, but never past a
+ * third of the row (the grid is square: three cells always fit) and never under 64. Without a usable
+ * width, uncapped.
+ */
+export function padSide(fontScale: number, rowWidth: number): number {
   const scale = Number.isFinite(fontScale) && fontScale > 1 ? fontScale : 1;
-  return Math.round(DPAD_METRICS.cell * scale);
+  const grown = Math.round(DPAD_METRICS.cell * scale);
+  const third = Number.isFinite(rowWidth) ? Math.floor(rowWidth / DPAD_GRID.length) : grown;
+  return Math.max(DPAD_METRICS.cell, Math.min(grown, third));
 }
 
 /** What VoiceOver hears of a target: selected for the page on screen, expanded for an open menu. */

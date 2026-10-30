@@ -3,15 +3,25 @@
 // Quests, ◀ Chat, ▶ Inventory, ▼ Menu — round the page-ground hub, each a button with its word as
 // its label (VoiceOver never reads the arrow) and what it opens as its hint. The page on screen is
 // selected (the menu's highlight and its ink) and Menu says whether the menu is open. Each cell is
-// the page with the window border inside; a press nudges it 2 pt. Cells grow with Dynamic Type
-// (padSide). The home says where each target goes (US-022g): routes only from routes.ts.
+// the page with the window border inside; a press nudges it 2 pt. Cells grow with Dynamic Type up
+// to a third of the controls row (padSide); past that the word wraps and its cell grows taller,
+// never wider, and the row's other cells match it. The home says where each target goes (US-022g):
+// routes only from routes.ts.
 
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { Text } from '../../../ui';
 import { ARCADE_COPY } from '../../strings';
 import { arcadePadWord } from '../../typeface/arcade-type';
-import { DPAD_GRID, DPAD_METRICS, padSide, padState, type DPadCell, type DPadId } from './pad-grid';
+import {
+  DPAD_GRID,
+  DPAD_METRICS,
+  padRowWidth,
+  padSide,
+  padState,
+  type DPadCell,
+  type DPadId,
+} from './pad-grid';
 import { useArcadePaint } from './use-arcade-paint';
 
 const PAD_WORD = arcadePadWord();
@@ -46,15 +56,13 @@ function Pad({ id, side, current, menuOpen, onPress }: PadProps) {
       accessibilityState={state}
       style={({ pressed }) => [
         styles.cell,
-        { width: side, height: side, borderColor: vars.bd },
+        { width: side, minHeight: side, borderColor: vars.bd },
         { backgroundColor: state.selected ? vars.hl : vars.page },
         pressed ? styles.pressed : null,
       ]}
     >
       <Text style={[type.label, { color: ink }]}>{copy.arrow}</Text>
-      <Text style={[PAD_WORD, { color: ink }]} numberOfLines={1}>
-        {copy.word}
-      </Text>
+      <Text style={[PAD_WORD, styles.word, { color: ink }]}>{copy.word}</Text>
     </Pressable>
   );
 }
@@ -63,11 +71,12 @@ function Filler({ cell, side }: { readonly cell: 'hub' | null; readonly side: nu
   const { vars } = useArcadePaint();
   const hub =
     cell === 'hub' ? [styles.hub, { backgroundColor: vars.page, borderColor: vars.bd }] : null;
-  return <View style={[{ width: side, height: side }, hub]} />;
+  return <View style={[{ width: side, minHeight: side }, hub]} />;
 }
 
 export function DPad({ current, menuOpen = false, onPress }: DPadProps) {
-  const side = padSide(useWindowDimensions().fontScale);
+  const { width, fontScale } = useWindowDimensions();
+  const side = padSide(fontScale, padRowWidth(width));
   const place = (cell: DPadCell, column: number) =>
     cell === null || cell === 'hub' ? (
       <Filler key={column} cell={cell} side={side} />
@@ -101,6 +110,7 @@ const styles = StyleSheet.create({
     gap: DPAD_METRICS.gap,
     borderWidth: DPAD_METRICS.ring,
   },
+  word: { textAlign: 'center' },
   hub: { borderWidth: DPAD_METRICS.ring },
   pressed: { transform: [{ translateX: DPAD_METRICS.press }, { translateY: DPAD_METRICS.press }] },
 });

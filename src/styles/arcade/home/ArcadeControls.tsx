@@ -17,6 +17,7 @@ import { VoiceLine } from '../../../voice/screen/VoiceLine';
 import { talkHandlers } from '../../hud/core/HudButtons';
 import type { HudLanguage, HudTalk } from '../../hud/core/model';
 import { DPad, type DPadProps } from '../parts/DPad';
+import { CONTROLS_PAD_H } from '../parts/pad-grid';
 import { SURROUND, VoiceSurround } from '../parts/VoiceSurround';
 import { useArcadePaint } from '../parts/use-arcade-paint';
 
@@ -25,7 +26,7 @@ const CONTROLS = Object.freeze({
   talk: SURROUND.accent - SURROUND.accentRing * 2,
   ring: 2,
   gap: 12,
-  padH: 8,
+  padH: CONTROLS_PAD_H,
   captionGap: 8,
 });
 

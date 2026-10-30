@@ -1,7 +1,8 @@
 // The D-pad (pad-grid.ts; the kit's frame/controls.tsx; D-ARC-6): four named targets round the hub in a
-// 3 × 3 grid of 64 pt cells that grow with Dynamic Type, the page on screen selected and Menu
-// expanded while open, and the pad word in Pixelify Sans at 11 pt, where the longest word,
-// 'Inventory', fits inside a cell's borders (measured from the bundled font).
+// 3 × 3 grid of 64 pt cells that grow with Dynamic Type up to a third of the controls row (the words
+// wrap past that: D-A11Y, OT-A5), the page on screen selected and Menu expanded while open, and the
+// pad word in Pixelify Sans at 11 pt, where the longest word, 'Inventory', fits inside a cell's
+// borders (measured from the bundled font).
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -11,13 +12,33 @@ import { describe, expect, it } from 'vitest';
 import { ARCADE_COPY } from '../../../strings';
 import { MIN_TEXT_SIZE } from '../../../type';
 import { ARCADE_PAD_WORD, arcadePadWord } from '../../../typeface/arcade-type';
-import { DPAD_GRID, DPAD_IDS, DPAD_METRICS, padSide, padState } from '../pad-grid';
+import {
+  CONTROLS_PAD_H,
+  DPAD_GRID,
+  DPAD_IDS,
+  DPAD_METRICS,
+  padRowWidth,
+  padSide,
+  padState,
+} from '../pad-grid';
 import { advanceEm } from './ttf-advance';
 
 const PIXELIFY = path.resolve(
   __dirname,
   '../../../../../assets/fonts/pixelify-sans/PixelifySans-Regular.ttf',
 );
+const DPAD_SOURCE = readFileSync(path.resolve(__dirname, '../DPad.tsx'), 'utf8');
+const CONTROLS_SOURCE = readFileSync(
+  path.resolve(__dirname, '../../home/ArcadeControls.tsx'),
+  'utf8',
+);
+
+/** React Native's iOS font multipliers, xSmall to the largest Accessibility size (RCTFontUtils). */
+const IOS_FONT_SCALES = [
+  0.823, 0.882, 0.941, 1, 1.118, 1.235, 1.353, 1.786, 2.143, 2.643, 3.143, 3.571,
+] as const;
+/** 375 and 430 pt phones; their rows are these less the controls row’s padding each side. */
+const PHONE_WIDTHS = [375, 430] as const;
 
 describe('the grid (README Pages)', () => {
   it('puts ▲ Quests over the hub, ◀ Chat and ▶ Inventory beside it and ▼ Menu under it', () => {
@@ -42,10 +63,53 @@ describe('the grid (README Pages)', () => {
 
   it('makes each cell a 64 pt target that grows with the phone’s text size, never shrinks', () => {
     expect(DPAD_METRICS.cell).toBe(64);
-    expect(padSide(1)).toBe(64);
-    expect(padSide(0.82)).toBe(64);
-    expect(padSide(1.5)).toBe(96);
-    expect(padSide(Number.NaN)).toBe(64);
+    expect(padSide(1, 390)).toBe(64);
+    expect(padSide(0.82, 390)).toBe(64);
+    expect(padSide(1.5, 390)).toBe(96);
+    expect(padSide(Number.NaN, 390)).toBe(64);
+  });
+
+  it('measures the row as the window less the controls row’s padding each side', () => {
+    expect(CONTROLS_PAD_H).toBe(8);
+    expect(PHONE_WIDTHS.map(padRowWidth)).toEqual([359, 414]);
+  });
+
+  it('keeps three cells inside the row at every iOS text size, each at least 64 pt (OT-A5)', () => {
+    PHONE_WIDTHS.map(padRowWidth).forEach((width) => {
+      IOS_FONT_SCALES.forEach((scale) => {
+        const side = padSide(scale, width);
+        expect(side * 3, `${scale} on ${width}`).toBeLessThanOrEqual(width);
+        expect(side, `${scale} on ${width}`).toBeGreaterThanOrEqual(DPAD_METRICS.cell);
+      });
+    });
+    expect(padSide(3.571, 359)).toBe(119);
+    expect(padSide(3.571, 414)).toBe(138);
+  });
+
+  it('grows uncapped only when the row has no usable width, never under 64', () => {
+    expect(padSide(1.5, Number.NaN)).toBe(96);
+    expect(padSide(2, 120)).toBe(64);
+  });
+});
+
+describe('the cells at large text (D-A11Y)', () => {
+  it('lets the pad word wrap: no line cap on any text in the D-pad', () => {
+    expect(DPAD_SOURCE).not.toMatch(/numberOfLines/);
+  });
+
+  it('holds a cell’s width to its side and lets a wrapped word make it taller', () => {
+    expect(DPAD_SOURCE).toMatch(/\{ width: side, minHeight: side, borderColor: vars\.bd \}/);
+    expect(DPAD_SOURCE).not.toMatch(/\bheight: side/);
+  });
+
+  it('sizes the cells from the window’s width less the row’s padding, one constant for both', () => {
+    expect(DPAD_SOURCE).toMatch(/padSide\(fontScale, padRowWidth\(width\)\)/);
+    expect(CONTROLS_SOURCE).toMatch(/padH: CONTROLS_PAD_H/);
+    expect(CONTROLS_SOURCE).toMatch(/paddingHorizontal: CONTROLS\.padH/);
+  });
+
+  it('keeps the voice surround wrapping under the D-pad', () => {
+    expect(CONTROLS_SOURCE).toMatch(/flexWrap: 'wrap'/);
   });
 });
 
