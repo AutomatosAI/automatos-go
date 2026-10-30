@@ -31,6 +31,11 @@ export const queryKeys = Object.freeze({
   /** use-deliverables-api.ts deliverableQueryKeys.list(workspaceId, filters). */
   deliverables: (workspaceId: string | null, filters?: KeyFilters) =>
     ['deliverables', workspaceId, 'list', filters ?? null] as const,
+  /**
+   * PRD-268 W1: GET /api/proactive/suggestions?status= (src/suggestions); the web's hook is core
+   * W2's (US-C21b), so the key is this app's own until then.
+   */
+  suggestions: (status: string) => ['proactive', 'suggestions', status] as const,
   /** use-deliverables-api.ts deliverableQueryKeys.detail(workspaceId, id, includeContent). */
   deliverable: (workspaceId: string | null, id: string, includeContent: boolean) =>
     ['deliverables', workspaceId, 'detail', id, includeContent] as const,
@@ -59,6 +64,7 @@ export type KeyFamilyName =
   | 'schedule'
   | 'questions'
   | 'socialPost'
+  | 'suggestions'
   | 'deliverables'
   | 'deliverable'
   | 'chat.thread'
@@ -87,6 +93,8 @@ export const KEY_FAMILIES: Readonly<Record<KeyFamilyName, KeyFamily>> = Object.f
   schedule: { pattern: ['activity', 'schedule'], persist: true },
   questions: { pattern: ['approval-grants'], persist: false },
   socialPost: { pattern: ['socials', ANY, 'posts'], persist: false },
+  /** Suggestions carry Auto's words about the workspace: memory only. */
+  suggestions: { pattern: ['proactive', 'suggestions'], persist: false },
   deliverables: { pattern: ['deliverables', ANY, 'list'], persist: true },
   deliverable: { pattern: ['deliverables', ANY, 'detail'], persist: false },
   'chat.thread': { pattern: ['chat', 'thread'], persist: false },

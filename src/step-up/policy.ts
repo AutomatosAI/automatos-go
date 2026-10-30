@@ -1,9 +1,9 @@
 // Face ID before approve or answer (D19, KP13): which actions ask, and what the phone's answer
 // means. Pure: step-up.ts reads the phone and calls these. Client-side only, as on the web; no
 // server step-up. Gated in the app: an answer (an option or own words), approving a ticket, a
-// Mission plan or a social post, granting a tool, and a row's Try again (PRD-268 'retry': it starts
-// work, as PRD-268's Start does). Not gated: reject, deny, withdraw, dismiss,
-// send back, request changes, report. Turning the setting off asks first ('settings_off'). A
+// Mission plan or a social post, granting a tool, a row's Try again (PRD-268 'retry': it starts
+// work, as PRD-268's Start does) and a suggestion's Start (PRD-268 US-G01). Not gated: reject, deny,
+// withdraw, dismiss, send back, request changes, report, and hiding a suggestion. Turning the setting off asks first ('settings_off'). A
 // notification Reply is not gated (D18: the unlocked phone is the check; iOS asks for the unlock
 // before the reply field opens). A phone with no passcode and no biometrics cannot be asked, so it
 // passes and the Notifications screen says so.
@@ -16,6 +16,7 @@ export const GATED_ACTIONS = Object.freeze([
   'grant_tool',
   'approve_social',
   'retry',
+  'start_suggestion',
 ] as const);
 export type GatedAction = (typeof GATED_ACTIONS)[number];
 
@@ -31,6 +32,7 @@ export const UNGATED_ACTIONS = Object.freeze([
   'send_back',
   'request_changes',
   'report',
+  'hide_suggestion',
 ] as const);
 export type UngatedAction = (typeof UNGATED_ACTIONS)[number];
 

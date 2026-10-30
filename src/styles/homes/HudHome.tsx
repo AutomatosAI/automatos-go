@@ -11,6 +11,9 @@
 // dress; a blank draft is already New chat (menuHere), so that row only closes the menu. First open
 // is the core with an empty transcript and 'Say or type what you need.' (a blank draft's turn is
 // EMPTY_TURN).
+//   Auto's suggestions (PRD-268 US-G01, src/suggestions): 'IDEAS · N' in the command row opens the
+// sheet of them all, and the newest is the NEXT ▸ line under the status row, never above the
+// buttons; only where discovery lists `suggestions`.
 //   HOLD TO TALK is A6's quick-ask in place (US-019k, useHudHomeVoice over this thread): MIC LIVE,
 // the waveform, the voice's turn in the transcript from a press until a typed send, the voice's chip
 // and line while it works, and STOP stopping the speech too (and A2's turn, typed or spoken).
@@ -31,6 +34,9 @@ import { menuHere } from '../../chat/home/menu';
 import { useHomeMenu } from '../../chat/home/use-home-menu';
 import { useMessageReport } from '../../chat/report/use-message-report';
 import type { ChatFile } from '../../chat/request';
+import { HudNext } from '../../suggestions/HudNext';
+import { SUGGESTION_COPY } from '../../suggestions/strings';
+import { useIdeas, type IdeasCount } from '../../suggestions/use-ideas';
 import { ReportSheet, Sheet } from '../../ui';
 import { useHudHomeVoice } from '../../voice/home/use-hud-home-voice';
 import { VoiceLine } from '../../voice/screen/VoiceLine';
@@ -45,9 +51,20 @@ export type HudHomeProps = {
   readonly ticketId?: string | null;
 };
 
+/** 'IDEAS · N' in HUD's words, while one is open. */
+function hudIdeas({ button }: IdeasCount) {
+  if (!button) return undefined;
+  return {
+    text: SUGGESTION_COPY.hud.count(button.count),
+    label: button.label,
+    onPress: button.onPress,
+  };
+}
+
 export function HudHome({ chatId, ticketId = null }: HudHomeProps) {
   const home = useHomeThread(chatId, ticketId);
   const { total } = useNeedsYou();
+  const ideas = useIdeas();
   const [typing, setTyping] = useState(false);
   const { state, stop } = home.thread;
   const menu = useHomeMenu(menuHere(state, ticketId));
@@ -75,6 +92,8 @@ export function HudHome({ chatId, ticketId = null }: HudHomeProps) {
         onType={() => setTyping(true)}
         onStop={voice.stop}
         needsYou={total}
+        ideas={hudIdeas(ideas)}
+        next={<HudNext />}
         onMenu={menu.open}
         levels={voice.levels}
         quickAsk={{
@@ -95,6 +114,7 @@ export function HudHome({ chatId, ticketId = null }: HudHomeProps) {
           onStop={stop}
         />
       </Sheet>
+      {ideas.sheet}
       <HomeMenu menu={menu} needsYou={total} />
       <ReportSheet {...sheet} />
       {brief.sheet}

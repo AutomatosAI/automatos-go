@@ -4,6 +4,8 @@
 // and Cancelled; within a column the server's order stands (open newest first, finished by finish).
 // A status this version does not know is its own filter, under its own word, sorted last: never
 // dropped. Words, chips, kinds and numbers come from the vendored web modules, not a second table.
+// PRD-268 §6.2.5 (US-G01): where discovery lists `suggestions`, one more filter, From suggestions,
+// keeps the tickets a suggestion's Start filed (source_type 'suggestion'), whatever their status.
 
 import { ticketKind, type TicketKind } from '../../core/web/components/activity/board/ticket-kind';
 import { stageReason } from '../../core/web/components/activity/board/ticket-stage';
@@ -27,6 +29,16 @@ export type BoardColumn = (typeof BOARD_STATUSES)[number];
 
 /** A column, or a status this version does not know (its own filter). */
 export type BoardFilter = 'all' | BoardColumn | (string & Record<never, never>);
+
+/** The From suggestions filter: a value no status has (statuses are words, never 'a:b'). */
+export const FROM_SUGGESTIONS = 'source:suggestion';
+/** The source_type of a ticket a suggestion's Start filed (§6.2.5). */
+export const SUGGESTION_SOURCE = 'suggestion';
+
+export type BoardFilterOptions = {
+  /** Offer From suggestions (discovery lists `suggestions`). */
+  readonly suggestions?: boolean;
+};
 
 /** The handoff's card order, then Failed and Cancelled; an unknown status sorts after them. */
 export const SORT_ORDER: readonly BoardColumn[] = [
@@ -88,6 +100,8 @@ export function sortTickets(tickets: readonly BoardTicket[]): BoardTicket[] {
 /** The tickets in one column (closed in cancelled) or under one unknown status; 'all' is all. */
 export function filterTickets(tickets: readonly BoardTicket[], filter: BoardFilter): BoardTicket[] {
   if (filter === 'all') return [...tickets];
+  if (filter === FROM_SUGGESTIONS)
+    return tickets.filter((ticket) => ticket.source_type === SUGGESTION_SOURCE);
   return tickets.filter((ticket) => boardColumn(ticket.status) === filter);
 }
 
@@ -104,10 +118,23 @@ function countBy(tickets: readonly BoardTicket[]): ReadonlyMap<string, number> {
   }, new Map<string, number>());
 }
 
-/** All, every column (even when empty), then each unknown status the tickets carry, with counts. */
-export function boardFilters(tickets: readonly BoardTicket[]): BoardFilterOption[] {
+/** From suggestions, where it is offered: the tickets a suggestion's Start filed. */
+function suggestionFilter(tickets: readonly BoardTicket[]): BoardFilterOption {
+  const count = filterTickets(tickets, FROM_SUGGESTIONS).length;
+  return { filter: FROM_SUGGESTIONS, word: BOARD_COPY.fromSuggestions, count };
+}
+
+/**
+ * All, every column (even when empty), then each unknown status the tickets carry, with counts;
+ * then From suggestions where it is offered.
+ */
+export function boardFilters(
+  tickets: readonly BoardTicket[],
+  { suggestions = false }: BoardFilterOptions = {},
+): BoardFilterOption[] {
   const counts = countBy(tickets);
   const unknown = [...counts.keys()].filter((column) => !isBoardColumn(column));
+  const extra = suggestions ? [suggestionFilter(tickets)] : [];
   return [
     { filter: 'all', word: BOARD_COPY.all, count: tickets.length },
     ...[...BOARD_STATUSES, ...unknown].map((column) => ({
@@ -115,6 +142,7 @@ export function boardFilters(tickets: readonly BoardTicket[]): BoardFilterOption
       word: statusWord(column),
       count: counts.get(column) ?? 0,
     })),
+    ...extra,
   ];
 }
 
