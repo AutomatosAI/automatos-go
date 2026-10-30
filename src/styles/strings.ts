@@ -66,15 +66,6 @@ export const PICKER_COPY = Object.freeze({
   }),
 });
 
-/** Arcade's Options until its look page lands (US-022j): what the page says meanwhile. */
-// ARCADE_STAND_IN US-022j
-export const ARCADE_OPTIONS_SOON_COPY = Object.freeze({
-  eyebrow: 'Arcade',
-  title: 'Options',
-  message: "Arcade's palettes, scanlines and text speed are coming in an update.",
-  back: 'Back',
-});
-
 /** Installed themes on the phone (US-016i, D58): the one toast when a theme on screen is gone. */
 export const THEME_COPY = Object.freeze({
   lost: "That theme isn't available any more, so Automatos Go is back on Studio.",
@@ -236,6 +227,56 @@ export const HUD_LOOK_COPY = Object.freeze({
 export const ARCADE_LOOK_COPY = Object.freeze({
   savedName: (n: number) => `Save slot ${n}`,
   savedSub: (name: string) => `From ${name}`,
+});
+
+/**
+ * Arcade's Options (US-022j; the design kit's looks/look-editor.tsx, look-controls.tsx,
+ * look-preview.tsx, look-transfer.tsx and spec.ts at 034fa629c): the heading and its line, each
+ * choice's word as spec.ts KNOBS gives it (a palette's is the catalogue's name), what VoiceOver
+ * hears for a sign ('2×'), the motion note, SAVE LOOK and RESET with what they say after, the
+ * preview's sample words, the save slots and the toast after a delete. The ▶ glyph is hidden from
+ * VoiceOver, which hears a choice's checked state and a slot's selected state.
+ */
+export const ARCADE_OPTIONS_COPY = Object.freeze({
+  back: 'Back',
+  heading: 'Options',
+  lead: 'Saved per person, per workspace.',
+  cursor: '▶',
+  choices: Object.freeze({
+    scanlines: Object.freeze<Record<string, string>>({ off: 'Off', soft: 'Soft', strong: 'Strong' }),
+    pixelScale: Object.freeze<Record<string, string>>({ '2': '2×', '3': '3×' }),
+    windowStyle: Object.freeze<Record<string, string>>({ classic: 'Classic double', thin: 'Thin' }),
+    textSpeed: Object.freeze<Record<string, string>>({
+      instant: 'Instant',
+      normal: 'Normal',
+      slow: 'Slow',
+    }),
+  }),
+  spoken: Object.freeze<Record<string, string>>({ '2×': '2 times', '3×': '3 times' }),
+  motionNote:
+    'Under reduced motion, text speed is instant and sprites hold their first frame, whatever is chosen here.',
+  saveLook: 'Save look',
+  reset: 'Reset',
+  resetHint: "Back to the palette's preset",
+  saved: (name: string) => `Saved ${name}.`,
+  backTo: (name: string) => `Back to ${name}.`,
+  slots: 'Save slots',
+  /** VoiceOver's name for a slot: 'Overworld, Night forest, grass-green accent, selected'. */
+  slot: (name: string, sub: string, selected: boolean) =>
+    [name, sub, selected ? 'selected' : ''].filter((part) => part !== '').join(', '),
+  slotHint: 'Touch and hold to rename or delete',
+  preview: Object.freeze({
+    title: (name: string) => `Preview · ${name}`,
+    line: 'Text types out at this speed. Press on, hero.',
+    gameColours: Object.freeze({ hp: 'HP', xp: 'XP', mp: 'Mana', qs: '! Quest' }),
+    selectedItem: 'Selected menu item',
+    menuItem: 'Menu item',
+    accentLine: 'Accent text on the page ground reads here.',
+    cursor: '▼',
+  }),
+  /** The toast after a delete: '… Arcade is back to Overworld.' when the look deleted was on. */
+  deleted: (name: string, backTo: string | null) =>
+    backTo === null ? `Deleted ${name}.` : `Deleted ${name}. Arcade is back to ${backTo}.`,
 });
 
 /**

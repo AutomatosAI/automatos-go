@@ -4,23 +4,28 @@ import { contrastRatio } from '../../../core/web/lib/look-kit/contrast';
 import { ACCENTS, ERROR_COLOUR } from '../../../core/frozen/lib/looks/catalogue';
 import { PRESETS } from '../../../core/frozen/lib/looks/presets';
 import {
+  ARCADE_STYLES,
   HUD_STYLES,
   PLAY_STYLES,
   STUDIO_DARK,
   STUDIO_LIGHT,
   STUDIO_STYLES,
 } from '../../dress/__tests__/fixtures';
+import { ARCADE_PRESET_LOOKS } from '../../arcade/look-schema';
 import { HUD_PRESET_LOOKS } from '../../hud/look-schema';
 import type { StyleMotion } from '../../provider/resolve';
 import { pickerState, type PickerInput } from '../../registry/picker';
 import { FOLLOW_STUDIO, builtinChoice, themeChoice } from '../../registry/style-id';
 import { MIN_TEXT_SIZE } from '../../type';
+import { ARCADE_BODY_MIN } from '../../typeface/arcade-type';
+import { arcadeVars } from '../../tokens/arcade';
 import { hudVars } from '../../tokens/hud';
 import { HUD_FIXED, HUD_LOOK_CATALOGUE } from '../../tokens/hud-catalogue';
 import { playVars } from '../../tokens/play';
 import {
   CARD_RING,
   PREVIEW,
+  arcadePreviewWords,
   cardFrame,
   hudChipWords,
   pickerCards,
@@ -163,14 +168,14 @@ describe('the picker cards', () => {
 
 describe("the card's frame", () => {
   it("rings the chosen card 2 pt in its style's accent", () => {
-    for (const style of [...STUDIO_STYLES, ...PLAY_STYLES, ...HUD_STYLES]) {
+    for (const style of [...STUDIO_STYLES, ...PLAY_STYLES, ...HUD_STYLES, ...ARCADE_STYLES]) {
       const ring = selectedPaint(style).ring;
       expect(cardFrame(true, style)).toEqual({ borderWidth: 2, margin: 0, colour: ring });
     }
   });
 
   it('keeps the others the same size with a 1 pt border and a 1 pt margin', () => {
-    for (const style of [STUDIO_LIGHT, PLAY_STYLES[0], HUD_STYLES[0]]) {
+    for (const style of [STUDIO_LIGHT, PLAY_STYLES[0], HUD_STYLES[0], ARCADE_STYLES[0]]) {
       const idle = cardFrame(false, style);
       expect(idle).toEqual({ borderWidth: 1, margin: 1, colour: style.tokens.colours.border });
       expect(idle.borderWidth + idle.margin).toBe(CARD_RING.selected);
@@ -209,6 +214,19 @@ describe("the chosen card's ring and 'Selected' (never the error colour)", () =>
     }
   });
 
+  it("ring Arcade in its palette's accent and word it in that accent, under every preset", () => {
+    expect(ARCADE_STYLES.length).toBeGreaterThanOrEqual(ARCADE_PRESET_LOOKS.length);
+    for (const style of ARCADE_STYLES) {
+      const { arcadeLook, arcade } = style;
+      if (!arcadeLook || !arcade) throw new Error('an Arcade style carries its look and variables');
+      const paint = selectedPaint(style);
+      expect(paint.ring).toBe(arcadeVars(arcadeLook).ac);
+      expect(paint.ring).toBe(arcade.ac);
+      expect(paint.ring).not.toBe(arcade.hp);
+      expect(paint.word).toBe(arcade.ac);
+    }
+  });
+
   it("keep Studio Light and Dark (and an installed theme) on Studio's accent", () => {
     for (const style of STUDIO_STYLES) {
       const { accent } = style.tokens.colours;
@@ -218,11 +236,12 @@ describe("the chosen card's ring and 'Selected' (never the error colour)", () =>
   });
 
   it("read 'Selected' at AA on the card under every style and preset", () => {
-    for (const style of [...STUDIO_STYLES, ...PLAY_STYLES, ...HUD_STYLES]) {
+    for (const style of [...STUDIO_STYLES, ...PLAY_STYLES, ...HUD_STYLES, ...ARCADE_STYLES]) {
       const ratio = contrastRatio(selectedPaint(style).word, style.tokens.colours.card);
+      const look = style.playLook?.id ?? style.hudLook?.id ?? style.arcadeLook?.id;
       expect(
         ratio,
-        `${style.layout} ${style.playLook?.id ?? style.hudLook?.id ?? style.tone}`,
+        `${style.layout} ${look ?? style.tone}`,
       ).toBeGreaterThanOrEqual(AA);
     }
   });
@@ -252,9 +271,18 @@ describe('the previews', () => {
     expect(PREVIEW.chip.size).toBeGreaterThanOrEqual(MIN_TEXT_SIZE);
   });
 
-  it("word Play's tool chip and HUD's chip as the real screens do", () => {
+  it("word Play's tool chip, HUD's chip and Arcade's dialogue as the real screens do", () => {
     expect(playToolLine()).toBe('✓ Searched the web · 3 results');
     expect(hudChipWords()).toBe('READY WHEN YOU ARE');
+    expect(arcadePreviewWords()).toEqual({ state: 'IDLE', line: 'Your move.' });
+  });
+
+  it("show Arcade's counters as a home does: ! and QUEST, no XP (D-ARC-6)", () => {
+    expect(PREVIEW.arcade.counters).toEqual({ xp: null, needs: 2, quest: 3 });
+  });
+
+  it("set Arcade's line at its body floor", () => {
+    expect(PREVIEW.arcade.lineSize).toBeGreaterThanOrEqual(ARCADE_BODY_MIN);
   });
 
   it('pulse on one 2.4 s loop: Ember 1 → 1.06, the HUD disc 0.96 ↔ 1.04', () => {
