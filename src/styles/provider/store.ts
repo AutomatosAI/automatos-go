@@ -4,7 +4,8 @@
 // at launch). Each part lives in its own MMKV store: the choice in US-016a's (styles.choice;
 // nothing stored is 'Same as Studio'), HUD's looks in US-018a's (styles.hud.looks), Arcade's in
 // US-022c's (styles.arcade.looks) with Arcade's pause beside them (US-022e,
-// styles.arcade.motionPaused, arcade/motion-pause.ts), Candy's in US-023c's (styles.candy.looks),
+// styles.arcade.motionPaused, arcade/motion-pause.ts), Candy's in US-023c's (styles.candy.looks)
+// with Candy's pause beside them (US-023e, styles.candy.motionPaused, candy/motion-pause.ts),
 // what 'Same as Studio' painted and the theme painting in US-016i's (styles.theme.followed,
 // styles.theme.paint, themes/cache.ts), Play's looks in US-017d's (styles.play.looks,
 // play/look-store.ts) with each theme's look sync marks beside them (styles.*.looks.sync,
@@ -22,6 +23,7 @@ import { createArcadeLooksStore, type ArcadeLooksStore } from '../arcade/look-st
 import { createMotionPauseSource } from '../arcade/motion-pause';
 import type { CandyLooks } from '../candy/candy-looks';
 import { createCandyLooksStore, type CandyLooksStore } from '../candy/look-store';
+import { createCandyMotionPauseSource } from '../candy/motion-pause';
 import type { HudLooks } from '../hud/hud-looks';
 import { createHudLooksStore, type HudLooksStore } from '../hud/look-store';
 import { NO_MARKS, statusFromMarks, type LookMarks, type LookSyncStatus } from '../play/look-sync';
@@ -54,6 +56,8 @@ export type StyleSources = {
   readonly lookMarks?: Readonly<Record<LookThemeKey, StyleSource<LookMarks>>>;
   /** Arcade's pause (WCAG 2.2.2); this launch only, not paused, when absent. */
   readonly arcadeMotionPaused?: StyleSource<boolean>;
+  /** Candy's pause (WCAG 2.2.2), the phone's own; this launch only, not paused, when absent. */
+  readonly candyMotionPaused?: StyleSource<boolean>;
 };
 
 /** Each theme's look sync standing (sync/look-sync-run.ts keeps it). */
@@ -72,6 +76,8 @@ export type StyleState = {
   readonly candyLooks: CandyLooks;
   /** Arcade's animation paused by the person: the sprite, cursor and typing hold still. */
   readonly arcadeMotionPaused: boolean;
+  /** Candy's animation paused by the person: Auto, the orb, the dots and the voice core hold still. */
+  readonly candyMotionPaused: boolean;
   readonly themePaint: ThemePaint | null;
   /** The installs the last read offered (the picker's rows under Studio), this launch only. */
   readonly themes: readonly OfferedTheme[];
@@ -102,6 +108,8 @@ export type StyleActions = {
   readonly setCandyLooks: (looks: CandyLooks) => boolean;
   /** Arcade's pause, kept on the phone; false when the save failed (it still applies). */
   readonly setArcadeMotionPaused: (paused: boolean) => boolean;
+  /** Candy's pause, kept on the phone (never synced); false when the save failed (it still applies). */
+  readonly setCandyMotionPaused: (paused: boolean) => boolean;
   /** One theme's look sync standing; its marks are kept on the phone (false: not saved). */
   readonly setLookSync: (key: LookThemeKey, status: LookSyncStatus) => boolean;
   readonly setThemePaint: (paint: ThemePaint | null) => boolean;
@@ -141,6 +149,7 @@ export function appStyleSources(storage: () => KeyValueStorage): StyleSources {
     followed: themeFollowedPart(storage),
     lookMarks: lookMarksParts(storage),
     arcadeMotionPaused: createMotionPauseSource(storage),
+    candyMotionPaused: createCandyMotionPauseSource(storage),
   });
 }
 
@@ -170,6 +179,7 @@ export function hydrateStyleState(sources: StyleSources): StyleState {
     arcadeLooks: sources.arcadeLooks.get(),
     candyLooks: sources.candyLooks.get(),
     arcadeMotionPaused: sources.arcadeMotionPaused?.get() ?? false,
+    candyMotionPaused: sources.candyMotionPaused?.get() ?? false,
     themePaint: sources.themePaint.get(),
     themes: NO_THEMES,
     themeFonts: null,
@@ -204,12 +214,21 @@ function arcadeActions(
   };
 }
 
-/** Candy's looks, saved through their source first. */
-function candyActions(sources: StyleSources, set: SetStyle): Pick<StyleActions, 'setCandyLooks'> {
+/** Candy's looks and its pause, each saved through its source first (the pause: this launch's). */
+function candyActions(
+  sources: StyleSources,
+  set: SetStyle,
+): Pick<StyleActions, 'setCandyLooks' | 'setCandyMotionPaused'> {
+  const pause = sources.candyMotionPaused ?? memorySource(false);
   return {
     setCandyLooks: (looks) => {
       const saved = sources.candyLooks.set(looks);
       set({ candyLooks: sources.candyLooks.get() });
+      return saved;
+    },
+    setCandyMotionPaused: (paused) => {
+      const saved = pause.set(paused);
+      set({ candyMotionPaused: pause.get() });
       return saved;
     },
   };

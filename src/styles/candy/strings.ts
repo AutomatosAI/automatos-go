@@ -16,3 +16,17 @@ export const CANDY_LOOK_COPY = Object.freeze({
   savedName: (n: number) => `My look ${n}`,
   savedSub: (name: string) => `From ${name}`,
 });
+
+/** The pause control (WCAG 2.2.2): its word, and what VoiceOver hears (the action a tap takes). */
+export const CANDY_PAUSE_COPY = Object.freeze({
+  pause: 'Pause',
+  play: 'Play',
+  pauseLabel: 'Pause the animation',
+  playLabel: 'Play the animation',
+});
+
+/** Auto in Candy: his one name for VoiceOver, and the stage's word while he speaks. */
+export const CANDY_AUTO_COPY = Object.freeze({
+  name: (caption: string) => `Auto, ${caption}`,
+  speaking: 'Speaking',
+});

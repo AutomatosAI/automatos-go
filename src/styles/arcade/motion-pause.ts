@@ -28,26 +28,6 @@ export function serialiseMotionPaused(paused: boolean): string {
   return paused ? PAUSED : MOVING;
 }
 
-export function readMotionPaused(storage: KeyValueStorage): boolean {
-  try {
-    return parseMotionPaused(storage.getItem(ARCADE_MOTION_PAUSED_KEY));
-  } catch (error) {
-    logger.warn("[styles] could not read Arcade's pause; the animation plays", error);
-    return false;
-  }
-}
-
-/** true when the choice was saved; false (logged) when the store refused it. */
-export function saveMotionPaused(storage: KeyValueStorage, paused: boolean): boolean {
-  try {
-    storage.setItem(ARCADE_MOTION_PAUSED_KEY, serialiseMotionPaused(paused));
-    return true;
-  } catch (error) {
-    logger.warn("[styles] could not save Arcade's pause; it applies until the app closes", error);
-    return false;
-  }
-}
-
 export type MotionPauseSource = {
   /** The choice in memory, read from the store the first time. */
   readonly get: () => boolean;
@@ -55,14 +35,53 @@ export type MotionPauseSource = {
   readonly set: (paused: boolean) => boolean;
 };
 
+/** One style's pause under its own key: read, save and the source over a store. */
+export type KeyedMotionPause = {
+  readonly key: string;
+  readonly read: (storage: KeyValueStorage) => boolean;
+  readonly save: (storage: KeyValueStorage, paused: boolean) => boolean;
+  readonly source: (storage: () => KeyValueStorage) => MotionPauseSource;
+};
+
+/**
+ * The pause kept under `key` (Arcade's, and Candy's under 'styles.candy.motionPaused', US-023e):
+ * parsed and serialised as above, a failing store logged in `owner`'s name ("Arcade's pause").
+ */
+export function keyedMotionPause(key: string, owner: string): KeyedMotionPause {
+  const read = (storage: KeyValueStorage): boolean => {
+    try {
+      return parseMotionPaused(storage.getItem(key));
+    } catch (error) {
+      logger.warn(`[styles] could not read ${owner}; the animation plays`, error);
+      return false;
+    }
+  };
+  const save = (storage: KeyValueStorage, paused: boolean): boolean => {
+    try {
+      storage.setItem(key, serialiseMotionPaused(paused));
+      return true;
+    } catch (error) {
+      logger.warn(`[styles] could not save ${owner}; it applies until the app closes`, error);
+      return false;
+    }
+  };
+  const source = (storage: () => KeyValueStorage) => pauseSourceOver(storage, owner, read, save);
+  return Object.freeze({ key, read, save, source });
+}
+
 /** The choice over one store, opened on the first read or write (as the looks stores are). */
-export function createMotionPauseSource(storage: () => KeyValueStorage): MotionPauseSource {
+function pauseSourceOver(
+  storage: () => KeyValueStorage,
+  owner: string,
+  read: KeyedMotionPause['read'],
+  save: KeyedMotionPause['save'],
+): MotionPauseSource {
   let current: boolean | null = null;
   const open = (): KeyValueStorage | null => {
     try {
       return storage();
     } catch (error) {
-      logger.warn("[styles] Arcade's pause store is unavailable", error);
+      logger.warn(`[styles] ${owner} store is unavailable`, error);
       return null;
     }
   };
@@ -70,16 +89,32 @@ export function createMotionPauseSource(storage: () => KeyValueStorage): MotionP
     get: () => {
       if (current === null) {
         const opened = open();
-        current = opened ? readMotionPaused(opened) : false;
+        current = opened ? read(opened) : false;
       }
       return current;
     },
     set: (paused: boolean) => {
       current = paused;
       const opened = open();
-      return opened ? saveMotionPaused(opened, paused) : false;
+      return opened ? save(opened, paused) : false;
     },
   });
+}
+
+const ARCADE_PAUSE = keyedMotionPause(ARCADE_MOTION_PAUSED_KEY, "Arcade's pause");
+
+export function readMotionPaused(storage: KeyValueStorage): boolean {
+  return ARCADE_PAUSE.read(storage);
+}
+
+/** true when the choice was saved; false (logged) when the store refused it. */
+export function saveMotionPaused(storage: KeyValueStorage, paused: boolean): boolean {
+  return ARCADE_PAUSE.save(storage, paused);
+}
+
+/** Arcade's choice over one store, opened on the first read or write (as the looks stores are). */
+export function createMotionPauseSource(storage: () => KeyValueStorage): MotionPauseSource {
+  return ARCADE_PAUSE.source(storage);
 }
 
 /** Whether Arcade moves, and why not. */
