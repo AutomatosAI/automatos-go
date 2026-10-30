@@ -29,6 +29,8 @@ export const CAPABILITIES = [
   'tts',
   /** Today's brief on request: POST /api/v1/mobile/digest/now (Settings → Notifications). */
   'digest_now',
+  /** PRD-268 (K20): what Auto depends on, GET /api/readiness and POST /api/readiness/check (Settings). */
+  'readiness',
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];

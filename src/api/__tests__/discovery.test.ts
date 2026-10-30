@@ -112,8 +112,22 @@ describe('DiscoverySchema', () => {
     ).toBe(false);
   });
 
-  it('knows exactly the six capabilities of PRD-266 §4.1, then tts and digest_now', () => {
-    expect([...CAPABILITIES]).toEqual([...SAAS_DOCUMENT.capabilities, 'tts', 'digest_now']);
+  it('knows exactly the six capabilities of PRD-266 §4.1, then tts, digest_now and readiness', () => {
+    expect([...CAPABILITIES]).toEqual([
+      ...SAAS_DOCUMENT.capabilities,
+      'tts',
+      'digest_now',
+      'readiness',
+    ]);
+  });
+
+  it('keeps readiness when a server lists it, and nothing without it (PRD-268 K20)', () => {
+    const listed = DiscoverySchema.parse({
+      ...SAAS_DOCUMENT,
+      capabilities: [...SAAS_DOCUMENT.capabilities, 'readiness'],
+    });
+    expect(listed.capabilities).toContain('readiness');
+    expect(DiscoverySchema.parse(SAAS_DOCUMENT).capabilities).not.toContain('readiness');
   });
 
   it('keeps digest_now when a server lists it, and nothing without it', () => {

@@ -56,3 +56,8 @@ export function canServerVoice(discovery: GateInput): boolean {
 export function canDigestNow(discovery: GateInput): boolean {
   return has(discovery, 'digest_now');
 }
+
+/** PRD-268's "What Auto depends on" in Settings (US-G07): GET /api/readiness and Check again. */
+export function canReadiness(discovery: GateInput): boolean {
+  return has(discovery, 'readiness');
+}

@@ -10,6 +10,7 @@ import { CC_ROUTES } from '../cc/routes';
 import { CHAT_ROUTES } from '../chat/routes';
 import { CONNECT_ROUTES } from '../connect/routes';
 import { PUSH_ROUTES } from '../push/routes';
+import { READINESS_ROUTES } from '../readiness/routes';
 import { STYLE_ROUTES } from '../styles/routes';
 import { VOICE_ROUTES } from '../voice/routes';
 import { MAX_INPUT_LENGTH, MAX_TEXT_LENGTH } from './redact';
@@ -24,6 +25,7 @@ export const ROUTE_TABLES: readonly object[] = Object.freeze([
   CHAT_ROUTES,
   CONNECT_ROUTES,
   PUSH_ROUTES,
+  READINESS_ROUTES,
   STYLE_ROUTES,
   VOICE_ROUTES,
 ]);
