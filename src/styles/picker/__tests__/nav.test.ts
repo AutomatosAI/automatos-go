@@ -5,11 +5,12 @@ import { STYLE_SCREENS, lookScreen } from '../../nav';
 import { STYLE_REGISTRY } from '../../registry/registry';
 
 describe('STYLE_SCREENS', () => {
-  it('names the picker and the two look pages under Settings', () => {
+  it('names the picker and the three look pages under Settings', () => {
     expect(STYLE_SCREENS).toEqual({
       settingsStyle: '/settings/style',
       lookPlay: '/settings/look/play',
       lookHud: '/settings/look/hud',
+      lookArcade: '/settings/look/arcade',
     });
     expect(Object.isFrozen(STYLE_SCREENS)).toBe(true);
   });
@@ -20,11 +21,12 @@ describe('STYLE_SCREENS', () => {
     expect(new Set(paths).size).toBe(paths.length);
   });
 
-  it("links each style's look page: Play's and HUD's, none for Studio", () => {
+  it("links each style's look page: Play's, HUD's and Arcade's, none for Studio", () => {
     expect(STYLE_REGISTRY.map((style) => [style.id, lookScreen(style.lookPage)])).toEqual([
       ['studio', null],
       ['play', '/settings/look/play'],
       ['hud', '/settings/look/hud'],
+      ['arcade', '/settings/look/arcade'],
     ]);
   });
 });

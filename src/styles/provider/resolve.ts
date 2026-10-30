@@ -8,6 +8,7 @@
 //   Studio  the scheme's tokens (System → the phone's appearance)
 //   Play    the look's ground decides the tone; the scheme does not apply (as on the web)
 //   HUD     always dark
+//   Arcade  Studio's paint until Arcade's palettes and looks land (US-022b, US-022c)
 //   theme   the Studio layout with the theme's painting, or Studio's own while none is cached; its
 //           fonts once they are loaded (themes/fonts.ts), Studio's faces until then
 
@@ -174,6 +175,8 @@ function painted(input: StyleInput): Painted {
   if (choice.kind === 'theme') return theme(input, choice.installId);
   if (choice.id === 'play') return play(input.playLook);
   if (choice.id === 'hud') return hud(input.hudLook);
+  // ARCADE_STAND_IN US-022c: Arcade paints Studio until its look reaches the input
+  if (choice.id === 'arcade') return studio(resolveScheme(input.studioScheme, input.systemScheme));
   return studio(resolveScheme(input.studioScheme, input.systemScheme));
 }
 

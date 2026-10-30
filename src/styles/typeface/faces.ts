@@ -74,13 +74,16 @@ const PLAY_DISPLAY = mapKeys(TYPE_STYLES, (type) => designFace(type.face, type.w
 /** HUD's display faces, read from looks.json's options.font (hud-catalogue.ts). */
 const HUD_DISPLAY = mapKeys(HUD_FONTS, (font) => designFace(font.family, font.weight, 'normal'));
 
+/** Studio's faces: Newsreader titles with their italic emphasis, Geist and Geist Mono. */
+const STUDIO_FACES = Object.freeze({
+  display: Object.freeze({ serif: spec(F.newsreader, 500) }),
+  emphasis: spec(F.newsreader, 500, 'italic'),
+  body: weights(F.geist, 400, 500, 600),
+  mono: weights(F.geistMono, 400, 500, 600),
+});
+
 export const STYLE_FACES = Object.freeze({
-  studio: Object.freeze({
-    display: Object.freeze({ serif: spec(F.newsreader, 500) }),
-    emphasis: spec(F.newsreader, 500, 'italic'),
-    body: weights(F.geist, 400, 500, 600),
-    mono: weights(F.geistMono, 400, 500, 600),
-  }),
+  studio: STUDIO_FACES,
   play: Object.freeze({
     display: PLAY_DISPLAY,
     body: weights(F.geist, 400, 500, 600),
@@ -91,6 +94,7 @@ export const STYLE_FACES = Object.freeze({
     body: weights(F.geist, 400, 500, 600),
     mono: weights(F.geistMono, 400, 500, 600),
   }),
+  arcade: STUDIO_FACES, // ARCADE_STAND_IN US-022d
 } satisfies Readonly<Record<BuiltInStyleId, StyleFaceSet>>);
 
 /** Play's display face for the look's font knob. */

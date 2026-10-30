@@ -49,4 +49,5 @@ export const STYLE_RADII = Object.freeze({
   studio: STUDIO,
   play: PLAY,
   hud: HUD,
+  arcade: STUDIO, // ARCADE_STAND_IN US-022b
 }) satisfies Readonly<Record<BuiltInStyleId, StyleRadii>>;

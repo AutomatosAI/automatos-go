@@ -51,11 +51,16 @@ function cardsFor(overrides: Partial<PickerInput> = {}) {
 }
 
 describe('the picker cards', () => {
-  it('are Studio, Play and HUD in order with their names and taglines', () => {
+  it('are Studio, Play, HUD and Arcade in order with their names and taglines', () => {
     expect(cardsFor().map(({ id, name, tagline }) => ({ id, name, tagline }))).toEqual([
       { id: 'studio', name: 'Studio', tagline: 'Cream paper or Studio Dark' },
       { id: 'play', name: 'Play', tagline: 'Auto and the Ember look' },
       { id: 'hud', name: 'HUD', tagline: 'Voice first, glow and grid' },
+      {
+        id: 'arcade',
+        name: 'Arcade',
+        tagline: 'Your agents as a party, Auto in the dialogue box',
+      },
     ]);
   });
 
@@ -65,12 +70,14 @@ describe('the picker cards', () => {
       'Studio style',
       'Play style',
       'HUD style',
+      'Arcade style',
     ]);
-    expect(cards.map((c) => c.selected)).toEqual([false, true, false]);
+    expect(cards.map((c) => c.selected)).toEqual([false, true, false, false]);
     expect(cards.map((c) => c.accessibilityHint)).toEqual([
       'Paints Automatos Go in Studio',
       'Paints Automatos Go in Play',
       'Paints Automatos Go in HUD',
+      'Paints Automatos Go in Arcade',
     ]);
   });
 
@@ -79,11 +86,18 @@ describe('the picker cards', () => {
       null,
       null,
       'Selected',
+      null,
+    ]);
+    expect(cardsFor({ choice: builtinChoice('arcade') }).map((c) => c.selectedWord)).toEqual([
+      null,
+      null,
+      null,
+      'Selected',
     ]);
   });
 
   it('give Studio Light / Dark / System and the others no scheme', () => {
-    const [studio, play, hud] = cardsFor({ studioScheme: 'dark' });
+    const [studio, play, hud, arcade] = cardsFor({ studioScheme: 'dark' });
     expect(studio.schemes.map(({ value, label, selected }) => [value, label, selected])).toEqual([
       ['light', 'Light', false],
       ['dark', 'Dark', true],
@@ -92,10 +106,11 @@ describe('the picker cards', () => {
     expect(studio.schemeGroup).toBe('Studio appearance');
     expect(play.schemes).toEqual([]);
     expect(hud.schemes).toEqual([]);
+    expect(arcade.schemes).toEqual([]);
   });
 
-  it("link Play to 'Make it yours →' and HUD to 'Looks →', and Studio to none", () => {
-    const [studio, play, hud] = cardsFor();
+  it("link Play to 'Make it yours →', HUD to 'Looks →', Arcade to 'Options →' and Studio to none", () => {
+    const [studio, play, hud, arcade] = cardsFor();
     expect(studio.lookLink).toBeNull();
     expect(play.lookLink).toEqual({
       label: 'Make it yours →',
@@ -109,6 +124,12 @@ describe('the picker cards', () => {
       accessibilityHint: "Opens HUD's looks",
       href: '/settings/look/hud',
     });
+    expect(arcade.lookLink).toEqual({
+      label: 'Options →',
+      accessibilityLabel: 'Options',
+      accessibilityHint: "Opens Arcade's looks",
+      href: '/settings/look/arcade',
+    });
   });
 
   it('list installed themes under Studio only when the server offers them', () => {
@@ -118,13 +139,14 @@ describe('the picker cards', () => {
       canMobileTheme: true,
       choice: themeChoice('inst-harbour'),
     });
-    const [studio, play, hud] = offered;
+    const [studio, play, hud, arcade] = offered;
     expect(
       studio.themes.map(({ title, selected, selectedWord }) => [title, selected, selectedWord]),
     ).toEqual([['Harbour · 1.1.0', true, 'Selected']]);
     expect(studio.selectedWord).toBeNull();
     expect(play.themes).toEqual([]);
     expect(hud.themes).toEqual([]);
+    expect(arcade.themes).toEqual([]);
   });
 
   it('carry no pointer to making an account and nothing about plans', () => {

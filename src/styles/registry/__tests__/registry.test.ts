@@ -4,11 +4,16 @@ import { DEFAULT_CHOICE, STYLE_REGISTRY, styleEntry } from '../registry';
 import { BUILT_IN_STYLE_IDS, builtinChoice, layoutOf, sameChoice, themeChoice } from '../style-id';
 
 describe('the built-in styles (D54)', () => {
-  it('lists Studio, Play and HUD in the picker order, each with its name and tagline', () => {
+  it('lists Studio, Play, HUD and Arcade in the picker order, each with its name and tagline', () => {
     expect(STYLE_REGISTRY.map(({ id, name, tagline }) => ({ id, name, tagline }))).toEqual([
       { id: 'studio', name: 'Studio', tagline: 'Cream paper or Studio Dark' },
       { id: 'play', name: 'Play', tagline: 'Auto and the Ember look' },
       { id: 'hud', name: 'HUD', tagline: 'Voice first, glow and grid' },
+      {
+        id: 'arcade',
+        name: 'Arcade',
+        tagline: 'Your agents as a party, Auto in the dialogue box',
+      },
     ]);
     expect(STYLE_REGISTRY.map((style) => style.id)).toEqual([...BUILT_IN_STYLE_IDS]);
   });
@@ -20,6 +25,8 @@ describe('the built-in styles (D54)', () => {
       { layout: 'studio', lookPage: 'scheme', mascot: 'never' },
       { layout: 'play', lookPage: 'play', mascot: 'always' },
       { layout: 'hud', lookPage: 'hud', mascot: 'look' },
+      // Arcade draws its own Auto, the pixel sprite (D-ARC-5): the bundled stage never shows
+      { layout: 'arcade', lookPage: 'arcade', mascot: 'never' },
     ]);
   });
 
@@ -35,6 +42,7 @@ describe('the built-in styles (D54)', () => {
 
   it('finds a style by id', () => {
     expect(styleEntry('hud').name).toBe('HUD');
+    expect(styleEntry('arcade').name).toBe('Arcade');
     expect(() => styleEntry('mist' as never)).toThrow('no style registered as mist');
   });
 });
@@ -44,6 +52,7 @@ describe('a choice and its layout (D58)', () => {
     expect(layoutOf(builtinChoice('studio'))).toBe('studio');
     expect(layoutOf(builtinChoice('play'))).toBe('play');
     expect(layoutOf(builtinChoice('hud'))).toBe('hud');
+    expect(layoutOf(builtinChoice('arcade'))).toBe('arcade');
     expect(layoutOf(themeChoice('a1b2'))).toBe('studio');
   });
 

@@ -17,6 +17,7 @@ const HOME_OF: Readonly<Record<Layout, HomeKind>> = Object.freeze({
   studio: 'studio',
   play: 'play',
   hud: 'hud',
+  arcade: 'studio', // ARCADE_STAND_IN US-022g
 });
 
 /** The home the resolved style's layout draws. */

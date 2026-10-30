@@ -28,6 +28,7 @@ import {
 const STUDIO = builtinChoice('studio');
 const PLAY = builtinChoice('play');
 const HUD = builtinChoice('hud');
+const ARCADE = builtinChoice('arcade');
 const INSTALL_ID = '3f2b6c1e-9d4a-4b7e-8c21-5a6f0e9d1b42';
 const THEME = themeChoice(INSTALL_ID);
 
@@ -87,6 +88,17 @@ describe('Studio follows Light / Dark / System (D59)', () => {
     const style = resolveStyle(input(STUDIO));
     expect(style.choice).toBe(STUDIO);
     expect(Object.isFrozen(style)).toBe(true);
+  });
+});
+
+// ARCADE_STAND_IN US-022c: Arcade's palettes and look replace Studio's paint here
+describe("Arcade paints Studio's paint until its looks land", () => {
+  it.each(SCHEME_GRID)('Arcade with Studio %s on a %s phone', (studioScheme, systemScheme) => {
+    const style = resolveStyle(input(ARCADE, { studioScheme, systemScheme }));
+    expect(style.choice).toBe(ARCADE);
+    expect(style.tokens).toBe(studioTokens(expectedScheme(studioScheme, systemScheme)));
+    expect(style.mascot).toBe('none');
+    expect(style.motion).toEqual({ loops: true, reason: null });
   });
 });
 

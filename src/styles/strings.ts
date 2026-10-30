@@ -12,11 +12,13 @@ export const STYLE_COPY = Object.freeze({
     studio: 'Studio',
     play: 'Play',
     hud: 'HUD',
+    arcade: 'Arcade',
   }),
   taglines: Object.freeze<Record<BuiltInStyleId, string>>({
     studio: 'Cream paper or Studio Dark',
     play: 'Auto and the Ember look',
     hud: 'Voice first, glow and grid',
+    arcade: 'Your agents as a party, Auto in the dialogue box',
   }),
 });
 
@@ -32,7 +34,7 @@ export const PICKER_COPY = Object.freeze({
   themeLabel: (name: string, version: string, selected: boolean) =>
     selected ? `${name} theme, version ${version}, selected` : `${name} theme, version ${version}`,
   /** The link from a style card to its look page (Studio's look is the scheme, on its card). */
-  lookLinks: Object.freeze({ play: 'Make it yours', hud: 'Looks' }),
+  lookLinks: Object.freeze({ play: 'Make it yours', hud: 'Looks', arcade: 'Options' }),
   /** Studio's Light / Dark / System control and its name for VoiceOver. */
   schemes: Object.freeze<Record<ThemeChoice, string>>({
     light: 'Light',
@@ -62,6 +64,15 @@ export const PICKER_COPY = Object.freeze({
       selected ? `Same as Studio, now ${painted}, selected` : `Same as Studio, now ${painted}`,
     hint: 'Automatos Go follows the theme you use in Studio',
   }),
+});
+
+/** Arcade's Options until its look page lands (US-022j): what the page says meanwhile. */
+// ARCADE_STAND_IN US-022j
+export const ARCADE_OPTIONS_SOON_COPY = Object.freeze({
+  eyebrow: 'Arcade',
+  title: 'Options',
+  message: "Arcade's palettes, scanlines and text speed are coming in an update.",
+  back: 'Back',
 });
 
 /** Installed themes on the phone (US-016i, D58): the one toast when a theme on screen is gone. */

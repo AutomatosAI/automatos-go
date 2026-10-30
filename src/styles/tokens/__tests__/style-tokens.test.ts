@@ -25,8 +25,19 @@ const STUDIO_KEYS = Object.keys(studioTokens('light')).sort();
 const COLOUR_KEYS = Object.keys(STUDIO_COLOURS.light).sort();
 
 describe('the accessor knows every built-in style', () => {
-  it('lists Studio, Play and HUD', () => {
-    expect([...STYLE_IDS].sort()).toEqual(['hud', 'play', 'studio']);
+  it('lists Studio, Play, HUD and Arcade', () => {
+    expect([...STYLE_IDS].sort()).toEqual(['arcade', 'hud', 'play', 'studio']);
+  });
+
+  // ARCADE_STAND_IN US-022b: Arcade's own palettes replace Studio's set here
+  it("gives Arcade Studio's set under Arcade's name, the same object each time", () => {
+    for (const scheme of ['light', 'dark'] as const) {
+      const tokens = tokensFor('arcade', scheme);
+      expect(tokens.style).toBe('arcade');
+      expect(tokens.colours).toBe(studioTokens(scheme).colours);
+      expect(tokensFor('arcade', scheme)).toBe(tokens);
+      expect(Object.isFrozen(tokens)).toBe(true);
+    }
   });
 
   it("gives Play its default look, Ember, in the ground's tone whatever the scheme", () => {

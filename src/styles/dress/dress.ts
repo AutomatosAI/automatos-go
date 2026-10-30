@@ -193,6 +193,7 @@ const DRESSES: Readonly<Record<Layout, (style: ResolvedStyle) => Dress>> = Objec
   studio,
   play,
   hud,
+  arcade: studio, // ARCADE_STAND_IN US-022h
 });
 
 /** What the shared primitives wear in the style this subtree paints. */

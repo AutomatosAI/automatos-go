@@ -44,6 +44,7 @@ describe('the stored choice (D59)', () => {
       builtinChoice('studio'),
       builtinChoice('play'),
       builtinChoice('hud'),
+      builtinChoice('arcade'),
       themeChoice(INSTALL_ID),
     ]) {
       expect(parseChoice(serialiseChoice(choice))).toEqual(choice);
