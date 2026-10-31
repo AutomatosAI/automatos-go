@@ -11,7 +11,7 @@ import { resolveStyle, scopeInput, type StyleLook } from './resolve';
 
 type StyleScopeProps = {
   readonly choice: StyleChoice;
-  /** Play's, HUD's or Arcade's look for that style (by its interface); the phone's own if omitted. */
+  /** Play's, HUD's, Arcade's or Candy's look for that style (by its interface); the phone's own if omitted. */
   readonly look?: StyleLook;
   readonly children: ReactNode;
 };

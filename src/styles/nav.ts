@@ -15,6 +15,8 @@ export const STYLE_SCREENS = Object.freeze({
   lookHud: '/settings/look/hud',
   /** Arcade's Options: app/(app)/settings/look/arcade.tsx (US-022j). */
   lookArcade: '/settings/look/arcade',
+  /** Candy's 'Make it sweet': app/(app)/settings/look/candy.tsx (US-023m). */
+  lookCandy: '/settings/look/candy',
 } as const);
 
 export type StyleScreen = keyof typeof STYLE_SCREENS;
@@ -28,6 +30,7 @@ const LOOK_SCREENS: Readonly<Record<LookPage, StyleScreenPath | null>> = Object.
   play: STYLE_SCREENS.lookPlay,
   hud: STYLE_SCREENS.lookHud,
   arcade: STYLE_SCREENS.lookArcade,
+  candy: STYLE_SCREENS.lookCandy,
 });
 
 /** The look page a style's card links to; null for Studio. */

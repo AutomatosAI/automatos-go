@@ -6,8 +6,9 @@
 //   Play     PlayHome (Ember 01-02, 06)
 //   HUD      HudHome (the voice-first core)
 //   Arcade   ArcadeHome (the handheld, US-022g)
+//   Candy    CandyHome (Today, Chat, Shelf and Team, US-023g): Today on home, Chat on the chat route
 //
-// Play's, HUD's and Arcade's home open the conversation A2's home would (useHomeChat: the newest
+// Play's, HUD's, Arcade's and Candy's home open the conversation A2's home would (useHomeChat: the newest
 // chat, checked before reuse, or a draft); until the list answers they show loading, or its error
 // with Retry, and no composer, as A2's home does. A flip between styles mounts the other home: the read
 // on screen is let go of and never cancelled (the reply is saved and the new home reopens it).
@@ -18,6 +19,7 @@ import { HomeScreen } from '../../chat/screens/HomeScreen';
 import { ErrorState, LoadingState, Screen } from '../../ui';
 import { useStyle } from '../theme';
 import { ArcadeHome } from './ArcadeHome';
+import { CandyHome } from './CandyHome';
 import { FirstOpenThread } from './FirstOpenThread';
 import { HudHome } from './HudHome';
 import { homeFor } from './layout';
@@ -35,10 +37,11 @@ function Choosing({ error, retry }: { readonly error: unknown; readonly retry: (
   );
 }
 
-function StyledHome({ kind }: { readonly kind: 'play' | 'hud' | 'arcade' }) {
+function StyledHome({ kind }: { readonly kind: 'play' | 'hud' | 'arcade' | 'candy' }) {
   const { chatId, error, retry } = useHomeChat();
   if (chatId === undefined) return <Choosing error={error} retry={retry} />;
   if (kind === 'play') return <PlayHome chatId={chatId} home />;
+  if (kind === 'candy') return <CandyHome chatId={chatId} view="today" />;
   return kind === 'hud' ? <HudHome chatId={chatId} /> : <ArcadeHome chatId={chatId} />;
 }
 
@@ -52,7 +55,8 @@ export function StyleHome() {
 
 /**
  * app/(app)/chat/[id].tsx: one conversation in the style's layout, opened at its focus message in
- * Studio's and Play's threads (PRD-268 US-G03; HUD shows only the newest turn, Arcade hooks it up).
+ * Studio's and Play's threads (PRD-268 US-G03; HUD shows only the newest turn, Arcade hooks it up, Candy's
+ * chat view opens at its newest turn).
  */
 export function StyleChat({
   chatId,
@@ -72,6 +76,8 @@ export function StyleChat({
     );
   if (kind === 'hud') return <HudHome chatId={chatId} ticketId={ticketId} />;
   if (kind === 'arcade') return <ArcadeHome chatId={chatId} ticketId={ticketId} />;
+  if (kind === 'candy')
+    return <CandyHome chatId={chatId} ticketId={ticketId} onBack={onBack} view="chat" />;
   return (
     <ChatScreen
       chatId={chatId}

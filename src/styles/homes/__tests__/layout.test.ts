@@ -14,6 +14,7 @@ describe('the layout decision', () => {
     expect(homeFor(layoutOf(builtinChoice('play')))).toBe('play');
     expect(homeFor(layoutOf(builtinChoice('hud')))).toBe('hud');
     expect(homeFor(layoutOf(builtinChoice('arcade')))).toBe('arcade');
+    expect(homeFor(layoutOf(builtinChoice('candy')))).toBe('candy');
   });
 
   it('an installed theme paints Studio’s layout, so it has Studio’s home', () => {

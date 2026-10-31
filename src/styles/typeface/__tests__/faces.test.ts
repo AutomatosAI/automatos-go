@@ -52,6 +52,15 @@ describe('STYLE_FACES', () => {
     expect(STYLE_FACES.arcade).not.toBe(STYLE_FACES.studio);
   });
 
+  it('gives Candy Outfit 600 titles and its 700 figure, Nunito 400/700/800 and Geist Mono', () => {
+    expect(STYLE_FACES.candy).toEqual({
+      display: { title: face(F.outfit, 600), figure: face(F.outfit, 700) },
+      body: [face(F.nunito, 400), face(F.nunito, 700), face(F.nunito, 800)],
+      mono: [face(F.geistMono, 400), face(F.geistMono, 500), face(F.geistMono, 600)],
+    });
+    expect(STYLE_FACES.candy).not.toBe(STYLE_FACES.studio);
+  });
+
   it('asks only for faces the app bundles (FONT_FACES), in every style', () => {
     for (const id of BUILT_IN_STYLE_IDS) {
       for (const item of facesOf(STYLE_FACES[id])) {
@@ -76,6 +85,8 @@ describe('STYLE_FACES', () => {
     expect(Object.isFrozen(STYLE_FACES.hud.body)).toBe(true);
     expect(Object.isFrozen(STYLE_FACES.arcade.display)).toBe(true);
     expect(Object.isFrozen(STYLE_FACES.arcade.body)).toBe(true);
+    expect(Object.isFrozen(STYLE_FACES.candy.display)).toBe(true);
+    expect(Object.isFrozen(STYLE_FACES.candy.body)).toBe(true);
   });
 });
 
@@ -86,6 +97,16 @@ describe('pickFace', () => {
 
   it("draws Arcade's 500 at Pixelify 400, the heaviest lighter face", () => {
     expect(pickFace(STYLE_FACES.arcade.body, 500)).toEqual(face(F.pixelifySans, 400));
+  });
+
+  it("draws Candy's 800 at Nunito ExtraBold, and its 500 and 600 at Nunito 400", () => {
+    expect(pickFace(STYLE_FACES.candy.body, 800)).toEqual(face(F.nunito, 800));
+    expect(pickFace(STYLE_FACES.candy.body, 600)).toEqual(face(F.nunito, 400));
+    expect(pickFace(STYLE_FACES.candy.body, 500)).toEqual(face(F.nunito, 400));
+  });
+
+  it("draws Studio's 800 at Geist 600, the heaviest it has", () => {
+    expect(pickFace(STYLE_FACES.studio.body, 800)).toEqual(face(F.geist, 600));
   });
 
   it("maps Ember's Geist 700 to 600, the heaviest the app bundles", () => {
@@ -109,6 +130,9 @@ describe('faceFor', () => {
     expect(faceFor(F.newsreader, 500, 'italic')).toBe('Newsreader16pt16pt-MediumItalic');
     expect(faceFor(F.pressStart2p, 400)).toBe('PressStart2P-Regular');
     expect(faceFor(F.pixelifySans, 600)).toBe('PixelifySans-SemiBold');
+    expect(faceFor(F.outfit, 600)).toBe('Outfit-SemiBold');
+    expect(faceFor(F.outfit, 700)).toBe('Outfit-Bold');
+    expect(faceFor(F.nunito, 800)).toBe('Nunito-ExtraBold');
   });
 
   it('throws for a face the app does not bundle', () => {

@@ -107,6 +107,11 @@ describe('voiceLookPath (LOOK)', () => {
     expect(voiceLookPath('arcade')).toBe('/settings/look/arcade');
   });
 
+  it("opens Candy's Make it sweet at '/settings/look/candy' (its registry entry's look page)", () => {
+    expect(voiceLookPath('candy')).toBe(STYLE_SCREENS.lookCandy);
+    expect(voiceLookPath('candy')).toBe('/settings/look/candy');
+  });
+
   it('opens the style picker for Studio (and a theme, on the Studio layout)', () => {
     expect(voiceLookPath('studio')).toBe(STYLE_SCREENS.settingsStyle);
   });

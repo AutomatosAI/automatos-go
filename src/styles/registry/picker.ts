@@ -1,8 +1,8 @@
-// The Style and look screen's state (FR-7, D54, D58): four sections in the registry's order —
+// The Style and look screen's state (FR-7, D54, D58): five sections in the registry's order —
 // Studio with Light / Dark / System, the 'Same as Studio' row (D-PHONE-CHOICE, the default) and,
 // when the server offers mobile themes, its installed theme rows; Play with 'Make it yours'; HUD
-// with 'Looks'; Arcade with 'Options'. Pure: the screen (US-016h) renders it and sends the reducer
-// its taps. The selection shown is what the phone chose: 'Same as Studio' selects its row alone
+// with 'Looks'; Arcade with 'Options'; Candy with 'Make it sweet'. Pure: the screen (US-016h)
+// renders it and sends the reducer its taps. The selection shown is what the phone chose: 'Same as Studio' selects its row alone
 // (its summary says what it paints now); a style or theme picked on the phone selects that card or
 // row, and a theme the workspace no longer offers shows Studio selected (resolveChoice). Every
 // state is new; no input is mutated.
@@ -71,7 +71,10 @@ export type PickerSection = {
   readonly accessibilityLabel: string;
   /** Studio only: Light / Dark / System (the foundation's scheme); empty for Play and HUD. */
   readonly schemes: readonly SchemeOption[];
-  /** Play's 'Make it yours', HUD's 'Looks', Arcade's 'Options'; null for Studio (its scheme). */
+  /**
+   * Play's 'Make it yours', HUD's 'Looks', Arcade's 'Options', Candy's 'Make it sweet'; null for
+   * Studio (its scheme).
+   */
   readonly lookLink: string | null;
   /** Studio only, when the server offers mobile themes; empty otherwise. */
   readonly themes: readonly PickerThemeRow[];
@@ -156,6 +159,7 @@ function lookLinkOf(page: LookPage): string | null {
   if (page === 'play') return PICKER_COPY.lookLinks.play;
   if (page === 'hud') return PICKER_COPY.lookLinks.hud;
   if (page === 'arcade') return PICKER_COPY.lookLinks.arcade;
+  if (page === 'candy') return PICKER_COPY.lookLinks.candy;
   return null;
 }
 

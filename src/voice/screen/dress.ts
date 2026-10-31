@@ -10,10 +10,14 @@
 //   Arcade (US-022i, D-ONE-VOICE): the palette's accent (ac) for both, the core filled with the
 //   window (win), Auto always, as Arcade's pixel sprite in place of the bundled mascot; no HUD
 //   overlay.
+//   Candy (US-023l, D-ONE-VOICE, D-CAN-5): the palette's accent for both under the card sets'
+//   gradient (voicePaint's: the three starts, which the rings and the waveform are stroked in), the
+//   core clear, Auto always, as Candy's own Auto inside Candy's orb (240 in the 290 core) in place
+//   of the bundled mascot; no HUD overlay.
 //   The waveform, the chip's words and the cursor take the accent; the chip's line the accent line.
 //   motion is the resolved style's loops: Reduce Motion, or HUD's motion off, stills them all.
-//   Arcade's pause, kept in the style store, stills them too: the core reads it live
-//   (src/styles/hud/core/use-voice-core.ts), so it is not part of this pure dress.
+//   Arcade's pause and Candy's, kept in the style store, still them too: the core reads them live
+//   (src/styles/hud/core/use-voice-core.ts), so they are not part of this pure dress.
 
 import type { ResolvedStyle } from '../../styles/provider/resolve';
 import { voicePaint } from '../../styles/tokens/voice-colours';
@@ -21,7 +25,7 @@ import { voicePaint } from '../../styles/tokens/voice-colours';
 /** What the dress reads of the resolved style. */
 export type DressStyle = Pick<
   ResolvedStyle,
-  'layout' | 'tokens' | 'play' | 'hud' | 'hudLook' | 'arcade' | 'mascot' | 'motion'
+  'layout' | 'tokens' | 'play' | 'hud' | 'hudLook' | 'arcade' | 'candy' | 'mascot' | 'motion'
 >;
 
 export type VoiceDress = {
@@ -43,12 +47,19 @@ export type VoiceDress = {
   readonly sprite: boolean;
   /** The disc inside the rings: Arcade's window; the accent at 0 where the style fills none. */
   readonly coreFill: string;
+  /** Auto in the core is Candy's own, inside Candy's orb, never the bundled mascot. */
+  readonly candy: boolean;
+  /** The rings and the waveform stroked in these colours (Candy's card sets); absent, the accent. */
+  readonly gradient?: readonly [string, string, string];
   /** Loops may run: rings, waveform shimmer, cursor blink, pulse. */
   readonly motion: boolean;
 };
 
+/** The styles whose Auto is always in the core: Play's Mascot, Arcade's sprite, Candy's own. */
+const AUTO_ALWAYS: ReadonlySet<DressStyle['layout']> = new Set(['play', 'arcade', 'candy'] as const);
+
 function mascotInCore(style: DressStyle): boolean {
-  if (style.layout === 'play' || style.layout === 'arcade') return true;
+  if (AUTO_ALWAYS.has(style.layout)) return true;
   if (style.layout === 'hud') return style.hudLook?.auto === 'on';
   return style.mascot === 'theme';
 }
@@ -66,6 +77,8 @@ export function voiceDress(style: DressStyle): VoiceDress {
     mascotInCore: mascotInCore(style),
     sprite: style.layout === 'arcade',
     coreFill: paint.coreFill,
+    candy: style.layout === 'candy',
+    ...(style.layout === 'candy' && paint.gradient ? { gradient: paint.gradient } : {}),
     motion: style.motion.loops,
   });
 }

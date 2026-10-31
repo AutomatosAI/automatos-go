@@ -1,16 +1,19 @@
 // The dress's derived colours (US-016f): Ember's outline line at 24 % and chip line at 20 % of the
 // ground's text, and HUD's selected-panel glow at half the accent, written as React Native reads
-// them, for Ember's cream and ARC's cyan.
+// them, for Ember's cream and ARC's cyan; Candy's shadow as one colour, its tint at the glow.
 
 import { describe, expect, it } from 'vitest';
 
 import { EMBER } from '../../../core/frozen/lib/looks/presets';
 import { ARCADE_DEFAULT_PICKS, arcadeVars } from '../arcade';
+import { CANDY_DEFAULT_PICKS, candyShadow, candyVars } from '../candy';
 import {
   HUD_SELECTED_GLOW,
   PLAY_CHIP_LINE_ALPHA,
   PLAY_OUTLINE_ALPHA,
   arcadeSelectedColours,
+  candySelectedColours,
+  candyShadowColour,
   hudSelectedGlowColour,
   playDressLines,
 } from '../dress-colours';
@@ -43,5 +46,23 @@ describe('the dress colours', () => {
     const selected = arcadeSelectedColours(arcadeVars(ARCADE_DEFAULT_PICKS));
     expect(selected).toEqual({ fill: '#7FE35C', ink: '#0B1A07' });
     expect(Object.isFrozen(selected)).toBe(true);
+  });
+
+  it("selects in Candy's accent with its ink: Blush's pink under white, Night bloom's under plum", () => {
+    const selected = candySelectedColours(candyVars(CANDY_DEFAULT_PICKS));
+    expect(selected).toEqual({ fill: '#D62F7A', ink: '#FFFFFF' });
+    expect(Object.isFrozen(selected)).toBe(true);
+    const night = candyVars({ ...CANDY_DEFAULT_PICKS, palette: 'nightbloom' });
+    expect(candySelectedColours(night)).toEqual({ fill: '#FF6FB5', ink: '#2A0618' });
+  });
+
+  it("shadows Candy in its palette's tint at the glow: Blush's pink at .04 + 6 / 33, .04 at none", () => {
+    expect(candyShadowColour(candyShadow(CANDY_DEFAULT_PICKS))).toMatch(
+      /^rgba\(214,47,122,0\.2218\d*\)$/,
+    );
+    const none = candyShadow({ ...CANDY_DEFAULT_PICKS, glow: 0 });
+    expect(candyShadowColour(none)).toBe('rgba(214,47,122,0.04)');
+    const night = candyShadow({ ...CANDY_DEFAULT_PICKS, palette: 'nightbloom', glow: 0 });
+    expect(candyShadowColour(night)).toBe('rgba(255,80,170,0.04)');
   });
 });

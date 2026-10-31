@@ -4,11 +4,14 @@
 // primitives on useTokens(); Play, HUD and Arcade take their own type (styleType) and the dress's
 // paints. Arcade's controls and labels are its pixel face at its type's own steps (the button's
 // 12, the label's 11), and every panel but a selected one wears its window (the dress's frame).
+// Candy's panels wear its tinted shadow (the frame) and head in its section title; its rows and
+// rules (52 pt, 1.5 pt) and its slider (the accent on the chip) are the dress's too.
 
 import type { FontWeight } from '../styles/fonts';
 import type { Dress, DressFace, LabelCase } from '../styles/dress/dress';
-import type { PanelPaint, Paint, SegmentPaint } from '../styles/dress/paints';
+import type { PanelPaint, Paint, SegmentPaint, SliderPaints } from '../styles/dress/paints';
 import type { ResolvedStyle } from '../styles/provider/resolve';
+import type { Colours } from '../styles/tokens/types';
 import { LEADING, type TypeOverrides, type TypeRole, type TypeStyle } from '../styles/type';
 import { TITLE_ROLES, type StyleType, type TitleRole } from '../styles/typeface/scale';
 import { DISABLED_OPACITY } from './paint';
@@ -109,8 +112,15 @@ export function fieldLabelStyle(style: ResolvedStyle, dress: Dress): TypeStyle {
   return labelStyle(style, dress);
 }
 
-/** A panel's header row: Studio's eyebrow, Play's label, HUD's display face at its label size. */
+/** A section's title in the scale: Title 3 (Candy's Outfit 600 20). */
+const SECTION_TITLE: TitleRole = 'title3';
+
+/**
+ * A panel's header row: Studio's eyebrow, Play's label, HUD's display face at its label size,
+ * Candy's section title.
+ */
 export function panelHeaderStyle(style: ResolvedStyle, dress: Dress): TypeStyle {
+  if (dress.panelHeader === 'section') return style.type.title(SECTION_TITLE);
   if (dress.panelHeader === 'display') return style.type.display('panel');
   if (dress.panelHeader === 'label') return labelStyle(style, dress);
   return style.tokens.type.eyebrow;
@@ -122,6 +132,22 @@ export function panelHeaderStyle(style: ResolvedStyle, dress: Dress): TypeStyle 
 export function buttonHeight(dress: Dress, sizeHeight: number, inPanel: boolean): number {
   const least = inPanel ? dress.button.panelMinHeight : dress.button.minHeight;
   return Math.max(sizeHeight, least);
+}
+
+/** An edge screen's one action: the edges' own height, raised to the dress's least (Candy's 50). */
+export function edgeActionHeight(dress: Dress, edgeHeight: number): number {
+  return Math.max(edgeHeight, dress.edgeActionMinHeight ?? edgeHeight);
+}
+
+export type DressedRow = {
+  readonly minHeight: number;
+  readonly separatorWidth: number;
+  readonly separatorColour: string;
+};
+
+/** A list's row and its rule: the foundation's 44 and 1 pt in --border; Candy's 52 and 1.5 pt. */
+export function dressedRow(dress: Dress, colours: Pick<Colours, 'border'>): DressedRow {
+  return { ...dress.row, separatorColour: colours.border };
 }
 
 // ── Paints ──────────────────────────────────────────────────────────────────────────────────
@@ -163,6 +189,20 @@ export function dressedPillPaint(
     ...control(chosen, opacity),
     borderWidth: selected ? pill.selectedBorderWidth : pill.borderWidth,
   };
+}
+
+/** The slider's colours: the dress's (Candy's accent on its chip), else primary on muted, the page past its cap. */
+export function dressedSliderPaint(
+  dress: Dress,
+  colours: Pick<Colours, 'primary' | 'muted' | 'background'>,
+): SliderPaints {
+  return (
+    dress.paints.slider ?? {
+      fill: colours.primary,
+      track: colours.muted,
+      past: colours.background,
+    }
+  );
 }
 
 /** A segment's paint (Studio: variants.ts segmentPaint, unchanged). */

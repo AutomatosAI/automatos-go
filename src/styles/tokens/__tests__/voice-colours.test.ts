@@ -1,6 +1,7 @@
 // The voice core's colours in every style (US-018b, D-ONE-VOICE): HUD's variables, Play's look,
 // Arcade's palette (the rings in its accent, the core filled with its window) and Studio's ink and
-// orange; never a HUD constant outside HUD.
+// orange; never a HUD constant outside HUD. Candy's waveform takes its gradient bar by bar
+// (gradientRun, US-023l).
 
 import { describe, expect, it } from 'vitest';
 
@@ -8,12 +9,19 @@ import { rgba } from '../../../core/web/lib/look-kit/css';
 import { HUD, PLAY, PLAY_STYLES, STUDIO_DARK, STUDIO_LIGHT } from '../../dress/__tests__/fixtures';
 import { ARCADE_DEFAULT_PICKS, arcadeVars, type ArcadePaintPicks } from '../arcade';
 import { PALETTE_IDS } from '../arcade-catalogue';
-import { arcadeStyleTokens } from '../style-tokens';
-import { clearOf, voicePaint, type VoiceStyle } from '../voice-colours';
+import { CANDY_DEFAULT_PICKS, candyVars, type CandyPaintPicks } from '../candy';
+import { PALETTE_IDS as CANDY_PALETTE_IDS } from '../candy-catalogue';
+import { arcadeStyleTokens, candyStyleTokens } from '../style-tokens';
+import { clearOf, gradientRun, voicePaint, type VoiceStyle } from '../voice-colours';
 
 /** Arcade as the voice core reads it: the palette's set and its variables. */
 function arcadeStyle(look: ArcadePaintPicks): VoiceStyle {
   return { tokens: arcadeStyleTokens(look), arcade: arcadeVars(look) };
+}
+
+/** Candy as the voice core reads it: the palette's set and its variables. */
+function candyStyle(look: CandyPaintPicks): VoiceStyle {
+  return { tokens: candyStyleTokens(look), candy: candyVars(look) };
 }
 
 describe('the voice core paint', () => {
@@ -75,6 +83,32 @@ describe('the voice core paint', () => {
     expect(paint.coreFill).toBe('#15291B');
   });
 
+  it.each(CANDY_PALETTE_IDS)("takes Candy's palette in Candy: the accent, the cards' starts, a clear core (%s)", (id) => {
+    const look = { ...CANDY_DEFAULT_PICKS, palette: id };
+    const vars = candyVars(look);
+    expect(voicePaint(candyStyle(look))).toEqual({
+      accent: vars.accent,
+      accentInk: vars.accentInk,
+      accentLine: rgba(vars.accent, 0.45),
+      accentFill: rgba(vars.accent, 0.12),
+      glow: clearOf(vars.accent),
+      text: vars.text,
+      text2: vars.quiet,
+      line: vars.line,
+      coreFill: clearOf(vars.accent),
+      gradient: [vars.g1a, vars.g2a, vars.g3a],
+    });
+  });
+
+  it("strokes Lilac's rings violet, blue and pink, or violet three times with One colour", () => {
+    const lilac = { ...CANDY_DEFAULT_PICKS, palette: 'lilac' as const };
+    expect(voicePaint(candyStyle(lilac)).gradient).toEqual(['#8E4AE8', '#2675D3', '#D73178']);
+    const single = { ...lilac, cards: 'single' as const };
+    expect(voicePaint(candyStyle(single)).gradient).toEqual(['#8E4AE8', '#8E4AE8', '#8E4AE8']);
+    expect(voicePaint(arcadeStyle(ARCADE_DEFAULT_PICKS)).gradient).toBeUndefined();
+    expect(voicePaint(STUDIO_LIGHT).gradient).toBeUndefined();
+  });
+
   it.each([STUDIO_LIGHT, STUDIO_DARK])("paints Studio's orange with no glow (%#)", (style) => {
     const { colours } = style.tokens;
     const paint = voicePaint(style);
@@ -96,9 +130,39 @@ describe('the voice core paint', () => {
     expect(voicePaint(HUD)).toBe(voicePaint(HUD));
     const arcade = arcadeStyle(ARCADE_DEFAULT_PICKS);
     expect(voicePaint(arcade)).toBe(voicePaint({ ...arcade }));
+    const candy = candyStyle(CANDY_DEFAULT_PICKS);
+    expect(voicePaint(candy)).toBe(voicePaint({ ...candy }));
   });
 
   it('fades a colour to 0 in its own hue', () => {
     expect(clearOf('#3FE0FF')).toBe('rgba(63,224,255,0)');
+  });
+});
+
+describe("gradientRun (Candy's waveform)", () => {
+  const STOPS = ['#FF0000', '#00FF00', '#0000FF'] as const;
+
+  it('starts on the first stop, passes the middle one and ends on the last', () => {
+    const run = gradientRun(STOPS, 5);
+    expect(run).toEqual(['#FF0000', '#808000', '#00FF00', '#008080', '#0000FF']);
+    expect(Object.isFrozen(run)).toBe(true);
+  });
+
+  it("spreads Candy's three starts across the phone's 44 bars, every one #RRGGBB", () => {
+    const gradient = voicePaint(candyStyle(CANDY_DEFAULT_PICKS)).gradient;
+    if (!gradient) throw new Error('Candy strokes in a gradient');
+    const run = gradientRun(gradient, 44);
+    expect(run).toHaveLength(44);
+    expect(run[0]).toBe(gradient[0]);
+    expect(run[43]).toBe(gradient[2]);
+    run.forEach((colour) => expect(colour).toMatch(/^#[0-9A-F]{6}$/));
+  });
+
+  it('gives one bar the first stop, one stop every bar, and none for no bars or no stops', () => {
+    expect(gradientRun(STOPS, 1)).toEqual(['#FF0000']);
+    expect(gradientRun(['#123456'], 3)).toEqual(['#123456', '#123456', '#123456']);
+    expect(gradientRun(STOPS, 0)).toEqual([]);
+    expect(gradientRun(STOPS, Number.NaN)).toEqual([]);
+    expect(gradientRun([], 4)).toEqual([]);
   });
 });

@@ -14,7 +14,9 @@
 //   A6's voice screen (US-019j, D-ONE-VOICE) passes `voice`: the core then draws in every style,
 // painted by voiceDress — on the style's own background, with HUD's ground and scanlines only where
 // the dress says, the rings' structure in its line colour, Auto in the core only where the dress
-// puts him (in Arcade as its pixel sprite on the core's disc, filled with the window, US-022i) —
+// puts him (in Arcade as its pixel sprite on the core's disc, filled with the window, US-022i; in
+// Candy as its own Auto inside its orb, 240 in the 290 core, the rings and the waveform stroked in
+// the card sets' gradient, US-023l) —
 // with the voice view-model's chip and status words, its line under the chip, HOLD TO
 // TALK's hold, STOP and TYPE as the voice says, the menu square named for closing the screen, and
 // LOOK going to the style's look page (onLook) instead of opening HUD's drawer here.
@@ -31,7 +33,8 @@
 //   HUD's home may pass `transcriptSlot` (PRD-268 US-G06): the day's brief in the rows' place.
 //   The voice screen in Arcade passes `controls` (P001A-RVW-1): Arcade's pause control, drawn at
 // the end of a row under the top bar, since its sprite, rings and waveform loop for the whole
-// session (WCAG 2.2.2). Every other caller passes none, and nothing is drawn.
+// session (WCAG 2.2.2); in Candy, Candy's (US-023l: its Auto, the orb's arc, the rings and the
+// waveform). Every other caller passes none, and nothing is drawn.
 
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
@@ -41,12 +44,15 @@ import type { ThreadReport } from '../../../chat/report/report';
 import type { MascotName } from '../../../core/frozen/lib/mascot/types';
 import { useArcadePaint } from '../../arcade/parts/use-arcade-paint';
 import { PixelSprite } from '../../arcade/sprite/PixelSprite';
+import { CandyAuto } from '../../candy/auto/CandyAuto';
+import { Orb } from '../../candy/parts/Orb';
 import { hudGroundPlan, type HudGroundPlan } from '../../ground/hud-ground';
 import { HudOverlay } from '../../ground/HudOverlay';
 import { useLayoutSize } from '../../ground/use-size';
 import { Mascot } from '../../mascot/Mascot';
 import type { MascotController } from '../../mascot/use-mascot';
 import { LooksDrawer } from '../LooksDrawer';
+import { candyCorePlace } from './candy-core';
 import { HudButtons } from './HudButtons';
 import { HudTopBar, type HudIdeas } from './HudTopBar';
 import {
@@ -78,6 +84,10 @@ export type HudCoreVoice = {
   readonly sprite?: boolean;
   /** The disc inside the rings, filled flat (Arcade's window); absent, none. */
   readonly coreFill?: string;
+  /** Auto in the core is Candy's own, inside Candy's orb, not the Mascot; absent, the Mascot. */
+  readonly candy?: boolean;
+  /** The rings and the waveform stroked in these colours (Candy's card sets); absent, the accent. */
+  readonly gradient?: readonly string[];
   /** The chip's words, and the status row's word (chip.label). */
   readonly chip: ChipView;
   readonly talk: HudTalk;
@@ -162,11 +172,31 @@ function CoreSprite({ size, state }: { readonly size: number; readonly state: Ma
   );
 }
 
-/** Auto in the core: none where the dress keeps him out, the sprite in Arcade, else the Mascot. */
+/** Candy: its orb centred in the core over the rings' middle, and Candy's Auto in the orb. */
+function CandyCore({ size, state }: { readonly size: number; readonly state: MascotName }) {
+  const place = useMemo(() => candyCorePlace(size), [size]);
+  const { orb, auto } = place;
+  return (
+    <>
+      <View pointerEvents="none" style={[styles.mascot, { left: orb.offset, top: orb.offset }]}>
+        <Orb size={orb.side} room={orb.side} />
+      </View>
+      <View pointerEvents="none" style={[styles.mascot, { left: auto.offset, top: auto.offset }]}>
+        <CandyAuto state={state} size={auto.side} />
+      </View>
+    </>
+  );
+}
+
+/**
+ * Auto in the core: none where the dress keeps him out, the sprite in Arcade, Candy's Auto in its
+ * orb in Candy, else the Mascot.
+ */
 function CoreAuto({ size, mascotState, voice }: CoreProps) {
   const place = useMemo(() => mascotPlace(size), [size]);
   if (voice && !voice.mascotInCore) return null;
   if (voice?.sprite) return <CoreSprite size={size} state={stateOf(mascotState)} />;
+  if (voice?.candy) return <CandyCore size={size} state={stateOf(mascotState)} />;
   return (
     <View pointerEvents="none" style={[styles.mascot, { left: place.left, top: place.top }]}>
       <Mascot size={place.size} state={mascotState} />
@@ -183,6 +213,7 @@ function Core({ size, mascotState, voice }: CoreProps) {
         colour={paint.accent}
         lineColour={voice?.ringLine}
         fill={voice?.coreFill}
+        gradient={voice?.gradient}
       />
       <CoreAuto size={size} mascotState={mascotState} voice={voice} />
     </View>
@@ -308,7 +339,7 @@ export function HudCore(props: HudCoreProps) {
           <Transcript turn={turn} report={props.report} slot={props.transcriptSlot} />
         </View>
         <View style={{ paddingHorizontal: HUD_CORE.wave.padX }}>
-          <Waveform colour={paint.accent} levels={levels} />
+          <Waveform colour={paint.accent} levels={levels} gradient={voice?.gradient} />
         </View>
         <HudButtons
           onType={onType}

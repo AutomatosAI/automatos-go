@@ -187,8 +187,17 @@ export function BriefBody({ brief, onLink }: BriefCardProps) {
   );
 }
 
-/** The card's one entrance, the first time this brief is drawn in this launch. */
-function Entrance({ brief, children }: { readonly brief: Brief; readonly children: ReactNode }) {
+/**
+ * The card's one entrance, the first time this brief is drawn in this launch. Candy's thread wraps
+ * its own Auto bubble in it.
+ */
+export function BriefEntrance({
+  brief,
+  children,
+}: {
+  readonly brief: Brief;
+  readonly children: ReactNode;
+}) {
   const reduceMotion = useReducedMotion();
   const [firstTime] = useState(() => sightings.first(briefKey(brief)));
   const entrance = briefEntrance(firstTime, reduceMotion);
@@ -200,21 +209,21 @@ function Entrance({ brief, children }: { readonly brief: Brief; readonly childre
 export function StudioBriefCard(props: BriefCardProps) {
   const tokens = useTokens();
   return (
-    <Entrance brief={props.brief}>
+    <BriefEntrance brief={props.brief}>
       <View style={bubbleStyle(tokens, 'auto')}>
         <BriefBody {...props} />
       </View>
-    </Entrance>
+    </BriefEntrance>
   );
 }
 
 /** Play: a card on the ground's surface, dressed by the primitives (14 pt corners). */
 export function PlayBriefCard(props: BriefCardProps) {
   return (
-    <Entrance brief={props.brief}>
+    <BriefEntrance brief={props.brief}>
       <Card padding="space6" radius="panel">
         <BriefBody {...props} />
       </Card>
-    </Entrance>
+    </BriefEntrance>
   );
 }

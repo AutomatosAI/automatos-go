@@ -6,9 +6,12 @@ import { AURORA, DAYLIGHT, EMBER, PRESETS } from '../../../core/frozen/lib/looks
 import { HUD_PRESET_LOOKS } from '../../hud/look-schema';
 import { ARCADE_DEFAULT_PICKS, arcadeVars } from '../arcade';
 import { PALETTE_IDS } from '../arcade-catalogue';
+import { CANDY_DEFAULT_PICKS } from '../candy';
+import { PALETTES as CANDY_PALETTES } from '../candy-catalogue';
 import {
   EMBER_GLOW_ALPHA,
   arcadeGroundColours,
+  candyGroundColours,
   hudGroundColours,
   playGlowAlpha,
   playLightStops,
@@ -96,5 +99,22 @@ describe('arcadeGroundColours', () => {
       page: '#0D1710',
       scanline: 'rgba(0,0,0,0.14)',
     });
+  });
+});
+
+describe('candyGroundColours', () => {
+  it("is the palette's page, under the aura's three blobs on Vivid only", () => {
+    for (const palette of CANDY_PALETTES) {
+      const look = { ...CANDY_DEFAULT_PICKS, palette: palette.id };
+      const { page, blobs } = palette.colours;
+      expect(candyGroundColours({ ...look, gradient: 'vivid' }), palette.id).toEqual({
+        page,
+        aura: blobs,
+      });
+      expect(candyGroundColours({ ...look, gradient: 'rich' })).toEqual({ page, aura: [] });
+      expect(candyGroundColours({ ...look, gradient: 'soft' })).toEqual({ page, aura: [] });
+    }
+    expect(candyGroundColours(CANDY_DEFAULT_PICKS)).toEqual({ page: '#FBF0F4', aura: [] });
+    expect(Object.isFrozen(candyGroundColours(CANDY_DEFAULT_PICKS))).toBe(true);
   });
 });

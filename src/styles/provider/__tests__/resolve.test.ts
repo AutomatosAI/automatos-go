@@ -1,8 +1,9 @@
 // resolveStyle (PRD-001 §4.6, D54, D58, D59): Studio by Light / Dark / System and the phone's
 // appearance; Play by its look's ground whatever the scheme; HUD always dark; Arcade by its look's
-// palette whatever the scheme; a theme choice on the Studio layout with its cached painting, or
-// Studio's own while none is; the motion rules (Reduce Motion, HUD's motion knob); where Auto
-// comes from; StyleScope's input, which tells a Play, HUD and Arcade look apart.
+// palette whatever the scheme (Candy's paint: candy-resolve.test.ts); a theme choice on the Studio
+// layout with its cached painting, or Studio's own while none is; the motion rules (Reduce Motion,
+// HUD's motion knob, Candy's Motion); where Auto comes from; StyleScope's input, which tells a
+// Play, HUD, Arcade and Candy look apart.
 
 import { describe, expect, it } from 'vitest';
 
@@ -12,6 +13,7 @@ import {
   ARCADE_PRESET_LOOKS,
   type ArcadeLook,
 } from '../../arcade/look-schema';
+import { CANDY_PRESET_LOOKS, type CandyLook } from '../../candy/look-schema';
 import { HUD_DEFAULT_LOOK, HUD_PRESET_LOOKS, type HudLook } from '../../hud/look-schema';
 import { builtinChoice, themeChoice, type StyleChoice } from '../../registry/style-id';
 import { THEME_CHOICES, type SystemScheme } from '../../theme-choice';
@@ -36,6 +38,7 @@ const STUDIO = builtinChoice('studio');
 const PLAY = builtinChoice('play');
 const HUD = builtinChoice('hud');
 const ARCADE = builtinChoice('arcade');
+const CANDY = builtinChoice('candy');
 const INSTALL_ID = '3f2b6c1e-9d4a-4b7e-8c21-5a6f0e9d1b42';
 const THEME = themeChoice(INSTALL_ID);
 
@@ -48,6 +51,8 @@ const GHOST = HUD_PRESET_LOOKS.find((look) => look.id === 'ghost') as HudLook;
 const HUD_STILL: HudLook = Object.freeze({ ...HUD_DEFAULT_LOOK, motion: 'off' });
 const NEON = ARCADE_PRESET_LOOKS.find((look) => look.id === 'neon') as ArcadeLook;
 const HANDHELD = ARCADE_PRESET_LOOKS.find((look) => look.id === 'handheld') as ArcadeLook;
+const LILAC = CANDY_PRESET_LOOKS.find((look) => look.id === 'lilac') as CandyLook;
+const CANDY_STILL: CandyLook = Object.freeze({ ...LILAC, motion: 'paused' });
 
 function input(choice: StyleChoice, overrides: Partial<StyleInput> = {}): StyleInput {
   return Object.freeze({
@@ -233,6 +238,8 @@ describe('HUD is always dark', () => {
     expect(resolveStyle(input(HUD, { hudLook: GHOST })).mascot).toBe('none');
     expect(bundledMascot('studio', HUD_DEFAULT_LOOK)).toBe('none');
     expect(bundledMascot('play', GHOST)).toBe('bundled');
+    // Candy draws its own Auto with Skia (D-CAN-5): never the bundled clips
+    expect(bundledMascot('candy', HUD_DEFAULT_LOOK)).toBe('none');
   });
 });
 
@@ -297,7 +304,7 @@ describe('an installed theme paints the Studio layout (D58)', () => {
 });
 
 describe('motion (D-A11Y)', () => {
-  const CHOICES = [STUDIO, PLAY, HUD, ARCADE, THEME];
+  const CHOICES = [STUDIO, PLAY, HUD, ARCADE, CANDY, THEME];
 
   it.each(CHOICES)('Reduce Motion stops every loop: %o', (choice) => {
     expect(resolveStyle(input(choice, { reduceMotion: true })).motion).toEqual({
@@ -318,12 +325,24 @@ describe('motion (D-A11Y)', () => {
     expect(resolveStyle(input(PLAY, { hudLook: HUD_STILL })).motion.loops).toBe(true);
     expect(resolveStyle(input(STUDIO, { hudLook: HUD_STILL })).motion.loops).toBe(true);
     expect(resolveStyle(input(ARCADE, { hudLook: HUD_STILL })).motion.loops).toBe(true);
+    expect(resolveStyle(input(CANDY, { hudLook: HUD_STILL })).motion.loops).toBe(true);
   });
 
   it('names Reduce Motion first when both stop the loops', () => {
     expect(motionOf('hud', HUD_STILL, true)).toEqual({ loops: false, reason: 'reduce-motion' });
     expect(motionOf('hud', HUD_STILL, false)).toEqual({ loops: false, reason: 'look' });
     expect(motionOf('hud', HUD_DEFAULT_LOOK, false)).toEqual({ loops: true, reason: null });
+    expect(motionOf('candy', HUD_DEFAULT_LOOK, true, CANDY_STILL).reason).toBe('reduce-motion');
+  });
+
+  it("Candy's look with Motion 'paused' stills Candy's loops, and only Candy's", () => {
+    const still = { loops: false, reason: 'look' };
+    expect(resolveStyle(input(CANDY, { candyLook: CANDY_STILL })).motion).toEqual(still);
+    expect(resolveStyle(input(CANDY, { candyLook: LILAC })).motion.loops).toBe(true);
+    for (const choice of [STUDIO, PLAY, HUD, ARCADE, THEME]) {
+      expect(resolveStyle(input(choice, { candyLook: CANDY_STILL })).motion.loops).toBe(true);
+    }
+    expect(motionOf('candy', HUD_STILL, false)).toEqual({ loops: true, reason: null });
   });
 });
 
@@ -334,20 +353,28 @@ describe("StyleScope's input", () => {
     expect(scopeInput(app, PLAY)).toEqual({ ...app, choice: PLAY });
   });
 
-  it("swaps in a Play, HUD or Arcade look as that style's look", () => {
+  it("swaps in a Play, HUD, Arcade or Candy look as that style's look", () => {
     expect(scopeInput(app, PLAY, DAYLIGHT)).toEqual({ ...app, choice: PLAY, playLook: DAYLIGHT });
     expect(scopeInput(app, HUD, GHOST)).toEqual({ ...app, choice: HUD, hudLook: GHOST });
     expect(scopeInput(app, ARCADE, NEON)).toEqual({ ...app, choice: ARCADE, arcadeLook: NEON });
+    expect(scopeInput(app, CANDY, LILAC)).toEqual({ ...app, choice: CANDY, candyLook: LILAC });
   });
 
-  it('tells the three looks apart by their interface, never mistaking one for another', () => {
-    const interfaces = [DAYLIGHT.interface, GHOST.interface, NEON.interface];
-    expect(interfaces).toEqual(['play', 'command', 'arcade']);
+  it('tells the four looks apart by their interface, never mistaking one for another', () => {
+    const interfaces = [DAYLIGHT.interface, GHOST.interface, NEON.interface, LILAC.interface];
+    expect(interfaces).toEqual(['play', 'command', 'arcade', 'candy']);
+    const onCandy = scopeInput(app, CANDY, LILAC);
+    expect([onCandy.playLook, onCandy.hudLook]).toEqual([app.playLook, app.hudLook]);
+    expect(onCandy).not.toHaveProperty('arcadeLook');
     const onArcade = scopeInput(app, ARCADE, NEON);
     expect(onArcade.playLook).toBe(app.playLook);
     expect(onArcade.hudLook).toBe(app.hudLook);
-    for (const look of [DAYLIGHT, GHOST]) {
+    expect(onArcade).not.toHaveProperty('candyLook');
+    for (const look of [DAYLIGHT, GHOST, LILAC]) {
       expect(scopeInput(app, ARCADE, look)).not.toHaveProperty('arcadeLook');
+    }
+    for (const look of [DAYLIGHT, GHOST, NEON]) {
+      expect(scopeInput(app, CANDY, look)).not.toHaveProperty('candyLook');
     }
     expect(scopeInput(app, HUD, GHOST).playLook).toBe(app.playLook);
     expect(scopeInput(app, PLAY, DAYLIGHT).hudLook).toBe(app.hudLook);

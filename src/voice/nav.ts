@@ -53,9 +53,9 @@ export function parseVoiceParams(params: RouteParams): VoiceParams {
 
 /**
  * LOOK on the voice screen: the style's look page (A5's lookScreen): Play's 'Make it yours', HUD's
- * Looks drawer, Arcade's Options ('/settings/look/arcade', US-022i); Studio's look (and an
- * installed theme's, on the Studio layout) is Light / Dark / System on the style picker's Studio
- * card.
+ * Looks drawer, Arcade's Options ('/settings/look/arcade', US-022i), Candy's Make it sweet
+ * ('/settings/look/candy', US-023l); Studio's look (and an installed theme's, on the Studio
+ * layout) is Light / Dark / System on the style picker's Studio card.
  */
 export function voiceLookPath(layout: Layout): StyleScreenPath {
   return lookScreen(styleEntry(layout).lookPage) ?? STYLE_SCREENS.settingsStyle;

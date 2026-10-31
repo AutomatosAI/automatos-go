@@ -1,9 +1,9 @@
 # Font sources
 
-The ten families every style uses, as static TTF instances embedded by the `expo-font`
-config plugin (PRD-001 §4.6, D57, K6; Press Start 2P and Pixelify Sans for Arcade, D-ARC-4).
-All ten are licensed under the SIL Open Font License 1.1; each family directory carries its
-licence file. No font is fetched at runtime.
+The twelve families every style uses, as static TTF instances embedded by the `expo-font`
+config plugin (PRD-001 §4.6, D57, K6; Press Start 2P and Pixelify Sans for Arcade, D-ARC-4;
+Outfit and Nunito for Candy, D-CAN-4). All twelve are licensed under the SIL Open Font License
+1.1; each family directory carries its licence file. No font is fetched at runtime.
 
 Each file is named after its PostScript name (nameID 6): iOS finds an embedded font by its
 PostScript name and Android by its file name in `assets/fonts/`, so one `fontFamily` string
@@ -32,6 +32,15 @@ are (the fontsource builds in automatos-ai name Newsreader `Newsreader16pt16pt-*
   `OFL.txt`, downloaded unchanged (each file's git blob matches that commit). Arcade sets its
   running text at 400 and 600 (the design kit's two Pixelify faces); the kit's phone file is the
   variable font, which the app does not bundle (static faces only, K6).
+- **Google Fonts** — Outfit v15 and Nunito v32: the static instance `fonts.gstatic.com` serves
+  for each weight, downloaded unchanged and saved under its PostScript name (Google Fonts serves
+  hashed file names). The google/fonts repository holds both families as variable fonts only,
+  which the app does not bundle (static faces only, K6); each family's `OFL.txt` comes from there,
+  `ofl/outfit` at `29e94d990c84a54f83644e7c43f42dfc9e1a4ac7` and `ofl/nunito` at
+  `a5bd0ea86b2576f86672aab557a6024d272187a5`, downloaded unchanged. `Outfit-SemiBold.ttf` and
+  `Nunito-Regular.ttf` are the same bytes as the design kit's
+  `themes/candy/assets/fonts/mobile/candy-title.ttf` and `candy-body.ttf` at
+  `3920359d5350960471aca1b7111f6243be537cc0` (AutomatosAI/automatos-design-kit).
 
 Every output was copied into `assets/fonts/<family>/` with `cp`. In the commands below:
 
@@ -41,6 +50,9 @@ FT="uvx --from fonttools[woff]==4.67.0 fonttools"
 GF=https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl
 PS=https://raw.githubusercontent.com/google/fonts/dbd72d6ef9ebea750d33c02c7189633e972d6a40/ofl/pressstart2p
 PX=https://raw.githubusercontent.com/eifetx/Pixelify-Sans/39df74aba80df8157546034b878e8be1eb565ced
+GS=https://fonts.gstatic.com/s
+OF=https://raw.githubusercontent.com/google/fonts/29e94d990c84a54f83644e7c43f42dfc9e1a4ac7/ofl/outfit
+NU=https://raw.githubusercontent.com/google/fonts/a5bd0ea86b2576f86672aab557a6024d272187a5/ofl/nunito
 ```
 
 ## Geist — `geist/`
@@ -149,3 +161,27 @@ upstream file names are the PostScript names already (`PixelifySans-Regular`,
 | `PixelifySans-Regular.ttf`  | https://github.com/eifetx/Pixelify-Sans/blob/39df74aba80df8157546034b878e8be1eb565ced/fonts/ttf/PixelifySans-Regular.ttf  | `curl -fsSL -o PixelifySans-Regular.ttf $PX/fonts/ttf/PixelifySans-Regular.ttf`   | `5436d485d1713afa376e1744911cbbcc0849eae1eb55ec9bc34c0753993ffef9` |
 | `PixelifySans-SemiBold.ttf` | https://github.com/eifetx/Pixelify-Sans/blob/39df74aba80df8157546034b878e8be1eb565ced/fonts/ttf/PixelifySans-SemiBold.ttf | `curl -fsSL -o PixelifySans-SemiBold.ttf $PX/fonts/ttf/PixelifySans-SemiBold.ttf` | `a4b54982991cd47450df317a451a7f066bf6b91aa033e105643aba2cf7bd35c3` |
 | `OFL.txt`                   | https://github.com/eifetx/Pixelify-Sans/blob/39df74aba80df8157546034b878e8be1eb565ced/OFL.txt                             | `curl -fsSL -o OFL.txt $PX/OFL.txt`                                               | `b66ba46f511a851ab09998b5a5a9fdbb102545a3864cb993095e1745996873a7` |
+
+## Outfit — `outfit/`
+
+Downloaded unchanged, so each file's sha256 equals its source's. Candy's titles and figures at
+600, the orb's figure at 700; the licence is google/fonts' at `29e94d99`.
+
+| File                  | Source                                                                                           | Command                                                                                    | sha256                                                             |
+| --------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| `Outfit-SemiBold.ttf` | https://fonts.gstatic.com/s/outfit/v15/QGYyz_MVcBeNP4NjuGObqx1XmO1I4e6yC4E.ttf (Outfit v15, 600) | `curl -fsSL -o Outfit-SemiBold.ttf $GS/outfit/v15/QGYyz_MVcBeNP4NjuGObqx1XmO1I4e6yC4E.ttf` | `8900df5726b5a6f23e723594f11d5ea27e695bd85c884f18d88ed080544fe205` |
+| `Outfit-Bold.ttf`     | https://fonts.gstatic.com/s/outfit/v15/QGYyz_MVcBeNP4NjuGObqx1XmO1I4deyC4E.ttf (Outfit v15, 700) | `curl -fsSL -o Outfit-Bold.ttf $GS/outfit/v15/QGYyz_MVcBeNP4NjuGObqx1XmO1I4deyC4E.ttf`     | `49dcdf653a004a2575b3de649f5e4c549d774fecddf317812330edd0ad70685a` |
+| `OFL.txt`             | https://github.com/google/fonts/blob/29e94d990c84a54f83644e7c43f42dfc9e1a4ac7/ofl/outfit/OFL.txt | `curl -fsSL -o OFL.txt $OF/OFL.txt`                                                        | `c676351bf8576b9aba743cd5eaa8c0e7ee0d51f805d720447b4df4ddb6a2e416` |
+
+## Nunito — `nunito/`
+
+Downloaded unchanged, so each file's sha256 equals its source's. Candy's running text at 400,
+its labels and meta at 700, its buttons, card labels and tab labels at 800; the licence is
+google/fonts' at `a5bd0ea8`.
+
+| File                   | Source                                                                                           | Command                                                                                     | sha256                                                             |
+| ---------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `Nunito-Regular.ttf`   | https://fonts.gstatic.com/s/nunito/v32/XRXI3I6Li01BKofiOc5wtlZ2di8HDLshRTM.ttf (Nunito v32, 400) | `curl -fsSL -o Nunito-Regular.ttf $GS/nunito/v32/XRXI3I6Li01BKofiOc5wtlZ2di8HDLshRTM.ttf`   | `9ecbdba35fa74f10a1a916c31649b802a12deb9e66c7b1fe4650afcfd4d16971` |
+| `Nunito-Bold.ttf`      | https://fonts.gstatic.com/s/nunito/v32/XRXI3I6Li01BKofiOc5wtlZ2di8HDFwmRTM.ttf (Nunito v32, 700) | `curl -fsSL -o Nunito-Bold.ttf $GS/nunito/v32/XRXI3I6Li01BKofiOc5wtlZ2di8HDFwmRTM.ttf`      | `1a025dfce6e6e03bbe31ba82277ec5ed96df8b8dd58b3df6267269490b90b1dc` |
+| `Nunito-ExtraBold.ttf` | https://fonts.gstatic.com/s/nunito/v32/XRXI3I6Li01BKofiOc5wtlZ2di8HDDsmRTM.ttf (Nunito v32, 800) | `curl -fsSL -o Nunito-ExtraBold.ttf $GS/nunito/v32/XRXI3I6Li01BKofiOc5wtlZ2di8HDDsmRTM.ttf` | `c5776505c7b3df3c3ca763477b795d6bbc6517760bede0462ab77d1fb44954a6` |
+| `OFL.txt`              | https://github.com/google/fonts/blob/a5bd0ea86b2576f86672aab557a6024d272187a5/ofl/nunito/OFL.txt | `curl -fsSL -o OFL.txt $NU/OFL.txt`                                                         | `580df76c95a1ec5ab878ceb25bb3d85c6a076804e9c970c8c6972aea775fdf65` |

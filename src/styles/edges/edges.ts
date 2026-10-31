@@ -10,13 +10,15 @@
 //                  so the app shows one command), selectable because there is no clipboard (KS7)
 //   Something went wrong   the taxonomy's words for the error (userMessage), never internals
 //   First open, Lost       their fixed words; a Play starter fills the composer, never sends (KS13);
-//                  Arcade says its own greeting, its own 404 lines and its own wordmark (US-022i)
+//                  Arcade says its own greeting, its own 404 lines and its own wordmark (US-022i),
+//                  and Candy its own (US-023l, candy/strings.ts CANDY_EDGE_COPY)
 
 import { isApiError, userMessage, type ApiErrorKind } from '../../api/errors';
 import type { Server } from '../../api/server';
 import { serverLabel } from '../../app-state/account';
 import { SELF_HOSTED_START_COMMAND } from '../../connect/config';
 import { isNotRunning } from '../../connect/server-support';
+import { CANDY_EDGE_COPY } from '../candy/strings';
 import { GLYPHS } from '../dress/status-glyphs';
 import type { Layout } from '../registry/style-id';
 import { EDGE_COPY, HUD_STATE_WORDS, PLAY_STATUS } from '../strings';
@@ -129,20 +131,27 @@ export type LostEdge = {
   readonly back: string;
 };
 
-/** Lost's words in a style: Arcade's own title and line (the kit's 404), the shared ones elsewhere. */
+/** The styles that say Lost in their own words: their kit's 404, in Arcade's copy and Candy's. */
+const OWN_LOST: Partial<Record<Layout, { readonly lostTitle: string; readonly lostMessage: string }>> =
+  Object.freeze({ arcade: EDGE_COPY.arcade, candy: CANDY_EDGE_COPY });
+
+/** Lost's words in a style: Arcade's and Candy's own title and line (their kit's 404), the shared ones elsewhere. */
 export function lostEdge(layout: Layout): LostEdge {
-  if (layout !== 'arcade') return LOST_EDGE;
-  const { lostTitle, lostMessage } = EDGE_COPY.arcade;
-  return Object.freeze({ ...LOST_EDGE, title: lostTitle, message: lostMessage });
+  const own = OWN_LOST[layout];
+  if (!own) return LOST_EDGE;
+  return Object.freeze({ ...LOST_EDGE, title: own.lostTitle, message: own.lostMessage });
 }
 
 // ── The brand line ──────────────────────────────────────────────────────────────────────────
 
-export type BrandWords = (typeof EDGE_COPY.brand)[keyof typeof EDGE_COPY.brand];
+export type BrandWords =
+  | (typeof EDGE_COPY.brand)[keyof typeof EDGE_COPY.brand]
+  | typeof CANDY_EDGE_COPY.brand;
 
-/** The brand line's words: HUD's and Arcade's own; Play's otherwise (Studio draws none). */
+/** The brand line's words: HUD's, Arcade's and Candy's own; Play's otherwise (Studio draws none). */
 export function brandWords(layout: Layout): BrandWords {
   if (layout === 'hud') return EDGE_COPY.brand.hud;
   if (layout === 'arcade') return EDGE_COPY.brand.arcade;
+  if (layout === 'candy') return CANDY_EDGE_COPY.brand;
   return EDGE_COPY.brand.play;
 }

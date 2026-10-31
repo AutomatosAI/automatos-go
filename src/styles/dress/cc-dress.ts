@@ -1,10 +1,10 @@
 // The Command Centre in each style (D-ONE-SET, US-016l, US-022h), pure: what A3's shell (src/cc/
 // shell: the top bar, head, tabs and live word) and the Calendar's day strip draw differently under
-// Play, HUD and Arcade, so they stay one set of screens that only reads this. Studio (an installed theme too, D58)
-// is the Command Centre as built; everything else A3 draws already goes through the primitives.
-// Two more decisions that stopped the dress: the shell's opaque grounds (the tabs and the tab's
-// screen), which hid Play's glow and HUD's grid, and A2's composer pill's 21 pt corners, which
-// HUD's TYPE sheet draws square (shellGround and roundCorner below).
+// Play, HUD, Arcade and Candy, so they stay one set of screens that only reads this. Studio (an
+// installed theme too, D58) is the Command Centre as built; everything else A3 draws already goes
+// through the primitives. Two more decisions that stopped the dress: the shell's opaque grounds
+// (the tabs and the tab's screen), which hid Play's glow and HUD's grid, and A2's composer pill's
+// 21 pt corners, which HUD's TYPE sheet draws square (shellGround and roundCorner below).
 //
 //   Studio  as built (src/cc/shell/chrome.ts, src/cc/calendar/chrome.ts): Title 1, tabs at Body 4
 //           500 over the accent rule, the live dot pulsing beside its word, the chosen day in ink
@@ -20,12 +20,19 @@
 //           tabs flush as HUD's, in Press Start 2P capitals, the chosen one in the palette's
 //           highlight over a 2 pt bar of it; the chosen day the highlight with its ink; the
 //           shell's grounds the page, opaque (Arcade's ground is the flat page colour)
+//   Candy   the head title Candy's section title (Outfit 600 20, CANDY-LAYOUT §7); the live word
+//           as glyph + word; the tabs in Nunito 800 at the button step, the chosen one in the
+//           accent over a 2 pt bar of it (TabStrip draws no fill: the kit's accent pill is a
+//           foundation gap); the chosen day the accent with its ink; the shell's grounds the page,
+//           opaque (Candy's ground on a shared screen is the flat page colour)
 //
 // Under a look Studio's --accent is the consequence colour, never the look's accent (core look-kit
 // studio-tokens.ts, D-REVIEW F9); the look's accent is --primary. So a mark (the tab's rule, a day's
 // dot) takes the style's accent: --accent in Studio, --primary in Play and HUD. Arcade's palette
 // puts its highlight, the menus' current row, on --accent (tokens/arcade.ts ARCADE_ROLES), so its
-// marks keep --accent. Words of consequence (needs you, overdue, a raised priority) keep --accent,
+// marks keep --accent. Candy's palette puts its accent's text colour (AA on the page and the
+// windows) on --primary and its chip on --accent (tokens/candy.ts CANDY_ROLES), so its marks take
+// --primary. Words of consequence (needs you, overdue, a raised priority) keep --accent,
 // as the web paints them.
 
 import type { LiveStatus } from '../../api/live-events';
@@ -38,6 +45,7 @@ import { ARCADE_DRESS_COPY, HUD_CORE_COPY } from '../strings';
 import type { StyleRadii } from '../tokens/radii';
 import type { ColourName, Colours } from '../tokens/types';
 import type { TypeStyle } from '../type';
+import type { TitleRole } from '../typeface/types';
 import type { Dress, GroundKind } from './dress';
 import type { GlyphStatus } from './status-glyphs';
 
@@ -86,6 +94,7 @@ const MARK: Readonly<Record<Layout, ColourName>> = Object.freeze({
   play: 'primary',
   hud: 'primary',
   arcade: 'accent', // the palette's highlight (ARCADE_ROLES: accent is hl)
+  candy: 'primary', // the accent's text colour (CANDY_ROLES: accent is the chip)
 });
 
 /** The token a mark (a tab's rule, a day's dot) takes: the style's accent. */
@@ -120,9 +129,19 @@ export function arcadeShellRuns(title: string): readonly TitleRun[] {
   ]);
 }
 
-/** The head's title: as built in Studio, the screen slot in Play (Arcade: after its ▶), HUD's brand line. */
+/** Candy's section title (candy-type.ts CANDY_TITLES: Title 3 is Outfit 600 20). */
+const CANDY_SECTION_TITLE: TitleRole = 'title3';
+
+/**
+ * The head's title: as built in Studio, the screen slot in Play (Arcade: after its ▶), HUD's brand
+ * line, Candy's section title.
+ */
 export function shellTitle(style: ResolvedStyle, title: string): ShellTitle {
   const plain = Object.freeze([{ text: title, accent: false }]);
+  if (style.layout === 'candy') {
+    const face = style.type.title(CANDY_SECTION_TITLE);
+    return Object.freeze({ face, runs: plain, accessibilityLabel: title });
+  }
   if (style.layout === 'hud') {
     const face = style.type.display('brand');
     return Object.freeze({ face, runs: HUD_SHELL_RUNS, accessibilityLabel: title });
@@ -149,9 +168,11 @@ function shellTabs(style: ResolvedStyle, dress: Dress): ShellTabs {
       stripPaddingX: spacing[HUD_TABS.stripPaddingX],
     };
   }
+  const candy = style.layout === 'candy';
   return {
-    face: null,
-    active: 'foreground',
+    // Candy's tab word is its button face, the chosen one in the accent (the mark)
+    face: candy ? controlLabel(style, dress, TAB_STRIP.level) : null,
+    active: candy ? rule : 'foreground',
     rest: 'mutedForeground',
     rule,
     gap: spacing[TAB_STRIP.gap],
@@ -169,13 +190,17 @@ export function shellDress(style: ResolvedStyle, dress: Dress): ShellDress {
   });
 }
 
-/** The grounds that draw nothing over the screen's own colour: Studio's plain, Arcade's page. */
-const FLAT_GROUNDS: ReadonlySet<GroundKind> = new Set<GroundKind>(['plain', 'arcade-page']);
+/** The grounds that draw nothing over the screen's own colour: Studio's plain, Arcade's, Candy's page. */
+const FLAT_GROUNDS: ReadonlySet<GroundKind> = new Set<GroundKind>([
+  'plain',
+  'arcade-page',
+  'candy-page',
+]);
 
 /**
  * A shell surface's ground (the tabs, the tab's screen): its own colour on a flat ground (Studio's
- * plain, Arcade's page, where it is the page's colour); clear over Play's glow and HUD's grid, so
- * the style's ground runs under the head, the tabs and the tab's screen as it does on every other
+ * plain, Arcade's and Candy's page, where it is the page's colour); clear over Play's glow and
+ * HUD's grid, so the style's ground runs under the head, the tabs and the tab's screen as it does on every other
  * screen (the Screen primitive draws it).
  */
 export function shellGround(dress: Dress, own: string): string {
@@ -183,7 +208,7 @@ export function shellGround(dress: Dress, own: string): string {
 }
 
 /**
- * A corner that rounds fully where the style rounds things (Studio and Play: the radius given)
+ * A corner that rounds fully where the style rounds things (Studio, Play, Candy: the radius given)
  * and squares where it rounds nothing (HUD's and Arcade's full radius is 0).
  */
 export function roundCorner(radius: number, radii: Pick<StyleRadii, 'full'>): number {

@@ -17,16 +17,17 @@ import {
 } from '../scale';
 import { STUDIO_SLOT_ROLES } from '../studio-type';
 
-/** Every source, per layout: Studio and Arcade have no font knob, Play and HUD one per font. */
+/** Every source, per layout: Studio, Arcade and Candy have no font knob, Play and HUD one per font. */
 const SOURCES: readonly TypeSource[] = [
   { layout: 'studio' },
   ...TYPE_STYLE_KEYS.map((font) => ({ layout: 'play' as const, font })),
   ...HUD_FONT_KEYS.map((font) => ({ layout: 'hud' as const, font })),
   { layout: 'arcade' },
+  { layout: 'candy' },
 ];
 
 const ASKED_SIZES = [8, 10, 10.5, 11, 12, 13, 15, 16, 19];
-const WEIGHTS = [400, 500, 600, 700] as const;
+const WEIGHTS = [400, 500, 600, 700, 800] as const;
 
 const nameOf = (source: TypeSource) =>
   'font' in source ? `${source.layout}/${source.font}` : source.layout;
@@ -62,6 +63,7 @@ describe('every style, font option and slot', () => {
     expect(layouts('play')).toHaveLength(TYPE_STYLE_KEYS.length);
     expect(layouts('hud')).toHaveLength(HUD_FONT_KEYS.length);
     expect(layouts('arcade')).toHaveLength(1);
+    expect(layouts('candy')).toHaveLength(1);
   });
 
   it('is never below 11 pt (D38), even when a layout asks for less', () => {

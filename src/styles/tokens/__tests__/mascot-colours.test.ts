@@ -4,7 +4,13 @@
 import { describe, expect, it } from 'vitest';
 
 import { SPRITE_COLOURS } from '../arcade-catalogue';
-import { RING_GLOW_ALPHA, arcadeSpriteColours, ringColours } from '../mascot-colours';
+import { AUTO_COLOURS } from '../candy-catalogue';
+import {
+  RING_GLOW_ALPHA,
+  arcadeSpriteColours,
+  candyAutoColour,
+  ringColours,
+} from '../mascot-colours';
 
 describe('ringColours', () => {
   it('glows at 0.35 of the ring colour', () => {
@@ -30,5 +36,19 @@ describe('arcadeSpriteColours', () => {
     }
     expect(arcadeSpriteColours({ palette: 'handheld' })).toBe(SPRITE_COLOURS.shades);
     expect(arcadeSpriteColours({ palette: 'overworld' }).s).toBe('#D86A2B');
+  });
+});
+
+describe('candyAutoColour', () => {
+  it("is Auto's colour itself when opaque, and at a stop's alpha otherwise", () => {
+    expect(candyAutoColour('bodyA')).toBe(AUTO_COLOURS.bodyA);
+    expect(candyAutoColour('visorB', 1)).toBe('#24102F');
+    expect(candyAutoColour('gloss', 0.6)).toBe('rgba(255,255,255,0.6)');
+    expect(candyAutoColour('eyeGlow', 0)).toBe('rgba(255,179,224,0)');
+  });
+
+  it('clamps an alpha outside 0-1', () => {
+    expect(candyAutoColour('cyan', 1.4)).toBe(AUTO_COLOURS.cyan);
+    expect(candyAutoColour('cyan', -0.2)).toBe('rgba(120,205,255,0)');
   });
 });

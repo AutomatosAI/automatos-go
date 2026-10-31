@@ -214,7 +214,7 @@ describe('app.json embeds every bundled font (US-002d, K6)', () => {
   };
 
   it('the expo-font plugin lists exactly the TTFs on disk', () => {
-    expect(fontFilesOnDisk()).toHaveLength(23);
+    expect(fontFilesOnDisk()).toHaveLength(28);
     expect([...(fonts.fonts ?? [])].sort()).toEqual(fontFilesOnDisk());
   });
 

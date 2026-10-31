@@ -13,12 +13,14 @@ export const STYLE_COPY = Object.freeze({
     play: 'Play',
     hud: 'HUD',
     arcade: 'Arcade',
+    candy: 'Candy',
   }),
   taglines: Object.freeze<Record<BuiltInStyleId, string>>({
     studio: 'Cream paper or Studio Dark',
     play: 'Auto and the Ember look',
     hud: 'Voice first, glow and grid',
     arcade: 'Your agents as a party, Auto in the dialogue box',
+    candy: 'Bright, glossy and round',
   }),
 });
 
@@ -34,7 +36,12 @@ export const PICKER_COPY = Object.freeze({
   themeLabel: (name: string, version: string, selected: boolean) =>
     selected ? `${name} theme, version ${version}, selected` : `${name} theme, version ${version}`,
   /** The link from a style card to its look page (Studio's look is the scheme, on its card). */
-  lookLinks: Object.freeze({ play: 'Make it yours', hud: 'Looks', arcade: 'Options' }),
+  lookLinks: Object.freeze({
+    play: 'Make it yours',
+    hud: 'Looks',
+    arcade: 'Options',
+    candy: 'Make it sweet',
+  }),
   /** Studio's Light / Dark / System control and its name for VoiceOver. */
   schemes: Object.freeze<Record<ThemeChoice, string>>({
     light: 'Light',
@@ -81,6 +88,7 @@ export const LOOK_SYNC_COPY = Object.freeze({
   localOnly: 'Kept on this phone only',
   playNotInstalled: 'Install Play in Studio to keep your looks in step with the web.',
   arcadeNotInstalled: "Arcade isn't installed in this workspace, so your looks stay on this phone.",
+  candyNotInstalled: "Candy isn't installed in this workspace, so your looks stay on this phone.",
 });
 
 /**

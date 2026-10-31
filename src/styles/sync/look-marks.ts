@@ -3,8 +3,9 @@
 // changed on the phone and not kept by the server yet (lookChanged, savedChanged), so a change made
 // offline is still sent after the app is closed and opened again, and the first meeting merges
 // once. Beside each theme's looks in the app's encrypted MMKV store (styles.play.looks.sync,
-// styles.hud.looks.sync, styles.arcade.looks.sync), through themes/cache.ts storedPart. Pure over
-// the KeyValueStorage port; anything that does not fit reads as no marks.
+// styles.hud.looks.sync, styles.arcade.looks.sync, styles.candy.looks.sync), through
+// themes/cache.ts storedPart. Pure over the KeyValueStorage port; anything that does not fit reads
+// as no marks.
 
 import { z } from 'zod';
 
@@ -13,13 +14,14 @@ import { NO_MARKS, type LookMarks } from '../play/look-sync';
 import { storedPart, type StoredPart } from '../themes/cache';
 
 /** The themes whose looks the phone keeps in step with the web. */
-export const LOOK_THEME_KEYS = Object.freeze(['play', 'hud', 'arcade'] as const);
+export const LOOK_THEME_KEYS = Object.freeze(['play', 'hud', 'arcade', 'candy'] as const);
 export type LookThemeKey = (typeof LOOK_THEME_KEYS)[number];
 
 export const LOOK_MARKS_KEYS: Readonly<Record<LookThemeKey, string>> = Object.freeze({
   play: 'styles.play.looks.sync',
   hud: 'styles.hud.looks.sync',
   arcade: 'styles.arcade.looks.sync',
+  candy: 'styles.candy.looks.sync',
 });
 
 /** The stored shape's version; a value written under any other version reads as no marks. */
@@ -64,5 +66,10 @@ export function lookMarksParts(storage: () => KeyValueStorage): LookMarksParts {
       serialise: serialiseLookMarks,
       parse: parseLookMarks,
     });
-  return Object.freeze({ play: part('play'), hud: part('hud'), arcade: part('arcade') });
+  return Object.freeze({
+    play: part('play'),
+    hud: part('hud'),
+    arcade: part('arcade'),
+    candy: part('candy'),
+  });
 }

@@ -8,11 +8,13 @@ import { rgba } from '../../../core/web/lib/look-kit/css';
 import { EMBER } from '../../../core/frozen/lib/looks/presets';
 import { HUD_PRESET_LOOKS } from '../../hud/look-schema';
 import { ARCADE_DEFAULT_PICKS, arcadeVars } from '../arcade';
+import { CANDY_DEFAULT_PICKS, candyVars } from '../candy';
 import { hudVars } from '../hud';
 import { playVars } from '../play';
 import {
   PREVIEW_ALPHAS,
   arcadePreviewColours,
+  candyPreviewColours,
   autoRingGlow,
   coreRingColours,
   glowFade,
@@ -63,6 +65,22 @@ describe("Arcade's preview", () => {
       shadow: 'rgba(255,82,217,.28)',
       text: vars.tx,
       cursor: vars.ac,
+    });
+    expect(Object.isFrozen(colours)).toBe(true);
+  });
+});
+
+describe("Candy's preview", () => {
+  it("paints the small Today in the palette's own colours", () => {
+    const vars = candyVars({ ...CANDY_DEFAULT_PICKS, palette: 'lilac' });
+    const colours = candyPreviewColours(vars);
+    expect(colours).toEqual({
+      screen: '#F3F1FF',
+      window: vars.win,
+      line: 'rgba(30,26,62,.09)',
+      text: vars.text,
+      figure: '#FFFFFF',
+      accent: '#5B35D5',
     });
     expect(Object.isFrozen(colours)).toBe(true);
   });

@@ -1,14 +1,15 @@
-// What the phone can be painted as (PRD-001 §4.6, §4.6.1, D54, D58): four built-in styles, each a layout
-// built into the app plus a look, and the installed marketplace themes with a mobile block, which
-// paint the Studio layout with their tokens, fonts and mascot (themes never bring a layout in v1).
+// What the phone can be painted as (PRD-001 §4.6, §4.6.1, §4.6.2, D54, D58): five built-in styles,
+// each a layout built into the app plus a look, and the installed marketplace themes with a mobile
+// block, which paint the Studio layout with their tokens, fonts and mascot (themes never bring a
+// layout in v1).
 // The phone's own choice may also be 'Same as Studio' (PhoneChoice), the default. Pure types and
 // helpers; choice.ts reads and writes a choice, registry.ts lists the styles.
 
-export const BUILT_IN_STYLE_IDS = ['studio', 'play', 'hud', 'arcade'] as const;
+export const BUILT_IN_STYLE_IDS = ['studio', 'play', 'hud', 'arcade', 'candy'] as const;
 export type BuiltInStyleId = (typeof BUILT_IN_STYLE_IDS)[number];
 
 /** The layouts the app builds in; a style or a theme picks one, never brings one. */
-export const LAYOUTS = ['studio', 'play', 'hud', 'arcade'] as const;
+export const LAYOUTS = ['studio', 'play', 'hud', 'arcade', 'candy'] as const;
 export type Layout = (typeof LAYOUTS)[number];
 
 export type StyleChoice =

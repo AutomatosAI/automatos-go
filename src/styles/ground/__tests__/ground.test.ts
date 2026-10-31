@@ -2,7 +2,9 @@
 // (vitest runs no React Native renderer): the ground under the content, the scanlines over it, the
 // status bar in the style's tone; the keyboard in Play's, HUD's and Arcade's tone, the window's
 // under Studio. Arcade stands on its palette's page and draws nothing over the content (its
-// scanlines live inside its windows, never over the AI label).
+// scanlines live inside its windows, never over the AI label). Candy stands on its palette's page,
+// flat (the band and the aura are its home's and its edges'), the keyboard and the status bar in
+// the palette's tone (Night bloom dark, the others light).
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -11,10 +13,13 @@ import { describe, expect, it } from 'vitest';
 
 import { EMBER, PRESETS } from '../../../core/frozen/lib/looks/presets';
 import { ARCADE_PRESET_LOOKS } from '../../arcade/look-schema';
+import { CANDY_PRESET_LOOKS } from '../../candy/look-schema';
 import { dressOf } from '../../dress/dress';
 import {
   ARCADE,
   ARCADE_STYLES,
+  CANDY,
+  CANDY_STYLES,
   HUD,
   HUD_STYLES,
   PLAY,
@@ -59,6 +64,15 @@ describe('groundPlan', () => {
     expect(planFor(ARCADE, 'chat')).toEqual(planFor(ARCADE, 'lost'));
   });
 
+  it("stands every Candy look on its palette's page, flat, on every shared screen", () => {
+    for (const style of CANDY_STYLES) {
+      const page = style.candy?.page;
+      expect(page).toBe(style.tokens.colours.background);
+      expect(planFor(style)).toEqual({ kind: 'candy-page', page });
+    }
+    expect(planFor(CANDY, 'chat')).toEqual(planFor(CANDY, 'lost'));
+  });
+
   it('stops the glow crossfade under Reduce Motion', () => {
     const still = { ...PLAY, motion: { loops: false, reason: 'reduce-motion' } } as const;
     const plan = planFor(still, 'chat');
@@ -72,6 +86,8 @@ describe('groundPlan', () => {
     });
     const plan = groundPlan({ style: studio, ground: 'arcade-page', kind: 'page', state: 'idle' });
     expect(plan).toEqual({ kind: 'plain' });
+    const candy = groundPlan({ style: studio, ground: 'candy-page', kind: 'page', state: 'idle' });
+    expect(candy).toEqual({ kind: 'plain' });
   });
 });
 
@@ -90,6 +106,13 @@ describe('statusBarStyle', () => {
       expect(statusBarStyle(style.tone)).toBe(light ? 'dark' : 'light');
     }
   });
+
+  it("follows Candy's palette: light content on Night bloom, dark on Blush and Lilac", () => {
+    for (const style of CANDY_STYLES) {
+      const dark = style.candyLook?.palette === 'nightbloom';
+      expect(statusBarStyle(style.tone)).toBe(dark ? 'light' : 'dark');
+    }
+  });
 });
 
 describe('keyboardAppearanceFor', () => {
@@ -99,6 +122,7 @@ describe('keyboardAppearanceFor', () => {
     systemScheme: SystemScheme,
     playLook = EMBER,
     arcadeLook = ARCADE_PRESET_LOOKS[0],
+    candyLook = CANDY_PRESET_LOOKS[0],
   ) =>
     resolveStyle({
       choice,
@@ -107,6 +131,7 @@ describe('keyboardAppearanceFor', () => {
       playLook,
       hudLook: HUD_DEFAULT_LOOK,
       arcadeLook,
+      candyLook,
       themePaint: null,
       reduceMotion: false,
     });
@@ -155,6 +180,17 @@ describe('keyboardAppearanceFor', () => {
     }
     for (const style of ARCADE_STYLES) expect(keyboardAppearanceFor(style)).toBe(style.tone);
   });
+
+  it("gives every Candy preset its palette's tone: Night bloom dark, the others light, whatever Studio says", () => {
+    for (const look of CANDY_PRESET_LOOKS) {
+      const expected = look.palette === 'nightbloom' ? 'dark' : 'light';
+      for (const [studio, system] of SCHEMES) {
+        const style = resolve(builtinChoice('candy'), studio, system, EMBER, undefined, look);
+        expect(keyboardAppearanceFor(style)).toBe(expected);
+      }
+    }
+    for (const style of CANDY_STYLES) expect(keyboardAppearanceFor(style)).toBe(style.tone);
+  });
 });
 
 describe("the app's text inputs", () => {
@@ -184,6 +220,11 @@ describe('ScreenGround and ScreenOverlay', () => {
     expect(source).toContain("if (plan.kind === 'arcade-page') return <ArcadePage page={plan.page} />;");
     expect(overlay).not.toContain('arcade');
     expect(overlay).toContain("if (plan.kind === 'hud-grid')");
+  });
+
+  it("draw Candy's page under the content and nothing of Candy's over it", () => {
+    expect(source).toContain("if (plan.kind === 'candy-page') return <CandyPage page={plan.page} />;");
+    expect(overlay).not.toContain('candy');
   });
 });
 

@@ -5,11 +5,15 @@
 // text at 0.1) and Not running's command box — Ember's #080706 on Graphite, the ground shaded
 // toward black on Play's and HUD's dark grounds and the raised surface everywhere else, under a
 // 1 pt line of the text at 0.16. Arcade draws its edge screens inside a window, so the window is
-// its ground and the command box is the page sunk into it (the kit's '.previewSay').
+// its ground and the command box is the page sunk into it (the kit's '.previewSay'). Candy draws
+// them in a window too (CANDY-LAYOUT §7): the window its ground, the chip the command box, Candy's
+// red the error.
 
 import { mixHex } from '../../core/web/lib/look-kit/contrast';
 import { rgba } from '../../core/web/lib/look-kit/css';
 import type { ArcadeVars } from './arcade';
+import type { CandyVars } from './candy';
+import type { Colours } from './types';
 
 /** Ember's alphas and mixes, each named for what it paints. */
 export const EDGE_ALPHAS = Object.freeze({
@@ -64,6 +68,20 @@ export function arcadeEdgeSource(
     text: vars.tx,
     surface: vars.page,
     error: vars.hp,
+    shade: false,
+  });
+}
+
+/** Candy's edge ground: the window, its text, the chip as the command box, its red the error. */
+export function candyEdgeSource(
+  vars: Pick<CandyVars, 'win' | 'text' | 'chip'>,
+  colours: Pick<Colours, 'destructive'>,
+): EdgeColourSource {
+  return Object.freeze({
+    ground: vars.win,
+    text: vars.text,
+    surface: vars.chip,
+    error: colours.destructive,
     shade: false,
   });
 }

@@ -1,15 +1,18 @@
 // The themes whose looks the phone keeps in step with the web (US-017d, D-PHONE-CHOICE): Play
 // ('automatos/play', the vendored validateLook), HUD ('automatos/hud', validateLook with
 // HUD_LOOK_SPEC; Gerard, 24 Oct: 'when you change on web or local the mobile picks up and changes
-// also') and Arcade ('automatos/arcade', validateLook with ARCADE_LOOK_SPEC; D-ARC-3). Each binds
-// its rules to its part of the style store: Play's looks (play/look-store.ts), HUD's
-// (hud/look-store.ts) and Arcade's (arcade/look-store.ts). Where the theme is not installed in the
+// also'), Arcade ('automatos/arcade', validateLook with ARCADE_LOOK_SPEC; D-ARC-3) and Candy
+// ('automatos/candy', validateLook with CANDY_LOOK_SPEC; D-CAN-3). Each binds its rules to its part
+// of the style store: Play's looks (play/look-store.ts), HUD's (hud/look-store.ts), Arcade's
+// (arcade/look-store.ts) and Candy's (candy/look-store.ts). Where the theme is not installed in the
 // workspace (404) its looks stay on the phone: Play's look page says how to change that, Arcade's
-// says the looks stay on this phone, HUD says nothing.
+// and Candy's say the looks stay on this phone, HUD says nothing.
 
 import type { Look } from '../../core/frozen/lib/looks/types';
 import { ARCADE_LOOK_RULES } from '../arcade/arcade-looks';
 import type { ArcadeLook } from '../arcade/look-schema';
+import { CANDY_LOOK_RULES } from '../candy/candy-looks';
+import type { CandyLook } from '../candy/look-schema';
 import { HUD_LOOK_RULES } from '../hud/hud-looks';
 import type { HudLook } from '../hud/look-schema';
 import type { LookDoc, LookRules, LookSet } from '../play/look-sync';
@@ -53,9 +56,18 @@ export const ARCADE_LOOK_THEME: LookTheme<ArcadeLook> = Object.freeze({
   notInstalled: LOOK_SYNC_COPY.arcadeNotInstalled,
 });
 
+export const CANDY_LOOK_THEME: LookTheme<CandyLook> = Object.freeze({
+  key: 'candy',
+  rules: CANDY_LOOK_RULES,
+  select: (state: StyleState) => state.candyLooks,
+  apply: (store: StyleStore, looks: LookSet<CandyLook>) => store.setCandyLooks(looks),
+  notInstalled: LOOK_SYNC_COPY.candyNotInstalled,
+});
+
 /** Each theme's words for a look page while it is not installed. */
 export const NOT_INSTALLED_COPY: Readonly<Record<LookThemeKey, string | null>> = Object.freeze({
   play: PLAY_LOOK_THEME.notInstalled,
   hud: HUD_LOOK_THEME.notInstalled,
   arcade: ARCADE_LOOK_THEME.notInstalled,
+  candy: CANDY_LOOK_THEME.notInstalled,
 });

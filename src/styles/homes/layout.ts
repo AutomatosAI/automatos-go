@@ -1,8 +1,8 @@
 // The homes per style (D54, US-016k), pure: which home a layout draws, and when a home shows First
 // open (PRD-001 §4.7 Edges, US-017f). Every home talks to the same Auto over A2's one thread
 // (src/chat/controller): Studio is A2's home as built, Play the Companion chat (Ember 01-02), HUD
-// its voice-first core, Arcade the handheld (US-022g, D-ARC-6). An installed theme paints the
-// Studio layout, so it has Studio's home.
+// its voice-first core, Arcade the handheld (US-022g, D-ARC-6), Candy its Today, Chat, Shelf and Team
+// (US-023g, D-CAN-6). An installed theme paints the Studio layout, so it has Studio's home.
 //
 // First open is the home before the first message: its conversation is a draft with nothing in it
 // (no chat, no saved message, no turn on screen, no failure), the rule A2's menu reads for "this
@@ -12,13 +12,14 @@
 import type { ThreadState } from '../../chat/controller/thread';
 import type { Layout } from '../registry/style-id';
 
-export type HomeKind = 'studio' | 'play' | 'hud' | 'arcade';
+export type HomeKind = 'studio' | 'play' | 'hud' | 'arcade' | 'candy';
 
 const HOME_OF: Readonly<Record<Layout, HomeKind>> = Object.freeze({
   studio: 'studio',
   play: 'play',
   hud: 'hud',
   arcade: 'arcade',
+  candy: 'candy',
 });
 
 /** The home the resolved style's layout draws. */

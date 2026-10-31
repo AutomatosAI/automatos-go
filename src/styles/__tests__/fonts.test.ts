@@ -114,12 +114,12 @@ describe('bundled TTFs (US-002d, K6)', () => {
 });
 
 describe('FONT_FACES', () => {
-  it('bundles the ten families (D57, D-ARC-4)', () => {
+  it('bundles the twelve families (D57, D-ARC-4, D-CAN-4)', () => {
     expect(new Set(faces.map((face) => face.family))).toEqual(
       new Set(Object.values(FONT_FAMILIES)),
     );
-    expect(Object.keys(FONT_FAMILIES)).toHaveLength(10);
-    expect(familyDirs).toHaveLength(10);
+    expect(Object.keys(FONT_FAMILIES)).toHaveLength(12);
+    expect(familyDirs).toHaveLength(12);
   });
 
   it('bundles a face for every weight the type scale and the HUD presets use', () => {
@@ -190,6 +190,57 @@ describe("Arcade's faces (US-022d, D-ARC-4)", () => {
 
   it('carries each family’s OFL beside its fonts', () => {
     for (const dir of ['press-start-2p', 'pixelify-sans']) {
+      expect(readdirSync(path.join(FONTS_DIR, dir))).toContain('OFL.txt');
+      expect(readFileSync(path.join(FONTS_DIR, dir, 'OFL.txt'), 'utf8')).toContain(
+        'SIL Open Font License, Version 1.1',
+      );
+    }
+  });
+});
+
+/** Candy's files (D-CAN-4): each one's sha256 as SOURCES.md records it; Outfit-SemiBold's and
+ * Nunito-Regular's are the design kit's mobile/candy-title.ttf and candy-body.ttf at 3920359d5,
+ * byte for byte. */
+const CANDY_FILES = {
+  'outfit/Outfit-SemiBold.ttf': '8900df5726b5a6f23e723594f11d5ea27e695bd85c884f18d88ed080544fe205',
+  'outfit/Outfit-Bold.ttf': '49dcdf653a004a2575b3de649f5e4c549d774fecddf317812330edd0ad70685a',
+  'outfit/OFL.txt': 'c676351bf8576b9aba743cd5eaa8c0e7ee0d51f805d720447b4df4ddb6a2e416',
+  'nunito/Nunito-Regular.ttf': '9ecbdba35fa74f10a1a916c31649b802a12deb9e66c7b1fe4650afcfd4d16971',
+  'nunito/Nunito-Bold.ttf': '1a025dfce6e6e03bbe31ba82277ec5ed96df8b8dd58b3df6267269490b90b1dc',
+  'nunito/Nunito-ExtraBold.ttf': 'c5776505c7b3df3c3ca763477b795d6bbc6517760bede0462ab77d1fb44954a6',
+  'nunito/OFL.txt': '580df76c95a1ec5ab878ceb25bb3d85c6a076804e9c970c8c6972aea775fdf65',
+} as const;
+
+describe("Candy's faces (US-023d, D-CAN-4)", () => {
+  it('bundles Outfit 600 and 700 and Nunito 400, 700 and 800, each under its PostScript name', () => {
+    expect(fontFace(FONT_FAMILIES.outfit, 600)?.file).toBe('outfit/Outfit-SemiBold.ttf');
+    expect(fontFace(FONT_FAMILIES.outfit, 700)?.file).toBe('outfit/Outfit-Bold.ttf');
+    expect(fontFace(FONT_FAMILIES.nunito, 400)?.file).toBe('nunito/Nunito-Regular.ttf');
+    expect(fontFace(FONT_FAMILIES.nunito, 700)?.file).toBe('nunito/Nunito-Bold.ttf');
+    expect(fontFace(FONT_FAMILIES.nunito, 800)?.postscriptName).toBe('Nunito-ExtraBold');
+    expect(fontFace(FONT_FAMILIES.outfit, 400)).toBeUndefined();
+    expect(fontFace(FONT_FAMILIES.nunito, 600)).toBeUndefined();
+  });
+
+  it('holds every new file to its sha256, recorded in SOURCES.md', () => {
+    const sources = readFileSync(path.join(FONTS_DIR, 'SOURCES.md'), 'utf8');
+    for (const [file, hash] of Object.entries(CANDY_FILES)) {
+      expect({ file, hash: sha256(file) }).toEqual({ file, hash });
+      expect({ file, recorded: sources.includes(hash) }).toEqual({ file, recorded: true });
+    }
+  });
+
+  it("records Google Fonts' static instances and the licences' commits", () => {
+    const sources = readFileSync(path.join(FONTS_DIR, 'SOURCES.md'), 'utf8');
+    expect(sources).toMatch(/^The twelve families/m);
+    expect(sources).toContain('fonts.gstatic.com/s/outfit/v15/');
+    expect(sources).toContain('fonts.gstatic.com/s/nunito/v32/');
+    expect(sources).toContain('29e94d990c84a54f83644e7c43f42dfc9e1a4ac7');
+    expect(sources).toContain('a5bd0ea86b2576f86672aab557a6024d272187a5');
+  });
+
+  it('carries each family’s OFL beside its fonts', () => {
+    for (const dir of ['outfit', 'nunito']) {
       expect(readdirSync(path.join(FONTS_DIR, dir))).toContain('OFL.txt');
       expect(readFileSync(path.join(FONTS_DIR, dir, 'OFL.txt'), 'utf8')).toContain(
         'SIL Open Font License, Version 1.1',

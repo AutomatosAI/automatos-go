@@ -6,6 +6,7 @@
 // Studio in the browser where the phone has no screen (the web's needs-you-widget.tsx targets:
 // ticketRowHref and askRowHref, mapped by appRouteForWebLink). Questions open the Questions tab;
 // tickets in review, stuck or failed open the ticket sheet; a social post its approval (D45).
+// Each card also carries its row's agent and time as served (Candy's Today names both, US-023g).
 // FOUNDATION GAP: needs-you has no social-post kind (src/api/needs-you.ts; the server's
 // services/needs_you.py at the pin lists none), so `social` is the strip's own input and home
 // passes none until the foundation parses one.
@@ -52,6 +53,10 @@ export type StripCard = {
   readonly target: WebLinkTarget | null;
   readonly accessibilityLabel: string;
   readonly accessibilityHint: string | undefined;
+  /** The agent the row names (its agent_name, trimmed), or null when it names none. */
+  readonly agent: string | null;
+  /** When the row started waiting (the server's ISO time), or null when it gives none. */
+  readonly at: string | null;
 };
 
 export type NeedsStrip = {
@@ -80,9 +85,11 @@ type CardFacts = {
   readonly title: string;
   readonly detail: string | null;
   readonly target: WebLinkTarget | null;
+  /** Who and when, from the row (Candy's Today names both); none for a social post. */
+  readonly row?: Pick<NeedsYouTicketRow, 'agent_name' | 'at'>;
 };
 
-function card({ key, kind, title, detail, target }: CardFacts): StripCard {
+function card({ key, kind, title, detail, target, row }: CardFacts): StripCard {
   const { meta: kindWord, word } = NEEDS_COPY.kinds[kind];
   const meta = detail ? `${kindWord}${META_SEPARATOR}${detail}` : kindWord;
   return {
@@ -95,6 +102,8 @@ function card({ key, kind, title, detail, target }: CardFacts): StripCard {
     target,
     accessibilityLabel: joinLabel(word, title, meta),
     accessibilityHint: target && 'external' in target ? NEEDS_COPY.opensStudio : undefined,
+    agent: row?.agent_name?.trim() || null,
+    at: row?.at ?? null,
   };
 }
 
@@ -115,6 +124,7 @@ function ticketCards(
       title: row.title?.trim() || NEEDS_COPY.untitledTicket,
       detail: row.number ?? row.mission_number,
       target: ticketTarget(row.ticket_id),
+      row,
     }),
   );
 }
@@ -129,6 +139,7 @@ function questionCard(row: NeedsYouAskRow): StripCard {
     title,
     detail: row.number,
     target: { app: routes.cc.questions },
+    row,
   });
 }
 
@@ -141,6 +152,7 @@ function approvalCard(row: NeedsYouAskRow, webUrl: string | undefined): StripCar
       title: row.mission_title?.trim() || row.title?.trim() || NEEDS_COPY.untitledPlan,
       detail: row.mission_number ?? row.number,
       target: appRouteForWebLink(missionHref(row.id), webUrl),
+      row,
     });
   }
   return card({
@@ -149,6 +161,7 @@ function approvalCard(row: NeedsYouAskRow, webUrl: string | undefined): StripCar
     title: row.title?.trim() || NEEDS_COPY.untitledApproval,
     detail: row.number,
     target: ticketTarget(row.ticket_id) ?? appRouteForWebLink(GOVERNANCE_HREF, webUrl),
+    row,
   });
 }
 

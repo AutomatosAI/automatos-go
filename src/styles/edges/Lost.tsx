@@ -5,7 +5,9 @@
 // wandered off.' (the screen slot, 44/0.95 in Play), "Auto looked everywhere. It's not here." and
 // one way out: Back to chat (48, full width) → routes.home, through the gate. Arcade (US-022i): the
 // '404' alone on the page (its lostNumber slot, sized for the screen, not a window), then a window
-// with Auto's sprite lost at its head and the kit's own lines, 'You wandered off the map'.
+// with Auto's sprite lost at its head and the kit's own lines, 'You wandered off the map'. Candy
+// (US-023l) the same way: the '404' alone (Outfit 600 180), then its window with the band across
+// its top, Auto lost on it with his state word, and its kit's lines, 'This page isn't here'.
 
 import { useRouter } from 'expo-router';
 import { useCallback, type ReactNode } from 'react';
@@ -15,8 +17,10 @@ import { routes } from '../../navigation/routes';
 import { Screen, Text } from '../../ui';
 import { MASCOT_SIZES } from '../mascot/geometry';
 import { Mascot } from '../mascot/Mascot';
+import type { Layout } from '../registry/style-id';
 import { useStyle } from '../theme';
 import { ArcadeEdgeWindow } from './ArcadeEdgeWindow';
+import { CandyEdgeWindow } from './CandyEdgeWindow';
 import { LOST_EDGE, lostEdge, type LostEdge } from './edges';
 import { EDGE_METRICS } from './metrics';
 import { EdgeAction, EdgeActions, EdgeBrand, useEdgePaint } from './parts';
@@ -26,14 +30,20 @@ export type LostProps = {
   readonly onBack?: () => void;
 };
 
-/** The '404' behind, Auto lost at its foot; in Arcade the number alone (his sprite is in the window). */
+/** The styles whose Auto is in Lost's window, so the '404' stands alone on the page. */
+const WINDOWED: ReadonlySet<Layout> = new Set<Layout>(['arcade', 'candy']);
+
+/**
+ * The '404' behind, Auto lost at its foot; in Arcade and Candy the number alone (Auto is in the
+ * window).
+ */
 function LostNumber() {
   const style = useStyle();
   const paint = useEdgePaint();
-  const arcade = style.layout === 'arcade';
+  const windowed = WINDOWED.has(style.layout);
   return (
     <View
-      style={[styles.stage, arcade ? null : { height: EDGE_METRICS.lostStage }]}
+      style={[styles.stage, windowed ? null : { height: EDGE_METRICS.lostStage }]}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
@@ -43,7 +53,7 @@ function LostNumber() {
       >
         {LOST_EDGE.number}
       </NativeText>
-      {arcade ? null : (
+      {windowed ? null : (
         <View style={styles.auto} pointerEvents="none">
           <Mascot size={MASCOT_SIZES.lost} state="lost" />
         </View>
@@ -72,9 +82,20 @@ function LostWords({ words }: { readonly words: LostEdge }) {
   );
 }
 
-/** Arcade's window round the words, Auto's sprite lost at its head; the words alone elsewhere. */
+/**
+ * Arcade's window round the words, Auto's sprite lost at its head; Candy's, Auto lost on its band;
+ * the words alone elsewhere.
+ */
 function LostFrame({ children }: { readonly children: ReactNode }) {
-  if (useStyle().layout !== 'arcade') return <>{children}</>;
+  const { layout } = useStyle();
+  if (layout === 'candy') {
+    return (
+      <CandyEdgeWindow state="lost" centred>
+        {children}
+      </CandyEdgeWindow>
+    );
+  }
+  if (layout !== 'arcade') return <>{children}</>;
   return (
     <ArcadeEdgeWindow state="lost" centred>
       {children}

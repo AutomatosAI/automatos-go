@@ -195,6 +195,30 @@ describe('the needs strip: each row kind opens its own screen', () => {
   });
 });
 
+describe("each card carries its row's agent and time (US-023g)", () => {
+  it('names the agent, trimmed, and the time the row started waiting, as served', () => {
+    const cards = cardsOf(
+      answer(3, {
+        question: [askRow('grant', '1', { agent_name: '  Ledger ' })],
+        approval: [askRow('mission', 'm-1', { agent_name: null, at: null })],
+        stuck: [ticketRow(9, '#0009', 'Stuck')],
+      }),
+      [{ postId: 'p-1', title: 'Launch', channel: 'X' }],
+    );
+    expect(cards.map(({ kind, agent, at }) => ({ kind, agent, at }))).toEqual([
+      { kind: 'question', agent: 'Ledger', at: AT },
+      { kind: 'plan', agent: null, at: null },
+      { kind: 'social', agent: null, at: null },
+      { kind: 'stuck', agent: 'Ledger', at: AT },
+    ]);
+  });
+
+  it('names no agent for a blank name', () => {
+    const card = only(cardsOf(answer(1, { review: [{ ...ticketRow(4, '#0004', 'T'), agent_name: ' ' }] })));
+    expect(card.agent).toBeNull();
+  });
+});
+
 describe("the needs strip's count is the server's total (D26)", () => {
   it('heads the strip with the total, not the number of cards, and links to the Command Centre', () => {
     const strip = needsStrip(answer(9, { question: [askRow('grant', '1')] }), { webUrl: WEB });
