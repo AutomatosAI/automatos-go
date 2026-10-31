@@ -16,6 +16,7 @@
 // once it has one; not there for a viewer.
 // `empty` takes the thread's place while it is a draft with nothing in it (A5's First open on home).
 // Where discovery lists `brief`, a message carrying the day's brief draws the brief card (US-G06).
+// The thread opens at its focus message, the route's or the brief on open's (US-G03).
 
 import { useCallback, useMemo, type ReactNode } from 'react';
 
@@ -39,6 +40,7 @@ import { HomeHeader } from '../home/HomeHeader';
 import { menuHere } from '../home/menu';
 import { useMessageReport } from '../report/use-message-report';
 import type { ChatFile } from '../request';
+import { useThreadFocus } from '../use-thread-focus';
 import { retryInput, threadRows } from '../view-model';
 import { ChatFrame } from './ChatFrame';
 
@@ -53,12 +55,19 @@ export type ChatScreenProps = {
   readonly ticketId?: string | null;
   /** In the thread's place while it is a draft with nothing in it (home's First open); none by default. */
   readonly empty?: ReactNode;
+  /** The message the thread opens at (the chat route's focus param, PRD-268 US-G03); none by default. */
+  readonly focusMessageId?: string | null;
 };
 
-type ThreadProps = { readonly thread: ThreadView; readonly empty?: ReactNode };
+type ThreadProps = {
+  readonly thread: ThreadView;
+  readonly empty?: ReactNode;
+  readonly focusMessageId: string | null;
+};
 
-function Thread({ thread, empty }: ThreadProps) {
+function Thread({ thread, empty, focusMessageId }: ThreadProps) {
   const { state, send, settleCard, loadError, retry } = thread;
+  const { focus, settle } = useThreadFocus(state.chatId, focusMessageId);
   const follow = useFollowLink();
   const { report, sheet } = useMessageReport();
   const briefs = canBrief(useAppSession().discovery);
@@ -78,13 +87,16 @@ function Thread({ thread, empty }: ThreadProps) {
         onRetry={askAgain}
         onCard={settleCard}
         report={report}
+        focusMessageId={focus}
+        onFocused={settle}
       />
       <ReportSheet {...sheet} />
     </>
   );
 }
 
-export function ChatScreen({ chatId, above, onBack, ticketId = null, empty }: ChatScreenProps) {
+export function ChatScreen(props: ChatScreenProps) {
+  const { chatId, above, onBack, ticketId = null, empty, focusMessageId = null } = props;
   const opened = useThread(chatId);
   const discussion = useDiscussion(ticketId);
   const files = useAttachments();
@@ -127,7 +139,11 @@ export function ChatScreen({ chatId, above, onBack, ticketId = null, empty }: Ch
         </>
       }
     >
-      <Thread thread={thread} empty={ticketId === null ? empty : undefined} />
+      <Thread
+        thread={thread}
+        empty={ticketId === null ? empty : undefined}
+        focusMessageId={focusMessageId}
+      />
     </ChatFrame>
   );
 }

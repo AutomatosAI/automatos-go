@@ -50,15 +50,34 @@ export function StyleHome() {
   return <StyledHome key={kind} kind={kind} />;
 }
 
-/** app/(app)/chat/[id].tsx: one conversation in the style's layout. */
+/**
+ * app/(app)/chat/[id].tsx: one conversation in the style's layout, opened at its focus message in
+ * Studio's and Play's threads (PRD-268 US-G03; HUD shows only the newest turn, Arcade hooks it up).
+ */
 export function StyleChat({
   chatId,
   ticketId = null,
   onBack,
+  focusMessageId = null,
 }: Omit<ChatScreenProps, 'above' | 'empty'>) {
   const kind = homeFor(useStyle().layout);
-  if (kind === 'play') return <PlayHome chatId={chatId} ticketId={ticketId} onBack={onBack} />;
+  if (kind === 'play')
+    return (
+      <PlayHome
+        chatId={chatId}
+        ticketId={ticketId}
+        onBack={onBack}
+        focusMessageId={focusMessageId}
+      />
+    );
   if (kind === 'hud') return <HudHome chatId={chatId} ticketId={ticketId} />;
   if (kind === 'arcade') return <ArcadeHome chatId={chatId} ticketId={ticketId} />;
-  return <ChatScreen chatId={chatId} ticketId={ticketId} onBack={onBack} />;
+  return (
+    <ChatScreen
+      chatId={chatId}
+      ticketId={ticketId}
+      onBack={onBack}
+      focusMessageId={focusMessageId}
+    />
+  );
 }

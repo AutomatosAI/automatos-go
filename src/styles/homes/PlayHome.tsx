@@ -9,7 +9,8 @@
 // none for a viewer), and the EN/PT switch just before it (LanguageChip, none for a viewer). The frame is First open's: the ground's light where the
 // screen kind puts it, everything lifted over the keyboard on iOS. Report this opens A2's one
 // ReportSheet. Chats goes back on the chat route, else to the history; Shelf to the Deliverables.
-// Where discovery lists `brief`, the day's brief draws as Play's brief card in the thread (US-G06).
+// Where discovery lists `brief`, the day's brief draws as Play's brief card in the thread (US-G06),
+// and the thread opens at its focus message, the route's or the brief on open's (US-G03).
 
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo } from 'react';
@@ -24,6 +25,7 @@ import { AttachmentChips } from '../../chat/attachments/AttachmentChips';
 import { useFollowLink } from '../../chat/components/follow-link';
 import { DiscussionBar } from '../../chat/discussion/DiscussionBar';
 import { useMessageReport } from '../../chat/report/use-message-report';
+import { useThreadFocus } from '../../chat/use-thread-focus';
 import { LIVE_AUTO_KEY, retryInput, threadRows } from '../../chat/view-model';
 import { routes } from '../../navigation/routes';
 import { PinnedSuggestion } from '../../suggestions/PinnedSuggestion';
@@ -53,6 +55,8 @@ export type PlayHomeProps = {
   readonly onBack?: () => void;
   /** Home: First open shows while the conversation is a blank draft. */
   readonly home?: boolean;
+  /** The message the thread opens at (the chat route's focus param, PRD-268 US-G03). */
+  readonly focusMessageId?: string | null;
 };
 
 type ComposerProps = {
@@ -85,10 +89,15 @@ function Composer({ home, composer, firstOpen }: ComposerProps) {
   );
 }
 
-type ThreadProps = { readonly home: HomeThread; readonly shelf: ShelfMemory };
+type ThreadProps = {
+  readonly home: HomeThread;
+  readonly shelf: ShelfMemory;
+  readonly focusMessageId: string | null;
+};
 
-function Thread({ home, shelf }: ThreadProps) {
+function Thread({ home, shelf, focusMessageId }: ThreadProps) {
   const { state, send, settleCard } = home.thread;
+  const { focus, settle } = useThreadFocus(state.chatId, focusMessageId);
   const follow = useFollowLink();
   const { report, sheet } = useMessageReport();
   const briefs = canBrief(useAppSession().discovery);
@@ -111,6 +120,8 @@ function Thread({ home, shelf }: ThreadProps) {
         onRetry={askAgain}
         onCard={settleCard}
         report={report}
+        focusMessageId={focus}
+        onFocused={settle}
       />
       <ReportSheet {...sheet} />
     </>
@@ -138,7 +149,8 @@ function Bottom({ home, composer, firstOpen, pinned }: BottomProps) {
   );
 }
 
-export function PlayHome({ chatId, ticketId = null, onBack, home: isHome = false }: PlayHomeProps) {
+export function PlayHome(props: PlayHomeProps) {
+  const { chatId, ticketId = null, onBack, home: isHome = false, focusMessageId = null } = props;
   const router = useRouter();
   const { y: stackTop } = useSafeAreaFrame();
   const home = useHomeThread(chatId, ticketId);
@@ -171,7 +183,7 @@ export function PlayHome({ chatId, ticketId = null, onBack, home: isHome = false
         {firstOpen ? (
           <FirstOpenThread onStarter={composer.setText} />
         ) : (
-          <Thread home={home} shelf={shelf} />
+          <Thread home={home} shelf={shelf} focusMessageId={focusMessageId} />
         )}
         <Bottom home={home} composer={composer} firstOpen={firstOpen} pinned={!firstOpen} />
       </KeyboardAvoidingView>
