@@ -16,6 +16,9 @@
 // iOS, the voice window while the voice works and the message box with hold to talk beside it.
 //   P3 Shelf (US-023i): A3's Deliverables as candy tiles under the type chips (ShelfView reads the
 // gallery itself, as Arcade's Inventory does); an empty shelf's Chat pill shows the Chat view.
+//   P4 Team (US-023j): the chat's agents, the active ones first in the row of rings, then every
+// agent with its status chip (TeamView reads the agents and the Board, as Arcade's party does; the
+// home hands it needs-you's rows).
 
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaFrame } from 'react-native-safe-area-context';
@@ -38,7 +41,7 @@ import type { MenuCircleProps } from '../candy/home/MenuCircle';
 import { CandyTalkButton } from '../candy/home/TalkButton';
 import { TodayView } from '../candy/home/TodayView';
 import { ShelfView } from '../candy/home/ShelfView';
-import { TeamStandIn } from '../candy/home/ViewStandIn';
+import { TeamView } from '../candy/home/TeamView';
 import { VoiceWindow } from '../candy/home/VoiceWindow';
 import { TabBar } from '../candy/parts/TabBar';
 import { useCandyPaint } from '../candy/parts/use-candy-paint';
@@ -181,8 +184,9 @@ export function CandyHome({ chatId, ticketId = null, onBack, view }: CandyHomePr
       {views.view === 'shelf' ? (
         <ShelfView menu={menuCircle} footRoom={room.foot} onChat={views.showChat} />
       ) : null}
-      {/* CANDY_STAND_IN US-023j */}
-      {views.view === 'team' ? <TeamStandIn footRoom={room.foot} menu={menuCircle} /> : null}
+      {views.view === 'team' ? (
+        <TeamView menu={menuCircle} footRoom={room.foot} needsYou={needsYou.rows} />
+      ) : null}
       <Floating views={views} voice={voice} room={room} />
       <HomeMenu menu={menu} needsYou={needsYou.total} />
       <ReportSheet {...sheet} />

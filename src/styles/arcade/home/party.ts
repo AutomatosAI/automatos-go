@@ -45,7 +45,8 @@ export function workingIds(tickets: readonly BoardTicket[]): ReadonlySet<number>
   return new Set(ids);
 }
 
-function stateOf(
+/** One agent's state from those sets (Candy's Team reads it too, US-023j). */
+export function stateOf(
   agent: ChatAgent,
   needy: ReadonlySet<string>,
   working: ReadonlySet<number>,

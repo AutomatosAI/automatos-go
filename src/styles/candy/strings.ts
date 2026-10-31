@@ -132,8 +132,18 @@ export const CANDY_SHELF_COPY = Object.freeze({
   showAllHint: 'Shows every type',
 });
 
-/** The Team view until US-023j builds it. */
-// CANDY_STAND_IN US-023j
-export const CANDY_TEAM_SOON_COPY = Object.freeze({
-  message: 'Your agents line up here in this update.',
+/** P4 Team (US-023j): the title, the active count, each agent's state, what VoiceOver hears and an empty team. */
+export const CANDY_TEAM_COPY = Object.freeze({
+  title: 'Your team',
+  /** Under the title, once the agents are read: '6 of 8 agents active'. */
+  count: (active: number, total: number) =>
+    `${active} of ${total} ${total === 1 ? 'agent' : 'agents'} active`,
+  /** Each agent's state by Arcade's party rules, in words (the status chip adds its glyph). */
+  states: Object.freeze({ needs: 'Needs you', working: 'Working', ready: 'Ready' }),
+  /** What VoiceOver hears for a row: 'Iris, Social media lead, working'. */
+  memberLabel: (name: string, line: string | null, word: string) =>
+    line ? `${name}, ${line}, ${word.toLowerCase()}` : `${name}, ${word.toLowerCase()}`,
+  /** What VoiceOver hears for the active row as a whole. */
+  frontLabel: 'Your agents, active ones first',
+  empty: 'No agents yet.',
 });
