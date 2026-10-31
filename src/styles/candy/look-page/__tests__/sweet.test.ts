@@ -3,7 +3,10 @@
 // Candy paints checked (a preset stays checked while it is edited), what VoiceOver hears for each,
 // what Save look and Reset say ('Saved as My look 2.', 'Back to Blush.') or why the phone saved no
 // more, the sheet's words, the preview's sample cards, and the page's sizes (44 pt touches, nothing
-// under Candy's 12). Never a mutation.
+// under Candy's 12), and that Auto celebrates only a save the phone kept. Never a mutation.
+
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
@@ -27,6 +30,7 @@ import {
   NOT_KEPT,
   PREVIEW_CARDS,
   SWEET_PAGE,
+  celebratesSave,
   presetItems,
   resetSaid,
   savedItems,
@@ -38,6 +42,8 @@ function saved(looks: CandyLooks): CandyLooks {
   if (!change.ok) throw new Error('the phone saved the look');
   return change.looks;
 }
+
+const PAGE_SOURCE = readFileSync(path.resolve(__dirname, '../use-sweet-page.ts'), 'utf8');
 
 const checked = (items: readonly { selected: boolean; look: { id: string } }[]) =>
   items.filter((item) => item.selected).map((item) => item.look.id);
@@ -116,6 +122,31 @@ describe('what Save look and Reset say', () => {
 
   it("celebrates a save for the kit's 2.4 s", () => {
     expect(CELEBRATE_MS).toBe(2400);
+  });
+});
+
+describe('Auto celebrates only a save the phone kept', () => {
+  const made = saveAsNew(INITIAL_CANDY_LOOKS);
+
+  it('celebrates a save that was made and kept', () => {
+    expect(made.ok).toBe(true);
+    expect(celebratesSave(made, true)).toBe(true);
+  });
+
+  it("never beside 'This phone couldn't keep that change'", () => {
+    expect(celebratesSave(made, false)).toBe(false);
+  });
+
+  it('never for a save the rules refused', () => {
+    expect(celebratesSave({ ok: false, reason: 'full' }, true)).toBe(false);
+  });
+
+  it('starts the celebration through celebratesSave, never on the save alone', () => {
+    const saveLook = PAGE_SOURCE.slice(PAGE_SOURCE.indexOf('saveLook: () => {'));
+    expect(saveLook.slice(0, saveLook.indexOf('reset:'))).toMatch(
+      /celebratesSave\(saved, kept\)\)\s*start\(\)/,
+    );
+    expect(PAGE_SOURCE).not.toMatch(/if\s*\(saved\.ok\)\s*start\(\)/);
   });
 });
 

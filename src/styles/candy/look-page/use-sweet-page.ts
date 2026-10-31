@@ -4,7 +4,8 @@
 // the phone (US-023c's store) and is sent by the look sync where Candy is installed in the
 // workspace (a 404 keeps them on the phone, with words). Every change is at once, a pick too. What
 // Save look and Reset did, or why a change was refused or not kept, is said under them; after a
-// save Auto celebrates in the preview for a moment (look-editor.tsx useCelebration).
+// save the phone kept, Auto celebrates in the preview for a moment (look-editor.tsx useCelebration;
+// sweet.ts celebratesSave: never beside 'This phone couldn't keep that change').
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -23,7 +24,14 @@ import {
 } from '../candy-looks';
 import type { CandyChoiceKnob, CandyLook } from '../look-schema';
 import { motionValue } from './knobs';
-import { CELEBRATE_MS, NOT_KEPT, resetSaid, savedSaid, type SweetSaid } from './sweet';
+import {
+  CELEBRATE_MS,
+  NOT_KEPT,
+  celebratesSave,
+  resetSaid,
+  savedSaid,
+  type SweetSaid,
+} from './sweet';
 
 export type SweetPage = {
   readonly looks: CandyLooks;
@@ -45,25 +53,32 @@ export type SweetPage = {
   readonly remove: (id: string) => CandyLooksChange;
 };
 
-/** The page's one writer: the store keeps the looks; `after` is what the page says once kept. */
+/**
+ * The page's one writer: the store keeps the looks; `after` is what the page says once kept. Each
+ * answers whether the phone kept the change (nothing changed, or setCandyLooks kept it).
+ */
 function useApply() {
   const { store } = useStyleRoot();
   const [said, setSaid] = useState<SweetSaid | null>(null);
   const current = useCallback(() => store.getState().candyLooks, [store]);
   const apply = useCallback(
-    (next: CandyLooks, after: SweetSaid | null = null) => {
-      if (next === current()) return setSaid(after);
+    (next: CandyLooks, after: SweetSaid | null = null): boolean => {
+      if (next === current()) {
+        setSaid(after);
+        return true;
+      }
       const kept = store.getState().setCandyLooks(next);
       setSaid(kept ? after : NOT_KEPT);
+      return kept;
     },
     [store, current],
   );
   /** Save look says what it saved under the buttons; the sheet's actions say theirs in the sheet. */
   const applyChange = useCallback(
-    (change: CandyLooksChange, after: SweetSaid | null) => {
-      if (change.ok) apply(change.looks, after);
-      else if (after !== null) setSaid(after);
-      return change;
+    (change: CandyLooksChange, after: SweetSaid | null): boolean => {
+      if (change.ok) return apply(change.looks, after);
+      if (after !== null) setSaid(after);
+      return true;
     },
     [apply],
   );
@@ -94,6 +109,11 @@ export function useSweetPage(): SweetPage {
       stop();
       apply(next(current()));
     };
+    /** The sheet reads the change itself (LookSheet's contract), so it can say a refusal there. */
+    const answer = (made: CandyLooksChange) => {
+      applyChange(made, null);
+      return made;
+    };
     return {
       choose: (knob: CandyChoiceKnob, value: string) => change((was) => setKnob(was, knob, value)),
       slideRoundness: (value: number) =>
@@ -103,17 +123,17 @@ export function useSweetPage(): SweetPage {
       pick: (id: string) => change((was) => pickLook(was, id)),
       saveLook: () => {
         const saved = saveAsNew(current());
-        void applyChange(saved, savedSaid(saved));
-        if (saved.ok) start();
+        const kept = applyChange(saved, savedSaid(saved));
+        if (celebratesSave(saved, kept)) start();
       },
       reset: () => {
         stop();
         apply(resetLook(current()), resetSaid(current()));
       },
-      rename: (id: string, name: string) => applyChange(renameLook(current(), id, name), null),
+      rename: (id: string, name: string) => answer(renameLook(current(), id, name)),
       remove: (id: string) => {
         stop();
-        return applyChange(deleteLook(current(), id), null);
+        return answer(deleteLook(current(), id));
       },
     };
   }, [apply, applyChange, current, start, stop]);

@@ -11,8 +11,8 @@
 //   Arcade  the look's palette decides the tone (Handheld light, the others dark), as on the web;
 //           Studio's type until Arcade's faces land (US-022d); never the bundled Auto (D-ARC-5)
 //   Candy   the look's palette decides the tone (Blush and Lilac light, Night bloom dark, D-CAN-7);
-//           its Roundness the corners; its Motion 'paused' stills the loops; Studio's type until
-//           Candy's faces land (US-023d); never the bundled Auto (D-CAN-5)
+//           its Roundness the corners; its Motion 'paused' stills the loops; Candy's type, Outfit
+//           and Nunito (typeface/candy-type.ts); never the bundled Auto (D-CAN-5)
 //   theme   the Studio layout with the theme's painting, or Studio's own while none is cached; its
 //           fonts once they are loaded (themes/fonts.ts), Studio's faces until then
 

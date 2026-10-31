@@ -3,7 +3,8 @@
 // pure: the page's measures; the three presets as cards and the person's saved looks after them,
 // one of them checked (the look Candy paints, by its id: a preset stays checked while it is being
 // edited); what Save look and Reset say after ('Saved as My look 2.', 'Back to Blush.'), or why a
-// change was refused or not kept; the sheet a long press on a saved look opens, in Candy's words
+// change was refused or not kept, and whether Auto celebrates a save (only one the phone kept);
+// the sheet a long press on a saved look opens, in Candy's words
 // (Rename, Delete); and the preview's sample cards. The changes themselves are US-023c's
 // (candy-looks.ts); the page hands each to the style store, which repaints Candy at once, keeps it
 // on the phone and lets the look sync send it. Pure: no React, React Native, Expo or Skia.
@@ -102,6 +103,11 @@ export const NOT_KEPT: SweetSaid = failed(PLAY_LOOK_COPY.notKept);
 
 /** How long Auto celebrates a save in the preview (look-editor.tsx CELEBRATE_MS: a one-shot). */
 export const CELEBRATE_MS = 2400;
+
+/** Auto celebrates a save only when it was made and the phone kept it (never beside NOT_KEPT). */
+export function celebratesSave(change: CandyLooksChange, kept: boolean): boolean {
+  return change.ok && kept;
+}
 
 /** The sheet a long press on a saved look opens, in Candy's words: Rename and Delete. */
 export const CANDY_SHEET_COPY: LookSheetCopy = Object.freeze({
