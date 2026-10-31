@@ -8,4 +8,4 @@ A page says so when part of it needs something the server has to switch on.
 
 ## Pages
 
-None yet.
+- [Auto, on your own initiative](proactive-auto.md): the daily brief, suggestions, approvals and what Auto depends on.
