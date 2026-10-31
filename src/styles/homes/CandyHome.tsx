@@ -61,7 +61,14 @@ import { useCandyPaint } from '../candy/parts/use-candy-paint';
 import type { SpaceName } from '../tokens';
 import { showsTabBar, type CandyView } from './candy-home';
 import { useOneShotEnd } from './use-arcade-home';
-import { useCandyChat, useCandyComposer, useChatTitle, useStageBack } from './use-candy-chat';
+import {
+  useCandyChat,
+  useCandyComposer,
+  useChatTitle,
+  useRouteFocus,
+  useStageBack,
+  type RouteFocus,
+} from './use-candy-chat';
 import { useCandyHome, useTabBarRoom, type CandyViews, type TabBarRoom } from './use-candy-home';
 import type { HomeThread } from './use-home-thread';
 
@@ -113,7 +120,8 @@ type ChatPaneProps = {
   readonly onBack: () => void;
   /** The approval sheet's line, under the stage's state pill (useHudApproval). */
   readonly approval: ReactNode;
-  readonly focusMessageId: string | null;
+  /** The route's focus, kept by the home across the Chat view's mounts (useRouteFocus). */
+  readonly routeFocus: RouteFocus;
 };
 
 /** The message box over A2's composer state, its files in the slots, hold to talk beside it. */
@@ -147,10 +155,10 @@ function ChatComposer({ home, voice }: Pick<ChatPaneProps, 'home' | 'voice'>) {
  * suggestions and the message box.
  */
 function ChatPane(props: ChatPaneProps) {
-  const { home, voice, report, stage, menu, onBack, approval, focusMessageId } = props;
+  const { home, voice, report, stage, menu, onBack, approval, routeFocus } = props;
   const { vars } = useCandyPaint();
   const { y: stackTop } = useSafeAreaFrame();
-  const chat = useCandyChat(home, focusMessageId);
+  const chat = useCandyChat(home, routeFocus);
   const { state } = home.thread;
   const title = useChatTitle(state);
   return (
@@ -191,6 +199,7 @@ export function CandyHome(props: CandyHomeProps) {
   const stage = stageOf(portraitState(home.mascot.driver.mascot), voice.stage);
   const menuCircle = { needsYou: needsYou.total, expanded: menu.visible, onPress: menu.open };
   const back = useStageBack(views.showToday, onBack);
+  const routeFocus = useRouteFocus(focusMessageId);
   return (
     <Screen ground="chat" edges={SIDES}>
       {views.view === 'today' ? (
@@ -212,7 +221,7 @@ export function CandyHome(props: CandyHomeProps) {
           menu={menuCircle}
           onBack={back}
           approval={approval.line}
-          focusMessageId={focusMessageId}
+          routeFocus={routeFocus}
         />
       ) : null}
       {views.view === 'shelf' ? (

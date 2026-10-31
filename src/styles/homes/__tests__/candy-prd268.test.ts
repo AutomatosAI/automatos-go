@@ -188,11 +188,13 @@ describe('how the home wires them', () => {
   });
 
   it('opens the thread at its focus message: the route’s, else the brief on open’s, scrolled to once', () => {
-    expect(codeOf(CHAT)).toMatch(/useThreadFocus\(state\.chatId, routeFocus\)/);
+    expect(codeOf(CHAT)).toMatch(/useThreadFocus\(state\.chatId, route\.focus\)/);
+    expect(codeOf(CHAT)).toMatch(/settle\(messageId\);\s*scrolled\(messageId\);/);
     expect(codeOf(VIEW_FILE)).toMatch(/useFocusScroll\(list, entries, focusMessageId, onFocused\)/);
     expect(codeOf(VIEW_FILE)).toMatch(/scrollOnAdd\(\);\s*focusRun\(\);/);
     expect(codeOf(VIEW_FILE)).toMatch(/onScrollToIndexFailed=\{focus\.onScrollToIndexFailed\}/);
-    expect(codeOf(HOME)).toMatch(/useCandyChat\(home, focusMessageId\)/);
+    expect(codeOf(HOME)).toMatch(/const routeFocus = useRouteFocus\(focusMessageId\);/);
+    expect(codeOf(HOME)).toMatch(/useCandyChat\(home, routeFocus\)/);
     expect(codeOf(HOME)).toMatch(/focusMessageId=\{chat\.focus\}\s*onFocused=\{chat\.onFocused\}/);
     expect(codeOf(STYLE_HOME)).toMatch(/<CandyHome[^>]*view="chat"\s*focusMessageId=\{focusMessageId\}/);
   });

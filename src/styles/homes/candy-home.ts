@@ -8,6 +8,9 @@
 //   conversation's own route: the conversation the route opened is the home's thread, so Chat there
 //   stays on it and never leaves for the home's route (Arcade's ◀ Chat did; Candy has no reason to).
 //   The home's route opens Today; a conversation's route opens Chat; a caller may name the view.
+//   The Chat view mounts each time it shows, so the home keeps which of the route's focus messages
+//   it has scrolled to (PRD-268 US-G03): back on Chat after Today, the thread is where it was left,
+//   never pulled back to the route's message.
 // Pure: no React, React Native, Expo or Skia.
 
 import { routes } from '../../navigation/routes';
@@ -50,4 +53,14 @@ export function tabAction(tab: CandyTab, current: CandyView): TabAction {
 export function openingView(pathname: string, view?: CandyView): CandyView {
   if (view !== undefined) return view;
   return pathname === routes.home ? 'today' : 'chat';
+}
+
+/** The route's focus while the Chat view has not scrolled to it yet; null once it has. */
+export function routeFocusLeft(focus: string | null, scrolled: ReadonlySet<string>): string | null {
+  return focus !== null && !scrolled.has(focus) ? focus : null;
+}
+
+/** The messages scrolled to, with this one; the same set when it is there already. */
+export function withScrolled(scrolled: ReadonlySet<string>, messageId: string): ReadonlySet<string> {
+  return scrolled.has(messageId) ? scrolled : new Set([...scrolled, messageId]);
 }

@@ -10,11 +10,12 @@
 // (threadRows' briefs, as Play's and Arcade's homes read it, PRD-268 US-G06): ChatEntry draws it.
 // Where it lists `suggestions`, a suggestion Auto posted is a row of its own, its card while open
 // (threadRows' suggestions, §6.5.1). The thread opens at its focus message, the route's or the
-// brief on open's (useThreadFocus, US-G03), as Play's thread does.
+// brief on open's (useThreadFocus, US-G03), as Play's thread does. The route's focus is kept by the
+// home (useRouteFocus), which outlives the Chat view: once scrolled to, it is spent.
 
 import { skipToken, useQuery } from '@tanstack/react-query';
 import { usePathname, useRouter } from 'expo-router';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { canBrief, canSuggestions } from '../../api/capabilities';
 import { queryKeys } from '../../api/query-keys';
@@ -28,6 +29,7 @@ import { LIVE_AUTO_KEY, threadRows } from '../../chat/view-model';
 import { routes } from '../../navigation/routes';
 import { typingEvent } from '../arcade/sprite/turn-state';
 import { chatEntries, chatTitle, stageBack, type ChatEntry } from '../candy/home/chat';
+import { routeFocusLeft, withScrolled } from './candy-home';
 import { placeReports } from './shelf';
 import { useTryAgain } from './use-arcade-home';
 import type { HomeThread } from './use-home-thread';
@@ -44,15 +46,40 @@ export type CandyChat = {
   readonly onFocused: (messageId: string) => void;
 };
 
-/** The Chat view's entries and handlers over the home's thread; `routeFocus` the route's focus. */
-export function useCandyChat(home: HomeThread, routeFocus: string | null = null): CandyChat {
+export type RouteFocus = {
+  /** The route's focus message, until the Chat view has scrolled to it; null for none. */
+  readonly focus: string | null;
+  /** The Chat view scrolled to this message. */
+  readonly scrolled: (messageId: string) => void;
+};
+
+const NO_SCROLLS: ReadonlySet<string> = new Set();
+const NO_ROUTE_FOCUS: RouteFocus = Object.freeze({ focus: null, scrolled: () => undefined });
+
+/** The chat route's focus, kept by the home: the Chat view mounts again, the focus stays spent. */
+export function useRouteFocus(focusMessageId: string | null): RouteFocus {
+  const [done, setDone] = useState(NO_SCROLLS);
+  const scrolled = useCallback((id: string) => setDone((now) => withScrolled(now, id)), []);
+  return { focus: routeFocusLeft(focusMessageId, done), scrolled };
+}
+
+/** The Chat view's entries and handlers over the home's thread, opened at the route's focus. */
+export function useCandyChat(home: HomeThread, route: RouteFocus = NO_ROUTE_FOCUS): CandyChat {
   const { state, send, settleCard } = home.thread;
   const onLink = useFollowLink();
   const shelf = useShelf(state);
   const { discovery } = useAppSession();
   const briefs = canBrief(discovery);
   const suggestions = canSuggestions(discovery);
-  const { focus, settle } = useThreadFocus(state.chatId, routeFocus);
+  const { focus, settle } = useThreadFocus(state.chatId, route.focus);
+  const { scrolled } = route;
+  const onFocused = useCallback(
+    (messageId: string) => {
+      settle(messageId);
+      scrolled(messageId);
+    },
+    [settle, scrolled],
+  );
   const rows = useMemo(
     () => threadRows(state, { briefs, suggestions }),
     [state, briefs, suggestions],
@@ -62,7 +89,7 @@ export function useCandyChat(home: HomeThread, routeFocus: string | null = null)
     return chatEntries(rows, places);
   }, [shelf, state, rows]);
   const onRetry = useTryAgain(state, send);
-  return { entries, onRetry, onCard: settleCard, onLink, focus, onFocused: settle };
+  return { entries, onRetry, onCard: settleCard, onLink, focus, onFocused };
 }
 
 /** The stage's title: the chat's own once A2's check cached it, never a second fetch. */

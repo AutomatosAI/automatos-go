@@ -206,7 +206,11 @@ the other layouts; each one with a capability shows only where discovery lists i
 - **Opening at a message** (US-G03). The chat route's `focus` param reaches CandyHome through
   StyleHome; `use-candy-chat.ts` takes it with the brief on open's request (`useThreadFocus`), and
   the Chat view's FlatList scrolls there once, after the jump to the end
-  (`src/chat/components/use-focus-scroll.ts`, as Play's thread).
+  (`src/chat/components/use-focus-scroll.ts`, as Play's thread). The Chat view mounts each time it
+  shows, so the home keeps the route's focus spent once scrolled to (`useRouteFocus`,
+  `candy-home.ts` `routeFocusLeft`): back on Chat after Today, the thread stays where it was. The
+  brief on open scrolls the Chat view when it shows the brief's chat; from Today it moves nothing,
+  as on HUD and Arcade (`BriefOnOpen.tsx` `THREAD_HOMES`: Candy's home draws no thread).
 
 **Candy and the design kit.** Candy follows the kit's `automatos/candy` at one commit, `3920359d5`
 (`3920359d5350960471aca1b7111f6243be537cc0`, Candy 1.0.1), and the kit's theme CLI README names Go's
