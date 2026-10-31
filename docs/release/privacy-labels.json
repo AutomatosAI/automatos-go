@@ -255,14 +255,15 @@
       "linked": true,
       "tracking": false,
       "purposes": ["AppFunctionality"],
-      "source": "Messages to Auto, files attached from Files, answers to agents' questions (in the app and from a notification), approvals, ticket and social-post verdicts with their notes; Auto Live transcripts once it ships.",
+      "source": "Messages to Auto, files attached from Files, answers to agents' questions (in the app and from a notification), approvals, ticket and social-post verdicts with their notes, a thumbs up or down on the day's brief; Auto Live transcripts once it ships.",
       "evidence": [
         "src/chat/request.ts",
         "src/chat/attachments/pickers.ts",
         "src/cc/questions/answer.ts",
         "src/cc/ticket/actions.ts",
         "src/cc/social/approval.ts",
-        "src/push/inbound/answer.ts"
+        "src/push/inbound/answer.ts",
+        "src/brief/feedback.ts"
       ],
       "changedFromDraft": null
     },
@@ -880,8 +881,13 @@
       "ephemeral": false,
       "requiredOrOptional": "Optional",
       "purposes": ["App functionality"],
-      "source": "Answers, approvals, ticket and social-post notes, and Report this (reason and note).",
-      "evidence": ["src/cc/questions/answer.ts", "src/cc/ticket/actions.ts", "src/api/reports.ts"],
+      "source": "Answers, approvals, ticket and social-post notes, a thumbs up or down on the day's brief, and Report this (reason and note).",
+      "evidence": [
+        "src/cc/questions/answer.ts",
+        "src/cc/ticket/actions.ts",
+        "src/api/reports.ts",
+        "src/brief/feedback.ts"
+      ],
       "changedFromDraft": null
     },
     {

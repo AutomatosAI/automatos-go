@@ -85,7 +85,7 @@ collected. Purposes are separated by ";".
 | App activity | App interactions | Yes | No | No | Required | App functionality | The phone's last-seen time on its device record. No taps, screens or navigation are recorded (KR7). |
 | App activity | In-app search history | No | No | — | — | — | The app has no search that is sent anywhere. |
 | App activity | Installed apps | No | No | — | — | — | The app never lists or queries other apps. |
-| App activity | Other user-generated content | Yes | No | No | Optional | App functionality | Answers, approvals, ticket and social-post notes, and Report this (reason and note). |
+| App activity | Other user-generated content | Yes | No | No | Optional | App functionality | Answers, approvals, ticket and social-post notes, a thumbs up or down on the day's brief, and Report this (reason and note). |
 | App activity | Other actions | Yes | No | No | Optional | App functionality; Fraud prevention, security, and compliance | The person's actions (answers, approvals, pausing a routine) in the workspace audit log. |
 | Web browsing | Web browsing history | No | No | — | — | — | Links open in the system browser; the app records no browsing. |
 | App info and performance | Crash logs | Yes | No | No | Optional | App functionality | Scrubbed crash and error reports to Sentry in the EU; Settings → Privacy & legal → Send crash reports turns them off (on by default). |
