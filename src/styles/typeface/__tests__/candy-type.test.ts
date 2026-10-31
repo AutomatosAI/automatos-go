@@ -8,6 +8,7 @@ import {
   CANDY_SLOTS,
   CANDY_STEPS,
   CANDY_TITLES,
+  candyAvatarInitial,
   candyOrbFigure,
   candyTabLabel,
 } from '../candy-type';
@@ -58,6 +59,7 @@ function everyStep(): [string, TypeStyle][] {
     ['button', candy.button],
     ['orb', candyOrbFigure()],
     ['tab', candyTabLabel()],
+    ['avatar initial', candyAvatarInitial(4)],
   ];
 }
 
@@ -137,6 +139,12 @@ describe("Candy's type (D-CAN-4)", () => {
   it('labels the tab bar in Nunito 800 at 12, at a leading that lets it wrap', () => {
     expect(candyTabLabel()).toEqual(text(EXTRA, 12, 15.6));
     expect(candyTabLabel().lineHeight).toBeGreaterThan(CANDY_STEPS.tab);
+  });
+
+  it("sets an avatar's initial in Outfit 600 at its size, solid, never under 12", () => {
+    expect(candyAvatarInitial(22)).toEqual(text(TITLE, 22, 22));
+    expect(candyAvatarInitial(16)).toEqual(text(TITLE, 16, 16));
+    expect(candyAvatarInitial(8)).toEqual(text(TITLE, CANDY_MIN, CANDY_MIN));
   });
 
   it('never draws a step under 12 and never in capitals or with tracking', () => {

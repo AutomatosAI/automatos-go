@@ -124,6 +124,11 @@ export function candyOrbFigure(): TypeStyle {
   return textStyle(outfit(CANDY_STEPS.orb, CANDY_LEADING.figure, FIGURE_FACE));
 }
 
+/** An avatar's initial: Outfit 600 at the size it is given (0.4 of the face, parts/avatar-model.ts), set solid. */
+export function candyAvatarInitial(size: number): TypeStyle {
+  return textStyle(outfit(Math.max(size, CANDY_MIN), 1));
+}
+
 /** The tab bar's label: Nunito 800 at 12, at a leading that lets it wrap (the bar grows taller). */
 export function candyTabLabel(): TypeStyle {
   return textStyle(nunito(CANDY_STEPS.tab, 800));

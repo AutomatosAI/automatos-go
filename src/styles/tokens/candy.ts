@@ -181,6 +181,9 @@ const PALETTE_VAR_NAMES = [
 /** The three card gradients' stops, --candy-g1a to --candy-g3c. */
 const CARD_STOP_NAMES = ['g1a', 'g1b', 'g1c', 'g2a', 'g2b', 'g2c', 'g3a', 'g3b', 'g3c'] as const;
 
+/** Each card gradient's start stop by its place in the look's order (1, 2, 3): a badge's dot, a tab's. */
+export const CARD_START_VARS = Object.freeze({ 1: 'g1a', 2: 'g2a', 3: 'g3a' } as const);
+
 /** The kit's --candy-* names camel-cased: the palette's colours, the card ink, then the card stops. */
 export const CANDY_VAR_NAMES = [...PALETTE_VAR_NAMES, 'cardInk', ...CARD_STOP_NAMES] as const;
 

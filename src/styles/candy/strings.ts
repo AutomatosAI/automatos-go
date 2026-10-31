@@ -30,3 +30,15 @@ export const CANDY_AUTO_COPY = Object.freeze({
   name: (caption: string) => `Auto, ${caption}`,
   speaking: 'Speaking',
 });
+
+/** Candy's parts (US-023f): the tab bar's words, the orb's words for VoiceOver, the status glyphs and the writing chip. */
+export const CANDY_COPY = Object.freeze({
+  tabs: Object.freeze({ today: 'Today', chat: 'Chat', shelf: 'Shelf', team: 'Team' }),
+  /** What VoiceOver hears for the tab bar as a whole. */
+  tabsLabel: 'Home views',
+  /** The orb's figure and caption as one line ('3 need you'). */
+  orbLabel: (figure: string, caption: string) => `${figure} ${caption}`,
+  /** A status is a glyph and a word, never colour alone: filled while active, open while resting. */
+  statusGlyph: Object.freeze({ active: '●', resting: '○' }),
+  writing: 'Auto is writing',
+});

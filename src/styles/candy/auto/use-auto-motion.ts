@@ -12,8 +12,8 @@ function still(): () => void {
   return () => undefined;
 }
 
-/** The clock's tick while `moving`; 0 and no listener while still. */
-function useCandyTick(moving: boolean): number {
+/** The clock's tick while `moving`; 0 and no listener while still (the orb's arc and the writing dots read it too). */
+export function useCandyTick(moving: boolean): number {
   return useSyncExternalStore(
     moving ? CANDY_CLOCK.subscribe : still,
     () => (moving ? CANDY_CLOCK.now() : 0),
