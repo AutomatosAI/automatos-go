@@ -28,10 +28,11 @@ http, Tailscale), and the security model: the one-time 10-minute code, the per-I
 device token in the keychain, rotation, revoke and the reinstall wipe. Lists what the operator sets
 on the server.
 
-**[styles-and-themes.md](styles-and-themes.md).** The phone's side of styles and themes: Studio,
-Play and HUD, "Same as Studio", how an active Studio theme maps to a phone style, installed themes
-painting the Studio layout, looks kept in step with the web, which theme files the phone downloads,
-and the routes. Mostly on branch (A5). The theme contract itself is in automatos-ai's Themes docs.
+**[styles-and-themes.md](styles-and-themes.md).** The phone's side of styles and themes: the five
+styles (Studio, Play, HUD, Arcade and Candy) and their layouts, "Same as Studio", how an active
+Studio theme maps to a phone style, installed themes painting the Studio layout, looks kept in step
+with the web, what Arcade and Candy take from the design kit, which theme files the phone downloads,
+and the routes. On `main`. The theme contract itself is in automatos-ai's Themes docs.
 
 **[push.md](push.md).** Notifications: what triggers a push on the server, how the phone registers
 and checks each push's signature, the notification buttons, Face ID before approving, the
@@ -43,6 +44,11 @@ own language and, on iPhone, by Apple for another chosen language without its di
 reply spoken by the phone or by Auto's server voice, the AI notice once per voice session), the
 languages (English and Portuguese (Brazil), with a one-tap EN/PT switch) and, later, Auto Live
 through Retell. Quick-ask, the server voice and the languages are on `main`; Auto Live is not built.
+
+**[proactive-auto.md](proactive-auto.md).** PRD-268 on the phone: the daily brief, suggestions, the approval
+sheet, "What Auto depends on" and the status vocabulary. The modules, capability gates, routes, view models
+per layout, how push taps route, and the tests that pin each. All on `main`. The people-facing version is
+[user/proactive-auto.md](user/proactive-auto.md).
 
 **[release.md](release.md).** How a merge reaches phones. GitHub CI checks; EAS Workflows ship.
 `testflight.yml` takes the fingerprint and either publishes an over-the-air update or builds iOS and
