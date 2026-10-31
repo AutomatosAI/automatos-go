@@ -6,13 +6,17 @@
 // useNeedsYou total, the one the header badge reads, D26), so the card, the strip and the badge
 // never disagree; the brief's own counts.needs_you stands in only until that number has loaded.
 // A row's action is drawn only where it goes somewhere (briefTarget), and VoiceOver hears it with
-// the row: "Start: Lisbon flights". HUD numbers the rows that ask for something (needs you, then
-// suggestions) so "start two" is a sentence a person can say (§6.12.6).
+// the row: "Start: Lisbon flights". A suggestion row's Start is no link: it starts the suggestion
+// through src/suggestions' Start (briefStartOf), and the row then says its done words. HUD numbers
+// the rows that ask for something (needs you, then suggestions) so "start two" is a sentence a
+// person can say (§6.12.6).
 
 import { missionHref } from '../core/web/lib/ticket-links';
 import { isTaskId, isUsableId, routes } from '../navigation/routes';
 import { appRouteForWebLink, type WebLinkTarget } from '../navigation/web-links';
 import type { StoredMessage } from '../chat/schemas';
+import type { SuggestionView } from '../suggestions/model';
+import { SUGGESTION_COPY } from '../suggestions/strings';
 import {
   BRIEF_SECTIONS,
   type Brief,
@@ -36,6 +40,11 @@ export type BriefRowView = {
   readonly actionAccessibilityLabel: string | null;
   /** HUD's number ('01'); null for the rows it does not number. */
   readonly number: string | null;
+  /**
+   * Start on a suggestion row (§6.12.3): the suggestion it starts through src/suggestions' Start
+   * (Face ID first), named as VoiceOver hears it; null on every other row.
+   */
+  readonly start: SuggestionView | null;
 };
 
 export type BriefSectionView = {
@@ -82,7 +91,7 @@ const TARGETS: Readonly<Record<BriefOpensType, TargetOf>> = Object.freeze({
   chat: (id) => ({ app: routes.chat(id) }),
   deliverable: (id) => ({ app: routes.cc.deliverable(id) }),
   settings: () => ({ app: routes.settings }),
-  // Start and Hide on a suggestion are US-G01's (POST …/start behind Face ID), not a link
+  // a suggestion's Start is US-G01's (POST …/start behind Face ID), not a link: briefStartOf
   suggestion: () => null,
 });
 
@@ -98,6 +107,42 @@ function actionOf(row: BriefRow, target: WebLinkTarget | null) {
   const label = row.action?.label ?? null;
   if (label === null || target === null) return { label: null, accessible: null };
   return { label, accessible: `${label}: ${row.title}` };
+}
+
+/**
+ * A suggestion row's Start (opens a suggestion, action verb start), as src/suggestions' Start takes
+ * it; its words are the brief's own (the server's, in the person's language). null on any other row.
+ */
+export function briefStartOf(row: BriefRow): SuggestionView | null {
+  const { opens, action } = row;
+  if (opens?.type !== 'suggestion' || action?.verb !== 'start' || !isUsableId(opens.id))
+    return null;
+  return Object.freeze({
+    id: opens.id.trim(),
+    title: row.title,
+    detail: row.why.trim(),
+    does: null,
+    cardLabel: SUGGESTION_COPY.cardLabel(row.title, row.why.trim()),
+    startLabel: `${action.label}: ${row.title}`,
+    hideLabel: SUGGESTION_COPY.hideLabel(row.title),
+  });
+}
+
+/**
+ * The words a pressed row says in place of its action (§6.12.3 '✓ {done_label}'): a Start's fall
+ * back to 'Started'; null while not pressed, or for a link row that has no done words.
+ */
+export function doneWordsOf(view: Pick<BriefRowView, 'row' | 'start'>, pressed: boolean) {
+  if (!pressed) return null;
+  return view.row.action?.done_label ?? (view.start ? BRIEF_COPY.started : null);
+}
+
+/** The rows a Start of `suggestionId` went through for: they then say their done words. */
+export function startedRowKeys(
+  rows: readonly Pick<BriefRowView, 'key' | 'start'>[],
+  suggestionId: string,
+): readonly string[] {
+  return rows.filter((each) => each.start?.id === suggestionId).map((each) => each.key);
 }
 
 function twoDigits(value: number): string {
@@ -122,6 +167,7 @@ function rowView(row: BriefRow, place: RowPlace, webUrl?: string): BriefRowView 
     actionLabel: action.label,
     actionAccessibilityLabel: action.accessible,
     number: number === null ? null : twoDigits(number),
+    start: briefStartOf(row),
   };
 }
 
