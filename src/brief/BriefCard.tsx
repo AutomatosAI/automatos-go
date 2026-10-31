@@ -5,8 +5,9 @@
 // PlayThread (PlayBriefCard), dressed by the primitives. Both draw the same body from model.ts: the
 // needs-you count is the strip's, a row with nowhere to go draws no action, a row pressed says its
 // done words in place, and each action names its row to VoiceOver ('Start: Lisbon flights'). The
-// prose is the text part's own words, so the text is never drawn a second time. The card enters
-// once (motion.ts); Auto's words are the server's, in the person's language.
+// prose is the text part's own words, so the text is never drawn a second time. The foot is Listen
+// (BriefFooter.tsx). The card enters once (motion.ts); Auto's words are the server's, in the
+// person's language.
 
 import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
@@ -18,6 +19,7 @@ import { Markdown } from '../chat/markdown/Markdown';
 import type { WebLinkTarget } from '../navigation/web-links';
 import { useTokens } from '../styles/theme';
 import { Button, Card, Text } from '../ui';
+import { BriefFooter } from './BriefFooter';
 import { sectionHeading, type BriefRowView, type BriefSectionView } from './model';
 import { BRIEF_ENTRANCE, briefEntrance, briefKey, createSightings } from './motion';
 import type { Brief } from './schema';
@@ -152,6 +154,7 @@ export function BriefBody({ brief, onLink }: BriefCardProps) {
         <BriefSection key={section.name} section={section} card={card} />
       ))}
       {view.empty ? <Text tone="muted">{view.empty}</Text> : null}
+      <BriefFooter brief={brief} />
     </View>
   );
 }

@@ -51,6 +51,13 @@ export const BRIEF_COPY = Object.freeze({
   action: (label: string) => `${label} →`,
   /** VoiceOver's hint on an action that opens Studio in the browser. */
   opensStudio: 'Opens in Studio, in your browser',
+  /** Listen (§6.4 'Spoken'): never plays until pressed; a second press stops it. */
+  listen: Object.freeze({
+    label: 'Listen',
+    accessibilityLabel: 'Listen to the brief',
+    stop: 'Stop',
+    stopLabel: 'Stop reading the brief',
+  }),
   /** HUD: the transcript's button and the sheet's head. */
   hud: Object.freeze({
     open: 'OPEN BRIEF',

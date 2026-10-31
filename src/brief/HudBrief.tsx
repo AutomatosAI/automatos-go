@@ -4,8 +4,9 @@
 // (HudBriefSheet): one panel headed 'Briefing · <date>', the greeting, then each section with its
 // count and its rows, the rows that ask for something numbered 01, 02, … so "start two" is a
 // sentence a person can say (§6.12.6). A row's action is '▸ <label>' where it goes somewhere (it
-// closes the sheet and opens it, model.ts briefTarget); its words are the server's. Copy, numbers
-// and targets are model.ts's; capitals come from HUD's label face.
+// closes the sheet and opens it, model.ts briefTarget); its words are the server's. The panel ends
+// with Listen (BriefFooter.tsx), as every layout's card does. Copy, numbers and targets are
+// model.ts's; capitals come from HUD's label face.
 
 import { Pressable, View } from 'react-native';
 
@@ -16,6 +17,7 @@ import { HUD_CORE } from '../styles/hud/core/model';
 import { useVoiceCore } from '../styles/hud/core/use-voice-core';
 import { useTokens } from '../styles/theme';
 import { Button, Card, Sheet, Text } from '../ui';
+import { BriefFooter } from './BriefFooter';
 import { sectionHeading, type BriefRowView, type BriefSectionView } from './model';
 import type { Brief } from './schema';
 import { BRIEF_COPY } from './strings';
@@ -175,6 +177,7 @@ function HudBriefPanel({
           <HudSection key={section.name} section={section} card={card} />
         ))}
         {view.empty ? <Text tone="muted">{view.empty}</Text> : null}
+        <BriefFooter brief={brief} />
       </View>
     </Card>
   );
