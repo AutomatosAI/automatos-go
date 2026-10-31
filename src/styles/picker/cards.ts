@@ -7,7 +7,8 @@
 // accessibilityState, so it is said once; on screen the chosen card carries a 2 pt ring in its
 // style's accent AND the word 'Selected' (never colour alone, D-A11Y). The accent is the style's
 // own (selectedPaint): under Play and HUD the Studio-keyed 'accent' is the look's error colour.
-// Arcade's ring and word are its palette's accent (ac), which reads at AA on its window ground.
+// Arcade's ring and word are its palette's accent (ac), which reads at AA on its window ground;
+// Candy's are its palette's accent and that accent as text, each AA on its window (win).
 
 import { toolLineLabel } from '../../core/frozen/components/play/chat/labels';
 import { captionFor } from '../../core/frozen/lib/mascot/media';
@@ -123,19 +124,24 @@ export type SelectedPaint = {
   readonly word: string;
 };
 
-type SelectedSource = Pick<ResolvedStyle, 'layout' | 'tokens' | 'play' | 'hud' | 'arcade'>;
+type SelectedSource = Pick<
+  ResolvedStyle,
+  'layout' | 'tokens' | 'play' | 'hud' | 'arcade' | 'candy'
+>;
 
 /**
  * The Studio-keyed 'accent' is the look's consequence (error) colour under Play and HUD (the
  * vendored studio-tokens.ts), so the chosen card reads its style's own: Play's look accent with its
  * accentText, HUD's accent (AA on its ground already), Arcade's palette accent (tuned to read on
- * its window, the card's ground), Studio's accent (there the two are one).
+ * its window, the card's ground), Candy's palette accent with its accentText (both read on its
+ * window, the card's ground), Studio's accent (there the two are one).
  */
 export function selectedPaint(style: SelectedSource): SelectedPaint {
-  const { play, hud, arcade } = style;
+  const { play, hud, arcade, candy } = style;
   if (style.layout === 'play' && play) return { ring: play.accent, word: play.accentText };
   if (style.layout === 'hud' && hud) return { ring: hud.accent, word: hud.accent };
   if (style.layout === 'arcade' && arcade) return { ring: arcade.ac, word: arcade.ac };
+  if (style.layout === 'candy' && candy) return { ring: candy.accent, word: candy.accentText };
   const { accent } = style.tokens.colours;
   return { ring: accent, word: accent };
 }
@@ -172,7 +178,9 @@ const ARCADE_PREVIEW_COUNTERS: CounterValues = Object.freeze({ xp: null, needs: 
 
 /**
  * The previews' numbers: Auto at 84 (Play's Auto row), HUD's ring core at 120, Arcade's handheld
- * (its sprite at the default look's pixel scale, a D-pad of 24 pt cells beside the dialogue).
+ * (its sprite at the default look's pixel scale, a D-pad of 24 pt cells beside the dialogue),
+ * Candy's small Today (the band, Auto at 56 as on Today's header, the orb at 96 with its figure,
+ * three mini cards).
  */
 export const PREVIEW = Object.freeze({
   minHeight: 196,
@@ -196,6 +204,16 @@ export const PREVIEW = Object.freeze({
     padCell: 24,
     lineSize: 15,
     counters: ARCADE_PREVIEW_COUNTERS,
+  }),
+  candy: Object.freeze({
+    pad: 12,
+    gap: 10,
+    band: 132,
+    auto: 56,
+    orb: 96,
+    /** The orb's sample figure: needs-you's number, as Today's orb shows it. */
+    figure: '3',
+    card: 40,
   }),
 });
 

@@ -6,7 +6,8 @@
 // listed with the screen that shows it and the file on that screen that draws CandyPauseButton; a
 // moving file listed nowhere fails. US-023h listed the Chat view's, US-023i the Shelf's (Auto asleep
 // on an empty shelf), US-023l the edge window's (its own) and the voice core's (Auto in the orb,
-// the voice screen's); US-023m adds its own; the picker's Candy card moves nothing.
+// the voice screen's); US-023m Make it sweet's (the preview's Auto, the control beside the way back);
+// the picker's Candy card moves nothing.
 
 import path from 'node:path';
 
@@ -30,6 +31,8 @@ const SHELF = 'src/styles/candy/home/ShelfView.tsx';
 const EDGE = 'src/styles/edges/CandyEdgeWindow.tsx';
 const VOICE = 'src/voice/screen/VoiceScreen.tsx';
 const HUD_CORE = 'src/styles/hud/core/HudCore.tsx';
+const SWEET = 'src/styles/candy/look-page/CandyLookPage.tsx';
+const SWEET_PREVIEW = 'src/styles/candy/look-page/SweetPreview.tsx';
 
 /**
  * Where a moving file shows: `mountedBy`, the components from its screen down to it (the screen
@@ -49,6 +52,8 @@ const REACH: Readonly<Record<string, Reach>> = Object.freeze({
   [EDGE]: { host: EDGE, mountedBy: [] },
   // the voice screen: Auto in the orb, the control in the core's slot under its top bar (US-023l)
   [HUD_CORE]: { host: VOICE, mountedBy: [VOICE] },
+  // Make it sweet: Auto in the live preview, the control beside the way back (US-023m)
+  [SWEET_PREVIEW]: { host: SWEET, mountedBy: [SWEET] },
 });
 
 const componentOf = (file: string) => path.posix.basename(file, '.tsx');
@@ -116,6 +121,14 @@ describe('where the control sits', () => {
       /<View style=\{styles\.pause\}>\s*<CandyPauseButton\s*\/>\s*<\/View>\s*<EdgeAuto\b/,
     );
     expect(window).toMatch(/<CandyAuto state=\{state\} size=\{candy\.auto\}\s*\/>/);
+  });
+
+  it("is in Make it sweet's heading, filled (it sits on the page), inside the page's StyleScope", () => {
+    const page = codeOf(SWEET);
+    expect(page).toMatch(/function Heading\([\s\S]*?<CandyPauseButton\s*\/>[\s\S]*?\n\}/);
+    expect(page).toMatch(
+      /<StyleScope\b[\s\S]*<Heading\s*\/>[\s\S]*<SweetPreview\b[\s\S]*<\/StyleScope>/,
+    );
   });
 
   it("is on the voice screen in Candy alone, in the core's slot, never beside Arcade's", () => {

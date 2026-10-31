@@ -2,15 +2,6 @@
 // name, tagline and look link (src/styles/strings.ts holds those, for its shared maps). Nothing
 // commercial (D8), and nothing that points at making an account (D63). Pure: no React.
 
-/** Make it sweet until Candy's look page lands (US-023m): what the page says meanwhile. */
-// CANDY_STAND_IN US-023m
-export const CANDY_LOOK_SOON_COPY = Object.freeze({
-  eyebrow: 'Candy',
-  title: 'Make it sweet',
-  message: "Candy's palettes, roundness, glow and motion are coming in an update.",
-  back: 'Back',
-});
-
 /** Save look's name for a saved look ('My look 2') and its line (spec.ts asNewLook). */
 export const CANDY_LOOK_COPY = Object.freeze({
   savedName: (n: number) => `My look ${n}`,
@@ -160,4 +151,51 @@ export const CANDY_TEAM_COPY = Object.freeze({
   /** What VoiceOver hears for the active row as a whole. */
   frontLabel: 'Your agents, active ones first',
   empty: 'No agents yet.',
+});
+
+/**
+ * Make it sweet (US-023m; the kit's looks/look-editor.tsx, look-controls.tsx, look-presets.tsx,
+ * look-preview.tsx and look-transfer.tsx at 3920359d5): the heading and its line, the presets and
+ * the saved looks, the Motion row's words (MOTION_ON, MOTION_PAUSED, MOTION_REDUCED), the sliders'
+ * values shown and spoken, Save look and Reset with what they say after, the toast after a delete
+ * and the preview's sample. The ✓ before a chosen word is hidden from VoiceOver, which hears the
+ * radio's checked state.
+ */
+export const CANDY_SWEET_COPY = Object.freeze({
+  back: 'Back',
+  heading: 'Make it sweet',
+  lead: 'Pick a preset, then tune it. Candy changes as you go.',
+  presets: 'Presets',
+  saved: 'Your looks',
+  /** VoiceOver's name for a preset or a saved look: 'Blush, Pink on white, mixed cards'. */
+  look: (name: string, sub: string) => (sub === '' ? name : `${name}, ${sub}`),
+  savedHint: 'Touch and hold to rename or delete',
+  chosen: '✓',
+  motion: Object.freeze({
+    on: 'On · Auto floats and blinks',
+    paused: 'Paused · everything still',
+    reduced: 'Motion off · Reduce Motion',
+  }),
+  roundness: Object.freeze({
+    shown: (n: number) => `${n} pt`,
+    spoken: (n: number) => `${n} points`,
+  }),
+  glow: Object.freeze({
+    shown: (n: number) => String(n),
+    spoken: (n: number, max: number) => `${n} of ${max}`,
+  }),
+  saveLook: 'Save look',
+  reset: 'Reset',
+  resetHint: "Back to the palette's preset",
+  savedAs: (name: string) => `Saved as ${name}.`,
+  backTo: (name: string) => `Back to ${name}.`,
+  /** The toast after a delete: '… Candy is back to Blush.' when the look deleted was on. */
+  deleted: (name: string, backTo: string | null) =>
+    backTo === null ? `Deleted ${name}.` : `Deleted ${name}. Candy is back to ${backTo}.`,
+  preview: Object.freeze({
+    title: 'Preview',
+    /** What VoiceOver hears for the sample, never its numbers (they aren't real). */
+    says: 'A sample in this look: Auto and three cards.',
+    bubble: 'Looking lovely. Want to keep it?',
+  }),
 });

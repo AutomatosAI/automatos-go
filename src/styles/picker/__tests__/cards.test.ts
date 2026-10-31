@@ -5,6 +5,7 @@ import { ACCENTS, ERROR_COLOUR } from '../../../core/frozen/lib/looks/catalogue'
 import { PRESETS } from '../../../core/frozen/lib/looks/presets';
 import {
   ARCADE_STYLES,
+  CANDY_STYLES,
   HUD_STYLES,
   PLAY_STYLES,
   STUDIO_DARK,
@@ -188,14 +189,26 @@ describe('the picker cards', () => {
 
 describe("the card's frame", () => {
   it("rings the chosen card 2 pt in its style's accent", () => {
-    for (const style of [...STUDIO_STYLES, ...PLAY_STYLES, ...HUD_STYLES, ...ARCADE_STYLES]) {
+    for (const style of [
+      ...STUDIO_STYLES,
+      ...PLAY_STYLES,
+      ...HUD_STYLES,
+      ...ARCADE_STYLES,
+      ...CANDY_STYLES,
+    ]) {
       const ring = selectedPaint(style).ring;
       expect(cardFrame(true, style)).toEqual({ borderWidth: 2, margin: 0, colour: ring });
     }
   });
 
   it('keeps the others the same size with a 1 pt border and a 1 pt margin', () => {
-    for (const style of [STUDIO_LIGHT, PLAY_STYLES[0], HUD_STYLES[0], ARCADE_STYLES[0]]) {
+    for (const style of [
+      STUDIO_LIGHT,
+      PLAY_STYLES[0],
+      HUD_STYLES[0],
+      ARCADE_STYLES[0],
+      CANDY_STYLES[0],
+    ]) {
       const idle = cardFrame(false, style);
       expect(idle).toEqual({ borderWidth: 1, margin: 1, colour: style.tokens.colours.border });
       expect(idle.borderWidth + idle.margin).toBe(CARD_RING.selected);
@@ -256,9 +269,16 @@ describe("the chosen card's ring and 'Selected' (never the error colour)", () =>
   });
 
   it("read 'Selected' at AA on the card under every style and preset", () => {
-    for (const style of [...STUDIO_STYLES, ...PLAY_STYLES, ...HUD_STYLES, ...ARCADE_STYLES]) {
+    for (const style of [
+      ...STUDIO_STYLES,
+      ...PLAY_STYLES,
+      ...HUD_STYLES,
+      ...ARCADE_STYLES,
+      ...CANDY_STYLES,
+    ]) {
       const ratio = contrastRatio(selectedPaint(style).word, style.tokens.colours.card);
-      const look = style.playLook?.id ?? style.hudLook?.id ?? style.arcadeLook?.id;
+      const look =
+        style.playLook?.id ?? style.hudLook?.id ?? style.arcadeLook?.id ?? style.candyLook?.id;
       expect(
         ratio,
         `${style.layout} ${look ?? style.tone}`,
