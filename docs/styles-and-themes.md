@@ -183,8 +183,8 @@ beside the way back on Make it sweet. Every copy sets the one stored value, so o
 everywhere (`src/styles/candy/__tests__/pause-reach.test.ts` holds each moving part to its
 screen's control). The picker's Candy card draws none and moves nothing.
 
-**PRD-268 in Candy** (D-CAN-8). Candy has the three phone features every layout has, on the same
-hooks and data, each shown only where discovery lists its capability:
+**PRD-268 in Candy** (D-CAN-8). Candy has PRD-268's phone features on the same hooks and data as
+the other layouts; each one with a capability shows only where discovery lists it:
 
 - **The day's brief** (US-G06, `brief`). The Chat view's rows keep a message's brief as Play's
   thread does (`threadRows(state, { briefs })`, `use-candy-chat.ts`). The reply draws the brief's
@@ -198,11 +198,15 @@ hooks and data, each shown only where discovery lists its capability:
   itself, once. If the sheet is closed unanswered, '◆ WAITING FOR YOU · OPEN' under the stage's
   state pill opens it again (`src/approvals/use-hud-approval.tsx`, as HUD mounts it under its
   chip), on the window's fill so its outline button keeps its pair.
-
-A suggestion Auto posts in the thread is a row of its own (`ThreadSuggestionRow`, #39) only for a
-caller that passes `threadRows`' `suggestions` option, as Play's home does and Arcade's story does
-from #42. Candy passes `briefs` alone, so its thread draws the post as Auto's words; `chat.ts`
-`entryOf` draws such a row the same way, never as the card.
+- **A suggestion in the thread** (§6.5.1, `suggestions`). Where discovery lists it, a suggestion
+  Auto posted is a row of its own (`ThreadSuggestionRow`, #39; `threadRows`' `suggestions`, as Play's
+  home and Arcade's story pass it) and the Chat view's entry of its own (`chat.ts`, kind
+  `suggestion`): its card while the open list has it, else the message as Auto's reply
+  (`ChatEntry.tsx` through `ThreadSuggestion`, as Play's thread draws it).
+- **Opening at a message** (US-G03). The chat route's `focus` param reaches CandyHome through
+  StyleHome; `use-candy-chat.ts` takes it with the brief on open's request (`useThreadFocus`), and
+  the Chat view's FlatList scrolls there once, after the jump to the end
+  (`src/chat/components/use-focus-scroll.ts`, as Play's thread).
 
 **Candy and the design kit.** Candy follows the kit's `automatos/candy` at one commit, `3920359d5`
 (`3920359d5350960471aca1b7111f6243be537cc0`, Candy 1.0.1), and the kit's theme CLI README names Go's
