@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/lib/text/__tests__/plain-line.test.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/lib/text/__tests__/plain-line.test.ts @ 1a8956c874dc42cff05b96f431c50b7d722a71aa — do not edit — scripts/sync-core.ts
 /**
  * PRD-260 P260-FX-10 (M56) — one line of plain text (lib/text/plain-line.ts):
  * the gate a Look's name passes (lib/look-kit/validate.ts) and the fold a link's

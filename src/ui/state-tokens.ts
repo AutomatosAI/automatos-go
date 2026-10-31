@@ -10,8 +10,17 @@
 // one Go has until that value reaches Go's source (studio-source.ts is copied, never retuned).
 //   Status colours are the status tokens only (US-T01 asks US-G05 to choose): olive and navy, which
 // TEXT_TONES' success and info read, are never a state's colour.
+//   Arcade draws HUD's glyph + WORD but paints the glyph by these roles (glyphToken, its dress's
+// glyphPaint 'state-role', D-ARC-7): its role tokens are tuned on each palette to read on its own
+// grounds (tokens/arcade.ts), so no light stand-in applies, and none of them is the accent.
 
-import type { StatusState } from '../styles/dress/status-glyphs';
+import {
+  GLYPH_ROLE_TOKENS,
+  glyphState,
+  statusGlyph,
+  type GlyphPaint,
+  type StatusState,
+} from '../styles/dress/status-glyphs';
 import type { ColourName, ColourScheme } from '../styles/tokens/types';
 
 /** Each state's role (§6.12.2), on any ground. */
@@ -46,4 +55,13 @@ export function statePaint(state: StatusState, scheme: ColourScheme): StatePaint
   const role = STATE_TOKENS[state];
   const glyph = scheme === 'light' ? (LIGHT_STAND_INS[role] ?? role) : role;
   return Object.freeze({ glyph, word: WORD_TOKENS[state] ?? STATE_WORD_TOKEN });
+}
+
+/**
+ * The token a glyph status's glyph paints in: HUD's glyph role ('glyph-role'), or the role of the
+ * state it reads as ('state-role', Arcade: glyphState, then STATE_TOKENS).
+ */
+export function glyphToken(status: string, paint: GlyphPaint): ColourName {
+  if (paint === 'glyph-role') return GLYPH_ROLE_TOKENS[statusGlyph(status).role];
+  return STATE_TOKENS[glyphState(status)];
 }

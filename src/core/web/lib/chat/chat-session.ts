@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/lib/chat/chat-session.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b · drop: loadChatSession, saveChatSession — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/lib/chat/chat-session.ts @ 1a8956c874dc42cff05b96f431c50b7d722a71aa · drop: loadChatSession, saveChatSession — do not edit — scripts/sync-core.ts
 /**
  * The conversation session (PRD-237 — generalises PRD-220's widget session).
  *
@@ -161,6 +161,19 @@ export function withDraft(session: ChatSession, now: number = Date.now()): ChatS
     lastReadAt: stamp(session.lastReadAt, session.activeChatId, now),
     lastActiveAt: now,
   }
+}
+
+/** No conversation and no draft open: the blank chat a cold start may still replace with the newest conversation. */
+export function isNothingOpen(session: ChatSession): boolean {
+  return session.openChatIds.length === 0 && !session.draftOpen
+}
+
+/**
+ * The person typed or sent in the blank chat shown while nothing is open: it becomes the draft, so a cold start's
+ * late answer never replaces it (only an empty draft gives way). Anything already open: unchanged.
+ */
+export function withDraftStarted(session: ChatSession, now: number = Date.now()): ChatSession {
+  return isNothingOpen(session) ? withDraft(session, now) : session
 }
 
 /** The backend named the conversation (first message of a draft, or a stale id healed). */

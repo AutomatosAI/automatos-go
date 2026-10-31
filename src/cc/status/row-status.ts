@@ -12,13 +12,13 @@ import type { Route } from '../../api/routes';
 import type { PathParams } from '../../api/url';
 import { isTaskId } from '../../navigation/routes';
 import {
-  GLYPH_ROLE_TOKENS,
   stateGlyph,
   statusGlyph,
+  type GlyphPaint,
   type StatusState,
 } from '../../styles/dress/status-glyphs';
 import type { ColourName, ColourScheme } from '../../styles/tokens/types';
-import { STATE_WORD_TOKEN, statePaint } from '../../ui/state-tokens';
+import { STATE_WORD_TOKEN, glyphToken, statePaint } from '../../ui/state-tokens';
 import { CC_ROUTES } from '../routes';
 
 type RetryParam = 'task_id' | 'mission_id';
@@ -118,20 +118,22 @@ export type StateMarkSpec = {
 };
 
 /**
- * What a state's mark draws: HUD's glyph in its role and its own word (capitals come from its
- * label face), else the vocabulary's word and the state's colour role for the ground's scheme.
+ * What a state's mark draws: HUD's glyph and its own word (capitals come from its label face), the
+ * glyph in its glyph's role (HUD) or its state's (Arcade: `glyphPaint` 'state-role', never the
+ * accent); else the vocabulary's word and the state's colour role for the ground's scheme.
  */
 export function stateMark(
   state: StatusState,
   glyphs: boolean,
   scheme: ColourScheme,
+  glyphPaint: GlyphPaint = 'glyph-role',
 ): StateMarkSpec {
   if (glyphs) {
     const hud = statusGlyph(state);
     return {
       glyph: hud.glyph,
       word: hud.word,
-      glyphToken: GLYPH_ROLE_TOKENS[hud.role],
+      glyphToken: glyphToken(state, glyphPaint),
       wordToken: STATE_WORD_TOKEN,
     };
   }

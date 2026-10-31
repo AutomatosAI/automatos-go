@@ -31,9 +31,14 @@ export const QUEST_REGIONS: readonly Region[] = Object.freeze(['active', 'needs'
 
 export type QuestTone = 'active' | 'needs' | 'failed' | 'done';
 
-/** Each tone's colour, by the palette's variable names (the kit's .marker[data-tone]). */
-export const QUEST_TONES: Readonly<Record<QuestTone, 'ac' | 'qs' | 'hp' | 'tx2'>> = Object.freeze({
-  active: 'ac',
+/**
+ * Each tone's colour, by the palette's variable names (the kit's .marker[data-tone]), active out of
+ * the accent into working's §6.12.2 role (D-ARC-7): active mana blue as running, needs you quest
+ * yellow as warning, failed HP red as destructive, the finished region (Done and Cancelled) in the
+ * secondary text.
+ */
+export const QUEST_TONES: Readonly<Record<QuestTone, 'mp' | 'qs' | 'hp' | 'tx2'>> = Object.freeze({
+  active: 'mp',
   needs: 'qs',
   failed: 'hp',
   done: 'tx2',

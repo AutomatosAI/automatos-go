@@ -1,10 +1,12 @@
-// Vendored from AutomatosAI/automatos-ai frontend/types/missions.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/types/missions.ts @ 1a8956c874dc42cff05b96f431c50b7d722a71aa — do not edit — scripts/sync-core.ts
 /**
  * Mission Control Types — PRD-82A Sequential Mission Coordinator
  *
  * Aligned 1:1 with backend Pydantic models in orchestrator/api/missions.py
  * and enums in orchestrator/core/models/orchestration_enums.py.
  */
+
+import type { RowStatus } from '../lib/proactive/types'
 
 // ── Enums (match orchestration_enums.py exactly) ──────────────
 
@@ -37,7 +39,8 @@ export type StateType = 'initial' | 'active' | 'blocked' | 'terminal'
 
 // ── API Response Types (match Pydantic models) ────────────────
 
-export interface MissionResponse {
+/** PRD-268 §6.11.1: a run carries where it stands, what happens next and what Try again does (RowStatus). */
+export interface MissionResponse extends RowStatus {
   id: string
   workspace_id: string
   goal: string

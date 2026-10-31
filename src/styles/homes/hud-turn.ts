@@ -10,6 +10,9 @@
 // server would refuse); the reply being written carries none (P001R-AF-1).
 // HUD has no thread, so the day's brief (PRD-268 US-G06) fills the transcript slot while it is the
 // newest message and no turn is live (hudBrief); OPEN BRIEF then opens its numbered rows.
+// Arcade's dialogue says the reply its story leaves out (arcade-story.ts sayingRowKey: the newest of
+// Auto's messages after the user's), so it reads the same turn naming that reply (sayingTurn); with
+// two of Auto's messages after the user's, HUD keeps the first, as before.
 
 import { briefOf } from '../../brief/model';
 import type { Brief } from '../../brief/schema';
@@ -88,11 +91,18 @@ export function reportableId(
 
 type SavedExchange = { readonly turn: HudTurn; readonly replyId: string | null };
 
-/** The newest saved exchange: the user's last message and the reply after it. */
-function savedExchange(messages: readonly StoredMessage[]): SavedExchange {
+/**
+ * The newest saved exchange: the user's last message and the reply after it, the first of Auto's
+ * messages there, or the one named (`replyId`, Arcade's saying row) when it is one of them.
+ */
+function savedExchange(
+  messages: readonly StoredMessage[],
+  replyId: string | null = null,
+): SavedExchange {
   const asked = lastIndexWhere(messages, 'user');
   const question = asked >= 0 ? messages[asked] : undefined;
-  const reply = messages.slice(asked + 1).find((message) => message.role === 'assistant');
+  const replies = messages.slice(asked + 1).filter((message) => message.role === 'assistant');
+  const reply = replies.find((message) => message.id === replyId) ?? replies[0];
   const turn = {
     you: question ? messageText(question) : null,
     auto: savedReplyWords(reply),
@@ -104,8 +114,8 @@ function savedExchange(messages: readonly StoredMessage[]): SavedExchange {
 }
 
 /** The newest saved exchange as the core draws it, naming the reply for Report this. */
-function savedTurn(state: ThreadState): HudTurn {
-  const { turn, replyId } = savedExchange(shownMessages(state));
+function savedTurn(state: ThreadState, named: string | null): HudTurn {
+  const { turn, replyId } = savedExchange(shownMessages(state), named);
   return { ...turn, autoMessageId: turn.auto === null ? null : reportableId(state, replyId) };
 }
 
@@ -128,14 +138,27 @@ function liveTurn(state: ThreadState): HudTurn {
   };
 }
 
-/** The newest turn as HUD's core draws it; EMPTY_TURN for a blank draft (First open's hint). */
-export function hudTurn(state: ThreadState): HudTurn {
+function turnOf(state: ThreadState, replyId: string | null): HudTurn {
   if (state.status === 'loading') return EMPTY_TURN;
-  const turn = state.live ? liveTurn(state) : savedTurn(state);
+  const turn = state.live ? liveTurn(state) : savedTurn(state, replyId);
   const notice = turnNotice(state);
   const auto = turn.auto ?? (notice ? notice.text : null);
   if (turn.you === null && auto === null && !turn.streaming) return EMPTY_TURN;
   return { ...turn, auto };
+}
+
+/** The newest turn as HUD's core draws it; EMPTY_TURN for a blank draft (First open's hint). */
+export function hudTurn(state: ThreadState): HudTurn {
+  return turnOf(state, null);
+}
+
+/**
+ * The newest turn with this saved reply (Arcade's saying row's message, one of Auto's messages
+ * after the user's last), so the dialogue says the reply its story leaves out; an id that is not
+ * one of them, or null, is hudTurn's choice.
+ */
+export function sayingTurn(state: ThreadState, replyId: string | null): HudTurn {
+  return turnOf(state, replyId);
 }
 
 export type HudBrief = { readonly brief: Brief; readonly messageId: string };

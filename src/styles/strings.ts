@@ -373,6 +373,16 @@ export const ARCADE_HOME_COPY = Object.freeze({
   typeHint: 'Opens the message box',
   stop: 'Stop',
   stopHint: 'Stops Auto’s reply',
+  /** The day's brief (US-G06): a story window's title ('★ Today's brief') and OPEN BRIEF. */
+  brief: Object.freeze({
+    today: 'Today’s brief',
+    dated: (date: string) => `Brief · ${date}`,
+    label: (title: string, greeting: string) => (greeting ? `${title}: ${greeting}` : title),
+    open: 'Open brief',
+    openHint: 'Shows the whole brief',
+  }),
+  /** Auto's newest suggestion (US-G01): '▶ NEXT'; START and HIDE are SUGGESTION_COPY's. */
+  next: Object.freeze({ word: 'Next', label: (title: string) => `Next: ${title}` }),
 });
 
 /**

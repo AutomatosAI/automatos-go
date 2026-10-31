@@ -8,6 +8,9 @@
 //            and one waiting on its approval card, show none (the kit's lines.ts)
 //   AUTO     Auto's answer, A2's markdown; the reply the dialogue window is saying keeps its words
 //            there (the kit's sayingId), the story shows the rest of it
+//   BRIEF    a reply carrying the day's brief (row.brief, where discovery lists `brief`; PRD-268
+//            US-G06) that the dialogue is not saying: a window, '★ Today's brief' (or the brief's
+//            date when it is another day's), its greeting and OPEN BRIEF, never its markdown
 //   ITEM RECEIVED  a window for each Deliverable the turn made (shelf.ts files them), with OPEN
 //   choices A2's own approval cards (a plan, a tool), unchanged, each under '! A choice awaits'
 //            while it is open and 'A choice was made' once answered; a choice whose reply never came
@@ -16,6 +19,8 @@
 // 'Auto is thinking' is not a row: the dialogue window's '…' says it. Pure: no React, React
 // Native, Expo or Skia.
 
+import { briefDateLabel } from '../../brief/model';
+import type { Brief } from '../../brief/schema';
 import type { CardRow } from '../../chat/cards/view';
 import type { AutoRow, ChatRow, Notice, ReceiptRow, ToolLineRow } from '../../chat/view-model';
 import {
@@ -62,6 +67,16 @@ export type StoryItem = {
   readonly openable: boolean;
 };
 
+/** A brief in the story: its window's title (with the ★), the greeting, and the brief to open. */
+export type StoryBrief = {
+  /** '★ Today's brief', or '★ Brief · Tuesday, 28 October' for another day's. */
+  readonly heading: string;
+  readonly greeting: string;
+  /** What VoiceOver hears of the window: the title and the greeting, without the ★. */
+  readonly label: string;
+  readonly brief: Brief;
+};
+
 export type StoryEntry =
   | { readonly kind: 'you'; readonly key: string; readonly text: string; readonly label: string }
   | {
@@ -69,8 +84,10 @@ export type StoryEntry =
       readonly key: string;
       readonly row: AutoRow;
       readonly events: readonly EventLine[];
-      /** Auto's answer (markdown) shown here; '' when the dialogue window says it. */
+      /** Auto's answer (markdown) shown here; '' when the dialogue window says it, or a brief. */
       readonly words: string;
+      /** The day's brief as its window; null when the row carries none or the dialogue says it. */
+      readonly brief: StoryBrief | null;
       readonly items: readonly StoryItem[];
       readonly cards: StoryCards;
     }
@@ -165,22 +182,51 @@ export function sayingRowKey(rows: readonly ChatRow[]): string | null {
   return null;
 }
 
+/**
+ * A brief's window in the story: '★ Today's brief' when its date is `today` (the phone's local
+ * date), else the brief's own date, then its greeting.
+ */
+export function storyBrief(brief: Brief, today: string | null): StoryBrief {
+  const said = ARCADE_HOME_COPY;
+  const title =
+    brief.date === today ? said.brief.today : said.brief.dated(briefDateLabel(brief.date));
+  const greeting = brief.greeting.trim();
+  return Object.freeze({
+    heading: `${said.event} ${title}`,
+    greeting,
+    label: said.brief.label(title, greeting),
+    brief,
+  });
+}
+
 type Places = ReadonlyMap<string, readonly DeliverableRef[]>;
 
-function entryOf(row: ChatRow, places: Places, sayingKey: string | null): StoryEntry | null {
+type EntryContext = {
+  readonly places: Places;
+  readonly sayingKey: string | null;
+  readonly today: string | null;
+};
+
+function autoEntry(row: AutoRow, { places, sayingKey, today }: EntryContext): StoryEntry {
+  const said = row.key === sayingKey;
+  return {
+    kind: 'auto',
+    key: row.key,
+    row,
+    events: eventLines(row),
+    words: said || row.brief !== null ? '' : row.answer,
+    brief: row.brief !== null && !said ? storyBrief(row.brief, today) : null,
+    items: (places.get(row.key) ?? NO_ITEMS).map(storyItem),
+    cards: storyCards(row.cards, ARCADE_HOME_COPY.choiceAwaits),
+  };
+}
+
+function entryOf(row: ChatRow, context: EntryContext): StoryEntry | null {
   switch (row.type) {
     case 'user':
       return { kind: 'you', key: row.key, text: userWords(row), label: row.accessibilityLabel };
     case 'auto':
-      return {
-        kind: 'auto',
-        key: row.key,
-        row,
-        events: eventLines(row),
-        words: row.key === sayingKey ? '' : row.answer,
-        items: (places.get(row.key) ?? NO_ITEMS).map(storyItem),
-        cards: storyCards(row.cards, ARCADE_HOME_COPY.choiceAwaits),
-      };
+      return autoEntry(row, context);
     case 'notice':
       return { kind: 'notice', key: row.key, notice: row.notice };
     case 'cards':
@@ -197,15 +243,18 @@ function entryOf(row: ChatRow, places: Places, sayingKey: string | null): StoryE
 
 /**
  * The story's entries, oldest first: each of A2's rows, then the Deliverables no drawn reply holds
- * (shelf.ts's LOOSE_REPORTS) as one more entry. `places` is placeReports' map.
+ * (shelf.ts's LOOSE_REPORTS) as one more entry. `places` is placeReports' map; `today` the phone's
+ * local date, which names a brief's window (null: every brief says its date).
  */
 export function storyEntries(
   rows: readonly ChatRow[],
   places: Places,
   sayingKey: string | null,
+  today: string | null = null,
 ): readonly StoryEntry[] {
+  const context: EntryContext = { places, sayingKey, today };
   const entries = rows.flatMap((row) => {
-    const entry = entryOf(row, places, sayingKey);
+    const entry = entryOf(row, context);
     return entry ? [entry] : [];
   });
   const loose = places.get(LOOSE_REPORTS) ?? NO_ITEMS;

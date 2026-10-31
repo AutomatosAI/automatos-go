@@ -2,13 +2,11 @@
 // foundation's src/api/routes.ts and never inside it. GET /api/workspaces/current and discovery stay
 // the foundation's (imported from there, never repeated here). scripts/check-routes.ts checks each
 // entry against the pinned route manifest, which has W1's device routes and W2's push settings
-// since the re-pin to 8c9361687. Shapes: W1 api/mobile_devices.py, W2 api/mobile_push.py,
-// api/notifications.py, api/approval_grants.py (src/push/schemas/server.ts).
+// since the re-pin to 8c9361687, and today's brief on request (#1356) since the re-pin to
+// 1a8956c87. Shapes: W1 api/mobile_devices.py, W2 api/mobile_push.py, api/notifications.py,
+// api/approval_grants.py (src/push/schemas/server.ts).
 
 import type { Route } from '../api/routes';
-
-/** Where today's brief on request comes from while the pinned manifest does not have it. */
-const DIGEST_NOW_UPSTREAM = "automatos-ai feat/digest-now (today's brief on request, 28 Oct 2026)";
 
 export const PUSH_ROUTES = Object.freeze({
   devices: Object.freeze({
@@ -27,11 +25,7 @@ export const PUSH_ROUTES = Object.freeze({
    * 'digest_rate_limited', retry_after_seconds}, 503 {code: 'digest_unavailable'}. Listed only with
    * the discovery capability digest_now.
    */
-  digestNow: {
-    method: 'POST',
-    path: '/api/v1/mobile/digest/now',
-    pendingUpstream: DIGEST_NOW_UPSTREAM,
-  },
+  digestNow: { method: 'POST', path: '/api/v1/mobile/digest/now' },
   /** {redact_questions}: owners and admins make question pushes generic (W2 US-014b). */
   pushSettings: { method: 'PUT', path: '/api/v1/mobile/push-settings' },
   preferences: Object.freeze({

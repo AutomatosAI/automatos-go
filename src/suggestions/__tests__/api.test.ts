@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createApiClient } from '../../api/client';
 import { SERVER, fakeTransport, jsonReply } from '../../api/__tests__/fake-transport';
+import { servedAtPin } from '../../api/__tests__/served';
 import { fetchOpenSuggestions, hideSuggestion, startSuggestion } from '../api';
 import { SUGGESTION_ROUTES } from '../routes';
 import { SuggestionListSchema, StartResultSchema } from '../schema';
@@ -63,9 +64,11 @@ describe('the suggestion calls', () => {
     ]);
   });
 
-  it('marks every route pendingUpstream until a re-pin carries core W1/W2', () => {
-    for (const route of Object.values(SUGGESTION_ROUTES))
-      expect(route.pendingUpstream).toBe('PRD-268 W2');
+  it('has every route on the server at the core pin, so none is marked pendingUpstream', () => {
+    for (const route of Object.values(SUGGESTION_ROUTES)) {
+      expect({ route, served: servedAtPin(route) }).toEqual({ route, served: true });
+      expect(route).not.toHaveProperty('pendingUpstream');
+    }
   });
 
   it('reads a chat Start and an unknown opens without failing', () => {

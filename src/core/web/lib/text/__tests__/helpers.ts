@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/lib/text/__tests__/helpers.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/lib/text/__tests__/helpers.ts @ 1a8956c874dc42cff05b96f431c50b7d722a71aa — do not edit — scripts/sync-core.ts
 /**
  * PRD-260 P260-FP-1 — text with hidden characters, for the tests of one line of
  * plain text (lib/text/plain-line.ts) and the two places that use it: a Look's

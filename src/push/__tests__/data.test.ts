@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { familyOf, isPersistableKey } from '../../api/query-keys';
+import type { Route } from '../../api/routes';
+import { servedAtPin } from '../../api/__tests__/served';
 import { pushQueryKeys } from '../query-keys';
 import { PUSH_ROUTES } from '../routes';
 import { parsePushData } from '../schemas/payload';
@@ -176,20 +178,18 @@ describe('the server answers (unknown fields ignored)', () => {
 });
 
 describe('the route table (KP4)', () => {
-  it("marks only today's brief on request pendingUpstream: the pin serves W1's and W2's routes", () => {
-    const leaves = (table: object): object[] =>
+  it("marks no route pendingUpstream: the pin serves W1's and W2's routes and today's brief on request", () => {
+    const leaves = (table: object): Route[] =>
       Object.values(table).flatMap((entry: object) =>
-        'method' in entry ? [entry] : leaves(entry),
+        'method' in entry ? [entry as Route] : leaves(entry),
       );
     const routes = leaves(PUSH_ROUTES);
     expect(routes).toContain(PUSH_ROUTES.devices.register);
     expect(routes).toContain(PUSH_ROUTES.pushSettings);
-    expect(routes.filter((route) => 'pendingUpstream' in route)).toEqual([PUSH_ROUTES.digestNow]);
-    expect(PUSH_ROUTES.digestNow).toMatchObject({
-      method: 'POST',
-      path: '/api/v1/mobile/digest/now',
-      pendingUpstream: expect.stringMatching(/feat\/digest-now/),
-    });
+    expect(routes).toContain(PUSH_ROUTES.digestNow);
+    expect(routes.filter((route) => 'pendingUpstream' in route)).toEqual([]);
+    expect(routes.filter((route) => !servedAtPin(route))).toEqual([]);
+    expect(PUSH_ROUTES.digestNow).toEqual({ method: 'POST', path: '/api/v1/mobile/digest/now' });
   });
 });
 

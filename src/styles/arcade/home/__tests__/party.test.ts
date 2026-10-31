@@ -121,10 +121,10 @@ describe('the party', () => {
 });
 
 describe('what the strip shows', () => {
-  it('is a glyph and a word for each state, in the design’s colours', () => {
+  it('is a glyph and a word for each state, in its §6.12.2 role’s colour, never the accent', () => {
     expect(PARTY_STATES.map((state) => partyBadge({ name: 'Scout', state }))).toEqual([
       { glyph: '!', word: 'Needs you', tone: 'qs', label: 'Scout, needs you' },
-      { glyph: '●', word: 'Working', tone: 'ac', label: 'Scout, working' },
+      { glyph: '●', word: 'Working', tone: 'mp', label: 'Scout, working' },
       { glyph: '—', word: 'Ready', tone: 'tx2', label: 'Scout, ready' },
     ]);
   });

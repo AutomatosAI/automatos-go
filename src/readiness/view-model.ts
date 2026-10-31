@@ -11,14 +11,15 @@
 //   Command Centre, Deliverables, chat); any other path (Studio's settings) shows no fix, and
 //   nothing ever opens an outside URL or the browser.
 //   The mark: ✓ Ready · ○ Not checked · ◆ Needs setup. HUD paints the glyph in its role
-//   (status-glyphs.ts GLYPH_ROLE_TOKENS); Studio, a theme and Play by the state's colour role for
-//   the ground (src/ui/state-tokens.ts). The word is the same in every layout.
+//   (status-glyphs.ts GLYPH_ROLE_TOKENS); Arcade in the state's role (its dress's glyphPaint, never
+//   the accent); Studio, a theme and Play by the state's colour role for the ground
+//   (src/ui/state-tokens.ts). The word is the same in every layout.
 
 import { isApiError, userMessage } from '../api/errors';
 import { appRouteForWebLink } from '../navigation/web-links';
-import { GLYPH_ROLE_TOKENS, statusGlyph } from '../styles/dress/status-glyphs';
+import { statusGlyph, type GlyphPaint } from '../styles/dress/status-glyphs';
 import type { ColourName, ColourScheme } from '../styles/tokens/types';
-import { STATE_WORD_TOKEN, statePaint } from '../ui/state-tokens';
+import { STATE_WORD_TOKEN, glyphToken, statePaint } from '../ui/state-tokens';
 import { CLIENT_ROW_IDS, type AppFix, type RowInput } from './client-rows';
 import type { ReadinessFix, ReadinessItem, ReadinessState } from './schema';
 import { READINESS_COPY, READINESS_WORDS } from './strings';
@@ -103,11 +104,15 @@ export type MarkSpec = Readonly<{
   wordToken: ColourName;
 }>;
 
-/** A state's glyph, word and tokens: HUD's glyph role, else the state's colour role for the ground. */
+/**
+ * A state's glyph, word and tokens: in glyphs, the glyph in its glyph's role (HUD) or its state's
+ * (Arcade, `glyphPaint` 'state-role'); else the state's colour role for the ground.
+ */
 export function readinessMark(
   state: ReadinessState,
   glyphs: boolean,
   scheme: ColourScheme,
+  glyphPaint: GlyphPaint = 'glyph-role',
 ): MarkSpec {
   const glyph = statusGlyph(state);
   const word = READINESS_WORDS[state];
@@ -115,7 +120,7 @@ export function readinessMark(
     return Object.freeze({
       glyph: glyph.glyph,
       word,
-      glyphToken: GLYPH_ROLE_TOKENS[glyph.role],
+      glyphToken: glyphToken(state, glyphPaint),
       wordToken: STATE_WORD_TOKEN,
     });
   }

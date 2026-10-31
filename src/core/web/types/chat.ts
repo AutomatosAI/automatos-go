@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/types/chat.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/types/chat.ts @ 1a8956c874dc42cff05b96f431c50b7d722a71aa — do not edit — scripts/sync-core.ts
 // Type definitions for PRD-27 AI Chatbot Upgrade
 
 import type { UIMessage } from '../../shims/ai-sdk-react'

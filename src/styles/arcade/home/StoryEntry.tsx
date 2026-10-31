@@ -5,13 +5,16 @@
 // this long-presses it and is each block's accessible action where A2 offers it. A2's notices
 // (with Try again), ticket cards and cards are drawn unchanged; each approval card sits under its
 // heading ('! A choice awaits' in the quest colour while it is open). A Deliverable the turn made
-// is an ITEM RECEIVED window whose OPEN opens its page. Entries are memoised by value: a streamed
-// delta redraws only the entry that changed.
+// is an ITEM RECEIVED window whose OPEN opens its page. A reply carrying the day's brief that the
+// dialogue is not saying (PRD-268 US-G06, D-ARC-7) is a window, '★ Today's brief' and its greeting,
+// whose OPEN BRIEF opens the whole brief in the home's sheet (onBrief); Report this stays on it.
+// Entries are memoised by value: a streamed delta redraws only the entry that changed.
 
 import { useRouter } from 'expo-router';
 import { memo, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import type { Brief } from '../../../brief/schema';
 import type { SettleCard } from '../../../chat/cards/model';
 import { TicketCards } from '../../../chat/cards/TaskCard';
 import { ThreadCards } from '../../../chat/cards/ThreadCards';
@@ -19,11 +22,21 @@ import type { FollowLink } from '../../../chat/components/follow-link';
 import { sameValue } from '../../../chat/components/row-same';
 import { TurnNotice } from '../../../chat/components/TurnNotice';
 import { Markdown } from '../../../chat/markdown/Markdown';
-import { reportTarget, type ThreadReport } from '../../../chat/report/report';
+import {
+  reportTarget,
+  type ReportAccessibility,
+  type ThreadReport,
+} from '../../../chat/report/report';
 import { routes } from '../../../navigation/routes';
 import { Text } from '../../../ui';
 import { MIN_TOUCH } from '../../../ui/paint';
-import type { EventLine, StoryCards, StoryEntry, StoryItem } from '../../homes/arcade-story';
+import type {
+  EventLine,
+  StoryBrief,
+  StoryCards,
+  StoryEntry,
+  StoryItem,
+} from '../../homes/arcade-story';
 import { ARCADE_HOME_COPY } from '../../strings';
 import { ArcadeButton } from '../parts/ArcadeButton';
 import { ArcadeWindow } from '../parts/ArcadeWindow';
@@ -118,6 +131,34 @@ function ItemReceived({ item }: { readonly item: StoryItem }) {
   );
 }
 
+type BriefWindowProps = {
+  readonly brief: StoryBrief;
+  readonly onBrief: (brief: Brief) => void;
+  readonly report: ReportAccessibility;
+};
+
+/** A brief the dialogue is not saying: its title (★ hidden from VoiceOver), greeting, OPEN BRIEF. */
+function BriefWindow({ brief, onBrief, report }: BriefWindowProps) {
+  const { vars, type } = useArcadePaint();
+  const said = ARCADE_HOME_COPY.brief;
+  return (
+    <ArcadeWindow contentStyle={styles.item}>
+      <View accessible accessibilityLabel={brief.label} {...report} style={styles.itemText}>
+        <Text style={[type.label, { color: vars.mp }]}>{brief.heading}</Text>
+        {brief.greeting ? (
+          <Text style={[type.body(STORY_LINE.size), { color: vars.tx }]}>{brief.greeting}</Text>
+        ) : null}
+      </View>
+      <ArcadeButton
+        kind="primary"
+        label={said.open}
+        hint={said.openHint}
+        onPress={() => onBrief(brief.brief)}
+      />
+    </ArcadeWindow>
+  );
+}
+
 type CardsProps = {
   readonly cards: StoryCards;
   readonly onCard: SettleCard;
@@ -151,15 +192,17 @@ export type StoryEntryProps = {
   readonly onCard: SettleCard;
   readonly onLink: FollowLink;
   readonly report: ThreadReport;
+  /** OPEN BRIEF on a brief's window: the home's sheet opens on it. */
+  readonly onBrief: (brief: Brief) => void;
 };
 
 type AutoProps = Omit<StoryEntryProps, 'entry'> & {
   readonly entry: Extract<StoryEntry, { kind: 'auto' }>;
 };
 
-function AutoEntry({ entry, onRetry, onCard, onLink, report }: AutoProps) {
-  const { row, words } = entry;
-  const target = words ? reportTarget(row, report.allowed) : null;
+function AutoEntry({ entry, onRetry, onCard, onLink, report, onBrief }: AutoProps) {
+  const { row, words, brief } = entry;
+  const target = words || brief ? reportTarget(row, report.allowed) : null;
   const onReport = target ? () => report.open(target) : undefined;
   const actions = useReportActions(onReport);
   const body = (
@@ -172,6 +215,7 @@ function AutoEntry({ entry, onRetry, onCard, onLink, report }: AutoProps) {
           <Markdown text={words} onLink={onLink} report={actions} />
         </StoryLine>
       ) : null}
+      {brief ? <BriefWindow brief={brief} onBrief={onBrief} report={actions} /> : null}
       {row.notices.map((notice) => (
         <TurnNotice key={notice.key} notice={notice} onRetry={onRetry} />
       ))}

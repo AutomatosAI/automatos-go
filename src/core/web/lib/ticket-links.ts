@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/lib/ticket-links.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/lib/ticket-links.ts @ 1a8956c874dc42cff05b96f431c50b7d722a71aa — do not edit — scripts/sync-core.ts
 /**
  * PRD-252 R1 — every ticket reference opens that ticket.
  *
@@ -45,6 +45,16 @@ export function questionHref(q: QuestionRef): string {
 /** A mission's own page, where its plan is approved or rejected. */
 export function missionHref(missionId: string | number): string {
   return `/missions/${encodeURIComponent(String(missionId))}`
+}
+
+/** The Command Center's summary, where Auto's Read and the Suggested list are (PRD-268 US-W01a). */
+export const SUGGESTED_HREF = '/command-center?tab=summary'
+/** The query parameter that scrolls the Suggested list to one card and outlines it. */
+export const SUGGESTION_PARAM = 'suggestion'
+
+/** One suggestion's card in the Suggested list: what its suggestion_ready bell row opens. */
+export function suggestionHref(suggestionId: string): string {
+  return `/command-center?${new URLSearchParams({ tab: 'summary', [SUGGESTION_PARAM]: suggestionId }).toString()}`
 }
 
 /** The chat. */

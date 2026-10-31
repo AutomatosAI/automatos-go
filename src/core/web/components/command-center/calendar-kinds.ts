@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/components/command-center/calendar-kinds.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/components/command-center/calendar-kinds.ts @ 1a8956c874dc42cff05b96f431c50b7d722a71aa — do not edit — scripts/sync-core.ts
 /**
  * Calendar kinds — what an item IS decides its colour; the agent is the dot.
  *

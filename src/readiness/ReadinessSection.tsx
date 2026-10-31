@@ -26,7 +26,8 @@ const MARK_MAX_WIDTH = '45%';
 
 function ReadinessMark({ state }: { readonly state: ReadinessState }) {
   const { colours, scheme, spacing } = useTokens();
-  const mark = readinessMark(state, useDress().status === 'glyph', scheme);
+  const dress = useDress();
+  const mark = readinessMark(state, dress.status === 'glyph', scheme, dress.glyphPaint);
   return (
     <View style={[styles.mark, { gap: spacing.space1 }]}>
       <Text variant="mono" style={{ color: colours[mark.glyphToken] }}>

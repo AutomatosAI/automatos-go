@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createApiClient } from '../../api/client';
 import { ApiError } from '../../api/errors';
 import { SERVER, fakeTransport, jsonReply } from '../../api/__tests__/fake-transport';
+import { servedAtPin } from '../../api/__tests__/served';
 import { openBrief, type BriefOpenBody } from '../api';
 import { BRIEF_ROUTES } from '../routes';
 import {
@@ -167,6 +168,7 @@ describe('openBrief', () => {
       local_date: '2026-10-28',
       timezone: 'Europe/Lisbon',
     });
-    expect(BRIEF_ROUTES.open.pendingUpstream).toBe('PRD-268 W2');
+    expect(servedAtPin(BRIEF_ROUTES.open)).toBe(true);
+    expect(BRIEF_ROUTES.open).not.toHaveProperty('pendingUpstream');
   });
 });

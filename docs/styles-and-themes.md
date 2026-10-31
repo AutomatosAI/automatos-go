@@ -73,6 +73,59 @@ screen's window (First open, Not running, Something went wrong, Lost) and beside
 Options. Every copy sets the one stored value, so one tap stills Arcade everywhere. The picker's
 Arcade card draws none and moves nothing.
 
+**PRD-268 on the handheld** (D-ARC-7). Arcade has the three phone features every layout has,
+on the same hooks and data, each shown only where discovery lists its capability:
+
+- **The day's brief** (US-G06, `brief`). The thread keeps a message's brief as Play's thread does
+  (`threadRows(state, { briefs })`). The dialogue window says the reply the story leaves out
+  (`sayingRowKey`'s row, `arcade-home.ts` `sayingOf`). When that reply is the brief, the dialogue
+  says its greeting and Auto's Read as plain words, typed at the look's text speed when it lands
+  while the chat is on screen, else whole. OPEN BRIEF sits beside TYPE, and Report this stays on
+  it. A brief further up the story is its own window: '★ TODAY'S BRIEF' (or the brief's date when
+  it is another day's), its greeting and OPEN BRIEF, never its markdown (`arcade-story.ts`
+  `storyBrief`). OPEN BRIEF opens the brief's own view (`BriefCard.tsx` `BriefBody`) inside an
+  Arcade window in the foundation's Sheet (`src/styles/arcade/home/ArcadeBrief.tsx`).
+- **Auto's suggestions** (US-G01, `suggestions`). 'IDEAS · N' under the status bar opens the sheet
+  of them all (`useIdeas`). Under it the NEXT line ('▶ NEXT', the newest open suggestion's title,
+  START and HIDE) is HUD's NEXT ▸ in Arcade's dress. It says 'Started. Auto is on it.' for 4 s
+  after a Start (`src/styles/arcade/home/ArcadeNext.tsx`, `next.ts`).
+- **The approval sheet** (US-G08). A card waiting with an ApprovalView opens its answer sheet by
+  itself, once. If the sheet is closed unanswered, '◆ WAITING FOR YOU · OPEN' under the dialogue
+  window opens it again (`src/approvals/use-hud-approval.tsx`, as HUD mounts it under its chip).
+
+When two of Auto's messages follow the person's last one, the dialogue says the newer and the story
+keeps the first (`hud-turn.ts` `sayingTurn`; HUD's own transcript still says the first).
+
+**Status colours on Arcade** (PRD-268 §6.12.2, D-ARC-7). Arcade draws HUD's glyph and WORD
+(`src/styles/dress/status-glyphs.ts`) but paints each glyph in its state's role token, never in
+the accent. The dress's `glyphPaint` is `'state-role'`, through `src/ui/state-tokens.ts`
+`glyphToken`. HUD keeps its own glyph roles (`'glyph-role'`), and Studio and Play keep their dots.
+
+- A status outside the vocabulary reads as its glyph's state: in progress and live as working,
+  review and blocked as needs you, inbox and closed as not checked.
+- Arcade's role tokens (`src/styles/tokens/arcade.ts` `ARCADE_ROLES`) follow the status bar's
+  colours:
+
+  | State | Role | Arcade colour |
+  |---|---|---|
+  | Needs you | warning | `qs`, the ! counter's quest yellow |
+  | Working | running | `mp`, QUEST's mana blue |
+  | Ready, done | success | `tx`, the plain text: the ✓ and the word carry them |
+  | Failed | destructive | `hp`, HP red |
+  | Needs setup, not checked | info, muted | `tx2`, the secondary text: the glyph and the word carry them |
+
+- The success text tone (olive) is the plain text too, and the live dot is mana blue.
+- This holds wherever Arcade paints a status:
+  - the Command Centre (StatusPip, StateMark, LIVE);
+  - the brief's rows and the readiness list;
+  - the party strip (WORKING ● in mana blue);
+  - the Quests map (an active quest in mana blue).
+- `src/styles/tokens/__tests__/arcade-status.test.ts` checks every palette:
+  - each status reads at AA on the window and the page;
+  - none of them is the accent;
+  - needs you, working, done and failed are at least ΔE 30 apart (CIE76 in CIELAB);
+  - every other status is at least ΔE 20 from needs you.
+
 ## The four styles in the picker
 
 | Style | Picker line | Look page |

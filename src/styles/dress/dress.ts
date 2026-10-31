@@ -13,7 +13,8 @@
 //   HUD     its README: square panels with brackets, buttons square and at least 44 (46 in a
 //           panel) in Geist Mono 12 capitals at .14em, labels Geist Mono 500 11 at .1em
 //   Arcade  its README and design kit: every panel a square window in the look's window style,
-//           glyph plus WORD statuses, buttons and chips square and at least 44 in Press Start 2P
+//           glyph plus WORD statuses (each glyph in its state's role, never the accent: D-ARC-7,
+//           glyphPaint), buttons and chips square and at least 44 in Press Start 2P
 //           capitals at its button step (12), labels at its label step (11, .1em), a chosen or
 //           pressed thing in the palette's highlight with its ink, on the palette's page
 //   Candy   CANDY-LAYOUT §7 and its design kit: every panel a window (the win fill, rs corners,
@@ -29,6 +30,7 @@ import type { StyleRadii } from '../tokens/radii';
 import type { SpaceName } from '../tokens/types';
 import { ARCADE_STEPS } from '../typeface/arcade-type';
 import { CANDY_STEPS } from '../typeface/candy-type';
+import type { GlyphPaint } from './status-glyphs';
 import { BUTTON_SIZES, PILL_HEIGHT } from '../../ui/variants';
 import { GRABBER } from '../../ui/overlay';
 import { MIN_TOUCH } from '../../ui/paint';
@@ -101,6 +103,8 @@ export type Dress = {
   readonly panel: PanelKind;
   readonly panelHeader: PanelHeaderFace;
   readonly status: StatusKind;
+  /** A glyph status's paint: HUD by its glyph's role, the others by the state's (§6.12.2). */
+  readonly glyphPaint: GlyphPaint;
   readonly button: ButtonDress;
   readonly label: LabelDress;
   readonly pill: PillDress;
@@ -243,6 +247,7 @@ function studio(style: ResolvedStyle): Dress {
     panel: 'card',
     panelHeader: 'eyebrow',
     status: 'pip',
+    glyphPaint: 'state-role',
     button: { ...STUDIO.button, radius: radii.control },
     label: STUDIO.label,
     pill: { ...STUDIO.pill, radius: radii.pill },
@@ -263,6 +268,7 @@ function play(style: ResolvedStyle): Dress {
     panel: 'card',
     panelHeader: 'label',
     status: 'pip',
+    glyphPaint: 'state-role',
     button: { ...PLAY.button, radius: radii.control },
     label: PLAY.label,
     pill: { ...PLAY.pill, radius: radii.pill },
@@ -283,6 +289,7 @@ function hud(style: ResolvedStyle): Dress {
     panel: 'bracket',
     panelHeader: 'display',
     status: 'glyph',
+    glyphPaint: 'glyph-role',
     button: { ...HUD.button, radius: radii.control },
     label: HUD.label,
     pill: { ...HUD.pill, radius: radii.pill },
@@ -303,6 +310,7 @@ function arcade(style: ResolvedStyle): Dress {
     panel: 'window',
     panelHeader: 'display',
     status: 'glyph',
+    glyphPaint: 'state-role',
     button: { ...ARCADE.button, radius: radii.control },
     label: ARCADE.label,
     pill: { ...ARCADE.pill, radius: radii.pill },
@@ -323,6 +331,7 @@ function candy(style: ResolvedStyle): Dress {
     panel: 'card',
     panelHeader: 'section',
     status: 'glyph',
+    glyphPaint: 'state-role',
     button: { ...CANDY.button, radius: radii.control },
     label: CANDY.label,
     pill: { ...CANDY.pill, radius: radii.pill },

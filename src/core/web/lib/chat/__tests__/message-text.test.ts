@@ -1,4 +1,4 @@
-// Vendored from AutomatosAI/automatos-ai frontend/lib/chat/__tests__/message-text.test.ts @ 8c9361687013cc31bfb7e42d5c51736116fb4b9b — do not edit — scripts/sync-core.ts
+// Vendored from AutomatosAI/automatos-ai frontend/lib/chat/__tests__/message-text.test.ts @ 1a8956c874dc42cff05b96f431c50b7d722a71aa — do not edit — scripts/sync-core.ts
 // @vitest-environment node
 /**
  * PRD-260 §4, PRD-261 A-11a (M28, M29), W-A8 — the core's chat messages as every theme's chat reads
