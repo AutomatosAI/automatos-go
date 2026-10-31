@@ -8,4 +8,6 @@ A page says so when part of it needs something the server has to switch on.
 
 ## Pages
 
-None yet.
+- [Auto, on your own initiative](proactive-auto.md): the daily brief, Auto's suggestions, approvals
+  and what Auto depends on, as the phone shows them.
+- [Candy](candy.md): the Candy style, its four views, Make it sweet and Pause.

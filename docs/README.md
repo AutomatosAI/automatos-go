@@ -28,10 +28,11 @@ http, Tailscale), and the security model: the one-time 10-minute code, the per-I
 device token in the keychain, rotation, revoke and the reinstall wipe. Lists what the operator sets
 on the server.
 
-**[styles-and-themes.md](styles-and-themes.md).** The phone's side of styles and themes: Studio,
-Play and HUD, "Same as Studio", how an active Studio theme maps to a phone style, installed themes
-painting the Studio layout, looks kept in step with the web, which theme files the phone downloads,
-and the routes. Mostly on branch (A5). The theme contract itself is in automatos-ai's Themes docs.
+**[styles-and-themes.md](styles-and-themes.md).** The phone's side of styles and themes: the five
+styles (Studio, Play, HUD, Arcade and Candy) and their layouts, "Same as Studio", how an active
+Studio theme maps to a phone style, installed themes painting the Studio layout, looks kept in step
+with the web, what Arcade and Candy take from the design kit, which theme files the phone downloads,
+and the routes. On `main`. The theme contract itself is in automatos-ai's Themes docs.
 
 **[push.md](push.md).** Notifications: what triggers a push on the server, how the phone registers
 and checks each push's signature, the notification buttons, Face ID before approving, the
