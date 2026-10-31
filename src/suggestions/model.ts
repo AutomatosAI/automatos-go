@@ -59,6 +59,36 @@ export function suggestionView(suggestion: Suggestion): SuggestionView {
   };
 }
 
+/** The one PinnedSuggestion shows above the composer: the newest open one; null when none is. */
+export function pinnedSuggestionId(open: readonly Suggestion[]): string | null {
+  return open[0]?.id ?? null;
+}
+
+export type ThreadSuggestionShown =
+  | { readonly kind: 'card'; readonly suggestion: Suggestion }
+  | { readonly kind: 'started' }
+  | { readonly kind: 'text' };
+
+const AS_TEXT: ThreadSuggestionShown = Object.freeze({ kind: 'text' });
+const STARTED: ThreadSuggestionShown = Object.freeze({ kind: 'started' });
+
+/**
+ * What a suggestion's post in the thread draws (§6.5.1, §6.12.5): its card while the open list has
+ * it; 'Started. Auto is on it.' in its place for 4 s after a Start from it; its text otherwise (an
+ * unknown, decided or expired suggestion). One suggestion surface: the one pinned above the
+ * composer has its Start and Hide there, so its post shows the text, as on the web.
+ */
+export function threadSuggestionShown(
+  open: readonly Suggestion[],
+  suggestionId: string,
+  startedId: string | null,
+): ThreadSuggestionShown {
+  if (startedId === suggestionId) return STARTED;
+  if (pinnedSuggestionId(open) === suggestionId) return AS_TEXT;
+  const suggestion = open.find((each) => each.id === suggestionId);
+  return suggestion ? Object.freeze({ kind: 'card', suggestion }) : AS_TEXT;
+}
+
 /** The pinned card's form: the whole card, or one line while the keyboard is up. */
 export function pinnedForm(keyboardHeight: number): 'card' | 'line' {
   return keyboardHeight > 0 ? 'line' : 'card';

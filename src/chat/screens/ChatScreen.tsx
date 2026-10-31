@@ -16,11 +16,12 @@
 // once it has one; not there for a viewer.
 // `empty` takes the thread's place while it is a draft with nothing in it (A5's First open on home).
 // Where discovery lists `brief`, a message carrying the day's brief draws the brief card (US-G06).
-// The thread opens at its focus message, the route's or the brief on open's (US-G03).
+// The thread opens at its focus message, the route's or the brief on open's (US-G03). Where it lists
+// `suggestions`, a suggestion Auto posted draws its card while it is open (§6.5.1).
 
 import { useCallback, useMemo, type ReactNode } from 'react';
 
-import { canBrief } from '../../api/capabilities';
+import { canBrief, canSuggestions } from '../../api/capabilities';
 import { useAppSession } from '../../app-state/session';
 import { roleCan } from '../../auth/role';
 import { isBlankDraft } from '../../styles/homes/layout';
@@ -70,8 +71,13 @@ function Thread({ thread, empty, focusMessageId }: ThreadProps) {
   const { focus, settle } = useThreadFocus(state.chatId, focusMessageId);
   const follow = useFollowLink();
   const { report, sheet } = useMessageReport();
-  const briefs = canBrief(useAppSession().discovery);
-  const rows = useMemo(() => threadRows(state, { briefs }), [state, briefs]);
+  const { discovery } = useAppSession();
+  const briefs = canBrief(discovery);
+  const suggestions = canSuggestions(discovery);
+  const rows = useMemo(
+    () => threadRows(state, { briefs, suggestions }),
+    [state, briefs, suggestions],
+  );
   const askAgain = useCallback(() => {
     const again = retryInput(state);
     if (again) send(again);

@@ -71,7 +71,8 @@ export type BriefView = {
 
 /** The brief@1 part of a saved message (its structured parts), or null. */
 export function briefOf(message: Pick<StoredMessage, 'structured'>): Brief | null {
-  return message.structured?.find((part) => part.type === 'brief@1')?.brief ?? null;
+  const part = message.structured?.find((each) => each.type === 'brief@1');
+  return part?.type === 'brief@1' ? part.brief : null;
 }
 
 /** The one needs-you number: the strip's once it has loaded, else the brief's own. */

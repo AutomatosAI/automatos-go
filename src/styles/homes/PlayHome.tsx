@@ -10,14 +10,15 @@
 // screen kind puts it, everything lifted over the keyboard on iOS. Report this opens A2's one
 // ReportSheet. Chats goes back on the chat route, else to the history; Shelf to the Deliverables.
 // Where discovery lists `brief`, the day's brief draws as Play's brief card in the thread (US-G06),
-// and the thread opens at its focus message, the route's or the brief on open's (US-G03).
+// and the thread opens at its focus message, the route's or the brief on open's (US-G03). Where it
+// lists `suggestions`, a suggestion Auto posted draws its card while it is open (§6.5.1).
 
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaFrame } from 'react-native-safe-area-context';
 
-import { canBrief } from '../../api/capabilities';
+import { canBrief, canSuggestions } from '../../api/capabilities';
 import { useAppSession } from '../../app-state/session';
 import { roleCan } from '../../auth/role';
 import { AttachMenu } from '../../chat/attachments/AttachMenu';
@@ -100,8 +101,13 @@ function Thread({ home, shelf, focusMessageId }: ThreadProps) {
   const { focus, settle } = useThreadFocus(state.chatId, focusMessageId);
   const follow = useFollowLink();
   const { report, sheet } = useMessageReport();
-  const briefs = canBrief(useAppSession().discovery);
-  const rows = useMemo(() => threadRows(state, { briefs }), [state, briefs]);
+  const { discovery } = useAppSession();
+  const briefs = canBrief(discovery);
+  const suggestions = canSuggestions(discovery);
+  const rows = useMemo(
+    () => threadRows(state, { briefs, suggestions }),
+    [state, briefs, suggestions],
+  );
   const reports = useMemo(
     () => placeReports(shelf, state, LIVE_AUTO_KEY, new Set(rows.map((row) => row.key))),
     [shelf, state, rows],

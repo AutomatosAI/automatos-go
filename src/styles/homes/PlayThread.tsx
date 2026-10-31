@@ -10,6 +10,7 @@
 // (A2's shouldScrollToEnd). A message carrying the day's brief (row.brief, PRD-268 US-G06) draws
 // Play's brief card in place of its words: the card holds the same words (Auto's Read). Given a
 // focus message (US-G03), the list scrolls there once (use-focus-scroll.ts), as A2's thread does.
+// A suggestion Auto posted draws its card while it is open, else its message (ThreadSuggestion).
 
 import { useRouter } from 'expo-router';
 import { useCallback, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
@@ -33,6 +34,7 @@ import { shouldScrollToEnd, type AutoRow, type ChatRow } from '../../chat/view-m
 import type { DeliverableRef } from '../../core/web/lib/chat/deliverables';
 import type { WebLinkTarget } from '../../navigation/web-links';
 import { routes } from '../../navigation/routes';
+import { ThreadSuggestion } from '../../suggestions/ThreadSuggestion';
 import {
   AutoMessage,
   PlayThreadCaption,
@@ -164,6 +166,13 @@ function PlayRow({ row, caretKey, refs, ...shared }: RowProps): ReactNode {
       return <TurnNotice notice={row.notice} onRetry={shared.onRetry} />;
     case 'cards':
       return <ThreadCards cards={row.cards} onSettled={shared.onCard} onLink={shared.onLink} />;
+    case 'suggestion':
+      return (
+        <ThreadSuggestion
+          suggestionId={row.suggestionId}
+          fallback={<PlayAuto row={row.text} caret={false} refs={refs} {...shared} />}
+        />
+      );
   }
 }
 

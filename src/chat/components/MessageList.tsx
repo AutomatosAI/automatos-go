@@ -17,6 +17,7 @@
 // The list says whether the day's brief card is on screen (PRD-268 US-G06: home's needs strip then
 // shrinks to its count, src/brief/on-screen.tsx); outside home nobody listens. Given a focus message
 // (US-G03: the Auto thread opened at the day's brief), it scrolls there once (use-focus-scroll.ts).
+// A suggestion Auto posted draws its card while it is open, else its message (ThreadSuggestion).
 
 import {
   memo,
@@ -33,6 +34,7 @@ import Animated, { FadeIn, FadeInDown, useReducedMotion } from 'react-native-rea
 
 import { briefOnScreen } from '../../brief/model';
 import { useReportBriefOnScreen } from '../../brief/on-screen';
+import { ThreadSuggestion } from '../../suggestions/ThreadSuggestion';
 import type { WebLinkTarget } from '../../navigation/web-links';
 import { AiLabel } from '../../styles/ai-label';
 import { useTokens } from '../../styles/theme';
@@ -85,6 +87,9 @@ type RowProps = Pick<MessageListProps, 'onLink' | 'onRetry' | 'onCard' | 'report
   readonly place: RowPlace;
 };
 
+/** A suggestion's card as Auto's message: under the sail avatar, in Auto's column. */
+const inAutoColumn = (card: ReactNode) => <AutoColumn avatar="header">{card}</AutoColumn>;
+
 function ThreadRowView({ row, place, onLink, onRetry, onCard, report }: RowProps) {
   const tokens = useTokens();
   switch (row.type) {
@@ -122,6 +127,23 @@ function ThreadRowView({ row, place, onLink, onRetry, onCard, report }: RowProps
         <AutoColumn avatar={place.avatar}>
           <ThreadCards cards={row.cards} onSettled={onCard} onLink={onLink} />
         </AutoColumn>
+      );
+    case 'suggestion':
+      return (
+        <ThreadSuggestion
+          suggestionId={row.suggestionId}
+          frame={inAutoColumn}
+          fallback={
+            <ThreadRowView
+              row={row.text}
+              place={place}
+              onLink={onLink}
+              onRetry={onRetry}
+              onCard={onCard}
+              report={report}
+            />
+          }
+        />
       );
   }
 }
