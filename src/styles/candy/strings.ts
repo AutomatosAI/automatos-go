@@ -98,10 +98,38 @@ export const CANDY_CHAT_COPY = Object.freeze({
   }),
 });
 
-/** The Shelf view until US-023i builds it. */
-// CANDY_STAND_IN US-023i
-export const CANDY_SHELF_SOON_COPY = Object.freeze({
-  message: 'Your Deliverables land on this shelf in this update.',
+/** P3 Shelf (US-023i): the title, the type chips, a tile's line and label, paging and the empty shelf. */
+export const CANDY_SHELF_COPY = Object.freeze({
+  title: 'Deliverables',
+  /** The type chips, each the gallery's type filter (shelf.ts SHELF_CHIPS). */
+  chips: Object.freeze({
+    all: 'All',
+    reports: 'Reports',
+    documents: 'Documents',
+    images: 'Images',
+    spreadsheets: 'Spreadsheets',
+    slides: 'Slides',
+  }),
+  /** Under a tile's title: '{type} · {day}', the type alone when the day is unknown. */
+  line: (type: string, day: string | null) => (day ? `${type} · ${day}` : type),
+  /** What VoiceOver hears for a tile: 'Q3 brand report, Report, Today'. */
+  tileLabel: (title: string, type: string, day: string | null) =>
+    day ? `${title}, ${type}, ${day}` : `${title}, ${type}`,
+  more: 'More',
+  /** The More pill while the next page loads. */
+  loadingMore: 'Loading…',
+  all: 'All Deliverables',
+  allHint: 'Opens the Deliverables in the Command Centre',
+  /** No Deliverable at all: Auto asleep, these words and the way to the chat. */
+  empty: Object.freeze({
+    title: 'Your shelf is empty.',
+    message: 'Ask Auto for something and it lands here.',
+  }),
+  chat: 'Chat',
+  chatHint: 'Shows the chat with Auto',
+  /** A type with none: back to every type. */
+  showAll: 'Show all',
+  showAllHint: 'Shows every type',
 });
 
 /** The Team view until US-023j builds it. */

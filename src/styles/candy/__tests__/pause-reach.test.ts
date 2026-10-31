@@ -4,7 +4,8 @@
 // under src/styles and src/voice that mounts a moving Candy part — Auto not held still, the orb not
 // held still, the writing dots, or the voice core's Candy Auto (a <CandyAuto in src/voice) — is
 // listed with the screen that shows it and the file on that screen that draws CandyPauseButton; a
-// moving file listed nowhere fails. US-023h listed the Chat view's; US-023l and US-023m add theirs;
+// moving file listed nowhere fails. US-023h listed the Chat view's, US-023i the Shelf's (Auto asleep
+// on an empty shelf); US-023l and US-023m add theirs;
 // the picker's Candy card moves nothing.
 
 import path from 'node:path';
@@ -25,6 +26,7 @@ const HOME = 'src/styles/homes/CandyHome.tsx';
 const TODAY = 'src/styles/candy/home/TodayView.tsx';
 const CHAT_STAGE = 'src/styles/candy/home/ChatStage.tsx';
 const CHAT_VIEW = 'src/styles/candy/home/ChatView.tsx';
+const SHELF = 'src/styles/candy/home/ShelfView.tsx';
 
 /**
  * Where a moving file shows: `mountedBy`, the components from its screen down to it (the screen
@@ -38,6 +40,8 @@ const REACH: Readonly<Record<string, Reach>> = Object.freeze({
   // the Chat view: Auto on the stage, and the writing dots in the thread under it (US-023h)
   [CHAT_STAGE]: { host: CHAT_STAGE, mountedBy: [HOME] },
   [CHAT_VIEW]: { host: CHAT_STAGE, mountedBy: [HOME] },
+  // the Shelf: Auto asleep on an empty shelf, the control in its header (US-023i)
+  [SHELF]: { host: SHELF, mountedBy: [HOME] },
 });
 
 const componentOf = (file: string) => path.posix.basename(file, '.tsx');
@@ -91,6 +95,12 @@ describe('where the control sits', () => {
     expect(stage).toMatch(/<CandyPauseButton variant="outline"\s*\/>/);
     expect(stage).toMatch(/<CandyAuto\b[\s\S]*<CandyPauseButton\b/);
     expect(codeOf(HOME)).toMatch(/<ChatStage\b[\s\S]*<ChatView\b/);
+  });
+
+  it("is in the Shelf's header, filled (it sits on the band), beside the menu circle", () => {
+    const shelf = codeOf(SHELF);
+    expect(shelf).toMatch(/function ShelfHeader\([\s\S]*?<CandyPauseButton\s*\/>[\s\S]*?\n\}/);
+    expect(shelf).toMatch(/<ShelfHeader\b[\s\S]*<ShelfBody\b/);
   });
 
   it('is never needed by a part that is held still, so the patterns skip `still`', () => {

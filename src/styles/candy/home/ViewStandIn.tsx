@@ -1,6 +1,6 @@
-// CANDY_STAND_IN US-023j: the home's Shelf and Team views until US-023i and US-023j build them (each
-// story stops using its own; US-023j, the last, deletes this file). Each is the page with its band,
-// its title (the tab's word) and a line in Candy's words.
+// CANDY_STAND_IN US-023j: the home's Team view until US-023j builds it (US-023j deletes this file;
+// US-023i built the Shelf). The page with its band, its title (the tab's word) and a line in
+// Candy's words.
 
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -10,7 +10,7 @@ import { Text } from '../../../ui';
 import { Band } from '../parts/Band';
 import { PAGE_GUTTER } from '../parts/orb-model';
 import { useCandyPaint } from '../parts/use-candy-paint';
-import { CANDY_COPY, CANDY_SHELF_SOON_COPY, CANDY_TEAM_SOON_COPY } from '../strings';
+import { CANDY_COPY, CANDY_TEAM_SOON_COPY } from '../strings';
 import { MenuCircle, type MenuCircleProps } from './MenuCircle';
 
 const SOON = Object.freeze({ band: 300, top: 8, gap: 12 });
@@ -44,16 +44,6 @@ export type TabStandInProps = {
   /** The home menu at the top right, as on every view (D73). */
   readonly menu: MenuCircleProps;
 };
-
-export function ShelfStandIn({ footRoom, menu }: TabStandInProps) {
-  return (
-    <Soon title={CANDY_COPY.tabs.shelf} message={CANDY_SHELF_SOON_COPY.message} footRoom={footRoom}>
-      <View style={styles.menu}>
-        <MenuCircle {...menu} />
-      </View>
-    </Soon>
-  );
-}
 
 export function TeamStandIn({ footRoom, menu }: TabStandInProps) {
   return (
