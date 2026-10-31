@@ -12,8 +12,9 @@
 // bevel, or Thin's line, and the hard drop shadow; arcade-frame.ts) on the window colour, a
 // selected one in the accent's lines; primary the accent with its ink, secondary the page inside
 // the window's line; chips the window inside the 2 pt chip ring; a chosen or pressed thing the
-// palette's highlight with its ink (the menus' current row). Candy's are candy-paints.ts's. Every
-// colour comes from the tokens: the look's variables, and the lines and glow
+// palette's highlight with its ink (the menus' current row). Candy's are candy-paints.ts's
+// candyButtons and candyPaints, beside this file so it stays under 400 lines (as arcade-frame.ts).
+// Every colour comes from the tokens: the look's variables, and the lines and glow
 // tokens/dress-colours.ts derives.
 
 import {

@@ -2,9 +2,10 @@
 // has no native one. A 4 pt track — the accent up to the thumb, the muted track after it, the part
 // past maxAllowed faded — and a 28 pt thumb (square under HUD and Arcade, round elsewhere) in a
 // 44 pt row; the colours are the dress's (dressedSliderPaint: Candy's round thumb and pill track in
-// its accent on its chip, the foundation's primary on muted elsewhere). A drag or a tap moves it in
-// whole steps on the UI thread, the thumb set on each step and never gliding between (Arcade's
-// stepped motion); onChange hears each new step and onChangeEnd the value a drag or tap ends on.
+// its accent on its chip, from candyPaints' slider; the foundation's primary on muted elsewhere).
+// A drag or a tap moves it in whole steps on the UI thread, the thumb set on each step and never
+// gliding between (Arcade's stepped motion); onChange hears each new step and onChangeEnd the value
+// a drag or tap ends on.
 // VoiceOver and TalkBack adjust it a step at a time (role 'adjustable', increment and decrement)
 // and read its value, in words when given. The logic is slider-model.ts (pure, tested).
 
