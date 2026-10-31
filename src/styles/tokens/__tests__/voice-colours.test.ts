@@ -1,6 +1,7 @@
 // The voice core's colours in every style (US-018b, D-ONE-VOICE): HUD's variables, Play's look,
 // Arcade's palette (the rings in its accent, the core filled with its window) and Studio's ink and
-// orange; never a HUD constant outside HUD.
+// orange; never a HUD constant outside HUD. Candy's waveform takes its gradient bar by bar
+// (gradientRun, US-023l).
 
 import { describe, expect, it } from 'vitest';
 
@@ -11,7 +12,7 @@ import { PALETTE_IDS } from '../arcade-catalogue';
 import { CANDY_DEFAULT_PICKS, candyVars, type CandyPaintPicks } from '../candy';
 import { PALETTE_IDS as CANDY_PALETTE_IDS } from '../candy-catalogue';
 import { arcadeStyleTokens, candyStyleTokens } from '../style-tokens';
-import { clearOf, voicePaint, type VoiceStyle } from '../voice-colours';
+import { clearOf, gradientRun, voicePaint, type VoiceStyle } from '../voice-colours';
 
 /** Arcade as the voice core reads it: the palette's set and its variables. */
 function arcadeStyle(look: ArcadePaintPicks): VoiceStyle {
@@ -135,5 +136,33 @@ describe('the voice core paint', () => {
 
   it('fades a colour to 0 in its own hue', () => {
     expect(clearOf('#3FE0FF')).toBe('rgba(63,224,255,0)');
+  });
+});
+
+describe("gradientRun (Candy's waveform)", () => {
+  const STOPS = ['#FF0000', '#00FF00', '#0000FF'] as const;
+
+  it('starts on the first stop, passes the middle one and ends on the last', () => {
+    const run = gradientRun(STOPS, 5);
+    expect(run).toEqual(['#FF0000', '#808000', '#00FF00', '#008080', '#0000FF']);
+    expect(Object.isFrozen(run)).toBe(true);
+  });
+
+  it("spreads Candy's three starts across the phone's 44 bars, every one #RRGGBB", () => {
+    const gradient = voicePaint(candyStyle(CANDY_DEFAULT_PICKS)).gradient;
+    if (!gradient) throw new Error('Candy strokes in a gradient');
+    const run = gradientRun(gradient, 44);
+    expect(run).toHaveLength(44);
+    expect(run[0]).toBe(gradient[0]);
+    expect(run[43]).toBe(gradient[2]);
+    run.forEach((colour) => expect(colour).toMatch(/^#[0-9A-F]{6}$/));
+  });
+
+  it('gives one bar the first stop, one stop every bar, and none for no bars or no stops', () => {
+    expect(gradientRun(STOPS, 1)).toEqual(['#FF0000']);
+    expect(gradientRun(['#123456'], 3)).toEqual(['#123456', '#123456', '#123456']);
+    expect(gradientRun(STOPS, 0)).toEqual([]);
+    expect(gradientRun(STOPS, Number.NaN)).toEqual([]);
+    expect(gradientRun([], 4)).toEqual([]);
   });
 });

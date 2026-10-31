@@ -1,8 +1,9 @@
 // What the edge screens paint with (US-017f), over every built-in style and look: Play reads its
 // look's variables, HUD its README's, Arcade its palette's (US-022i: its window the ground),
-// Studio (and an installed theme) the Studio-keyed set; the words stay readable — the title, the
-// text and the snag's title on the ground, the command on its box — at AA (4.5:1) in every style,
-// Arcade's brand line on its page too; and the paint is built once per style object.
+// Studio (and an installed theme) the Studio-keyed set, Candy its palette's (US-023l: its window the
+// ground); the words stay readable — the title, the text and the snag's title on the ground, the
+// command on its box — at AA (4.5:1) in every style, Arcade's and Candy's brand line on its page
+// too; and the paint is built once per style object.
 
 import { describe, expect, it } from 'vitest';
 
@@ -11,6 +12,8 @@ import {
   ALL_STYLES,
   ARCADE,
   ARCADE_STYLES,
+  CANDY,
+  CANDY_STYLES,
   HUD,
   PLAY,
   PLAY_STYLES,
@@ -24,8 +27,9 @@ const AA = 4.5;
 function groundOf(style: (typeof ALL_STYLES)[number]): string {
   if (style.play) return style.play.groundBg;
   if (style.hud) return style.hud.bg;
-  // Arcade's words sit in a window (ArcadeEdgeWindow.tsx)
+  // Arcade's and Candy's words sit in a window (ArcadeEdgeWindow.tsx, CandyEdgeWindow.tsx)
   if (style.arcade) return style.arcade.win;
+  if (style.candy) return style.candy.win;
   return style.tokens.colours.background;
 }
 
@@ -82,6 +86,41 @@ describe('edgePaint', () => {
       ] as const) {
         const ratio = contrastRatio(fg, page);
         if (ratio < AA) low.push(`${style.arcadeLook?.palette} ${name} ${ratio.toFixed(2)}`);
+      }
+    }
+    expect(low).toEqual([]);
+  });
+
+  it("reads Candy's palette: its text on the window, the quiet text, the accent text, its red", () => {
+    const paint = edgePaint(CANDY);
+    const vars = CANDY.candy;
+    expect(CANDY.layout).toBe('candy');
+    expect(vars).toBeDefined();
+    expect(paint).toMatchObject({
+      text: vars?.text,
+      text2: vars?.quiet,
+      text3: vars?.quiet,
+      accentText: vars?.accentText,
+      snagTitle: CANDY.tokens.colours.destructive,
+      commandFill: vars?.chip,
+    });
+    expect(paint).not.toEqual(edgePaint(STUDIO_LIGHT));
+  });
+
+  it("keeps Candy's brand line, status word and the line under Check again readable on its page", () => {
+    const low: string[] = [];
+    expect(CANDY_STYLES.length).toBeGreaterThan(0);
+    for (const style of CANDY_STYLES) {
+      const paint = edgePaint(style);
+      const page = style.candy?.page ?? '';
+      for (const [name, fg] of [
+        ['text', paint.text],
+        ['text2', paint.text2],
+        ['text3', paint.text3],
+        ['accentText', paint.accentText],
+      ] as const) {
+        const ratio = contrastRatio(fg, page);
+        if (ratio < AA) low.push(`${style.candyLook?.palette} ${name} ${ratio.toFixed(2)}`);
       }
     }
     expect(low).toEqual([]);

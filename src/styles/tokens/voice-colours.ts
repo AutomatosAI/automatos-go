@@ -19,8 +19,11 @@
 //   themes  foreground, the muted foreground and the border; no glow (Studio draws none)
 //
 // Only Arcade fills the core; every other style leaves it clear (the accent at 0). Only Candy
-// strokes in a gradient; every other style leaves gradient out and strokes in the accent.
+// strokes in a gradient; every other style leaves gradient out and strokes in the accent. Candy's
+// waveform takes the gradient bar by bar (gradientRun: the stops mixed with the vendored mixHex where
+// each bar stands), so the colours stay in this directory (D-TOKENS).
 
+import { mixHex } from '../../core/web/lib/look-kit/contrast';
 import { ACCENT_FILL_ALPHA, ACCENT_LINE_ALPHA, rgba } from '../../core/web/lib/look-kit/css';
 import type { ResolvedStyle } from '../provider/resolve';
 import type { ArcadeVars } from './arcade';
@@ -145,4 +148,26 @@ export function voicePaint(style: VoiceStyle): VoicePaint {
   if (style.arcade) return arcadePaint(style.arcade);
   if (style.candy) return candyPaint(style.candy);
   return studioPaint(style.tokens.colours);
+}
+
+/** Where bar `index` of `count` stands along stops `0 … last`: the first at 0, the last at `last`. */
+function standing(index: number, count: number, last: number): number {
+  return count > 1 ? (index / (count - 1)) * last : 0;
+}
+
+/**
+ * Candy's waveform: the gradient's stops spread across `count` bars, first to last, each bar the
+ * two stops it stands between mixed where it stands (#RRGGBB). No stops or no bars: none.
+ */
+export function gradientRun(stops: readonly string[], count: number): readonly string[] {
+  const bars = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
+  const last = stops.length - 1;
+  if (last < 0 || bars === 0) return Object.freeze([]);
+  const run = Array.from({ length: bars }, (_, index) => {
+    const at = standing(index, bars, last);
+    const from = Math.min(Math.floor(at), last);
+    const to = Math.min(from + 1, last);
+    return mixHex(stops[from], stops[to], at - from);
+  });
+  return Object.freeze(run);
 }

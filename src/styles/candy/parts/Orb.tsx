@@ -6,7 +6,9 @@
 // one clock while Candy moves (useCandyMotion), and rests under Reduce Motion, the look's Motion,
 // the pause control or `still`. The ball grows with Dynamic Type up to the room it has (orb-model.ts
 // orbSide); the ring reaches past the square without taking layout. VoiceOver hears the figure
-// and caption as one line ('3 need you').
+// and caption as one line ('3 need you'). Without them it is the ball alone, hidden from VoiceOver:
+// the voice core's (US-023l), with Candy's Auto in it and the state chip under it saying what it
+// shows.
 
 import {
   Canvas,
@@ -19,7 +21,7 @@ import {
   vec,
   type SkPath,
 } from '@shopify/react-native-skia';
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { Text } from '../../../ui';
@@ -50,9 +52,10 @@ const WORDS_SHADOW = Object.freeze({
 });
 
 export type OrbProps = {
-  /** The big number, as text ('3', or '—' while it is unknown). */
-  readonly figure: string;
-  readonly caption: string;
+  /** The big number, as text ('3', or '—' while it is unknown); absent, the ball alone. */
+  readonly figure?: string;
+  /** The words under the figure; absent, the ball alone. */
+  readonly caption?: string;
   /** The ball's side at the default text size; 200 (Today's) when omitted. */
   readonly size?: number;
   /** The widest the ball may grow; the screen less the page's gutters when omitted. */
@@ -116,8 +119,49 @@ function Ball({ paint, side, turn }: { readonly paint: OrbPaint; readonly side: 
   );
 }
 
+type FrameProps = Pick<OrbProps, 'figure' | 'caption'> & {
+  readonly side: number;
+  readonly children: ReactNode;
+};
+
+/** The figure and caption in the ball's middle, white with the figure's shadow. */
+function OrbWords({ figure, caption, side }: Omit<FrameProps, 'children'>) {
+  const { vars, type } = useCandyPaint();
+  const ink = { color: vars.cardInk, maxWidth: side * ORB_WORDS_SHARE };
+  const captionFace = type.body(ORB.caption, 800, { leading: CANDY_LEADING.label });
+  return (
+    <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.words]}>
+      <Text style={[FIGURE, WORDS_SHADOW, ink, styles.centred]}>{figure}</Text>
+      <Text style={[captionFace, WORDS_SHADOW, ink, styles.centred]}>{caption}</Text>
+    </View>
+  );
+}
+
+/** The ball's square: its words over it and named for VoiceOver, or the ball alone and hidden. */
+function OrbFrame({ figure, caption, side, children }: FrameProps) {
+  const square = { width: side, height: side };
+  if (figure === undefined || caption === undefined) {
+    return (
+      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={square}>
+        {children}
+      </View>
+    );
+  }
+  return (
+    <View
+      accessible
+      accessibilityRole="text"
+      accessibilityLabel={CANDY_COPY.orbLabel(figure, caption)}
+      style={square}
+    >
+      {children}
+      <OrbWords figure={figure} caption={caption} side={side} />
+    </View>
+  );
+}
+
 export function Orb({ figure, caption, size = ORB.size, room, still = false }: OrbProps) {
-  const { look, vars, type, shadow } = useCandyPaint();
+  const { look, vars, shadow } = useCandyPaint();
   const { moving } = useCandyMotion();
   const { width, fontScale } = useWindowDimensions();
   const side = orbSide(size, fontScale, room ?? width - PAGE_GUTTER * 2);
@@ -125,15 +169,8 @@ export function Orb({ figure, caption, size = ORB.size, room, still = false }: O
   const turn = useOrbTurn(moving && !still);
   const reach = orbReach(paint, side);
   const canvas = { left: -reach, top: -reach, width: side + reach * 2, height: side + reach * 2 };
-  const ink = { color: vars.cardInk, maxWidth: side * ORB_WORDS_SHARE };
-  const captionFace = type.body(ORB.caption, 800, { leading: CANDY_LEADING.label });
   return (
-    <View
-      accessible
-      accessibilityRole="text"
-      accessibilityLabel={CANDY_COPY.orbLabel(figure, caption)}
-      style={{ width: side, height: side }}
-    >
+    <OrbFrame figure={figure} caption={caption} side={side}>
       <View
         pointerEvents="none"
         style={[StyleSheet.absoluteFill, { borderRadius: side / 2, backgroundColor: vars.g1a }, shadow]}
@@ -143,11 +180,7 @@ export function Orb({ figure, caption, size = ORB.size, room, still = false }: O
           <Ball paint={paint} side={side} turn={turn} />
         </Group>
       </Canvas>
-      <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.words]}>
-        <Text style={[FIGURE, WORDS_SHADOW, ink, styles.centred]}>{figure}</Text>
-        <Text style={[captionFace, WORDS_SHADOW, ink, styles.centred]}>{caption}</Text>
-      </View>
-    </View>
+    </OrbFrame>
   );
 }
 

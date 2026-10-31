@@ -2,7 +2,8 @@
 // Ember.dc.html'), in points, and which button each style draws a screen's one action as. Every
 // style lays the same screen out with these; the style changes the faces, colours and grounds.
 // Arcade (US-022i) puts each screen's words in a window with Auto's sprite at its head
-// (ArcadeEdgeWindow.tsx), so it adds the window's padding and gaps.
+// (ArcadeEdgeWindow.tsx), so it adds the window's padding and gaps; Candy (US-023l) a window with
+// the band across its top and Auto at 140 on it (CandyEdgeWindow.tsx).
 
 import type { ButtonVariant } from '../../ui/variants';
 import type { Layout } from '../registry/style-id';
@@ -38,6 +39,12 @@ export const EDGE_METRICS = Object.freeze({
    * the brand line's pieces when they wrap.
    */
   arcade: Object.freeze({ pad: 16, gap: 14, spriteGap: 6, brandGap: 8 }),
+  /**
+   * Candy's edge window (CANDY-LAYOUT §7; the kit's edges/asleep: the band 150 across its top, Auto
+   * 140, 18 between its rows, its phone padding 20): 6 between Auto and his state word, and 8
+   * between the brand line's pieces when they wrap.
+   */
+  candy: Object.freeze({ band: 150, auto: 140, pad: 20, gap: 18, wordGap: 6, brandGap: 8 }),
 });
 
 /**

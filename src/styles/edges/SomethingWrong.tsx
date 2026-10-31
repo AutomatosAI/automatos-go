@@ -5,8 +5,10 @@
 // taxonomy's words for the error (never internals), Try again and an optional second way forward;
 // under it Auto's row, 'Hm.' and his caption (Play's AutoRow; HUD's state chip and Auto when the
 // look's auto is on). Arcade (US-022i) draws the card as a window tabbed '✕ SNAG' with Auto's sprite
-// in oops and its word at its head, the title in HP red, and no row under it. The words are
-// edges.ts somethingWrongEdge's.
+// in oops and its word at its head, the title in HP red, and no row under it. Candy (US-023l)
+// draws it as its window, the band across its top with Auto in oops and his state word ('✕ Oops')
+// on it, the title in Candy's red, and no row under it. The words are edges.ts
+// somethingWrongEdge's.
 
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -18,6 +20,7 @@ import { Mascot } from '../mascot/Mascot';
 import { AutoRow } from '../play/companion/AutoRow';
 import { useStyle } from '../theme';
 import { ArcadeEdgeWindow } from './ArcadeEdgeWindow';
+import { CandyEdgeWindow } from './CandyEdgeWindow';
 import { somethingWrongEdge, type SomethingWrongEdge } from './edges';
 import { EDGE_METRICS } from './metrics';
 import { EdgeAction, EdgeBrand, useEdgePaint } from './parts';
@@ -47,7 +50,10 @@ function SnagAuto() {
 
 type SnagCardProps = { readonly view: SomethingWrongEdge; readonly children: ReactNode };
 
-/** The snag card: Arcade's window with Auto at its head; the style's Card (HUD's line) elsewhere. */
+/**
+ * The snag card: Arcade's window with Auto at its head, Candy's with Auto on its band; the style's
+ * Card (HUD's line) elsewhere.
+ */
 function SnagCard({ view, children }: SnagCardProps) {
   const style = useStyle();
   const paint = useEdgePaint();
@@ -58,6 +64,7 @@ function SnagCard({ view, children }: SnagCardProps) {
       </ArcadeEdgeWindow>
     );
   }
+  if (style.layout === 'candy') return <CandyEdgeWindow state="oops">{children}</CandyEdgeWindow>;
   return (
     <Card padding="space8" radius="card" style={{ borderColor: paint.snagLine }}>
       <View style={{ gap: snag.gap }}>

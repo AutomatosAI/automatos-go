@@ -132,6 +132,20 @@ export const CANDY_SHELF_COPY = Object.freeze({
   showAllHint: 'Shows every type',
 });
 
+/**
+ * The edge screens in Candy (US-023l): the brand line over them, First open's greeting (its line
+ * the kit's chat/thread.tsx EMPTY_THREAD) and Lost's lines (the kit's edges/not-found.tsx).
+ */
+export const CANDY_EDGE_COPY = Object.freeze({
+  brand: Object.freeze({ name: 'Automatos', mark: 'Candy', label: 'Automatos Candy' }),
+  greeting: Object.freeze({
+    title: "Hi, I'm Auto",
+    line: 'Tell Auto what you need: a post, a report, a plan. He takes it from there.',
+  }),
+  lostTitle: "This page isn't here",
+  lostMessage: 'The link may be old, or the page may have moved. Let’s get you back.',
+});
+
 /** P4 Team (US-023j): the title, the active count, each agent's state, what VoiceOver hears and an empty team. */
 export const CANDY_TEAM_COPY = Object.freeze({
   title: 'Your team',

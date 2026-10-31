@@ -2,13 +2,17 @@
 // the screens use, and tokens/edge-colours.ts's derived ones for its ground. Play reads its look's
 // variables (Ember's cream, text-2 and text-3, the accent and error text), HUD its README's (text,
 // text2, the accent, the error), Arcade its palette's (US-022i: the window its ground, tx and tx2,
-// the accent, HP red for the snag; tokens/edge-colours.ts arcadeEdgeSource), Studio the
-// Studio-keyed set (an installed theme's too). Built once per resolved style object.
+// the accent, HP red for the snag; tokens/edge-colours.ts arcadeEdgeSource), Candy its palette's
+// (US-023l: the window its ground, the text and the quiet text, the accent as text, Candy's red for
+// the snag; candyEdgeSource), Studio the Studio-keyed set (an installed theme's too). Built once
+// per resolved style object.
 
 import type { ResolvedStyle } from '../provider/resolve';
 import type { ArcadeVars } from '../tokens/arcade';
+import type { CandyVars } from '../tokens/candy';
 import {
   arcadeEdgeSource,
+  candyEdgeSource,
   edgeColours,
   type EdgeColourSource,
   type EdgeColours,
@@ -20,15 +24,18 @@ export type EdgePaint = EdgeColours & {
   readonly text: string;
   readonly text2: string;
   readonly text3: string;
-  /** The accent as text: Play's 'Play' and its greeting's second line, HUD's '//', 'ARCADE'. */
+  /** The accent as text: Play's 'Play' and its greeting's second line, HUD's '//', 'ARCADE', 'Candy'. */
   readonly accentText: string;
-  /** The snag card's title: Play's error text, HUD's error, Arcade's HP red, Studio's ink. */
+  /** The snag card's title: Play's error text, HUD's error, Arcade's HP red, Candy's red, Studio's ink. */
   readonly snagTitle: string;
 };
 
 type Picked = Omit<EdgePaint, keyof EdgeColours> & { readonly source: EdgeColourSource };
 
-type PaintSource = Pick<ResolvedStyle, 'layout' | 'tone' | 'tokens' | 'play' | 'hud' | 'arcade'>;
+type PaintSource = Pick<
+  ResolvedStyle,
+  'layout' | 'tone' | 'tokens' | 'play' | 'hud' | 'arcade' | 'candy'
+>;
 
 /** Arcade: the window its ground (its words sit in one), the accent, HP red for the snag. */
 function fromArcade(arcade: ArcadeVars): Picked {
@@ -39,6 +46,18 @@ function fromArcade(arcade: ArcadeVars): Picked {
     text3: arcade.tx2,
     accentText: arcade.ac,
     snagTitle: arcade.hp,
+  };
+}
+
+/** Candy: the window its ground (its words sit in one), the quiet text, the accent as text, its red. */
+function fromCandy(candy: CandyVars, colours: Colours): Picked {
+  return {
+    source: candyEdgeSource(candy, colours),
+    text: candy.text,
+    text2: candy.quiet,
+    text3: candy.quiet,
+    accentText: candy.accentText,
+    snagTitle: colours.destructive,
   };
 }
 
@@ -62,7 +81,7 @@ function fromStudio(colours: Colours): Picked {
 
 function pick(style: PaintSource): Picked {
   const { colours } = style.tokens;
-  const { play, hud, arcade } = style;
+  const { play, hud, arcade, candy } = style;
   if (style.layout === 'play' && play) {
     const source = {
       ground: play.groundBg,
@@ -92,6 +111,7 @@ function pick(style: PaintSource): Picked {
     };
   }
   if (style.layout === 'arcade' && arcade) return fromArcade(arcade);
+  if (style.layout === 'candy' && candy) return fromCandy(candy, colours);
   return fromStudio(colours);
 }
 

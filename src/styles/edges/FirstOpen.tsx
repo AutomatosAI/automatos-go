@@ -14,6 +14,9 @@
 //   Arcade  the brand line; a window tabbed AUTO with his sprite waving (hello) and its word at its
 //           head, and the greeting his dialogue says before any reply (Pixelify Sans 17/1.3, the
 //           dialogue's line), which says the lede's words too; no chips (US-022i)
+//   Candy   the brand line; Candy's window with the band across its top, Auto at 140 waving
+//           (hello) on it with his state word, 'Hi, I'm Auto' (the hero slot, Outfit 600 28) and
+//           the kit's empty-thread line (15/1.5, the quiet text); no chips (US-023l)
 
 import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -30,7 +33,9 @@ import { PlayThreadCaption } from '../play/companion';
 import { ARCADE_COPY, EDGE_COPY } from '../strings';
 import { useStyle } from '../theme';
 import { ARCADE_DIALOGUE } from '../typeface/arcade-type';
+import { CANDY_EDGE_COPY } from '../candy/strings';
 import { ArcadeEdgeWindow } from './ArcadeEdgeWindow';
+import { CandyEdgeWindow } from './CandyEdgeWindow';
 import { STARTERS } from './edges';
 import { EDGE_METRICS } from './metrics';
 import { EdgeBrand, useEdgePaint } from './parts';
@@ -116,6 +121,31 @@ function ArcadeHello() {
   );
 }
 
+/** Candy's hello: its window, Auto waving on its band, his greeting and its line. */
+function CandyHello() {
+  const style = useStyle();
+  const paint = useEdgePaint();
+  const lede = style.type.body(EDGE_METRICS.ledeSize, 400, { leading: EDGE_METRICS.ledeLeading });
+  const { greeting } = CANDY_EDGE_COPY;
+  return (
+    <ScrollView
+      style={styles.fill}
+      contentContainerStyle={styles.middle}
+      keyboardShouldPersistTaps="handled"
+    >
+      <CandyEdgeWindow state="hello" centred>
+        <Text
+          accessibilityRole="header"
+          style={[style.type.display('hero'), styles.centred, { color: paint.text }]}
+        >
+          {greeting.title}
+        </Text>
+        <Text style={[lede, styles.centred, { color: paint.text2 }]}>{greeting.line}</Text>
+      </CandyEdgeWindow>
+    </ScrollView>
+  );
+}
+
 /** Studio's and Play's hello: Auto, the greeting, the lede, and Play's starters. */
 function Hello({ onStarter }: FirstOpenHelloProps) {
   const style = useStyle();
@@ -145,9 +175,11 @@ function Hello({ onStarter }: FirstOpenHelloProps) {
   );
 }
 
-/** The hello: Auto, the greeting, the lede, and Play's starters; Arcade's window. */
+/** The hello: Auto, the greeting, the lede, and Play's starters; Arcade's and Candy's window. */
 export function FirstOpenHello({ onStarter }: FirstOpenHelloProps) {
-  if (useStyle().layout === 'arcade') return <ArcadeHello />;
+  const { layout } = useStyle();
+  if (layout === 'arcade') return <ArcadeHello />;
+  if (layout === 'candy') return <CandyHello />;
   return <Hello onStarter={onStarter} />;
 }
 

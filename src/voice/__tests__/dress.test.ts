@@ -2,13 +2,15 @@
 // resolveStyle, never hand-written colours: Studio light and dark (ink structure, orange motion),
 // Play (its look's accent, Auto in the core), HUD with Auto on and off (its accent, its overlay),
 // Arcade in every preset (its palette's accent, the core filled with its window, Auto as its
-// sprite, US-022i), an installed theme with and without a mascot, and Reduce Motion. Every colour
-// equals the resolved style's own.
+// sprite, US-022i), Candy in every preset (its accent under the card sets' gradient, the core
+// clear for its orb, Auto as its own, US-023l), an installed theme with and without a mascot, and
+// Reduce Motion. Every colour equals the resolved style's own.
 
 import { describe, expect, it } from 'vitest';
 
 import { DAYLIGHT, EMBER, OBSIDIAN, PRESETS } from '../../core/frozen/lib/looks/presets';
 import { ARCADE_PRESET_LOOKS } from '../../styles/arcade/look-schema';
+import { CANDY_PRESET_LOOKS } from '../../styles/candy/look-schema';
 import { HUD_DEFAULT_LOOK, HUD_PRESET_LOOKS, type HudLook } from '../../styles/hud/look-schema';
 import { resolveStyle, type ResolvedStyle, type StyleInput } from '../../styles/provider/resolve';
 import { builtinChoice, themeChoice, type StyleChoice } from '../../styles/registry/style-id';
@@ -35,6 +37,7 @@ const studio = builtinChoice('studio');
 const play = builtinChoice('play');
 const hud = builtinChoice('hud');
 const arcade = builtinChoice('arcade');
+const candy = builtinChoice('candy');
 const theme = themeChoice(INSTALL_ID);
 
 /** A theme's painting as US-016i caches it, its colours from the vendored look engine. */
@@ -59,6 +62,7 @@ const HUD_AUTO_OFF = resolve(hud, { hudLook: hudLook({ auto: 'off' }) });
 const THEME_WITH_MASCOT = resolve(theme, painted(true));
 const THEME_WITHOUT = resolve(theme, painted(false));
 const ARCADE_STYLES = ARCADE_PRESET_LOOKS.map((look) => resolve(arcade, { arcadeLook: look }));
+const CANDY_STYLES = CANDY_PRESET_LOOKS.map((look) => resolve(candy, { candyLook: look }));
 
 const STYLES: readonly ResolvedStyle[] = [
   STUDIO_LIGHT,
@@ -69,6 +73,7 @@ const STYLES: readonly ResolvedStyle[] = [
   HUD_AUTO_OFF,
   ...HUD_PRESET_LOOKS.map((look) => resolve(hud, { hudLook: look })),
   ...ARCADE_STYLES,
+  ...CANDY_STYLES,
   THEME_WITH_MASCOT,
   THEME_WITHOUT,
   resolve(theme),
@@ -185,9 +190,43 @@ describe('Arcade: the palette’s accent, its window in the core, Auto as the sp
   });
 });
 
+describe('Candy: the palette’s accent under its gradient, its orb in the core, Auto as its own', () => {
+  it('every preset: the accent for the rings and the chip, the three card starts as the gradient', () => {
+    expect(CANDY_STYLES).toHaveLength(3);
+    CANDY_STYLES.forEach((style) => {
+      const vars = style.candy;
+      const dress = voiceDress(style);
+      expect(style.layout).toBe('candy');
+      expect(vars).toBeDefined();
+      expect(dress.ringLine).toBe(vars?.accent);
+      expect(accentOnly(dress)).toEqual(Array(4).fill(vars?.accent));
+      expect(dress.chipLine).toBe(voicePaint(style).accentLine);
+      expect(dress.gradient).toEqual([vars?.g1a, vars?.g2a, vars?.g3a]);
+      expect(dress.coreFill).toBe(clearOf(vars?.accent ?? ''));
+      expect(dress).toMatchObject({ overlay: false, mascotInCore: true, sprite: false, candy: true });
+    });
+  });
+
+  it("puts Candy's own Auto in the core in place of the bundled mascot, which Candy never shows", () => {
+    const style = CANDY_STYLES[0];
+    expect(style.mascot).toBe('none');
+    expect(voiceDress(style).mascotInCore).toBe(true);
+    expect(voiceDress(style).candy).toBe(true);
+  });
+
+  it('is the only style with a gradient or its own Auto in the orb', () => {
+    STYLES.filter((style) => style.layout !== 'candy').forEach((style) => {
+      const dress = voiceDress(style);
+      expect(dress.candy).toBe(false);
+      expect(dress.gradient).toBeUndefined();
+      expect('gradient' in dress).toBe(false);
+    });
+  });
+});
+
 describe('motion', () => {
   it('Reduce Motion stills every style; HUD’s motion off stills HUD', () => {
-    const choices = [studio, play, hud, arcade, theme];
+    const choices = [studio, play, hud, arcade, candy, theme];
     choices.forEach((choice) => {
       expect(voiceDress(resolve(choice)).motion).toBe(true);
       expect(voiceDress(resolve(choice, { reduceMotion: true })).motion).toBe(false);
@@ -210,7 +249,13 @@ describe('no colour of its own (D-TOKENS)', () => {
         ...Object.values(voicePaint(style)).flat(),
       ]);
       const dress = voiceDress(style);
-      const colours = [dress.ringLine, ...accentOnly(dress), dress.chipLine, dress.coreFill];
+      const colours = [
+        dress.ringLine,
+        ...accentOnly(dress),
+        dress.chipLine,
+        dress.coreFill,
+        ...(dress.gradient ?? []),
+      ];
       colours.forEach((colour) => expect(own.has(colour)).toBe(true));
       expect(Object.isFrozen(dress)).toBe(true);
     });

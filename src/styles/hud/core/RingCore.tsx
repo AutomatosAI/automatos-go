@@ -7,7 +7,9 @@
 // structure (the outer ring, the ticks, the dashed ring and the crosshair) in a line colour of its
 // own, Studio's ink (KV9); their motion (the arcs, the segments, the pulse) keeps the colour. It may
 // also fill the disc at the centre (the pulse's circle) over the pulse and the crosshair: Arcade's
-// window, flat, for its sprite to stand on (US-022i). Loops follow useVoiceCore (Arcade's pause too).
+// window, flat, for its sprite to stand on (US-022i). Candy's voice screen (US-023l) strokes every
+// ring in a gradient, the card sets' starts swept round the centre (pink, violet, blue and back),
+// turning with the ring it paints. Loops follow useVoiceCore (Arcade's and Candy's pause too).
 
 import {
   BlurMask,
@@ -20,6 +22,7 @@ import {
   RadialGradient,
   Rect,
   Skia,
+  SweepGradient,
   vec,
   type SkPath,
 } from '@shopify/react-native-skia';
@@ -70,9 +73,16 @@ type StrokeProps = {
   readonly centre: number;
   readonly colour: string;
   readonly loops: boolean;
+  /** The colours swept round the centre in place of `colour`, closed (the first again last). */
+  readonly sweep?: readonly string[];
 };
 
-function Stroke({ stroke, centre, colour, loops }: StrokeProps) {
+/** The sweep's shader for a ring's path; none without a sweep. */
+function SweepPaint({ sweep, centre }: { readonly sweep?: readonly string[]; readonly centre: number }) {
+  return sweep ? <SweepGradient c={vec(centre, centre)} colors={[...sweep]} /> : null;
+}
+
+function Stroke({ stroke, centre, colour, loops, sweep }: StrokeProps) {
   const groups = useMemo(
     () =>
       arcGroups(stroke.arcs).map((group) => ({
@@ -93,12 +103,14 @@ function Stroke({ stroke, centre, colour, loops }: StrokeProps) {
       {stroke.glow > 0
         ? groups.map(({ alpha, path }) => (
             <Path key={`glow-${alpha}`} path={path} {...paint} opacity={alpha}>
+              <SweepPaint sweep={sweep} centre={centre} />
               <BlurMask blur={blurSigma(stroke.glow)} style="normal" />
             </Path>
           ))
         : null}
       {groups.map(({ alpha, path }) => (
         <Path key={alpha} path={path} {...paint} opacity={alpha}>
+          <SweepPaint sweep={sweep} centre={centre} />
           {stroke.dash ? <DashPathEffect intervals={[stroke.dash.on, stroke.dash.off]} /> : null}
         </Path>
       ))}
@@ -168,11 +180,20 @@ export type RingCoreProps = {
   readonly lineColour?: string;
   /** The disc at the centre, filled flat (Arcade's window); absent, the pulse shows through. */
   readonly fill?: string;
+  /** Every ring stroked in these colours swept round the centre (Candy's); absent, `colour`. */
+  readonly gradient?: readonly string[];
 };
 
-export function RingCore({ size, colour, lineColour = colour, fill }: RingCoreProps) {
+/** The gradient closed into a loop for the sweep (its first colour again at the end). */
+function closedSweep(gradient: readonly string[] | undefined): readonly string[] | undefined {
+  const first = gradient?.[0];
+  return gradient && first !== undefined ? [...gradient, first] : undefined;
+}
+
+export function RingCore({ size, colour, lineColour = colour, fill, gradient }: RingCoreProps) {
   const { loops } = useVoiceCore();
   const specs = useMemo(() => ringSpecs(size), [size]);
+  const sweep = useMemo(() => closedSweep(gradient), [gradient]);
   return (
     <Canvas
       pointerEvents="none"
@@ -187,6 +208,7 @@ export function RingCore({ size, colour, lineColour = colour, fill }: RingCorePr
           centre={specs.centre}
           colour={STRUCTURE.has(stroke.key) ? lineColour : colour}
           loops={loops}
+          sweep={sweep}
         />
       ))}
       <Pulse pulse={specs.pulse} centre={specs.centre} colour={colour} loops={loops} />

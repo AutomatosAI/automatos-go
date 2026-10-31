@@ -1,11 +1,12 @@
 // What the edge screens share (US-017f): their paint, the brand line at the top (Play's italic
 // 'Automatos Play' with 'Play' in the accent text, all in text2 when the glow is out; HUD's
-// 'AUTOMATOS //'; Arcade's 'AUTOMATOS ARCADE' in its label face, wrapping when the phone is too
-// narrow for it and the status word; none in Studio), a status word on its right (the dimmed
-// light's text twin), the 48 pt full-width action (Candy's dress raises it to 50), the bottom row
-// it sits in, Not running's command as selectable mono (no clipboard module, KS7) and HUD's bracket
-// panel round a screen's words (an Arcade window with Auto's sprite at its head, US-022i; a plain
-// column in Studio and Play).
+// 'AUTOMATOS //'; Arcade's 'AUTOMATOS ARCADE' and Candy's 'Automatos Candy' in their label face,
+// wrapping when the phone is too narrow for it and the status word; none in Studio), a status word
+// on its right (the dimmed light's text twin), the 48 pt full-width action (Candy's dress raises it
+// to 50, its accent pill), the bottom row it sits in, Not running's command as selectable mono (no
+// clipboard module, KS7) and HUD's bracket panel round a screen's words (an Arcade window with
+// Auto's sprite at its head, US-022i; Candy's window with the band and Auto at 140, US-023l; a
+// plain column in Studio and Play).
 
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -17,6 +18,7 @@ import type { ButtonVariant } from '../../ui/variants';
 import { useDress } from '../dress/use-dress';
 import { useStyle } from '../theme';
 import { ArcadeEdgeWindow } from './ArcadeEdgeWindow';
+import { CandyEdgeWindow } from './CandyEdgeWindow';
 import { brandWords } from './edges';
 import { EDGE_METRICS } from './metrics';
 import { edgePaint, type EdgePaint } from './paint';
@@ -53,16 +55,17 @@ export function EdgeBrand({ status, dimmed = false }: BrandProps) {
   const style = useStyle();
   const paint = useEdgePaint();
   const showsBrand = style.layout !== 'studio';
-  const arcade = style.layout === 'arcade';
-  // Arcade's words are labels in its pixel face (README 'Type'), too wide to promise one line
-  const statusFace = arcade ? style.type.label : style.type.mono(brand.statusSize);
+  const ownLabels = style.layout === 'arcade' || style.layout === 'candy';
+  // Arcade's words are labels in its pixel face (README 'Type'), Candy's in Nunito (never under
+  // its 12): too wide to promise one line
+  const statusFace = ownLabels ? style.type.label : style.type.mono(brand.statusSize);
   if (!showsBrand && status === undefined) return null;
   return (
     <View
       style={[
         styles.brand,
         { paddingVertical: brand.padY, paddingHorizontal: EDGE_METRICS.padX },
-        arcade ? styles.wraps : null,
+        ownLabels ? styles.wraps : null,
       ]}
     >
       {showsBrand ? <BrandWords dimmed={dimmed} /> : <View />}
@@ -140,14 +143,18 @@ type PanelProps = {
   readonly line: string;
   readonly label: string;
   readonly gap: number;
-  /** Arcade: Auto's state, his sprite at the window's head (the other styles draw the Mascot). */
+  /**
+   * Arcade and Candy: Auto's state, his sprite at the window's head, Candy's Auto on its band (the
+   * other styles draw the Mascot).
+   */
   readonly auto: MascotName;
   readonly children: ReactNode;
 };
 
 /**
  * HUD: the words in a bracket panel under a glyph-and-word line; Arcade: a window tabbed with the
- * line, Auto's sprite at its head; Studio and Play: a column.
+ * line, Auto's sprite at its head; Candy: its window, Auto and his state word on its band (his
+ * word says what the line would); Studio and Play: a column.
  */
 export function EdgePanel({ line, label, gap, auto, children }: PanelProps) {
   const style = useStyle();
@@ -159,6 +166,7 @@ export function EdgePanel({ line, label, gap, auto, children }: PanelProps) {
       </ArcadeEdgeWindow>
     );
   }
+  if (style.layout === 'candy') return <CandyEdgeWindow state={auto}>{children}</CandyEdgeWindow>;
   if (style.layout !== 'hud') return <View style={{ gap }}>{children}</View>;
   return (
     <Card padding="space8" radius="panel">

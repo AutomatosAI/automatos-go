@@ -5,8 +5,8 @@
 // held still, the writing dots, or the voice core's Candy Auto (a <CandyAuto in src/voice) — is
 // listed with the screen that shows it and the file on that screen that draws CandyPauseButton; a
 // moving file listed nowhere fails. US-023h listed the Chat view's, US-023i the Shelf's (Auto asleep
-// on an empty shelf); US-023l and US-023m add theirs;
-// the picker's Candy card moves nothing.
+// on an empty shelf), US-023l the edge window's (its own) and the voice core's (Auto in the orb,
+// the voice screen's); US-023m adds its own; the picker's Candy card moves nothing.
 
 import path from 'node:path';
 
@@ -27,6 +27,9 @@ const TODAY = 'src/styles/candy/home/TodayView.tsx';
 const CHAT_STAGE = 'src/styles/candy/home/ChatStage.tsx';
 const CHAT_VIEW = 'src/styles/candy/home/ChatView.tsx';
 const SHELF = 'src/styles/candy/home/ShelfView.tsx';
+const EDGE = 'src/styles/edges/CandyEdgeWindow.tsx';
+const VOICE = 'src/voice/screen/VoiceScreen.tsx';
+const HUD_CORE = 'src/styles/hud/core/HudCore.tsx';
 
 /**
  * Where a moving file shows: `mountedBy`, the components from its screen down to it (the screen
@@ -42,6 +45,10 @@ const REACH: Readonly<Record<string, Reach>> = Object.freeze({
   [CHAT_VIEW]: { host: CHAT_STAGE, mountedBy: [HOME] },
   // the Shelf: Auto asleep on an empty shelf, the control in its header (US-023i)
   [SHELF]: { host: SHELF, mountedBy: [HOME] },
+  // every edge screen's window: Auto on its band, the control at its top end (US-023l)
+  [EDGE]: { host: EDGE, mountedBy: [] },
+  // the voice screen: Auto in the orb, the control in the core's slot under its top bar (US-023l)
+  [HUD_CORE]: { host: VOICE, mountedBy: [VOICE] },
 });
 
 const componentOf = (file: string) => path.posix.basename(file, '.tsx');
@@ -101,6 +108,24 @@ describe('where the control sits', () => {
     const shelf = codeOf(SHELF);
     expect(shelf).toMatch(/function ShelfHeader\([\s\S]*?<CandyPauseButton\s*\/>[\s\S]*?\n\}/);
     expect(shelf).toMatch(/<ShelfHeader\b[\s\S]*<ShelfBody\b/);
+  });
+
+  it("is at the top end of every edge screen's window, filled (it sits on the band), over Auto", () => {
+    const window = codeOf(EDGE);
+    expect(window).toMatch(
+      /<View style=\{styles\.pause\}>\s*<CandyPauseButton\s*\/>\s*<\/View>\s*<EdgeAuto\b/,
+    );
+    expect(window).toMatch(/<CandyAuto state=\{state\} size=\{candy\.auto\}\s*\/>/);
+  });
+
+  it("is on the voice screen in Candy alone, in the core's slot, never beside Arcade's", () => {
+    const voice = codeOf(VOICE);
+    expect(voice).toMatch(/controls=\{pauseControl\(model\.core\)\}/);
+    expect(voice).toMatch(
+      /if \(sprite\)\s*return <PauseButton\s*\/>;\s*return candy \? <CandyPauseButton\s*\/> : undefined;/,
+    );
+    expect(codeOf(HUD_CORE)).toMatch(/if \(voice\?\.candy\)\s*return <CandyCore\b/);
+    expect(codeOf(HUD_CORE)).toMatch(/<Orb size=\{orb\.side\} room=\{orb\.side\}\s*\/>/);
   });
 
   it('is never needed by a part that is held still, so the patterns skip `still`', () => {

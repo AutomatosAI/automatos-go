@@ -4,11 +4,14 @@
 // time and delay, on reanimated); while they may not, every bar stands still at its full height.
 // A6's live mic passes levels: each bar then stands at its level and the breath stops. Decoration,
 // hidden from VoiceOver: the state chip and the mic say what it shows. Loops follow useVoiceCore
-// (Arcade's pause stills the breath too, US-022i).
+// (Arcade's pause stills the breath too, US-022i, and Candy's, US-023l). Candy's voice screen
+// strokes it in a gradient: each bar the gradient's colour where it stands (gradientRun).
 
+import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle } from 'react-native-reanimated';
 
+import { gradientRun } from '../../tokens/voice-colours';
 import { CSS_EASE_IN_OUT } from './ring-specs';
 import { useLoop } from './use-loop';
 import { useVoiceCore } from './use-voice-core';
@@ -55,6 +58,8 @@ export type WaveformProps = {
   /** 44 bars 36 high on the phone. */
   readonly bars?: number;
   readonly height?: number;
+  /** The bars across these colours, first to last (Candy's); absent, every bar `colour`. */
+  readonly gradient?: readonly string[];
 };
 
 export function Waveform({
@@ -62,9 +67,11 @@ export function Waveform({
   levels,
   bars = WAVE.phone.bars,
   height = WAVE.phone.height,
+  gradient,
 }: WaveformProps) {
   const { loops } = useVoiceCore();
   const scales = levelScales(levels, bars);
+  const run = useMemo(() => (gradient ? gradientRun(gradient, bars) : null), [gradient, bars]);
   return (
     <View
       pointerEvents="none"
@@ -76,7 +83,7 @@ export function Waveform({
         <Bar
           key={bar.index}
           bar={bar}
-          colour={colour}
+          colour={run?.[bar.index] ?? colour}
           loops={loops}
           level={scales ? (scales[bar.index] ?? null) : null}
         />

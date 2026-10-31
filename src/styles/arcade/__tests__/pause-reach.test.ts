@@ -95,8 +95,10 @@ describe('where the control sits', () => {
   });
 
   it('is on the voice screen in Arcade alone, in a slot the core draws under its top bar', () => {
+    // Arcade's control when the dress draws the sprite, before Candy's (US-023l): never both
+    expect(codeOf(VOICE)).toMatch(/controls=\{pauseControl\(model\.core\)\}/);
     expect(codeOf(VOICE)).toMatch(
-      /controls=\{model\.core\.sprite \? <PauseButton\s*\/> : undefined\}/,
+      /function pauseControl\(\{ sprite, candy \}[\s\S]*?\{\s*if \(sprite\)\s*return <PauseButton\s*\/>;\s*return candy \? <CandyPauseButton\s*\/> : undefined;\s*\}/,
     );
     expect(codeOf(HUD_CORE)).toMatch(/readonly controls\?: ReactNode;/);
     expect(codeOf(HUD_CORE)).toMatch(/<HudTopBar\b[\s\S]*?\/>\s*\{props\.controls \?/);

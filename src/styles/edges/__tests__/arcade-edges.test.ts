@@ -64,8 +64,9 @@ describe("the voice core's Auto in Arcade", () => {
   });
 
   it("stills the rings, the waveform and the cursor on Arcade's pause", () => {
+    // Arcade's pause in Arcade; Candy's motion in Candy (US-023l); the style's loops elsewhere
     expect(code('hud/core/use-voice-core.ts')).toMatch(
-      /const loops = style\.layout === 'arcade' \? moving : style\.motion\.loops;/,
+      /const own = style\.layout === 'candy' \? candy\.moving : style\.motion\.loops;\s*const loops = style\.layout === 'arcade' \? moving : own;/,
     );
     for (const file of ['hud/core/RingCore.tsx', 'hud/core/WaveformView.tsx']) {
       expect(code(file)).toMatch(/const \{ loops \} = useVoiceCore\(\);/);
