@@ -1,14 +1,16 @@
 // Auto's suggestions, wired (PRD-268 §6.5.2, US-G01; the rules are model.ts's). One query, GET
 // /api/proactive/suggestions?status=open, only where discovery lists `suggestions`: memory only
 // (query-keys.ts), refetched on a suggestion_changed live event (live-events.ts) and on the 60 s
-// poll needs-you uses. Start and Hide are for the roles that may answer (owners, admins, editors;
-// a viewer is 403 on both). Start: refused at once while the app is offline (one line, nothing
-// queued), else Face ID first (gated.ts), then sent; 'Started. Auto is on it.' shows for 4 s, and
-// the suggestion leaves the list at once (so no surface offers it again), and the suggestions, the
-// Board and needs-you are read again. One Start at a time across every surface (the pinned card,
-// the sheet, HUD's line share the mutation's key). Hide is never gated: the reason menu
-// (reason-menu.ts), then the suggestion leaves the list at once and the server is told; a Hide that
-// fails puts it back.
+// poll needs-you uses. Until the person's pause is read, and while they have paused suggestions
+// (§6.9, use-pause.ts), every surface shows none and the list is not read; a pause or a resume
+// reads it again (pause.ts). Start and Hide are for the roles that may answer (owners, admins,
+// editors; a viewer is 403 on both). Start: refused at once while the app is offline (one line,
+// nothing queued), else Face ID first (gated.ts), then sent; 'Started. Auto is on it.' shows for
+// 4 s, and the suggestion leaves the list at once (so no surface offers it again), and the
+// suggestions, the Board and needs-you are read again. One Start at a time across every surface
+// (the pinned card, the sheet, HUD's line share the mutation's key). Hide is never gated: the
+// reason menu (reason-menu.ts), then the suggestion leaves the list at once and the server is
+// told; a Hide that fails puts it back.
 
 import { useMutation, useMutationState, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -25,10 +27,11 @@ import { useToast } from '../ui';
 import { fetchOpenSuggestions, hideSuggestion } from './api';
 import { OPEN_KEY, putBack, takeOff } from './cache';
 import { startGated } from './gated';
-import { STARTED_FOR_MS, openSuggestions, startRefusal, type SuggestionView } from './model';
+import { STARTED_FOR_MS, shownSuggestions, startRefusal, type SuggestionView } from './model';
 import { askHideReason } from './reason-menu';
 import type { HideReason, Suggestion } from './schema';
 import { SUGGESTION_COPY } from './strings';
+import { useSuggestionsPaused } from './use-pause';
 
 /** Every surface's Start shares this key: one Start at a time, its busy row seen everywhere. */
 const START_KEY = ['proactive', 'suggestions', 'start'] as const;
@@ -45,16 +48,17 @@ export type OpenSuggestions = {
 export function useOpenSuggestions(): OpenSuggestions {
   const { client, discovery } = useAppSession();
   const offered = canSuggestions(discovery);
+  const paused = useSuggestionsPaused(offered);
   const query = useQuery({
     queryKey: OPEN_KEY,
     queryFn: ({ signal }) => fetchOpenSuggestions(client, signal),
     refetchInterval: NEEDS_YOU_REFETCH_INTERVAL_MS,
-    enabled: offered,
+    enabled: offered && paused === false,
   });
   const data = query.data;
   const open = useMemo(
-    () => (offered && data ? openSuggestions(data, Date.now()) : []),
-    [offered, data],
+    () => shownSuggestions({ offered, paused, list: data, now: Date.now() }),
+    [offered, paused, data],
   );
   return { offered, open };
 }

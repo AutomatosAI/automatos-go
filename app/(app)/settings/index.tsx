@@ -3,7 +3,8 @@
 // this server, US-006h), then the workspace, role and app version, then Style and look (the style
 // picker, US-016j). Nothing deletes an account or a workspace (D63); nothing about plans (D8).
 // After them, Notifications (src/push, US-014h), Voice (Auto's voice, speed and pitch on this
-// phone, src/voice/settings), What Auto depends on (PRD-268 US-G07, src/readiness: only where
+// phone, src/voice/settings), Pause suggestions (PRD-268 §6.9, src/suggestions: only where
+// discovery lists suggestions), What Auto depends on (PRD-268 US-G07, src/readiness: only where
 // discovery lists readiness) and, on a hosted phone with a push record, Remove this phone (KP16; an
 // own server's way out stays the server section's). The policies and the other Settings pages
 // arrive with their stories.
@@ -26,6 +27,7 @@ import { RemovePhone } from '../../../src/push/bind/RemovePhone';
 import { pushScreens } from '../../../src/push/nav';
 import { PUSH_ACCOUNT_COPY } from '../../../src/push/strings';
 import { PrivacySection } from '../../../src/release/components/PrivacySection';
+import { PauseSection } from '../../../src/suggestions/PauseSection';
 import { useTokens } from '../../../src/styles/theme';
 import { Card, Divider, IconButton, ListRow, Screen, Text } from '../../../src/ui';
 import { VOICE_SCREENS } from '../../../src/voice/nav';
@@ -95,6 +97,7 @@ export default function AccountSettings() {
             onPress={() => router.push(VOICE_SCREENS.settings)}
           />
         </Card>
+        <PauseSection />
         <ReadinessSection />
         <PrivacySection />
         <RemovePhone />
