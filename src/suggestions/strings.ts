@@ -61,3 +61,21 @@ export const SUGGESTION_COPY = Object.freeze({
   }),
   hideFailed: 'Auto couldn’t hide this. Try again in a minute.',
 });
+
+/**
+ * Settings → "Pause suggestions" (PRD-268 §6.9, FR-13): the person's own switch, in this workspace
+ * on every phone and on the web (core's GET/PUT /api/proactive/me). A failure is one line under the
+ * switch: the lead says what did not happen, the API taxonomy's words (src/api/strings.ts) why.
+ */
+export const PAUSE_COPY = Object.freeze({
+  section: 'Suggestions',
+  title: 'Pause suggestions',
+  /** The one line under the switch: what a pause stops, and what it leaves alone. */
+  detail:
+    'While paused, Auto makes no new suggestions for you and sends no notifications about them. Your daily brief still comes unless Daily digest is off in Notifications.',
+  /** The first read is out: the switch waits for the server's answer before it can be pressed. */
+  reading: 'Reading your setting…',
+  readFailed: 'Auto couldn’t read whether your suggestions are paused.',
+  pauseFailed: 'Your suggestions weren’t paused.',
+  resumeFailed: 'Your suggestions weren’t resumed.',
+});
