@@ -11,14 +11,17 @@
 // them (shelf.ts), A2's Try again, cards and links. Where discovery lists `brief` (canBrief), the
 // rows keep the day's brief (threadRows' briefs, as Play's thread does, PRD-268 US-G06): the story
 // draws a brief's window, named for the phone's local date, and the dialogue says the brief the
-// newest reply carries, whole or typed as a reply is (openedChat). The dialogue says the row the
-// story leaves out (sayingOf: its message and brief), so no reply is lost or said twice.
+// newest reply carries, whole or typed as a reply is (openedChat). Where it lists `suggestions`
+// (canSuggestions), a suggestion Auto posted is its own row (threadRows' suggestions, as Play's and
+// Studio's threads ask): the story draws its card, and the dialogue says its words when it is the
+// newest reply, with Report this as on any reply. The dialogue says the row the story leaves out
+// (sayingOf: its message and brief), so no reply is lost or said twice.
 
 import { useQuery } from '@tanstack/react-query';
 import { usePathname, useRouter } from 'expo-router';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
-import { canBrief } from '../../api/capabilities';
+import { canBrief, canSuggestions } from '../../api/capabilities';
 import type { NeedsYouRows } from '../../api/needs-you';
 import { useApiClient, useAppSession } from '../../app-state/session';
 import { localDateIn } from '../../brief/on-open';
@@ -54,7 +57,7 @@ import {
   type OpenedChat,
   type Saying,
 } from './arcade-home';
-import { sayingRowKey, storyEntries, type StoryEntry } from './arcade-story';
+import { autoRowOf, sayingRowKey, storyEntries, type StoryEntry } from './arcade-story';
 import { placeReports } from './shelf';
 import type { HomeThread } from './use-home-thread';
 import { useShelf } from './use-play-home';
@@ -173,6 +176,8 @@ export type ArcadeStory = {
   readonly sayingReport: (() => void) | undefined;
   /** The row the dialogue window says (its message and brief); null when none is its to say. */
   readonly saying: Saying | null;
+  /** That row's saved message: a focus there settles without a scroll (US-G03); null for none. */
+  readonly sayingId: string | null;
 };
 
 /** The phone's local date, as the brief's date is written ('2026-10-28'). */
@@ -200,9 +205,14 @@ export function useArcadeStory(home: HomeThread, report: ThreadReport): ArcadeSt
   const { state, send, settleCard } = home.thread;
   const onLink = useFollowLink();
   const shelf = useShelf(state);
-  const briefs = canBrief(useAppSession().discovery);
+  const { discovery } = useAppSession();
+  const briefs = canBrief(discovery);
+  const suggestions = canSuggestions(discovery);
   const today = useToday();
-  const rows = useMemo(() => threadRows(state, { briefs }), [state, briefs]);
+  const rows = useMemo(
+    () => threadRows(state, { briefs, suggestions }),
+    [state, briefs, suggestions],
+  );
   const sayingKey = sayingRowKey(rows);
   const entries = useMemo(() => {
     const places = placeReports(shelf, state, LIVE_AUTO_KEY, new Set(rows.map((row) => row.key)));
@@ -211,7 +221,8 @@ export function useArcadeStory(home: HomeThread, report: ThreadReport): ArcadeSt
   const sayingRow = useMemo(() => sayingOf(rows, sayingKey), [rows, sayingKey]);
   const onRetry = useTryAgain(state, send);
   const saying = rows.find((row) => row.key === sayingKey);
-  const target = saying ? reportTarget(saying, report.allowed) : null;
+  const sayingAuto = saying ? autoRowOf(saying) : null;
+  const target = sayingAuto ? reportTarget(sayingAuto, report.allowed) : null;
   // by its id: reportTarget makes a new object each time, the handler stays while the id does
   const targetId = target?.target_id ?? null;
   const { open } = report;
@@ -220,5 +231,14 @@ export function useArcadeStory(home: HomeThread, report: ThreadReport): ArcadeSt
       targetId === null ? undefined : () => open({ target_type: 'message', target_id: targetId }),
     [targetId, open],
   );
-  return { entries, onRetry, onCard: settleCard, onLink, sayingReport, saying: sayingRow };
+  const sayingId = sayingRow?.messageId ?? null;
+  return {
+    entries,
+    onRetry,
+    onCard: settleCard,
+    onLink,
+    sayingReport,
+    saying: sayingRow,
+    sayingId,
+  };
 }
