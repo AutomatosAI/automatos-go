@@ -1,5 +1,7 @@
 // PRD-268 in Candy (D-CAN-8, US-023n): the day's brief on the Chat view's rows (threadRows' briefs,
-// as Play's and Arcade's homes read it), 'Ideas · N' in Today's header (today.ts ideasPill over
+// as Play's and Arcade's homes read it), a suggestion Auto posted as its card in the thread
+// (threadRows' suggestions, §6.5.1), the thread opened at its focus message (US-G03, as Play's
+// thread opens), 'Ideas · N' in Today's header (today.ts ideasPill over
 // use-ideas.tsx's button), and what Candy draws while a feature is not offered: no brief where
 // discovery does not list `brief`, no pill without an open suggestion, no approval line while no
 // card waits with an ApprovalView. The components load React Native, so how they are wired is read
@@ -10,11 +12,12 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { canBrief, type GateInput } from '../../../api/capabilities';
+import { canBrief, canSuggestions, type GateInput } from '../../../api/capabilities';
 import { VIEW } from '../../../approvals/__tests__/fixtures';
 import { waitingSheetCard } from '../../../approvals/waiting';
 import { PROSE, WIRE_BRIEF, briefMessage } from '../../../brief/__tests__/fixtures';
 import { saved } from '../../../chat/__tests__/thread-fixtures';
+import { StoredMessageSchema, type StoredMessage } from '../../../chat/schemas';
 import { opened, streaming } from '../../../chat/__tests__/view-model-fixtures';
 import { reportTarget } from '../../../chat/report/report';
 import { threadRows } from '../../../chat/view-model';
@@ -38,12 +41,33 @@ const HOME = 'src/styles/homes/CandyHome.tsx';
 const CHAT = 'src/styles/homes/use-candy-chat.ts';
 const ENTRY = 'src/styles/candy/home/ChatEntry.tsx';
 const STAGE = 'src/styles/candy/home/ChatStage.tsx';
+const VIEW_FILE = 'src/styles/candy/home/ChatView.tsx';
+const STYLE_HOME = 'src/styles/homes/StyleHome.tsx';
 const TODAY = 'src/styles/candy/home/TodayView.tsx';
 
 /** The Chat view's entries over these messages, gated as useCandyChat gates them. */
-function entriesOf(discovery: GateInput) {
-  const state = opened([ASKED, REPLY, briefMessage()]);
-  return chatEntries(threadRows(state, { briefs: canBrief(discovery) }), NO_PLACES);
+function entriesOf(discovery: GateInput, messages: readonly StoredMessage[] = [briefMessage()]) {
+  const state = opened([ASKED, REPLY, ...messages]);
+  const gates = { briefs: canBrief(discovery), suggestions: canSuggestions(discovery) };
+  return chatEntries(threadRows(state, gates), NO_PLACES);
+}
+
+const SUGGESTION_ID = '5b0c3f7e-8a51-4c1f-9d2e-0f6a7b8c9d10';
+const SUGGESTED = 'Auto suggests: “Lisbon flights”. Fares drop on Tuesdays.';
+
+/** Auto's post of a suggestion: its words and the suggestion@1 part (suggestion-row.test.ts's). */
+function suggestionPost(): StoredMessage {
+  return StoredMessageSchema.parse({
+    id: 'm-idea',
+    role: 'assistant',
+    parts: [
+      { type: 'text', text: SUGGESTED },
+      { type: 'suggestion@1', suggestion_id: SUGGESTION_ID },
+    ],
+    attachments: [],
+    source: { origin: 'suggestion', suggestion_id: SUGGESTION_ID, label: null },
+    createdAt: '2026-10-28T08:00:00.000Z',
+  });
 }
 
 function briefEntry(entries: readonly ChatEntry[]) {
@@ -78,6 +102,24 @@ describe('the day’s brief on the Chat view', () => {
       'Here it is.',
       null,
     ]);
+  });
+});
+
+describe('a suggestion Auto posted, on the Chat view', () => {
+  it('is its own entry where discovery lists `suggestions`: the card’s id, and his words as the fallback', () => {
+    const [entry] = entriesOf(NOT_OFFERED, [suggestionPost()]).slice(-1);
+    if (entry?.kind !== 'suggestion') throw new Error('expected the suggestion’s entry');
+    expect(entry.key).toBe('m-idea');
+    expect(entry.suggestionId).toBe(SUGGESTION_ID);
+    expect(entry.text.kind).toBe('auto');
+    expect(entry.text.row.answer).toBe(SUGGESTED);
+  });
+
+  it('is Auto’s reply, never a card, where discovery does not list `suggestions`', () => {
+    const [entry] = entriesOf(OFFERED, [suggestionPost()]).slice(-1);
+    expect(entry?.kind).toBe('auto');
+    if (entry?.kind !== 'auto') throw new Error('expected Auto’s entry');
+    expect(entry.row.answer).toBe(SUGGESTED);
   });
 });
 
@@ -131,11 +173,30 @@ describe('how the home wires them', () => {
   });
 
   it('gates the Chat view’s rows on `brief`, and draws a brief in Auto’s bubble with its entrance', () => {
-    expect(codeOf(CHAT)).toMatch(/const briefs = canBrief\(useAppSession\(\)\.discovery\);/);
-    expect(codeOf(CHAT)).toMatch(/threadRows\(state, \{ briefs \}\)/);
+    expect(codeOf(CHAT)).toMatch(/const \{ discovery \} = useAppSession\(\);\s*const briefs = canBrief\(discovery\);/);
+    expect(codeOf(CHAT)).toMatch(/threadRows\(state, \{ briefs, suggestions \}\)/);
     expect(codeOf(ENTRY)).toMatch(
       /row\.brief \? \(<BriefEntrance brief=\{row\.brief\}>\s*<AutoBubble>\s*<BriefBody brief=\{row\.brief\} onLink=\{onLink\}\s*\/>/,
     );
+  });
+
+  it('gates suggestion rows on `suggestions` and draws the card, else Auto’s entry, through ThreadSuggestion', () => {
+    expect(codeOf(CHAT)).toMatch(/const suggestions = canSuggestions\(discovery\);/);
+    expect(codeOf(ENTRY)).toMatch(
+      /case 'suggestion':\s*return \(\s*<ThreadSuggestion\s*suggestionId=\{entry\.suggestionId\}\s*fallback=\{<AutoEntry \{\.\.\.props\} entry=\{entry\.text\}\s*\/>\}/,
+    );
+  });
+
+  it('opens the thread at its focus message: the route’s, else the brief on open’s, scrolled to once', () => {
+    expect(codeOf(CHAT)).toMatch(/useThreadFocus\(state\.chatId, route\.focus\)/);
+    expect(codeOf(CHAT)).toMatch(/settle\(messageId\);\s*scrolled\(messageId\);/);
+    expect(codeOf(VIEW_FILE)).toMatch(/useFocusScroll\(list, entries, focusMessageId, onFocused\)/);
+    expect(codeOf(VIEW_FILE)).toMatch(/scrollOnAdd\(\);\s*focusRun\(\);/);
+    expect(codeOf(VIEW_FILE)).toMatch(/onScrollToIndexFailed=\{focus\.onScrollToIndexFailed\}/);
+    expect(codeOf(HOME)).toMatch(/const routeFocus = useRouteFocus\(focusMessageId\);/);
+    expect(codeOf(HOME)).toMatch(/useCandyChat\(home, routeFocus\)/);
+    expect(codeOf(HOME)).toMatch(/focusMessageId=\{chat\.focus\}\s*onFocused=\{chat\.onFocused\}/);
+    expect(codeOf(STYLE_HOME)).toMatch(/<CandyHome[^>]*view="chat"\s*focusMessageId=\{focusMessageId\}/);
   });
 
   it('puts the approval line under the stage’s state pill, and Ideas beside Today’s pause', () => {

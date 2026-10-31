@@ -61,7 +61,14 @@ import { useCandyPaint } from '../candy/parts/use-candy-paint';
 import type { SpaceName } from '../tokens';
 import { showsTabBar, type CandyView } from './candy-home';
 import { useOneShotEnd } from './use-arcade-home';
-import { useCandyChat, useCandyComposer, useChatTitle, useStageBack } from './use-candy-chat';
+import {
+  useCandyChat,
+  useCandyComposer,
+  useChatTitle,
+  useRouteFocus,
+  useStageBack,
+  type RouteFocus,
+} from './use-candy-chat';
 import { useCandyHome, useTabBarRoom, type CandyViews, type TabBarRoom } from './use-candy-home';
 import type { HomeThread } from './use-home-thread';
 
@@ -80,6 +87,8 @@ export type CandyHomeProps = {
   readonly onBack?: () => void;
   /** The view to open; the route's own when omitted (candy-home.ts openingView). */
   readonly view?: CandyView;
+  /** The message the Chat view's thread opens at (the chat route's focus param, PRD-268 US-G03). */
+  readonly focusMessageId?: string | null;
 };
 
 type FloatingProps = {
@@ -111,6 +120,8 @@ type ChatPaneProps = {
   readonly onBack: () => void;
   /** The approval sheet's line, under the stage's state pill (useHudApproval). */
   readonly approval: ReactNode;
+  /** The route's focus, kept by the home across the Chat view's mounts (useRouteFocus). */
+  readonly routeFocus: RouteFocus;
 };
 
 /** The message box over A2's composer state, its files in the slots, hold to talk beside it. */
@@ -143,10 +154,11 @@ function ChatComposer({ home, voice }: Pick<ChatPaneProps, 'home' | 'voice'>) {
  * P2 Chat: the stage, A2's discussion bar, the thread, the voice window, the newest of Auto's open
  * suggestions and the message box.
  */
-function ChatPane({ home, voice, report, stage, menu, onBack, approval }: ChatPaneProps) {
+function ChatPane(props: ChatPaneProps) {
+  const { home, voice, report, stage, menu, onBack, approval, routeFocus } = props;
   const { vars } = useCandyPaint();
   const { y: stackTop } = useSafeAreaFrame();
-  const chat = useCandyChat(home);
+  const chat = useCandyChat(home, routeFocus);
   const { state } = home.thread;
   const title = useChatTitle(state);
   return (
@@ -164,6 +176,8 @@ function ChatPane({ home, voice, report, stage, menu, onBack, approval }: ChatPa
           onCard={chat.onCard}
           onLink={chat.onLink}
           report={report}
+          focusMessageId={chat.focus}
+          onFocused={chat.onFocused}
         />
         {voice.available ? <VoiceWindow voice={{ ...voice, ...chatViewVoice(voice) }} /> : null}
         <PinnedSuggestion inset={COMPOSER_INSET} />
@@ -173,7 +187,8 @@ function ChatPane({ home, voice, report, stage, menu, onBack, approval }: ChatPa
   );
 }
 
-export function CandyHome({ chatId, ticketId = null, onBack, view }: CandyHomeProps) {
+export function CandyHome(props: CandyHomeProps) {
+  const { chatId, ticketId = null, onBack, view, focusMessageId = null } = props;
   const { home, needsYou, menu, views, today } = useCandyHome(chatId, ticketId, view);
   const voice = useCandyHomeVoice(home, views.showChat);
   const { report, sheet } = useMessageReport();
@@ -184,6 +199,7 @@ export function CandyHome({ chatId, ticketId = null, onBack, view }: CandyHomePr
   const stage = stageOf(portraitState(home.mascot.driver.mascot), voice.stage);
   const menuCircle = { needsYou: needsYou.total, expanded: menu.visible, onPress: menu.open };
   const back = useStageBack(views.showToday, onBack);
+  const routeFocus = useRouteFocus(focusMessageId);
   return (
     <Screen ground="chat" edges={SIDES}>
       {views.view === 'today' ? (
@@ -205,6 +221,7 @@ export function CandyHome({ chatId, ticketId = null, onBack, view }: CandyHomePr
           menu={menuCircle}
           onBack={back}
           approval={approval.line}
+          routeFocus={routeFocus}
         />
       ) : null}
       {views.view === 'shelf' ? (

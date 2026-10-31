@@ -5,11 +5,14 @@
 // yet, the writing chip ('Auto is writing', its dots bouncing on Candy's one clock, still under the
 // pause the stage draws). The list scrolls to the end only when an entry is added (A2's
 // shouldScrollToEnd), not animated under Reduce Motion, and the keyboard closes as it is dragged.
+// Given a focus message (PRD-268 US-G03), it scrolls there once instead (use-focus-scroll.ts, as
+// Play's thread does).
 
 import { useCallback, useLayoutEffect, useRef } from 'react';
 import { FlatList, StyleSheet, View, type ListRenderItem } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
+import { useFocusScroll } from '../../../chat/components/use-focus-scroll';
 import { shouldScrollToEnd } from '../../../chat/view-model';
 import { AiLabel } from '../../ai-label';
 import { WritingChip } from '../parts/WritingChip';
@@ -22,6 +25,10 @@ const THREAD = Object.freeze({ top: 16, side: 16, gap: 12 });
 
 export type ChatViewProps = Omit<ChatEntryProps, 'entry'> & {
   readonly entries: readonly ChatEntry[];
+  /** The message the thread opens at, scrolled to once (use-thread-focus.ts); null for none. */
+  readonly focusMessageId?: string | null;
+  /** The list scrolled to the focus message. */
+  readonly onFocused?: (messageId: string) => void;
 };
 
 /** Marks a scroll when an entry is added; the next content size change carries it out. */
@@ -51,9 +58,17 @@ function ChatCaption() {
 
 const keyOf = (entry: ChatEntry) => entry.key;
 
-export function ChatView({ entries, onRetry, onCard, onLink, report }: ChatViewProps) {
+export function ChatView(props: ChatViewProps) {
+  const { entries, onRetry, onCard, onLink, report, focusMessageId = null, onFocused } = props;
   const list = useRef<FlatList<ChatEntry>>(null);
-  const onContentSizeChange = useScrollOnAdd(list, entries.length);
+  const scrollOnAdd = useScrollOnAdd(list, entries.length);
+  const focus = useFocusScroll(list, entries, focusMessageId, onFocused);
+  const { run: focusRun } = focus;
+  // the focus runs after the jump to the end, so a thread opened at a message stays there
+  const onContentSizeChange = useCallback(() => {
+    scrollOnAdd();
+    focusRun();
+  }, [scrollOnAdd, focusRun]);
   const renderItem = useCallback<ListRenderItem<ChatEntry>>(
     ({ item }) => (
       <View style={styles.item}>
@@ -80,6 +95,7 @@ export function ChatView({ entries, onRetry, onCard, onLink, report }: ChatViewP
       renderItem={renderItem}
       ListHeaderComponent={ChatCaption}
       onContentSizeChange={onContentSizeChange}
+      onScrollToIndexFailed={focus.onScrollToIndexFailed}
       accessibilityLabel={CANDY_CHAT_COPY.threadLabel}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"

@@ -41,7 +41,8 @@ Chats, the Command Centre and Settings.
   open. Cards that need your answer appear in the conversation, and an approval opens its sheet by
   itself.
 - The day's brief, in Auto's reply, where your server offers it.
-- Auto's newest open suggestion, pinned just above the message box.
+- Auto's suggestions as cards in the conversation, where your server offers them, and his newest
+  open one pinned just above the message box.
 - **Message Auto**, with the voice button beside it.
 - When an approval is waiting and you closed its sheet without answering, **◆ WAITING FOR YOU ·
   OPEN** sits under Auto's state. Tap it to answer.
