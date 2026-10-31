@@ -1,8 +1,7 @@
 # Automatos Go technical docs
 
 For engineers working on the app, and for operators who run their own Automatos server and want to
-connect phones to it. Help for people who use the app is in the Automatos GitBook
-(`automatos-gitbook` repo), not here.
+connect phones to it. Help for people who use the app is in [user/](user/_index.md).
 
 State on 24 Oct 2026. `main` is at `f432b3f`. Each page says what is on `main` and what is still on a
 branch, using these labels:
@@ -77,6 +76,10 @@ decisions, waves and stories. Where it and the code differ, the code is right. K
 - [docs/theme-host/mobile.md](https://github.com/AutomatosAI/automatos-ai/blob/main/docs/theme-host/mobile.md):
   the theme contract for phones. The rest of the theme docs: [docs/theme-host/](https://github.com/AutomatosAI/automatos-ai/blob/main/docs/theme-host/_index.md)
   for engineers, [docs/themes/](https://github.com/AutomatosAI/automatos-ai/blob/main/docs/themes/_index.md) for people who install themes.
+
+## For people who use the app
+
+[user/_index.md](user/_index.md): what each screen does and how to use it, one page per feature.
 
 ## In this repository
 
