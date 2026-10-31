@@ -13,9 +13,8 @@ for the contract, and the Themes pages for people who install themes,
 [on-your-phone.md](https://github.com/AutomatosAI/automatos-ai/blob/main/docs/themes/on-your-phone.md)). The Themes pages
 merged in automatos-ai #1304, which also revised mobile.md (first merged in #1258).
 
-State on 31 Oct 2026. Studio, Play and HUD are on `main` (A5, #14), and Arcade too (A8, #35; its
-PRD-268 slots #37). Candy is wave A9 (PRD-001 §4.6.2, US-023) on the branch `feat/a9-candy`, not on
-`main` yet; the parts of this page about Candy describe that branch.
+State on 31 Oct 2026. All five styles are on `main`: Studio, Play and HUD (A5, #14), Arcade (A8,
+#35; its PRD-268 slots #37) and Candy (A9, PRD-001 §4.6.2, US-023, #40).
 
 ## Status
 
@@ -30,7 +29,7 @@ PRD-268 slots #37). Candy is wave A9 (PRD-001 §4.6.2, US-023) on the branch `fe
 | Auto the mascot (clips, stills, ring) | On `main` (A5) |
 | The Command Centre, sheets, settings, the edge screens and the voice screen dressed per style | On `main` (A5, A6) |
 | Arcade: the fourth style, its looks and Options (`/settings/look/arcade`), Press Start 2P and Pixelify Sans, Auto as a pixel sprite, the handheld home with its party, Quests and Inventory, the shared screens in its dress | On `main` (A8, #35) |
-| Candy: the fifth style, its looks and Make it sweet (`/settings/look/candy`), Outfit and Nunito, Auto drawn with Skia, the home's Today, Chat, Shelf and Team behind the floating tab bar, the shared screens in its dress, PRD-268's brief, suggestions and approval line | Branch `feat/a9-candy` (A9) |
+| Candy: the fifth style, its looks and Make it sweet (`/settings/look/candy`), Outfit and Nunito, Auto drawn with Skia, the home's Today, Chat, Shelf and Team behind the floating tab bar, the shared screens in its dress, PRD-268's brief, suggestions and approval line | On `main` (A9, #40) |
 
 The kits are `scripts/ralph/prd-001-styles.json` (A5), `scripts/ralph/prd-001-arcade.json` (A8)
 and `scripts/ralph/prd-001-candy.json` (A9); each story's `passes` is the truth.
@@ -199,6 +198,30 @@ hooks and data, each shown only where discovery lists its capability:
   itself, once. If the sheet is closed unanswered, '◆ WAITING FOR YOU · OPEN' under the stage's
   state pill opens it again (`src/approvals/use-hud-approval.tsx`, as HUD mounts it under its
   chip), on the window's fill so its outline button keeps its pair.
+
+A suggestion Auto posts in the thread is a row of its own (`ThreadSuggestionRow`, #39) only for a
+caller that passes `threadRows`' `suggestions` option, as Play's home does and Arcade's story does
+from #42. Candy passes `briefs` alone, so its thread draws the post as Auto's words; `chat.ts`
+`entryOf` draws such a row the same way, never as the card.
+
+**Candy and the design kit.** Candy follows the kit's `automatos/candy` at one commit, `3920359d5`
+(`3920359d5350960471aca1b7111f6243be537cc0`, Candy 1.0.1), and the kit's theme CLI README names Go's
+commit back. What comes from the kit, and what holds it there:
+
+| Here | From the kit's `themes/candy` | Held by |
+|---|---|---|
+| `src/styles/tokens/candy-catalogue.ts` | `src/looks/catalogue.ts`: every colour | its header's sha256 |
+| `src/styles/candy/look-schema.ts` | `looks/schema.json`, the three presets, `src/looks/spec.ts` | its header's sha256s; `look-schema.test.ts` |
+| `src/styles/candy/auto/auto-geometry.ts`, `auto-path.ts`, `state-words.ts` | `src/art/`: Auto's shapes, paints and state words | their headers; `auto-geometry.test.ts` against `__tests__/kit-auto.ts`, the kit's own code's output per state |
+| `src/styles/candy/sets.ts`, `when.ts` | `src/ui/sets.ts`, `src/ui/when.ts` | their headers; `sets.test.ts`, `when.test.ts` |
+| `src/styles/tokens/__tests__/candy-prepaint.ts` | `boot/prepaint.json`, copied for the tests | `candy.test.ts` and `candy-paint.test.ts` hold the phone's tokens equal to it |
+| `src/styles/tokens/__tests__/candy.test.ts` | `design/contrast.json`'s pairs | the test measures each on every preset |
+| `assets/fonts/outfit/`, `assets/fonts/nunito/` | Outfit and Nunito, the faces the kit ships (Outfit SemiBold and Nunito Regular are its `assets/fonts/mobile/` files, byte for byte) | `src/styles/__tests__/fonts.test.ts` (each file's sha256, as `SOURCES.md` records it) |
+
+To follow a newer kit commit: copy each file at that commit, keep only the repo's imports and
+layout, put the new commit and each source's sha256 in its header, regenerate `kit-auto.ts` from
+the kit's code if Auto changed, and run the tests above; then re-pin the kit's README row to the
+Go commit that has it.
 
 ## The five styles in the picker
 
