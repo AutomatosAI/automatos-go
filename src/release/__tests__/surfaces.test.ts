@@ -55,6 +55,10 @@ function brokenSteps(surface: string, path: LabelPath): string[] {
 
 // ── (a) the AI label ─────────────────────────────────────────────────────────────────────────
 
+// importersOf reads every product file for each hook, which outgrew vitest's 5 s default with the fifth layout
+// (Candy, A9), as the a11y audit's whole-tree scans did with the fourth (5788f46). Assertions unchanged.
+const WHOLE_TREE_MS = 30_000;
+
 describe('(a) every way to talk to Auto is in the explicit list', () => {
   it('scans the whole product tree', () => {
     expect(products.length).toBeGreaterThan(300);
@@ -148,6 +152,7 @@ describe('(a) every surface reaches the AI label', () => {
       expect(users.filter((user) => !inside.includes(user))).toEqual([]);
       inside.forEach((parent) => expect(screens.map((entry) => entry.file)).toContain(parent));
     },
+    WHOLE_TREE_MS,
   );
 
   it('keeps every composer free of the label: nothing waits for it (D73)', () => {
