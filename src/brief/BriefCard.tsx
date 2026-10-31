@@ -5,8 +5,10 @@
 // PlayThread (PlayBriefCard), dressed by the primitives. Both draw the same body from model.ts: the
 // needs-you count is the strip's, a row with nowhere to go draws no action, a row pressed says its
 // done words in place, and each action names its row to VoiceOver ('Start: Lisbon flights'). The
-// prose is the text part's own words, so the text is never drawn a second time. The card enters
-// once (motion.ts); Auto's words are the server's, in the person's language.
+// prose is the text part's own words, so the text is never drawn a second time. A suggestion row
+// offers Start (src/suggestions' Start, Face ID first) and says '✓ {done_label}' in place once it
+// went through. The foot is Listen and the thumbs (BriefFooter.tsx). The card enters once
+// (motion.ts); Auto's words are the server's, in the person's language.
 
 import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
@@ -17,7 +19,9 @@ import { bubbleStyle } from '../chat/components/thread-look';
 import { Markdown } from '../chat/markdown/Markdown';
 import type { WebLinkTarget } from '../navigation/web-links';
 import { useTokens } from '../styles/theme';
+import { SUGGESTION_COPY } from '../suggestions/strings';
 import { Button, Card, Text } from '../ui';
+import { BriefFooter } from './BriefFooter';
 import { sectionHeading, type BriefRowView, type BriefSectionView } from './model';
 import { BRIEF_ENTRANCE, briefEntrance, briefKey, createSightings } from './motion';
 import type { Brief } from './schema';
@@ -35,19 +39,36 @@ const ENTRANCES = Object.freeze({
 
 type RowProps = {
   readonly view: BriefRowView;
-  readonly pressed: boolean;
-  readonly onPress: (row: BriefRowView) => void;
+  readonly card: BriefCardState;
 };
 
-function RowAction({ view, pressed, onPress }: RowProps) {
-  const done = view.row.action?.done_label;
-  if (pressed && done) {
-    return (
-      <Text level={5} tone="success">
-        {BRIEF_COPY.done(done)}
-      </Text>
-    );
-  }
+/** A suggestion row's Start: Face ID first, then '✓ {done_label}' in place; a refusal is one line. */
+function StartAction({ view, card }: RowProps) {
+  const label = view.row.action?.label;
+  if (!view.start || !label || !card.canStart) return null;
+  const refusal = card.refusal(view);
+  return (
+    <View style={{ alignSelf: 'flex-start' }}>
+      <Button
+        label={BRIEF_COPY.action(label)}
+        variant="ghost"
+        size="sm"
+        busy={card.starting(view)}
+        onPress={() => card.press(view)}
+        accessibilityLabel={view.start.startLabel}
+        accessibilityHint={SUGGESTION_COPY.startHint}
+      />
+      {refusal ? (
+        <Text level={5} tone="warning" accessibilityLiveRegion="polite">
+          {refusal}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+/** A row's link: where briefTarget says it goes. */
+function LinkAction({ view, card }: RowProps) {
   if (!view.actionLabel || !view.target) return null;
   return (
     <View style={{ alignSelf: 'flex-start' }}>
@@ -55,7 +76,7 @@ function RowAction({ view, pressed, onPress }: RowProps) {
         label={BRIEF_COPY.action(view.actionLabel)}
         variant="ghost"
         size="sm"
-        onPress={() => onPress(view)}
+        onPress={() => card.press(view)}
         accessibilityLabel={view.actionAccessibilityLabel ?? undefined}
         accessibilityHint={'external' in view.target ? BRIEF_COPY.opensStudio : undefined}
       />
@@ -63,7 +84,20 @@ function RowAction({ view, pressed, onPress }: RowProps) {
   );
 }
 
-function BriefRowLine({ view, pressed, onPress }: RowProps) {
+function RowAction({ view, card }: RowProps) {
+  const done = card.doneWords(view);
+  if (done) {
+    return (
+      <Text level={5} tone="success">
+        {BRIEF_COPY.done(done)}
+      </Text>
+    );
+  }
+  if (view.start) return <StartAction view={view} card={card} />;
+  return <LinkAction view={view} card={card} />;
+}
+
+function BriefRowLine({ view, card }: RowProps) {
   const { spacing } = useTokens();
   const { row } = view;
   const lead = [row.at, row.number].filter(Boolean).join(' · ');
@@ -83,7 +117,7 @@ function BriefRowLine({ view, pressed, onPress }: RowProps) {
         </Text>
       ) : null}
       {row.display_state ? <StateMark state={row.display_state} /> : null}
-      <RowAction view={view} pressed={pressed} onPress={onPress} />
+      <RowAction view={view} card={card} />
     </View>
   );
 }
@@ -105,12 +139,7 @@ function BriefSection({ section, card }: SectionProps) {
         {sectionHeading(section)}
       </Text>
       {rows.map((view) => (
-        <BriefRowLine
-          key={view.key}
-          view={view}
-          pressed={card.pressed.has(view.key)}
-          onPress={card.press}
-        />
+        <BriefRowLine key={view.key} view={view} card={card} />
       ))}
       {more > 0 ? (
         <View style={{ alignSelf: 'flex-start' }}>
@@ -152,6 +181,8 @@ export function BriefBody({ brief, onLink }: BriefCardProps) {
         <BriefSection key={section.name} section={section} card={card} />
       ))}
       {view.empty ? <Text tone="muted">{view.empty}</Text> : null}
+      {/* a new brief starts its own thumbs and its own reading */}
+      <BriefFooter key={brief.state_hash} brief={brief} />
     </View>
   );
 }

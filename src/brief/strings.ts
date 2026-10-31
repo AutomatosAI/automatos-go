@@ -51,6 +51,22 @@ export const BRIEF_COPY = Object.freeze({
   action: (label: string) => `${label} →`,
   /** VoiceOver's hint on an action that opens Studio in the browser. */
   opensStudio: 'Opens in Studio, in your browser',
+  /** A suggestion row's Start went through and the brief named no done words. */
+  started: 'Started',
+  /** Listen (§6.4 'Spoken'): never plays until pressed; a second press stops it. */
+  listen: Object.freeze({
+    label: 'Listen',
+    accessibilityLabel: 'Listen to the brief',
+    stop: 'Stop',
+    stopLabel: 'Stop reading the brief',
+  }),
+  /** The thumbs on Auto's Read (§6.4 'Feedback'): what the person thought of the brief. */
+  feedback: Object.freeze({
+    up: 'This brief was useful',
+    down: "This brief wasn't useful",
+    thanks: 'Thanks, noted.',
+    failed: 'Auto couldn’t save that. Try again in a minute.',
+  }),
   /** HUD: the transcript's button and the sheet's head. */
   hud: Object.freeze({
     open: 'OPEN BRIEF',

@@ -15,7 +15,9 @@
 // sameThreadRow (equal in value, the same handlers) and Try again is one stable function that
 // calls the screen's latest: only the row that changed draws again.
 // The list says whether the day's brief card is on screen (PRD-268 US-G06: home's needs strip then
-// shrinks to its count, src/brief/on-screen.tsx); outside home nobody listens.
+// shrinks to its count, src/brief/on-screen.tsx); outside home nobody listens. Given a focus message
+// (US-G03: the Auto thread opened at the day's brief), it scrolls there once (use-focus-scroll.ts).
+// A suggestion Auto posted draws its card while it is open, else its message (ThreadSuggestion).
 
 import {
   memo,
@@ -32,6 +34,7 @@ import Animated, { FadeIn, FadeInDown, useReducedMotion } from 'react-native-rea
 
 import { briefOnScreen } from '../../brief/model';
 import { useReportBriefOnScreen } from '../../brief/on-screen';
+import { ThreadSuggestion } from '../../suggestions/ThreadSuggestion';
 import type { WebLinkTarget } from '../../navigation/web-links';
 import { AiLabel } from '../../styles/ai-label';
 import { useTokens } from '../../styles/theme';
@@ -52,6 +55,7 @@ import {
   type RowPlace,
 } from './thread-look';
 import { TurnNotice } from './TurnNotice';
+import { useFocusScroll } from './use-focus-scroll';
 import { UserBubble } from './UserBubble';
 import { WorkingIndicator } from './WorkingIndicator';
 
@@ -72,12 +76,19 @@ export type MessageListProps = {
   readonly onCard: SettleCard;
   /** Report this on Auto's messages (useMessageReport). */
   readonly report: ThreadReport;
+  /** The message the thread opens at, scrolled to once (PRD-268 US-G03, use-thread-focus.ts). */
+  readonly focusMessageId?: string | null;
+  /** The list scrolled to the focus message. */
+  readonly onFocused?: (messageId: string) => void;
 };
 
 type RowProps = Pick<MessageListProps, 'onLink' | 'onRetry' | 'onCard' | 'report'> & {
   readonly row: ChatRow;
   readonly place: RowPlace;
 };
+
+/** A suggestion's card as Auto's message: under the sail avatar, in Auto's column. */
+const inAutoColumn = (card: ReactNode) => <AutoColumn avatar="header">{card}</AutoColumn>;
 
 function ThreadRowView({ row, place, onLink, onRetry, onCard, report }: RowProps) {
   const tokens = useTokens();
@@ -116,6 +127,23 @@ function ThreadRowView({ row, place, onLink, onRetry, onCard, report }: RowProps
         <AutoColumn avatar={place.avatar}>
           <ThreadCards cards={row.cards} onSettled={onCard} onLink={onLink} />
         </AutoColumn>
+      );
+    case 'suggestion':
+      return (
+        <ThreadSuggestion
+          suggestionId={row.suggestionId}
+          frame={inAutoColumn}
+          fallback={
+            <ThreadRowView
+              row={row.text}
+              place={place}
+              onLink={onLink}
+              onRetry={onRetry}
+              onCard={onCard}
+              report={report}
+            />
+          }
+        />
       );
   }
 }
@@ -210,14 +238,22 @@ function ThreadCaption() {
   );
 }
 
-export function MessageList({ rows, onLink, onRetry, onCard, report }: MessageListProps) {
+export function MessageList(props: MessageListProps) {
+  const { rows, onLink, onRetry, onCard, report, focusMessageId = null, onFocused } = props;
   const { spacing } = useTokens();
   const list = useRef<FlatList<ChatRow>>(null);
   const retry = useStableRetry(onRetry);
   // counted before the fold: a notice landing in the reply's box still scrolls to it
-  const onContentSizeChange = useScrollOnAdd(list, rows.length);
+  const scrollOnAdd = useScrollOnAdd(list, rows.length);
   const onViewableItemsChanged = useBriefSighting();
   const shown = useMemo(() => foldNotices(rows), [rows]);
+  const focus = useFocusScroll(list, shown, focusMessageId, onFocused);
+  const { run: focusRun } = focus;
+  // the focus runs after the jump to the end, so a thread opened at a message stays there
+  const onContentSizeChange = useCallback(() => {
+    scrollOnAdd();
+    focusRun();
+  }, [scrollOnAdd, focusRun]);
   const places = useMemo(() => threadPlaces(shown), [shown]);
   const renderItem = useCallback<ListRenderItem<ChatRow>>(
     ({ item, index }) => (
@@ -242,6 +278,7 @@ export function MessageList({ rows, onLink, onRetry, onCard, report }: MessageLi
       renderItem={renderItem}
       ListHeaderComponent={ThreadCaption}
       onContentSizeChange={onContentSizeChange}
+      onScrollToIndexFailed={focus.onScrollToIndexFailed}
       onViewableItemsChanged={onViewableItemsChanged}
       viewabilityConfig={VIEWABILITY}
       keyboardShouldPersistTaps="handled"

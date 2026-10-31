@@ -238,6 +238,8 @@ function entryOf(row: ChatRow, context: EntryContext): StoryEntry | null {
       };
     case 'working':
       return null; // the dialogue window's '…'
+    case 'suggestion':
+      return autoEntry(row.text, context); // its words until Arcade draws the card (PRD-268 §6.5.1)
   }
 }
 

@@ -71,3 +71,11 @@ export function canSuggestions(discovery: GateInput): boolean {
 export function canReadiness(discovery: GateInput): boolean {
   return has(discovery, 'readiness');
 }
+
+/**
+ * PRD-268 W3 (US-C24): an approval's ApprovalView@1 by its grant id, so a tap on an approval's push
+ * opens the US-G08 approval sheet. Without it the tap opens what it opened before.
+ */
+export function canApprovalView(discovery: GateInput): boolean {
+  return has(discovery, 'approval_view');
+}

@@ -71,8 +71,8 @@ export function sideOf(row: Typed): ThreadSide {
 
 function avatarOf(row: Typed, continues: boolean): AvatarRole {
   if (row.type === 'user') return 'none';
-  // every Auto message keeps its 'Auto said' head
-  if (row.type === 'auto') return 'header';
+  // every Auto message keeps its 'Auto said' head (a suggestion Auto posted is one)
+  if (row.type === 'auto' || row.type === 'suggestion') return 'header';
   // the thinking pill, a notice, loose cards: a disc only where they start Auto's run
   return continues ? 'none' : 'decorative';
 }

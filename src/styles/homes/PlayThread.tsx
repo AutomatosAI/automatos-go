@@ -8,7 +8,9 @@
 // twin). Report this long-presses Auto's message and is each block's accessible action, as on A2's
 // thread (AutoMessage.tsx is the reference). The list scrolls to the end only when a row is added
 // (A2's shouldScrollToEnd). A message carrying the day's brief (row.brief, PRD-268 US-G06) draws
-// Play's brief card in place of its words: the card holds the same words (Auto's Read).
+// Play's brief card in place of its words: the card holds the same words (Auto's Read). Given a
+// focus message (US-G03), the list scrolls there once (use-focus-scroll.ts), as A2's thread does.
+// A suggestion Auto posted draws its card while it is open, else its message (ThreadSuggestion).
 
 import { useRouter } from 'expo-router';
 import { useCallback, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
@@ -20,6 +22,7 @@ import { ThreadCards } from '../../chat/cards/ThreadCards';
 import type { SettleCard } from '../../chat/cards/model';
 import { TicketCards } from '../../chat/cards/TaskCard';
 import { TurnNotice } from '../../chat/components/TurnNotice';
+import { useFocusScroll } from '../../chat/components/use-focus-scroll';
 import { Markdown } from '../../chat/markdown/Markdown';
 import {
   reportAccessibility,
@@ -31,6 +34,7 @@ import { shouldScrollToEnd, type AutoRow, type ChatRow } from '../../chat/view-m
 import type { DeliverableRef } from '../../core/web/lib/chat/deliverables';
 import type { WebLinkTarget } from '../../navigation/web-links';
 import { routes } from '../../navigation/routes';
+import { ThreadSuggestion } from '../../suggestions/ThreadSuggestion';
 import {
   AutoMessage,
   PlayThreadCaption,
@@ -53,9 +57,16 @@ export type PlayThreadProps = {
   readonly onRetry: () => void;
   readonly onCard: SettleCard;
   readonly report: ThreadReport;
+  /** The message the thread opens at, scrolled to once (PRD-268 US-G03, use-thread-focus.ts). */
+  readonly focusMessageId?: string | null;
+  /** The list scrolled to the focus message. */
+  readonly onFocused?: (messageId: string) => void;
 };
 
-type Shared = Omit<PlayThreadProps, 'rows' | 'reports' | 'caretKey'>;
+type Shared = Omit<
+  PlayThreadProps,
+  'rows' | 'reports' | 'caretKey' | 'focusMessageId' | 'onFocused'
+>;
 
 const NO_REPORTS: readonly DeliverableRef[] = Object.freeze([]);
 
@@ -155,6 +166,13 @@ function PlayRow({ row, caretKey, refs, ...shared }: RowProps): ReactNode {
       return <TurnNotice notice={row.notice} onRetry={shared.onRetry} />;
     case 'cards':
       return <ThreadCards cards={row.cards} onSettled={shared.onCard} onLink={shared.onLink} />;
+    case 'suggestion':
+      return (
+        <ThreadSuggestion
+          suggestionId={row.suggestionId}
+          fallback={<PlayAuto row={row.text} caret={false} refs={refs} {...shared} />}
+        />
+      );
   }
 }
 
@@ -178,11 +196,19 @@ const keyOf = (row: ChatRow) => row.key;
 /** Auto's row under the thread says he is thinking: A2's thinking pill is not drawn here. */
 const isDrawn = (row: ChatRow) => row.type !== 'working';
 
-export function PlayThread({ rows, caretKey, reports, ...shared }: PlayThreadProps) {
+export function PlayThread(props: PlayThreadProps) {
+  const { rows, caretKey, reports, focusMessageId = null, onFocused, ...shared } = props;
   const { spacing } = useTokens();
   const list = useRef<FlatList<ChatRow>>(null);
   const drawn = useMemo(() => rows.filter(isDrawn), [rows]);
-  const onContentSizeChange = useScrollOnAdd(list, drawn.length);
+  const scrollOnAdd = useScrollOnAdd(list, drawn.length);
+  const focus = useFocusScroll(list, drawn, focusMessageId, onFocused);
+  const { run: focusRun } = focus;
+  // the focus runs after the jump to the end, so a thread opened at a message stays there
+  const onContentSizeChange = useCallback(() => {
+    scrollOnAdd();
+    focusRun();
+  }, [scrollOnAdd, focusRun]);
   const loose = reports.get(LOOSE_REPORTS) ?? NO_REPORTS;
   const { onLink, onRetry, onCard, report } = shared;
   const renderItem = useCallback<ListRenderItem<ChatRow>>(
@@ -210,6 +236,7 @@ export function PlayThread({ rows, caretKey, reports, ...shared }: PlayThreadPro
       ListHeaderComponent={PlayThreadCaption}
       ListFooterComponent={loose.length > 0 ? <Reports refs={loose} /> : null}
       onContentSizeChange={onContentSizeChange}
+      onScrollToIndexFailed={focus.onScrollToIndexFailed}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
       contentContainerStyle={{ padding: spacing.space7 }}

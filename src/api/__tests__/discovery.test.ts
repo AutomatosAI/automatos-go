@@ -112,7 +112,7 @@ describe('DiscoverySchema', () => {
     ).toBe(false);
   });
 
-  it('knows exactly the six capabilities of PRD-266 §4.1, then tts, digest_now, PRD-268 W2 and readiness', () => {
+  it('knows exactly the six capabilities of PRD-266 §4.1, then tts, digest_now, PRD-268 W2, readiness and approval_view', () => {
     expect([...CAPABILITIES]).toEqual([
       ...SAAS_DOCUMENT.capabilities,
       'tts',
@@ -120,7 +120,17 @@ describe('DiscoverySchema', () => {
       'brief',
       'suggestions',
       'readiness',
+      'approval_view',
     ]);
+  });
+
+  it('keeps approval_view when a server lists it (core W3, US-C24), and nothing without it', () => {
+    const listed = DiscoverySchema.parse({
+      ...SAAS_DOCUMENT,
+      capabilities: [...SAAS_DOCUMENT.capabilities, 'approval_view'],
+    });
+    expect(listed.capabilities).toContain('approval_view');
+    expect(DiscoverySchema.parse(SAAS_DOCUMENT).capabilities).not.toContain('approval_view');
   });
 
   it('keeps readiness when a server lists it, and nothing without it (PRD-268 K20)', () => {

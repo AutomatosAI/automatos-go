@@ -5,16 +5,19 @@
 // link — and a verified one is acted on only in the current workspace. Only 'reply', 'open' and
 // the tap exist (no Approve, no option buttons: D-LOCK-SCREEN); any other identifier is 'unknown'.
 // The category is unsigned and never decides anything: a reply answers only a signed question
-// (link_type 'question' with a grant_id). A signed field sent as '' reads as absent.
+// (link_type 'question' with a grant_id). An Open or a tap on an approval's push carries its signed
+// grant_id, for the approval sheet (PRD-268 US-G08). A signed field sent as '' reads as absent.
 
 import type { WorkspaceRole } from '../../api/workspace';
 import { roleCan } from '../../auth/role';
 import {
   ANSWER_MAX_CHARS,
+  APPROVAL_LINK_TYPE,
   DEFAULT_ACTION_ID,
   OPEN_ACTION_ID,
   QUESTION_LINK_TYPE,
   REPLY_ACTION_ID,
+  ROW_ID_PATTERN,
 } from '../config';
 import type { PushPayload } from '../schemas/payload';
 import type { InboundEvent } from './parse';
@@ -33,7 +36,8 @@ export type PushIntent =
       notificationId?: string;
       ticketNumber?: string;
     }>
-  | Readonly<{ kind: 'open'; link: PushLink; notificationId?: string }>
+  /** grantId: an approval's signed grant (link_type approval_grant), for its approval sheet. */
+  | Readonly<{ kind: 'open'; link: PushLink; notificationId?: string; grantId?: string }>
   | Readonly<{ kind: 'neutral'; reason: NeutralReason; link?: PushLink }>;
 
 export type IntentInput = Readonly<{
@@ -67,12 +71,24 @@ function neutral(reason: NeutralReason, link?: PushLink): PushIntent {
   return Object.freeze({ kind: 'neutral', reason, ...(link && { link }) });
 }
 
+/**
+ * The approval a push names (PRD-268 US-G08): its signed grant_id, a row id, on an approval's own
+ * link. core sends grant_id only while the grant still waits (services/push/fanout.py _grant).
+ */
+function approvalGrantOf(payload: PushPayload): string | undefined {
+  const grantId = present(payload.grant_id);
+  if (payload.link_type !== APPROVAL_LINK_TYPE || !grantId) return undefined;
+  return ROW_ID_PATTERN.test(grantId) ? grantId : undefined;
+}
+
 function openIntent(payload: PushPayload): PushIntent {
   const notificationId = present(payload.notification_id);
+  const grantId = approvalGrantOf(payload);
   return Object.freeze({
     kind: 'open',
     link: linkOf(payload),
     ...(notificationId && { notificationId }),
+    ...(grantId && { grantId }),
   });
 }
 
