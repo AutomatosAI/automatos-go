@@ -1,10 +1,11 @@
 // The dress (D-ONE-SET, PRD-001 §4.6): what the shared primitives wear in each style, so the
 // Command Centre, the sheets and settings are one set of screens that look like the style chosen
 // without anyone copying a screen. dressOf(resolved) answers, for the style a subtree paints: the
-// panel (Studio's and Play's cards, HUD's bracketed panels, Arcade's windows), the status (a dot and
-// a word, or a glyph plus WORD), the button (radius, height, label face, case and tracking), the small label,
-// the filter pill, the radii, the sheet's top, the ground behind the screen and the paints.
-// Pure: src/ui reads it through useDress() (use-dress.ts) and src/ui/dressed.ts.
+// panel (Studio's, Play's and Candy's cards, HUD's bracketed panels, Arcade's windows), the status
+// (a dot and a word, or a glyph plus WORD), the button (radius, height, label face, case and
+// tracking), the small label, the filter pill, a list's rows and rules, the radii, the sheet's top,
+// the ground behind the screen, the least an edge screen's action is tall and the paints. Pure:
+// src/ui reads it through useDress() (use-dress.ts) and src/ui/dressed.ts.
 //
 //   Studio  exactly what the foundation draws (an installed theme too: the Studio layout, D58)
 //   Play    Ember: cards 14 on the surface with the ground's line, buttons 10 and 44 high in
@@ -15,6 +16,11 @@
 //           glyph plus WORD statuses, buttons and chips square and at least 44 in Press Start 2P
 //           capitals at its button step (12), labels at its label step (11, .1em), a chosen or
 //           pressed thing in the palette's highlight with its ink, on the palette's page
+//   Candy   CANDY-LAYOUT §7 and its design kit: every panel a window (the win fill, rs corners,
+//           the palette's tinted shadow), section titles in Outfit 600 20, glyph and word
+//           statuses, buttons, chips and segments pills at least 44 high in Nunito 800 13 (an edge
+//           screen's action 50), the chosen one the accent with its ink, labels Nunito 700 14,
+//           rows 52 high over 1.5 pt rules, on the palette's page
 
 import type { FontWeight } from '../fonts';
 import type { ResolvedStyle } from '../provider/resolve';
@@ -22,13 +28,23 @@ import type { Layout } from '../registry/style-id';
 import type { StyleRadii } from '../tokens/radii';
 import type { SpaceName } from '../tokens/types';
 import { ARCADE_STEPS } from '../typeface/arcade-type';
+import { CANDY_STEPS } from '../typeface/candy-type';
 import { BUTTON_SIZES, PILL_HEIGHT } from '../../ui/variants';
 import { GRABBER } from '../../ui/overlay';
-import { arcadePaints, hudPaints, playPaints, studioPaints, type DressPaints } from './paints';
+import { MIN_TOUCH } from '../../ui/paint';
+import { CANDY_LINE, candyPaints } from './candy-paints';
+import {
+  HAIRLINE,
+  arcadePaints,
+  hudPaints,
+  playPaints,
+  studioPaints,
+  type DressPaints,
+} from './paints';
 
 export type PanelKind = 'card' | 'bracket' | 'window';
 export type StatusKind = 'pip' | 'glyph';
-export type GroundKind = 'plain' | 'play-glow' | 'hud-grid' | 'arcade-page';
+export type GroundKind = 'plain' | 'play-glow' | 'hud-grid' | 'arcade-page' | 'candy-page';
 export type LabelCase = 'as-written' | 'capitals';
 
 /**
@@ -67,8 +83,18 @@ export type PillDress = {
   readonly selectedWeight: FontWeight;
 };
 
-/** A panel's header row: Studio's eyebrow, Play's label, HUD's display face at its label size. */
-export type PanelHeaderFace = 'eyebrow' | 'label' | 'display';
+/** A list's row and the rule between two (Settings' grouped cards: CANDY-LAYOUT §7). */
+export type RowDress = {
+  readonly minHeight: number;
+  /** The rule's thickness, in the border token (Candy's line on a window). */
+  readonly separatorWidth: number;
+};
+
+/**
+ * A panel's header row: Studio's eyebrow, Play's label, HUD's display face at its label size,
+ * Candy's section title (the scale's Title 3: Outfit 600 20).
+ */
+export type PanelHeaderFace = 'eyebrow' | 'label' | 'display' | 'section';
 
 export type Dress = {
   readonly layout: Layout;
@@ -78,10 +104,13 @@ export type Dress = {
   readonly button: ButtonDress;
   readonly label: LabelDress;
   readonly pill: PillDress;
+  readonly row: RowDress;
   readonly radii: StyleRadii;
   readonly sheetRadius: number;
   readonly grabberRadius: number;
   readonly ground: GroundKind;
+  /** The least an edge screen's one action is tall (Candy's 50 pt pill); null: the edges' 48. */
+  readonly edgeActionMinHeight: number | null;
   readonly paints: DressPaints;
 };
 
@@ -91,6 +120,13 @@ export const DRESS_MIN_HEIGHT = 44;
 export const HUD_PANEL_BUTTON_HEIGHT = 46;
 /** Ember 04's filter chips. */
 export const PLAY_PILL_HEIGHT = 40;
+/** CANDY-LAYOUT §7: an edge screen's primary is an accent pill 50 tall. */
+export const CANDY_EDGE_ACTION_HEIGHT = 50;
+/** CANDY-LAYOUT §7: Settings' rows are at least 52 tall (the design's min-height 52px). */
+export const CANDY_ROW_HEIGHT = 52;
+
+/** The foundation's rows (ListRow's 44 pt touch) and rules (Divider's 1 pt). */
+const ROW: RowDress = Object.freeze({ minHeight: MIN_TOUCH, separatorWidth: HAIRLINE });
 
 const STUDIO_BUTTON_WEIGHT: FontWeight = 500;
 
@@ -165,6 +201,36 @@ const ARCADE = Object.freeze({
   },
 } as const);
 
+/** Nunito's weights for a label and for a button or chip (candy-type.ts). */
+const CANDY_LABEL_WEIGHT: FontWeight = 700;
+const CANDY_BUTTON_WEIGHT: FontWeight = 800;
+
+const CANDY = Object.freeze({
+  button: {
+    minHeight: DRESS_MIN_HEIGHT,
+    panelMinHeight: DRESS_MIN_HEIGHT,
+    labelFace: { role: 'sans', weight: CANDY_BUTTON_WEIGHT },
+    labelSize: CANDY_STEPS.button,
+    labelCase: 'as-written',
+    trackingEm: 0,
+  },
+  // the design's label step ('3 things need you': Nunito 700 14)
+  label: {
+    face: { role: 'sans', weight: CANDY_LABEL_WEIGHT },
+    size: CANDY_STEPS.label,
+    case: 'as-written',
+    trackingEm: 0,
+  },
+  // the kit's filter pill (ui.module.css .pill: 40 high, 0 18px, 800), 44 high (D-A11Y)
+  pill: {
+    minHeight: DRESS_MIN_HEIGHT,
+    paddingX: 'space8',
+    restWeight: CANDY_BUTTON_WEIGHT,
+    selectedWeight: CANDY_BUTTON_WEIGHT,
+  },
+  row: { minHeight: CANDY_ROW_HEIGHT, separatorWidth: CANDY_LINE },
+} as const);
+
 function needs<T>(vars: T | undefined, layout: Layout): T {
   if (vars === undefined) throw new Error(`a resolved ${layout} style without its variables`);
   return vars;
@@ -180,10 +246,12 @@ function studio(style: ResolvedStyle): Dress {
     button: { ...STUDIO.button, radius: radii.control },
     label: STUDIO.label,
     pill: { ...STUDIO.pill, radius: radii.pill },
+    row: ROW,
     radii,
     sheetRadius: radii.sheet,
     grabberRadius: GRABBER.radius,
     ground: 'plain',
+    edgeActionMinHeight: null,
     paints: studioPaints(style.tokens.colours),
   };
 }
@@ -198,10 +266,12 @@ function play(style: ResolvedStyle): Dress {
     button: { ...PLAY.button, radius: radii.control },
     label: PLAY.label,
     pill: { ...PLAY.pill, radius: radii.pill },
+    row: ROW,
     radii,
     sheetRadius: radii.sheet,
     grabberRadius: GRABBER.radius,
     ground: 'play-glow',
+    edgeActionMinHeight: null,
     paints: playPaints(needs(style.play, 'play'), style.tokens.colours),
   };
 }
@@ -216,10 +286,12 @@ function hud(style: ResolvedStyle): Dress {
     button: { ...HUD.button, radius: radii.control },
     label: HUD.label,
     pill: { ...HUD.pill, radius: radii.pill },
+    row: ROW,
     radii,
     sheetRadius: radii.sheet,
     grabberRadius: 0, // radius 0 everywhere (its README)
     ground: 'hud-grid',
+    edgeActionMinHeight: null,
     paints: hudPaints(needs(style.hud, 'hud'), style.tokens.colours),
   };
 }
@@ -234,11 +306,33 @@ function arcade(style: ResolvedStyle): Dress {
     button: { ...ARCADE.button, radius: radii.control },
     label: ARCADE.label,
     pill: { ...ARCADE.pill, radius: radii.pill },
+    row: ROW,
     radii,
     sheetRadius: radii.sheet,
     grabberRadius: 0, // hard edges only (README 'Pixels')
     ground: 'arcade-page',
+    edgeActionMinHeight: null,
     paints: arcadePaints(needs(style.arcade, 'arcade'), needs(style.arcadeLook, 'arcade')),
+  };
+}
+
+function candy(style: ResolvedStyle): Dress {
+  const { radii } = style;
+  return {
+    layout: 'candy',
+    panel: 'card',
+    panelHeader: 'section',
+    status: 'glyph',
+    button: { ...CANDY.button, radius: radii.control },
+    label: CANDY.label,
+    pill: { ...CANDY.pill, radius: radii.pill },
+    row: CANDY.row,
+    radii,
+    sheetRadius: radii.sheet,
+    grabberRadius: GRABBER.radius,
+    ground: 'candy-page',
+    edgeActionMinHeight: CANDY_EDGE_ACTION_HEIGHT,
+    paints: candyPaints(needs(style.candy, 'candy'), needs(style.candyLook, 'candy')),
   };
 }
 
@@ -247,7 +341,7 @@ const DRESSES: Readonly<Record<Layout, (style: ResolvedStyle) => Dress>> = Objec
   play,
   hud,
   arcade,
-  candy: studio, // CANDY_STAND_IN US-023k
+  candy,
 });
 
 /** What the shared primitives wear in the style this subtree paints. */

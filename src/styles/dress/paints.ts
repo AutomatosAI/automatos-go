@@ -7,13 +7,14 @@
 // with the ground's line. HUD's are its README's: primary the accent with its ink, secondary and
 // outline the 1 pt accent line, chosen things the accent fill with a 1.5 pt accent border, panels
 // the panel fill with the panel border and the brackets, and a selected panel a soft accent glow
-// ('Automatos Command Pages.dc.html': 1.5px accent, 0 0 24px -6px at .5). Arcade's are its
-// design kit's (ui.module.css, inventory.module.css): every panel the look's window (Classic's
-// rings and bevel, or Thin's line, and the hard drop shadow; arcade-frame.ts) on the window colour,
-// a selected one in the accent's lines; primary the accent with its ink, secondary the page inside
+// ('Automatos Command Pages.dc.html': 1.5px accent, 0 0 24px -6px at .5). Arcade's are its design
+// kit's (ui.module.css, inventory.module.css): every panel the look's window (Classic's rings and
+// bevel, or Thin's line, and the hard drop shadow; arcade-frame.ts) on the window colour, a
+// selected one in the accent's lines; primary the accent with its ink, secondary the page inside
 // the window's line; chips the window inside the 2 pt chip ring; a chosen or pressed thing the
-// palette's highlight with its ink (the menus' current row). Every colour comes from the tokens:
-// the look's variables, and the lines and glow tokens/dress-colours.ts derives.
+// palette's highlight with its ink (the menus' current row). Candy's are candy-paints.ts's. Every
+// colour comes from the tokens: the look's variables, and the lines and glow
+// tokens/dress-colours.ts derives.
 
 import {
   BUTTON_PAINTS,
@@ -37,7 +38,7 @@ import type { PlayVars } from '../tokens/play';
 import type { Colours } from '../tokens/types';
 import { arcadePanelFrame } from './arcade-frame';
 
-const NONE = 'transparent';
+export const NONE = 'transparent';
 
 export type Paint = {
   readonly background: string;
@@ -98,11 +99,20 @@ export type PanelPaints = {
   readonly bracket: string | null;
 };
 
+/** The slider's colours: the filled track and its thumb, the track after it, the part past its cap. */
+export type SliderPaints = {
+  readonly fill: string;
+  readonly track: string;
+  readonly past: string;
+};
+
 export type DressPaints = {
   readonly button: Readonly<Record<ButtonVariant, PaintSet>>;
   readonly pill: PillPaints;
   readonly segment: SegmentPaints;
   readonly panel: PanelPaints;
+  /** The slider's (Candy's accent on its chip); null: the foundation's primary on muted. */
+  readonly slider: SliderPaints | null;
 };
 
 /** A solid button's pressed opacity (at-btn--default:hover, as the foundation's primary). */
@@ -113,13 +123,15 @@ export const HAIRLINE = 1;
 /** Arcade's chip ring (theme.css --arcade-chip-ring: inset 0 0 0 2px the window border). */
 export const ARCADE_CHIP_RING = 2;
 
+
 const paintOf = (control: Pick<ControlPaint, 'backgroundColor' | 'borderColor' | 'color'>) => ({
   background: control.backgroundColor,
   border: control.borderColor,
   foreground: control.color,
 });
 
-const solid = (fill: string, ink: string): PaintSet => {
+/** A filled control: the fill, its ink on it, pressed at the solid opacity. */
+export const solid = (fill: string, ink: string): PaintSet => {
   const rest = { background: fill, border: fill, foreground: ink };
   return { rest, pressed: rest, pressedOpacity: SOLID_PRESSED_OPACITY };
 };
@@ -172,6 +184,7 @@ export function studioPaints(colours: Colours): DressPaints {
       frame: null,
       bracket: null,
     },
+    slider: null,
   };
 }
 
@@ -222,6 +235,7 @@ export function playPaints(vars: PlayVars, colours: Colours): DressPaints {
       frame: null,
       bracket: null,
     },
+    slider: null,
   };
 }
 
@@ -278,6 +292,7 @@ export function hudPaints(vars: HudVars, colours: Colours): DressPaints {
       frame: null,
       bracket: vars.bracket,
     },
+    slider: null,
   };
 }
 
@@ -336,5 +351,6 @@ export function arcadePaints(vars: ArcadeVars, look: ArcadePaintPicks): DressPai
       frame: rest.layers,
       bracket: null,
     },
+    slider: null,
   };
 }

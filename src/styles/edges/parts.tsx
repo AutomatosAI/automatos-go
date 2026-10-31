@@ -2,16 +2,19 @@
 // 'Automatos Play' with 'Play' in the accent text, all in text2 when the glow is out; HUD's
 // 'AUTOMATOS //'; Arcade's 'AUTOMATOS ARCADE' in its label face, wrapping when the phone is too
 // narrow for it and the status word; none in Studio), a status word on its right (the dimmed
-// light's text twin), the 48 pt full-width action, the bottom row it sits in, Not running's command
-// as selectable mono (no clipboard module, KS7) and HUD's bracket panel round a screen's words (an
-// Arcade window with Auto's sprite at its head, US-022i; a plain column in Studio and Play).
+// light's text twin), the 48 pt full-width action (Candy's dress raises it to 50), the bottom row
+// it sits in, Not running's command as selectable mono (no clipboard module, KS7) and HUD's bracket
+// panel round a screen's words (an Arcade window with Auto's sprite at its head, US-022i; a plain
+// column in Studio and Play).
 
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import type { MascotName } from '../../core/frozen/lib/mascot/types';
 import { Button, Card, Text } from '../../ui';
+import { edgeActionHeight } from '../../ui/dressed';
 import type { ButtonVariant } from '../../ui/variants';
+import { useDress } from '../dress/use-dress';
 import { useStyle } from '../theme';
 import { ArcadeEdgeWindow } from './ArcadeEdgeWindow';
 import { brandWords } from './edges';
@@ -76,10 +79,11 @@ type ActionProps = {
   readonly variant?: ButtonVariant;
 };
 
-/** A screen's one action: 48 high, full width. */
+/** A screen's one action: 48 high (the dress's least where it is more: Candy's 50), full width. */
 export function EdgeAction({ label, onPress, variant = 'primary' }: ActionProps) {
+  const minHeight = edgeActionHeight(useDress(), action.height);
   return (
-    <Button label={label} onPress={onPress} variant={variant} fullWidth minHeight={action.height} />
+    <Button label={label} onPress={onPress} variant={variant} fullWidth minHeight={minHeight} />
   );
 }
 

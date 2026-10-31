@@ -3,8 +3,9 @@
 // primitives; Play's and HUD's titles, eyebrows and labels come from their own type (Play's display
 // face only at 19 and above), their controls from the dress (Play Geist 600 14, HUD Geist Mono 12
 // capitals), their heights (44, HUD's 46 in a panel) and paints from the dress; Arcade's controls
-// and labels are its pixel face at its own steps and every panel wears its window; the Slider is
-// square under HUD and Arcade; nothing is drawn below 11 pt in any style.
+// and labels are its pixel face at its own steps and every panel wears its window (Candy's:
+// candy-dressed.test.ts); the Slider is square under HUD and Arcade; nothing is drawn below 11 pt
+// in any style.
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';

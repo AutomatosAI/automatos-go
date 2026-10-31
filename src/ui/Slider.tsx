@@ -1,11 +1,12 @@
 // The slider (KS7): ours, on react-native-gesture-handler and react-native-reanimated, as the build
 // has no native one. A 4 pt track — the accent up to the thumb, the muted track after it, the part
 // past maxAllowed faded — and a 28 pt thumb (square under HUD and Arcade, round elsewhere) in a
-// 44 pt row. A drag or a tap moves it in whole steps on the UI thread, the thumb set on each step
-// and never gliding between (Arcade's stepped motion); onChange hears each new step and
-// onChangeEnd the value a drag or tap ends on. VoiceOver and TalkBack adjust it a step at a time
-// (role 'adjustable', increment and decrement) and read its value, in words when given. The logic
-// is slider-model.ts (pure, tested).
+// 44 pt row; the colours are the dress's (dressedSliderPaint: Candy's round thumb and pill track in
+// its accent on its chip, the foundation's primary on muted elsewhere). A drag or a tap moves it in
+// whole steps on the UI thread, the thumb set on each step and never gliding between (Arcade's
+// stepped motion); onChange hears each new step and onChangeEnd the value a drag or tap ends on.
+// VoiceOver and TalkBack adjust it a step at a time (role 'adjustable', increment and decrement)
+// and read its value, in words when given. The logic is slider-model.ts (pure, tested).
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -25,6 +26,7 @@ import Animated, {
 import { useDress } from '../styles/dress/use-dress';
 import type { Layout } from '../styles/registry/style-id';
 import { useTokens } from '../styles/theme';
+import { dressedSliderPaint } from './dressed';
 import { DISABLED_OPACITY } from './paint';
 import {
   SLIDER,
@@ -131,6 +133,7 @@ export function Slider({
 }: SliderProps) {
   const { colours } = useTokens();
   const shape = sliderShape(SQUARE_LAYOUTS.has(useDress().layout));
+  const paint = dressedSliderPaint(useDress(), colours);
   const range = useMemo(
     () => sliderRange({ min, max, step, maxAllowed }),
     [min, max, step, maxAllowed],
@@ -191,21 +194,21 @@ export function Slider({
         onLayout={onLayout}
         style={[styles.row, disabled ? styles.disabled : null]}
       >
-        <View style={[styles.track, track, { backgroundColor: colours.muted }]} />
+        <View style={[styles.track, track, { backgroundColor: paint.track }]} />
         {capOffset < length ? (
           <View
             style={[
               styles.past,
               track,
-              { left: HALF_THUMB + capOffset, backgroundColor: colours.background },
+              { left: HALF_THUMB + capOffset, backgroundColor: paint.past },
             ]}
           />
         ) : null}
-        <Animated.View style={[styles.fill, track, { backgroundColor: colours.primary }, fill]} />
+        <Animated.View style={[styles.fill, track, { backgroundColor: paint.fill }, fill]} />
         <Animated.View
           style={[
             styles.thumb,
-            { borderRadius: shape.thumbRadius, backgroundColor: colours.primary },
+            { borderRadius: shape.thumbRadius, backgroundColor: paint.fill },
             thumb,
           ]}
         />

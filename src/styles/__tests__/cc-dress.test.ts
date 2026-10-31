@@ -1,5 +1,6 @@
 // The Command Centre, its sheets and settings in each style (US-016l, D-ONE-SET): one set of
-// screens, dressed (Arcade's shell, statuses and primitives: arcade-cc-dress.test.ts). Every status A3's board puts on a card (read from A3's own modules) has HUD's
+// screens, dressed (Arcade's shell, statuses and primitives: arcade-cc-dress.test.ts; Candy's:
+// candy-cc-dress.test.ts). Every status A3's board puts on a card (read from A3's own modules) has HUD's
 // glyph and a word; the shell is Studio's as built, Play's display title and accent underline, and
 // HUD's 'AUTOMATOS // COMMAND', glyph + WORD live word and Geist Mono tabs over a 2 pt inset bar;
 // the calendar's kind colours stay the vendored data (K14); and the primitives those screens draw
@@ -210,9 +211,9 @@ describe('the tabs per style', () => {
     });
   });
 
-  it('mark with the style’s accent: Studio’s --accent, the look’s in Play and HUD, Arcade’s hl', () => {
-    const marks = (['studio', 'play', 'hud', 'arcade'] as const).map(markToken);
-    expect(marks).toEqual(['accent', 'primary', 'primary', 'accent']);
+  it('mark with the style’s accent: Studio’s --accent, the look’s in Play and HUD, Arcade’s hl, Candy’s accent text', () => {
+    const marks = (['studio', 'play', 'hud', 'arcade', 'candy'] as const).map(markToken);
+    expect(marks).toEqual(['accent', 'primary', 'primary', 'accent', 'primary']);
   });
 });
 

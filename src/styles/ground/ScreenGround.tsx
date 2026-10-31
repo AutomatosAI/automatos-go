@@ -1,8 +1,8 @@
 // The ground a Screen stands on (ground.ts): useGroundPlan reads the subtree's style and dress
 // once; ScreenGround draws the part under the content (Play's glow, HUD's glow and grid, Arcade's
-// page) and ScreenOverlay the part over it (HUD's scanlines; Arcade draws nothing over the content,
-// its scanlines are inside its windows). Studio draws neither: its ground is the Screen's own
-// background colour.
+// and Candy's page) and ScreenOverlay the part over it (HUD's scanlines; Arcade draws nothing over
+// the content, its scanlines are inside its windows, and nor does Candy). Studio draws neither:
+// its ground is the Screen's own background colour.
 
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -21,8 +21,8 @@ export function useGroundPlan(kind: ScreenKind, state: MascotName): GroundPlan {
   return useMemo(() => groundPlan({ style, ground, kind, state }), [style, ground, kind, state]);
 }
 
-/** Arcade's page: the palette's flat page colour under the content, hidden from accessibility. */
-function ArcadePage({ page }: { readonly page: string }) {
+/** A palette's flat page colour under the content, hidden from accessibility. */
+function FlatPage({ page }: { readonly page: string }) {
   return (
     <View
       pointerEvents="none"
@@ -33,10 +33,15 @@ function ArcadePage({ page }: { readonly page: string }) {
   );
 }
 
+/** Arcade's page and Candy's (on a shared screen) are each the palette's page colour, flat. */
+const ArcadePage = FlatPage;
+const CandyPage = FlatPage;
+
 export function ScreenGround({ plan }: { readonly plan: GroundPlan }) {
   if (plan.kind === 'play-glow') return <PlayGlow plan={plan.plan} />;
   if (plan.kind === 'hud-grid') return <HudOverlay plan={plan.plan} layer="ground" />;
   if (plan.kind === 'arcade-page') return <ArcadePage page={plan.page} />;
+  if (plan.kind === 'candy-page') return <CandyPage page={plan.page} />;
   return null;
 }
 
