@@ -5,7 +5,7 @@
 // count and its rows, the rows that ask for something numbered 01, 02, … so "start two" is a
 // sentence a person can say (§6.12.6). A row's action is '▸ <label>' where it goes somewhere (it
 // closes the sheet and opens it, model.ts briefTarget); its words are the server's. The panel ends
-// with Listen (BriefFooter.tsx), as every layout's card does. Copy, numbers and targets are
+// with Listen and the thumbs (BriefFooter.tsx), as every layout's card does. Copy, numbers and targets are
 // model.ts's; capitals come from HUD's label face.
 
 import { Pressable, View } from 'react-native';

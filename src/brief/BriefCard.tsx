@@ -6,7 +6,7 @@
 // needs-you count is the strip's, a row with nowhere to go draws no action, a row pressed says its
 // done words in place, and each action names its row to VoiceOver ('Start: Lisbon flights'). The
 // prose is the text part's own words, so the text is never drawn a second time. The foot is Listen
-// (BriefFooter.tsx). The card enters once (motion.ts); Auto's words are the server's, in the
+// and the thumbs (BriefFooter.tsx). The card enters once (motion.ts); Auto's words are the server's, in the
 // person's language.
 
 import { useState, type ReactNode } from 'react';
