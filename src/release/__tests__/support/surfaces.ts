@@ -24,10 +24,15 @@ export const SEND_MARKERS: readonly SendMarker[] = [
     pattern: /(?<!function )\buseQuickAsk\(/,
     what: "runs A6's quick-ask: listens, and sends the words heard to Auto",
   },
+  {
+    id: 'candy-talk',
+    pattern: /<CandyTalkButton\b/,
+    what: "renders Candy's hold to talk, whose press sends the words heard to Auto (A6's quick-ask)",
+  },
 ];
 
 /** The words some marker's match must contain, read on the raw file before it is parsed. */
-export const SEND_HINT = /Composer|HudCore|useQuickAsk/;
+export const SEND_HINT = /Composer|HudCore|useQuickAsk|CandyTalkButton/;
 
 /** The ids of the markers a piece of code shows, in SEND_MARKERS order. */
 export function sendMarkersIn(code: string): string[] {
@@ -62,6 +67,8 @@ export const PLAY_HOME = 'src/styles/homes/PlayHome.tsx';
 export const HUD_HOME = 'src/styles/homes/HudHome.tsx';
 export const ARCADE_HOME = 'src/styles/homes/ArcadeHome.tsx';
 const STORY_WINDOW = 'src/styles/arcade/home/StoryWindow.tsx';
+export const CANDY_HOME = 'src/styles/homes/CandyHome.tsx';
+const CANDY_VOICE_WINDOW = 'src/styles/candy/home/VoiceWindow.tsx';
 export const VOICE_SCREEN = 'src/voice/screen/VoiceScreen.tsx';
 export const FIRST_OPEN = 'src/styles/edges/FirstOpen.tsx';
 export const FIRST_OPEN_THREAD = 'src/styles/homes/FirstOpenThread.tsx';
@@ -100,6 +107,13 @@ export const SEND_SURFACES: readonly SendSurface[] = [
       "Arcade's home (US-022g): the story window's first row is the caption, above every entry; TYPE's Sheet and hold to talk sit under that window",
   },
   {
+    file: CANDY_HOME,
+    sends: ['candy-talk'],
+    labels: [[CANDY_VOICE_WINDOW]],
+    reason:
+      "Candy's home (US-023g): hold to talk in the tab bar's raised centre; from the press on, the voice window over the bar opens with the caption, while Auto listens, thinks and speaks",
+  },
+  {
     file: VOICE_SCREEN,
     sends: ['composer', 'hud-core'],
     labels: [[HUD_CORE, TRANSCRIPT]],
@@ -124,6 +138,12 @@ export const SEND_SURFACES: readonly SendSurface[] = [
     sends: ['speech'],
     inside: [ARCADE_HOME],
     reason: "Hold to talk on Arcade's home (US-022g): a hook, used only by ArcadeHome",
+  },
+  {
+    file: 'src/voice/home/use-candy-home-voice.ts',
+    sends: ['speech'],
+    inside: [CANDY_HOME],
+    reason: "Hold to talk on Candy's home (US-023g): a hook, used only by CandyHome",
   },
   {
     file: 'src/voice/screen/use-voice-screen.ts',
@@ -177,6 +197,13 @@ export const REPORT_MOUNTS: readonly ReportMount[] = [
       "Arcade's home (US-022g): a long-press or the accessible action on Auto's saved replies in the story window, and on the one the dialogue window says",
   },
   {
+    file: CANDY_HOME,
+    target: 'message',
+    opener: MESSAGE_REPORT,
+    reason:
+      "Candy's home (US-023g): mounted once beside its views; the Chat view takes `report` for a long-press or the accessible action on Auto's bubbles (US-023h)",
+  },
+  {
     file: VOICE_SCREEN,
     target: 'message',
     opener: MESSAGE_REPORT,
@@ -208,6 +235,7 @@ export const AUTO_MESSAGES: Readonly<Record<string, AutoMessages>> = {
   [PLAY_HOME]: { kind: 'report' },
   [HUD_HOME]: { kind: 'report' },
   [ARCADE_HOME]: { kind: 'report' },
+  [CANDY_HOME]: { kind: 'report' },
   [VOICE_SCREEN]: { kind: 'report' },
   [FIRST_OPEN]: {
     kind: 'none',

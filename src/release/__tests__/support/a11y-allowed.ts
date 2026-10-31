@@ -52,6 +52,13 @@ export const ALLOWED: readonly AllowedA11y[] = [
       "Play's way to the notifications inbox (D73: Play has no header menu): lucide's bell in Play's own round chip (the avatar chip's ground paint beside it, KS10) with the CountBadge BESIDE it while something is unread, in a chip that grows to hold the badge. IconButton is a fixed square with no badge slot and paints from the dress, not Play's ground. Its label is inboxButtonLabel's, always set, and carries the count ('Notifications, 3 unread').",
   },
   {
+    file: 'src/styles/candy/home/TalkButton.tsx',
+    text: 'Pressable in CandyTalkButton',
+    rule: 'ICON_ONLY',
+    reason:
+      "Candy's hold to talk (US-023g, D-CAN-6): A6's quick-ask in the tab bar's raised centre, a 64 pt circle in the window's fill (the accent while the mic is held) with lucide's mic, inside the tab bar's accent ring. IconButton is at most 42 pt and fires onPress only, so it can neither take the press in and out a hold needs (HUD's talkHandlers) nor fill the fixed 64 pt centre; words would not fit the circle at the larger text sizes. Its accessibilityLabel and hint are voiceView's (KV8: 'Hold to talk', how to use it, or why it is off), always set, and the voice window's caption says its state in words.",
+  },
+  {
     file: 'src/styles/edges/Lost.tsx',
     text: 'allowFontScaling: false',
     rule: 'SCALING_OFF',
