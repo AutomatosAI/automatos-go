@@ -13,7 +13,9 @@
 // plain. A saved message carrying the day's brief (a brief@1 part, PRD-268 §6.11.2) keeps it on its
 // row where the caller says briefs are drawn (discovery lists `brief`): the layouts then draw the
 // brief card in place of the answer, which stays the row's text for everything else (Report this,
-// HUD's transcript, an older server). The components only draw these rows.
+// HUD's transcript, an older server). Where the caller says suggestions are drawn, a suggestion's
+// post is a 'suggestion' row carrying its Auto row (suggestion-row.ts). The components only draw
+// these rows.
 
 import { ApiError } from '../api/errors';
 import {
@@ -44,6 +46,9 @@ import {
 import type { ChatFile } from './request';
 import type { StoredMessage } from './schemas';
 import { CHAT_COPY, NOTICE_WORDS, TURN_ERROR_COPY, type FailureCopy } from './strings';
+import { suggestionRowOf, type ThreadSuggestionRow } from './suggestion-row';
+
+export type { ThreadSuggestionRow } from './suggestion-row';
 
 export {
   MARK_COLOURS,
@@ -97,6 +102,8 @@ export type AutoRow = {
 export type ChatRow =
   | UserRow
   | AutoRow
+  /** A suggestion Auto posted (ViewOptions.suggestions): its card while open, else its text. */
+  | ThreadSuggestionRow
   | { readonly type: 'working'; readonly key: string }
   | { readonly type: 'notice'; readonly key: string; readonly notice: Notice }
   /** Cards whose reply was never saved (a stopped or failed turn): after the saved messages. */
@@ -105,6 +112,8 @@ export type ChatRow =
 export type ViewOptions = LineOptions & {
   /** Draw the brief@1 card (discovery lists `brief`, canBrief); off, the text part as before. */
   readonly briefs?: boolean;
+  /** A suggestion's post is a 'suggestion' row (suggestion-row.ts); off, its Auto row as before. */
+  readonly suggestions?: boolean;
 };
 
 export const LIVE_USER_KEY = 'live-user';
@@ -226,7 +235,7 @@ function storedRow(
     const note = notice(`${message.id}-${kind}`, kind, copy.text, newest && copy.canRetry);
     return autoRow({ ...base, answer: '', notices: [note], tickets: [], brief: null });
   }
-  return autoRow({
+  const row = autoRow({
     ...base,
     brief: options.briefs ? briefOf(message) : null,
     tickets: ticketRows(
@@ -236,6 +245,7 @@ function storedRow(
     receipts: receiptsView(receiptsOf(message), options),
     notices: [],
   });
+  return options.suggestions && row ? (suggestionRowOf(message, row) ?? row) : row;
 }
 
 function turnNotices(turn: TurnState): Notice[] {

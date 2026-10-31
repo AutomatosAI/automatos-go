@@ -130,24 +130,30 @@ export function deliverableRow(ref: DeliverableRef): DeliverableRow {
 
 type Places = ReadonlyMap<string, readonly DeliverableRef[]>;
 
+function autoEntry(row: AutoRow, places: Places): ChatEntry {
+  return {
+    kind: 'auto',
+    key: row.key,
+    row,
+    chips: toolChipsOf(row),
+    deliverables: (places.get(row.key) ?? NO_REFS).map(deliverableRow),
+  };
+}
+
 function entryOf(row: ChatRow, places: Places): ChatEntry {
   switch (row.type) {
     case 'user':
       return { kind: 'you', key: row.key, text: userWords(row), label: row.accessibilityLabel };
     case 'auto':
-      return {
-        kind: 'auto',
-        key: row.key,
-        row,
-        chips: toolChipsOf(row),
-        deliverables: (places.get(row.key) ?? NO_REFS).map(deliverableRow),
-      };
+      return autoEntry(row, places);
     case 'working':
       return { kind: 'writing', key: row.key };
     case 'notice':
       return { kind: 'notice', key: row.key, notice: row.notice };
     case 'cards':
       return { kind: 'loose', key: row.key, cards: row.cards, deliverables: [] };
+    case 'suggestion':
+      return autoEntry(row.text, places); // its words until Candy draws the card (PRD-268 §6.5.1)
   }
 }
 

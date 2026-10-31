@@ -19,6 +19,8 @@ export type IconButtonProps = {
   readonly round?: boolean;
   readonly disabled?: boolean;
   readonly accessibilityHint?: string;
+  /** A choice that is on (the brief's thumbs): VoiceOver hears it selected. */
+  readonly selected?: boolean;
 };
 
 export function IconButton({
@@ -30,6 +32,7 @@ export function IconButton({
   round = false,
   disabled = false,
   accessibilityHint,
+  selected,
 }: IconButtonProps) {
   const dress = useDress();
   const { box, icon } = ICON_BUTTON_SIZES[size];
@@ -41,7 +44,7 @@ export function IconButton({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
-      accessibilityState={{ disabled }}
+      accessibilityState={selected === undefined ? { disabled } : { disabled, selected }}
       style={({ pressed }) => {
         const tone = dressedButtonPaint(dress, variant, { pressed, disabled });
         return [

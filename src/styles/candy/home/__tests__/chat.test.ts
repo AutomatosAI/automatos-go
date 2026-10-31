@@ -98,6 +98,18 @@ describe('the entries', () => {
       { kind: 'loose', key: 'loose-cards', cards: [card], deliverables: [] },
     ]);
   });
+
+  it("draws a suggestion Auto posted as his words, as Arcade does until the card comes (PRD-268 §6.5.1)", () => {
+    const text = autoRowOf(threadRows(opened([saved('m-idea', 'assistant', 'Want a weekly recap?')])));
+    const posted: ChatRow = {
+      type: 'suggestion',
+      key: text.key,
+      messageId: 'm-idea',
+      suggestionId: 's-1',
+      text,
+    };
+    expect(entriesOf([posted])).toEqual(entriesOf([text]));
+  });
 });
 
 describe('the tool chips', () => {

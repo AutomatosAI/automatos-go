@@ -6,6 +6,7 @@
 // route tables are plain data.
 
 import { routes } from '../api/routes';
+import { APPROVAL_ROUTES } from '../approvals/routes';
 import { BRIEF_ROUTES } from '../brief/routes';
 import { CC_ROUTES } from '../cc/routes';
 import { CHAT_ROUTES } from '../chat/routes';
@@ -23,6 +24,7 @@ export const ID_SEGMENT = ':id';
 /** Every route table the app calls the server through (a table may nest: STYLE_ROUTES does). */
 export const ROUTE_TABLES: readonly object[] = Object.freeze([
   routes,
+  APPROVAL_ROUTES,
   BRIEF_ROUTES,
   CC_ROUTES,
   CHAT_ROUTES,

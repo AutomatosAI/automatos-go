@@ -4,8 +4,10 @@
 // (HudBriefSheet): one panel headed 'Briefing · <date>', the greeting, then each section with its
 // count and its rows, the rows that ask for something numbered 01, 02, … so "start two" is a
 // sentence a person can say (§6.12.6). A row's action is '▸ <label>' where it goes somewhere (it
-// closes the sheet and opens it, model.ts briefTarget); its words are the server's. Copy, numbers
-// and targets are model.ts's; capitals come from HUD's label face.
+// closes the sheet and opens it, model.ts briefTarget); its words are the server's. A suggestion
+// row's '▸ START' starts it in place (Face ID first; the sheet stays for the done words), and the
+// panel ends with Listen and the thumbs (BriefFooter.tsx), as every layout's card does. Copy,
+// numbers and targets are model.ts's; capitals come from HUD's label face.
 
 import { Pressable, View } from 'react-native';
 
@@ -16,6 +18,7 @@ import { HUD_CORE } from '../styles/hud/core/model';
 import { useVoiceCore } from '../styles/hud/core/use-voice-core';
 import { useTokens } from '../styles/theme';
 import { Button, Card, Sheet, Text } from '../ui';
+import { BriefFooter } from './BriefFooter';
 import { sectionHeading, type BriefRowView, type BriefSectionView } from './model';
 import type { Brief } from './schema';
 import { BRIEF_COPY } from './strings';
@@ -76,11 +79,27 @@ type HudRowProps = {
   readonly card: BriefCardState;
 };
 
+/** A row's '▸ <label>' where it goes somewhere: it closes the sheet, then opens the place. */
+function HudLink({ view, card }: HudRowProps) {
+  if (!view.actionLabel || !view.target) return null;
+  return (
+    <View style={{ alignSelf: 'flex-start' }}>
+      <Button
+        label={BRIEF_COPY.hud.action(view.actionLabel)}
+        accessibilityLabel={view.actionAccessibilityLabel ?? undefined}
+        variant="ghost"
+        size="sm"
+        onPress={() => card.press(view)}
+      />
+    </View>
+  );
+}
+
 function HudRow({ view, card }: HudRowProps) {
   const { spacing } = useTokens();
   const { row } = view;
   const head = [view.number, row.at, row.title].filter(Boolean).join('  ');
-  const done = card.pressed.has(view.key) ? row.action?.done_label : null;
+  const done = card.doneWords(view);
   return (
     <View style={{ gap: spacing.space1, paddingVertical: spacing.space2 }}>
       <Text variant="title" level={6} selectable>
@@ -93,16 +112,31 @@ function HudRow({ view, card }: HudRowProps) {
       ) : null}
       {row.display_state ? <StateMark state={row.display_state} /> : null}
       {done ? <Text level={5}>{BRIEF_COPY.done(done)}</Text> : null}
-      {!done && view.actionLabel && view.target ? (
-        <View style={{ alignSelf: 'flex-start' }}>
-          <Button
-            label={BRIEF_COPY.hud.action(view.actionLabel)}
-            accessibilityLabel={view.actionAccessibilityLabel ?? undefined}
-            variant="ghost"
-            size="sm"
-            onPress={() => card.press(view)}
-          />
-        </View>
+      {done ? null : <HudLink view={view} card={card} />}
+      {done ? null : <HudStart view={view} card={card} />}
+    </View>
+  );
+}
+
+/** A suggestion row's '▸ START': Face ID first; the sheet stays open for the done words. */
+function HudStart({ view, card }: HudRowProps) {
+  const label = view.row.action?.label;
+  if (!view.start || !label || !card.canStart) return null;
+  const refusal = card.refusal(view);
+  return (
+    <View style={{ alignSelf: 'flex-start' }}>
+      <Button
+        label={BRIEF_COPY.hud.action(label)}
+        accessibilityLabel={view.start.startLabel}
+        variant="ghost"
+        size="sm"
+        busy={card.starting(view)}
+        onPress={() => card.press(view)}
+      />
+      {refusal ? (
+        <Text level={5} tone="warning" accessibilityLiveRegion="polite">
+          {refusal}
+        </Text>
       ) : null}
     </View>
   );
@@ -175,6 +209,8 @@ function HudBriefPanel({
           <HudSection key={section.name} section={section} card={card} />
         ))}
         {view.empty ? <Text tone="muted">{view.empty}</Text> : null}
+        {/* a new brief starts its own thumbs and its own reading */}
+        <BriefFooter key={brief.state_hash} brief={brief} />
       </View>
     </Card>
   );

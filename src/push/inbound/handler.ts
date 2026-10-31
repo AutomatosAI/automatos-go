@@ -4,7 +4,9 @@
 // intentFor → act. A reply posts its answer once (answer.ts) and lands on Questions with the
 // server's result; Open and a tap open the link's screen after its stale check (links/stale.ts);
 // anything else opens the notifications inbox (the push's own row first), or the question, with
-// nothing done (outcomes.ts): a tap never lands on home with nothing to show. Only a verified push
+// nothing done (outcomes.ts): a tap never lands on home with nothing to show. A tap on an approval's
+// push whose grant still waits also opens its approval sheet over that screen (PRD-268 US-G08),
+// where the caller offers it (discovery lists approval_view); elsewhere it opens what it did before. Only a verified push
 // of the current workspace posts, follows its link or marks its bell notification read. The outcome
 // is shown first (the screen, then its line); marking read and dismissing follow, and a failure of
 // either is ignored. The key is the record's when the record is this server's: a push from another workspace
@@ -72,6 +74,15 @@ export type HandlerDeps = Readonly<{
   refresh?: () => void;
   /** The tap diagnostics (tap-log.ts): one entry per response, kinds and words only. */
   taps?: Pick<TapLog, 'record'>;
+  /** The approval sheet a tap on an approval's push opens (PRD-268 US-G08); none, no sheet. */
+  approvals?: PushApprovalSheet;
+}>;
+
+/** Where a tap on an approval's push opens its sheet: only while `offered` says so. */
+export type PushApprovalSheet = Readonly<{
+  /** Discovery lists approval_view and the role may answer an approval, read when the tap lands. */
+  offered: () => boolean;
+  open: (grantId: string) => void;
 }>;
 
 /** What a signature check reads: this server's push record, the hash and the clock. */
@@ -226,8 +237,19 @@ async function open(intent: Intent<'open'>, deps: HandlerDeps): Promise<Handled>
     linkType: intent.link.link_type,
   };
   const shown = show(deps, outcome(route, resolved.notice), tap);
+  // a decided approval said so (the notice): there is nothing left to answer
+  if (intent.grantId && !resolved.notice) openApproval(deps, intent.grantId);
   await markRead(deps, intent.notificationId);
   return shown;
+}
+
+/** Over the screen the tap opened, the approval's sheet, where it is offered; never throws. */
+function openApproval(deps: HandlerDeps, grantId: string): void {
+  try {
+    if (deps.approvals?.offered()) deps.approvals.open(grantId);
+  } catch {
+    logger.warn("[push] could not open an approval's sheet");
+  }
 }
 
 async function act(event: ReadableEvent, deps: HandlerDeps): Promise<Handled> {

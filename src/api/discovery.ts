@@ -35,6 +35,11 @@ export const CAPABILITIES = [
   'suggestions',
   /** PRD-268 (K20): what Auto depends on, GET /api/readiness and POST /api/readiness/check (Settings). */
   'readiness',
+  /**
+   * PRD-268 W3 (US-C24): GET /api/v1/approval-grants/{grant_id}/view, an approval's ApprovalView@1 by
+   * its grant; the app opens its approval sheet from a push only where a server lists it.
+   */
+  'approval_view',
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];

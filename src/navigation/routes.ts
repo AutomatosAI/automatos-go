@@ -15,6 +15,8 @@ export type RouteParams = Readonly<Record<string, string | string[] | undefined>
 export const TICKET_PARAM = 'ticket';
 /** The query parameter a ticket opens at one of its questions with (the web's &question=…). */
 export const QUESTION_PARAM = 'question';
+/** The query parameter a conversation opens scrolled to one of its messages with (PRD-268 US-G03). */
+export const FOCUS_PARAM = 'focus';
 /** Connect's prefill: the server's address and the pairing code (US-006d). */
 export const CONNECT_ORIGIN_PARAM = 'origin';
 export const CONNECT_CODE_PARAM = 'code';
@@ -71,6 +73,17 @@ export function questionFromTicketParams(params: RouteParams): string | null {
   return value ? value : null;
 }
 
+/** A conversation opened scrolled to one of its messages (the day's brief, PRD-268 US-G03). */
+export function chatAt(chatId: string, messageId: string): string {
+  return `/chat/${segment(chatId, 'A chat id')}?${FOCUS_PARAM}=${segment(messageId, 'A message id')}`;
+}
+
+/** The message a conversation was opened at, or null (none, or not an id). */
+export function focusFromChatParams(params: RouteParams): string | null {
+  const value = firstParam(params, FOCUS_PARAM)?.trim();
+  return value && isUsableId(value) ? value : null;
+}
+
 /** What Connect opens with: the server's address and the pairing code, each as typed or scanned. */
 export type ConnectPrefill = { readonly origin?: string; readonly code?: string };
 
@@ -124,6 +137,8 @@ export const routes = Object.freeze({
   chats: '/chats',
   /** One conversation (A2: app/(app)/chat/[id].tsx). */
   chat: (chatId: string) => `/chat/${segment(chatId, 'A chat id')}`,
+  /** One conversation, scrolled to one of its messages (routes.chat's screen, its focus param). */
+  chatAt,
   chatWithTicket,
   cc: Object.freeze({
     /** The Command Centre opens on the Board: app/(app)/cc/index.tsx (A3). */

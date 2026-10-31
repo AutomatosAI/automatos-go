@@ -20,6 +20,7 @@ import { clearLeftover, onSessionExpired, pushLeaveFor, type PushLeave } from '.
 import { phoneRemovalFor, type PhoneRemoval } from './bind/remove-phone';
 import { MS_PER_SECOND } from './config';
 import { handledStoreOver, type HandledStore } from './inbound/handled-store';
+import type { PushApprovalSheet } from './inbound/handler';
 import { tapLogOver, type TapLog } from './inbound/tap-log';
 import { refreshAfterPush, type IncomingDeps } from './inbound/receive';
 import type { NotificationResponsesDeps } from './inbound/use-notification-responses';
@@ -63,6 +64,8 @@ export type WiringInput = Readonly<{
   currentRoute: () => string | null;
   /** Told each registrar run's outcome. */
   onOutcome: (outcome: RegistrationOutcome) => void;
+  /** The approval sheet an approval's push opens (PRD-268 US-G08); none, the tap as before. */
+  approvals?: PushApprovalSheet;
 }>;
 
 export type PushWiring = Readonly<{
@@ -140,6 +143,7 @@ function responsesFor(
     nowSeconds: () => Math.floor(natives.now() / MS_PER_SECOND),
     refresh: shared.refresh,
     taps: shared.taps,
+    ...(input.approvals ? { approvals: input.approvals } : {}),
   });
 }
 

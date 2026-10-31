@@ -73,3 +73,19 @@ export type StartResult = Readonly<z.output<typeof StartResultSchema>>;
 
 /** POST …/hide: the suggestion as it now is. */
 export const HideResultSchema = z.object({ suggestion: SuggestionSchema.nullable().catch(null) });
+
+/** The origin a suggestion's post in the Auto thread carries (services/proactive/delivery.py). */
+export const SUGGESTION_ORIGIN = 'suggestion';
+
+/**
+ * The message part a suggestion's post in the Auto thread carries after its text (PRD-268 §6.5.1,
+ * §6.11.2: `[text, {type: 'suggestion@1', suggestion_id}]`). Only the id: the card is drawn from
+ * the open list, so its state is the live one. A part whose id does not read keeps its place, and
+ * the message's source.suggestion_id names the suggestion instead (as the web reads it).
+ */
+export const SuggestionPartSchema = z.object({
+  type: z.literal('suggestion@1'),
+  suggestion_id: z.string().trim().min(1).nullable().optional().catch(null),
+});
+
+export type SuggestionPart = Readonly<z.output<typeof SuggestionPartSchema>>;
