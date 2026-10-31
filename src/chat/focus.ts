@@ -5,8 +5,11 @@
 // and any other thread view can, with the same two props. The rows are the view-model's: a saved
 // message's row is keyed by its id.
 //   The store says which chats a thread view shows now. The brief on open asks it first: a thread
-// that shows the brief's chat holds the request until it has scrolled there (settle); none, and the
-// caller decides whether to open the chat at the message (briefOpenStep). Memory only.
+// that shows the brief's chat holds the request until it has scrolled there (settle), or until the
+// last view of that chat goes; none, and the caller decides whether to open the chat at the message
+// (briefOpenStep). While home is still choosing its thread (no view shows any chat yet), the caller
+// waits for the first one, a little while at most (whenAThreadShows), so it never opens a second
+// copy of the thread home is about to draw. Memory only.
 
 /** A message of a conversation. */
 export type FocusTarget = { readonly chatId: string; readonly messageId: string };
@@ -16,9 +19,16 @@ export function focusIndex(rows: readonly { readonly key: string }[], messageId:
   return rows.findIndex((row) => row.key === messageId);
 }
 
-/** Scroll now: there is a focus not scrolled to yet, and its row is drawn. */
-export function shouldFocus(focus: string | null, done: string | null, index: number): boolean {
-  return focus !== null && focus !== done && index >= 0;
+/**
+ * Scroll now: there is a focus this list has not scrolled to yet, and its row is drawn. Every id
+ * scrolled to counts, so a route's focus never pulls the list back after a later one.
+ */
+export function shouldFocus(
+  focus: string | null,
+  done: ReadonlySet<string>,
+  index: number,
+): boolean {
+  return focus !== null && !done.has(focus) && index >= 0;
 }
 
 /** How many times a scroll to a row not yet laid out is tried again (FlatList measures as it goes). */
@@ -73,6 +83,8 @@ export type ThreadFocusStore = {
   readonly pending: (chatId: string | null) => string | null;
   /** The view scrolled there: the request is done. */
   readonly settle: (chatId: string, messageId: string) => void;
+  /** Some thread view shows a chat now. */
+  readonly anyShown: () => boolean;
   readonly subscribe: (listener: () => void) => () => void;
 };
 
@@ -86,6 +98,10 @@ function withCount(shown: ReadonlyMap<string, number>, chatId: string, by: numbe
   const count = (shown.get(chatId) ?? 0) + by;
   const others = [...shown].filter(([id]) => id !== chatId);
   return new Map(count > 0 ? [...others, [chatId, count] as const] : others);
+}
+
+function without(pending: ReadonlyMap<string, string>, chatId: string) {
+  return new Map([...pending].filter(([id]) => id !== chatId));
 }
 
 export function createThreadFocus(): ThreadFocusStore {
@@ -102,7 +118,10 @@ export function createThreadFocus(): ThreadFocusStore {
       return () => {
         if (!shown) return;
         shown = false;
-        set({ ...state, shown: withCount(state.shown, chatId, -1) });
+        const next = withCount(state.shown, chatId, -1);
+        // the last view of the chat went: a request it never scrolled to goes with it
+        const pending = next.has(chatId) ? state.pending : without(state.pending, chatId);
+        set({ shown: next, pending });
       };
     },
     request: (target: FocusTarget) => {
@@ -113,8 +132,9 @@ export function createThreadFocus(): ThreadFocusStore {
     pending: (chatId: string | null) => (chatId ? (state.pending.get(chatId) ?? null) : null),
     settle: (chatId: string, messageId: string) => {
       if (state.pending.get(chatId) !== messageId) return;
-      set({ ...state, pending: new Map([...state.pending].filter(([id]) => id !== chatId)) });
+      set({ ...state, pending: without(state.pending, chatId) });
     },
+    anyShown: () => state.shown.size > 0,
     subscribe: (listener: () => void) => {
       listeners = new Set([...listeners, listener]);
       return () => {
@@ -122,6 +142,42 @@ export function createThreadFocus(): ThreadFocusStore {
       };
     },
   });
+}
+
+/** How long the brief on open waits for home to draw its thread before it decides anyway. */
+export const HOME_THREAD_WAIT_MS = 3_000;
+
+/**
+ * Runs `decide` once some thread view shows a chat, or after `waitMs` when none does (home's draft,
+ * a layout without a thread); at once when one already does. Returns the cancel.
+ */
+export function whenAThreadShows(
+  store: Pick<ThreadFocusStore, 'anyShown' | 'subscribe'>,
+  decide: () => void,
+  later: (run: () => void, ms: number) => () => void,
+  waitMs: number = HOME_THREAD_WAIT_MS,
+): () => void {
+  if (store.anyShown()) {
+    decide();
+    return () => undefined;
+  }
+  let pending = true;
+  const once = () => {
+    if (!pending) return;
+    pending = false;
+    unsubscribe();
+    cancelTimer();
+    decide();
+  };
+  const unsubscribe = store.subscribe(() => {
+    if (store.anyShown()) once();
+  });
+  const cancelTimer = later(once, waitMs);
+  return () => {
+    pending = false;
+    unsubscribe();
+    cancelTimer();
+  };
 }
 
 /** The app's one store: the thread views and the brief on open share it. */

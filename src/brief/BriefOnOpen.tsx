@@ -6,7 +6,8 @@
 // Auto thread, shows the brief without waiting for the live event. Then the Auto thread opens at
 // the brief (US-G03, src/chat/focus.ts briefOpenStep): a thread on screen that shows its chat
 // scrolls there; else, on home in a layout with a thread (Studio, Play), the chat route opens at it
-// (routes.chatAt); anywhere else nothing moves. Draws nothing.
+// (routes.chatAt); anywhere else nothing moves. While home is still choosing its thread it waits
+// for it a moment (whenAThreadShows), so it never opens a second copy of it. Draws nothing.
 
 import { useQueryClient } from '@tanstack/react-query';
 import { getCalendars } from 'expo-localization';
@@ -16,7 +17,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { canBrief } from '../api/capabilities';
 import { matchesFamily, queryKeys } from '../api/query-keys';
 import { useAppSession } from '../app-state/session';
-import { briefOpenStep, focusTargetOf, threadFocus } from '../chat/focus';
+import { briefOpenStep, focusTargetOf, threadFocus, whenAThreadShows } from '../chat/focus';
 import { routes } from '../navigation/routes';
 import { homeFor } from '../styles/homes/layout';
 import { useStyle } from '../styles/theme';
@@ -28,6 +29,11 @@ import type { BriefOpen } from './schema';
 /** The phone's IANA zone as it is now (expo-localization), or null when it reports none. */
 function phoneTimeZone(): string | null {
   return getCalendars()[0]?.timeZone ?? null;
+}
+
+function later(run: () => void, ms: number): () => void {
+  const timer = setTimeout(run, ms);
+  return () => clearTimeout(timer);
 }
 
 /** The layouts whose home draws a thread to open at the brief (HUD's and Arcade's draw none). */
@@ -43,16 +49,24 @@ function useOpenAtBrief(): (answer: BriefOpen) => void {
   useEffect(() => {
     where.current = { router, pathname, kind };
   }, [router, pathname, kind]);
+  // a wait for home's thread still out when BriefOnOpen goes (sign-out, a server switch)
+  const waiting = useRef<() => void>(() => undefined);
+  useEffect(() => () => waiting.current(), []);
   return useCallback((answer: BriefOpen) => {
     const target = focusTargetOf(answer);
     if (!target) return;
-    const now = where.current;
-    const step = briefOpenStep({
-      shown: threadFocus.request(target),
-      onHome: now.pathname === routes.home,
-      threadLayout: THREAD_HOMES.has(now.kind),
-    });
-    if (step === 'open') now.router.push(routes.chatAt(target.chatId, target.messageId));
+    const decide = () => {
+      const now = where.current;
+      const step = briefOpenStep({
+        shown: threadFocus.request(target),
+        onHome: now.pathname === routes.home,
+        threadLayout: THREAD_HOMES.has(now.kind),
+      });
+      if (step === 'open') now.router.push(routes.chatAt(target.chatId, target.messageId));
+    };
+    waiting.current();
+    // home may still be choosing its thread: never open a second copy of the one it will draw
+    waiting.current = whenAThreadShows(threadFocus, decide, later);
   }, []);
 }
 

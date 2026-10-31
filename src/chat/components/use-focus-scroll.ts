@@ -29,12 +29,20 @@ export function useFocusScroll<Row extends { readonly key: string }>(
   focus: string | null,
   onFocused?: (messageId: string) => void,
 ): FocusScroll {
-  const done = useRef<string | null>(null);
+  // every id scrolled to, so a route's focus never pulls the list back after a later one
+  const done = useRef<ReadonlySet<string>>(new Set());
   const retries = useRef(0);
+  const retry = useRef<ReturnType<typeof setTimeout> | null>(null);
   const index = focus === null ? -1 : focusIndex(rows, focus);
+  useEffect(
+    () => () => {
+      if (retry.current) clearTimeout(retry.current);
+    },
+    [],
+  );
   const run = useCallback(() => {
     if (focus === null || !shouldFocus(focus, done.current, index)) return;
-    done.current = focus;
+    done.current = new Set([...done.current, focus]);
     retries.current = 0;
     list.current?.scrollToIndex({ index, animated: false, viewPosition: TOP });
     onFocused?.(focus);
@@ -50,7 +58,8 @@ export function useFocusScroll<Row extends { readonly key: string }>(
       list.current?.scrollToOffset({ offset: approximateOffset(info), animated: false });
       if (retries.current >= FOCUS_RETRIES) return;
       retries.current += 1;
-      setTimeout(
+      if (retry.current) clearTimeout(retry.current);
+      retry.current = setTimeout(
         () =>
           list.current?.scrollToIndex({ index: info.index, animated: false, viewPosition: TOP }),
         RETRY_MS,

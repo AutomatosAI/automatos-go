@@ -11,12 +11,14 @@ import { briefMessage } from '../../brief/__tests__/fixtures';
 import { FOCUS_PARAM, focusFromChatParams, routes } from '../../navigation/routes';
 import {
   FOCUS_RETRIES,
+  HOME_THREAD_WAIT_MS,
   approximateOffset,
   briefOpenStep,
   createThreadFocus,
   focusIndex,
   focusTargetOf,
   shouldFocus,
+  whenAThreadShows,
 } from '../focus';
 import { foldNotices } from '../components/thread-look';
 import { threadRows } from '../view-model';
@@ -66,10 +68,16 @@ describe('the row a thread view scrolls to', () => {
   });
 
   it('scrolls once, only when the row is drawn', () => {
-    expect(shouldFocus(MESSAGE_ID, null, 3)).toBe(true);
-    expect(shouldFocus(MESSAGE_ID, MESSAGE_ID, 3)).toBe(false);
-    expect(shouldFocus(MESSAGE_ID, null, -1)).toBe(false);
-    expect(shouldFocus(null, null, 3)).toBe(false);
+    const none: ReadonlySet<string> = new Set();
+    expect(shouldFocus(MESSAGE_ID, none, 3)).toBe(true);
+    expect(shouldFocus(MESSAGE_ID, new Set([MESSAGE_ID]), 3)).toBe(false);
+    expect(shouldFocus(MESSAGE_ID, none, -1)).toBe(false);
+    expect(shouldFocus(null, none, 3)).toBe(false);
+  });
+
+  it("never pulls the list back to the route's focus once a later one was scrolled to", () => {
+    // ?focus=A scrolled, then the brief's B; B settled, so the focus falls back to A
+    expect(shouldFocus('A', new Set(['A', 'B']), 2)).toBe(false);
   });
 
   it('jumps near a row not laid out yet, a few times at most', () => {
@@ -131,5 +139,70 @@ describe('the store a thread view and the brief on open share', () => {
     expect(store.request({ chatId: CHAT_ID, messageId: MESSAGE_ID })).toBe(true);
     second();
     expect(store.request({ chatId: CHAT_ID, messageId: 'next' })).toBe(false);
+  });
+});
+
+describe('the brief on open waits for home to draw its thread', () => {
+  /** A clock the test turns: the waits it was asked for, run on demand. */
+  function manualClock() {
+    const timers: { run: () => void; ms: number; live: boolean }[] = [];
+    const later = (run: () => void, ms: number) => {
+      const timer = { run, ms, live: true };
+      timers.push(timer);
+      return () => void (timer.live = false);
+    };
+    const fire = () => timers.filter((each) => each.live).forEach((each) => each.run());
+    return { later, fire, timers };
+  }
+
+  it('decides at once when a thread already shows a chat', () => {
+    const store = createThreadFocus();
+    store.show(CHAT_ID);
+    const decide = vi.fn();
+    whenAThreadShows(store, decide, manualClock().later);
+    expect(decide).toHaveBeenCalledTimes(1);
+  });
+
+  it("decides when home's thread first shows, never a second time", () => {
+    const store = createThreadFocus();
+    const clock = manualClock();
+    const decide = vi.fn();
+    whenAThreadShows(store, decide, clock.later);
+    expect(decide).not.toHaveBeenCalled();
+    store.show(CHAT_ID);
+    expect(decide).toHaveBeenCalledTimes(1);
+    clock.fire();
+    store.show('another');
+    expect(decide).toHaveBeenCalledTimes(1);
+  });
+
+  it('decides after a short wait when no thread shows (a draft, a layout without one)', () => {
+    const store = createThreadFocus();
+    const clock = manualClock();
+    const decide = vi.fn();
+    whenAThreadShows(store, decide, clock.later);
+    expect(clock.timers[0]?.ms).toBe(HOME_THREAD_WAIT_MS);
+    clock.fire();
+    expect(decide).toHaveBeenCalledTimes(1);
+  });
+
+  it('decides nothing once cancelled', () => {
+    const store = createThreadFocus();
+    const clock = manualClock();
+    const decide = vi.fn();
+    const cancel = whenAThreadShows(store, decide, clock.later);
+    cancel();
+    store.show(CHAT_ID);
+    clock.fire();
+    expect(decide).not.toHaveBeenCalled();
+  });
+
+  it('drops a request when the last view of its chat goes before it scrolled there', () => {
+    const store = createThreadFocus();
+    const hide = store.show(CHAT_ID);
+    store.request({ chatId: CHAT_ID, messageId: MESSAGE_ID });
+    hide();
+    expect(store.pending(CHAT_ID)).toBeNull();
+    expect(store.anyShown()).toBe(false);
   });
 });
