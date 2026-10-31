@@ -181,7 +181,8 @@ export function BriefBody({ brief, onLink }: BriefCardProps) {
         <BriefSection key={section.name} section={section} card={card} />
       ))}
       {view.empty ? <Text tone="muted">{view.empty}</Text> : null}
-      <BriefFooter brief={brief} />
+      {/* a new brief starts its own thumbs and its own reading */}
+      <BriefFooter key={brief.state_hash} brief={brief} />
     </View>
   );
 }

@@ -170,9 +170,12 @@ describe('the reader', () => {
     const h = voiceOver();
     const reader = createBriefReader(h.voice);
     await reader.read('Morning, Sam.', WITH_SERVER);
-    h.voice.listen(() => undefined);
+    const taker: SpeakerEvent[] = [];
+    h.voice.listen((event) => taker.push(event));
     expect(reader.reading()).toBe(false);
     expect(h.serverStop).toHaveBeenCalled();
+    // the reading's own stop reached the reading, never the engine that took over
+    expect(taker).toEqual([]);
   });
 
   it('speaks nothing when stopped while its voice was still being picked', async () => {
