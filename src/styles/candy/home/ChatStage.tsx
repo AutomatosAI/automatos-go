@@ -8,8 +8,12 @@
 // and a word ('● Listening', the stage ink on white, 30 tall; the polite status VoiceOver hears
 // change, the text twin of his drawing) and the pause control in its outline (Auto floats and
 // blinks here, and the writing dots under the stage bounce: one control stops them all, D-CAN-5).
-// Small white text sits at the top, over the gradient's a and b stops (D-A11Y).
+// Small white text sits at the top, over the gradient's a and b stops (D-A11Y). Under the pills, an
+// approval's way back in (PRD-268 US-G08, useHudApproval's line: its sheet opens by itself, once;
+// closed unanswered, '◆ WAITING FOR YOU · OPEN' opens it again), as HUD draws it under its state
+// chip, on the window's fill so the dressed outline button keeps its window pair (D-A11Y).
 
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -60,6 +64,8 @@ export type ChatStageProps = {
   readonly title: string;
   readonly onBack: () => void;
   readonly menu: MenuCircleProps;
+  /** The approval sheet's line (useHudApproval); null while no card waits. */
+  readonly approval?: ReactNode;
 };
 
 function BackCircle({ onBack }: Pick<ChatStageProps, 'onBack'>) {
@@ -98,7 +104,18 @@ function StatePill({ stage }: Pick<ChatStageProps, 'stage'>) {
   );
 }
 
-export function ChatStage({ stage, title, onBack, menu }: ChatStageProps) {
+/** The approval's line on the window's fill, a capsule round its button. */
+function ApprovalLine({ approval }: Pick<ChatStageProps, 'approval'>) {
+  const { vars, round } = useCandyPaint();
+  if (!approval) return null;
+  return (
+    <View style={[styles.approval, { borderRadius: round, backgroundColor: vars.win }]}>
+      {approval}
+    </View>
+  );
+}
+
+export function ChatStage({ stage, title, onBack, menu, approval }: ChatStageProps) {
   const { vars, type } = useCandyPaint();
   const insets = useSafeAreaInsets();
   const pad = { paddingTop: insets.top, paddingBottom: STAGE.bottom };
@@ -120,6 +137,7 @@ export function ChatStage({ stage, title, onBack, menu }: ChatStageProps) {
           <StatePill stage={stage} />
           <CandyPauseButton variant="outline" />
         </View>
+        <ApprovalLine approval={approval} />
       </View>
     </GradientCard>
   );
@@ -150,4 +168,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: STAGE.padH,
   },
   pill: { minHeight: STAGE.pill, paddingHorizontal: STAGE.pillPadH, justifyContent: 'center' },
+  approval: { alignSelf: 'center' },
 });

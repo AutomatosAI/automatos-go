@@ -17,6 +17,10 @@
 //   request on one line ('Ledger: ' left off a question's words, the agent being named under it),
 //   '{agent} · {time ago}' (when.ts agoWords on the row's own time), and the card's target, opened
 //   as Studio's strip opens it; VoiceOver hears the card's own label. No rows, no window.
+//   Auto's suggestions (PRD-268 US-G01, US-023n): 'Ideas · N' in the header, beside the pause
+//   control, is the count every layout's header shows (use-ideas.tsx's button, its words and
+//   VoiceOver's label the count's own); nothing where discovery does not list `suggestions` or none
+//   is open. A tap opens the sheet of them all, which the home mounts.
 // Pure: no React, React Native, Expo or Skia.
 
 import { filterTickets, topLevelTickets } from '../../../cc/board/board';
@@ -57,6 +61,29 @@ export const UNKNOWN_FIGURE = '—';
 /** A count as the orb and a card show it: the number, or '—' while it is unknown (the kit's figureOf). */
 export function figureOf(count: number | null): string {
   return known(count) ? String(count) : UNKNOWN_FIGURE;
+}
+
+// ── Auto's ideas ─────────────────────────────────────────────────────────────────────────────
+
+/** A pill in a view's header (HeaderPill): what it shows, what VoiceOver hears, what a tap does. */
+export type HeaderPillView = {
+  readonly text: string;
+  readonly label: string;
+  readonly hint?: string;
+  readonly onPress: () => void;
+};
+
+/** useIdeas().button, as the header's pill reads it. */
+export type IdeasButton = {
+  readonly text: string;
+  readonly label: string;
+  readonly onPress: () => void;
+} | null;
+
+/** 'Ideas · 3' in Today's header; null when the header count shows nothing. */
+export function ideasPill(button: IdeasButton): HeaderPillView | null {
+  if (button === null) return null;
+  return Object.freeze({ text: button.text, label: button.label, onPress: button.onPress });
 }
 
 // ── The stat cards ───────────────────────────────────────────────────────────────────────────

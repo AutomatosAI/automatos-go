@@ -6,11 +6,15 @@
 // them, never restyled. Report this long-presses Auto's reply and is each block's accessible action
 // where A2 offers it (AutoMessage.tsx is the reference). 'Auto is writing' is the view's own row
 // (ChatView.tsx). Entries are memoised by value: a streamed delta redraws only the entry that
-// changed.
+// changed. A reply carrying the day's brief (row.brief, PRD-268 US-G06; only where discovery lists
+// `brief`) draws the brief's own view (BriefBody) in Auto's bubble in place of its words, with the
+// brief card's one entrance, as Studio's StudioBriefCard draws it in Auto's box; Report this stays
+// on the message.
 
 import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { BriefBody, BriefEntrance } from '../../../brief/BriefCard';
 import { ThreadCards } from '../../../chat/cards/ThreadCards';
 import type { SettleCard } from '../../../chat/cards/model';
 import { TicketCards } from '../../../chat/cards/TaskCard';
@@ -52,7 +56,13 @@ function AutoEntry({ entry, onRetry, onCard, onLink, report }: AutoProps) {
       {entry.chips.map((chip) => (
         <ToolChipView key={chip.key} chip={chip} onLink={onLink} />
       ))}
-      {row.answer ? (
+      {row.brief ? (
+        <BriefEntrance brief={row.brief}>
+          <AutoBubble>
+            <BriefBody brief={row.brief} onLink={onLink} />
+          </AutoBubble>
+        </BriefEntrance>
+      ) : row.answer ? (
         <AutoBubble>
           <Markdown text={row.answer} onLink={onLink} report={actions} />
         </AutoBubble>

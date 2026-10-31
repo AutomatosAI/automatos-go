@@ -6,12 +6,16 @@
 // message box is Play's composer model over A2's composerState and the home's sendMessage
 // (usePlayComposer), a send makes the thread's turn the newest for the voice (typed()), and Auto
 // listens while the box has the keyboard (its focus is his 'input-focus', as Arcade's TYPE sheet).
+// Where discovery lists `brief`, a message carrying the day's brief keeps it on its row
+// (threadRows' briefs, as Play's and Arcade's homes read it, PRD-268 US-G06): ChatEntry draws it.
 
 import { skipToken, useQuery } from '@tanstack/react-query';
 import { usePathname, useRouter } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 
+import { canBrief } from '../../api/capabilities';
 import { queryKeys } from '../../api/query-keys';
+import { useAppSession } from '../../app-state/session';
 import type { SettleCard } from '../../chat/cards/model';
 import { useFollowLink, type FollowLink } from '../../chat/components/follow-link';
 import type { ThreadState } from '../../chat/controller/thread';
@@ -37,7 +41,8 @@ export function useCandyChat(home: HomeThread): CandyChat {
   const { state, send, settleCard } = home.thread;
   const onLink = useFollowLink();
   const shelf = useShelf(state);
-  const rows = useMemo(() => threadRows(state), [state]);
+  const briefs = canBrief(useAppSession().discovery);
+  const rows = useMemo(() => threadRows(state, { briefs }), [state, briefs]);
   const entries = useMemo(() => {
     const places = placeReports(shelf, state, LIVE_AUTO_KEY, new Set(rows.map((row) => row.key)));
     return chatEntries(rows, places);

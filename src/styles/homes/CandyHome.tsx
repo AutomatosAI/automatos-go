@@ -19,16 +19,28 @@
 //   P4 Team (US-023j): the chat's agents, the active ones first in the row of rings, then every
 // agent with its status chip (TeamView reads the agents and the Board, as Arcade's party does; the
 // home hands it needs-you's rows).
+//   PRD-268 in Candy (D-CAN-8, US-023n), on the data and hooks every layout uses, each only where
+// discovery lists its capability. Auto's suggestions (US-G01): 'Ideas · N' in Today's header opens
+// the sheet of them all (useIdeas, its sheet mounted beside the menu), and the newest is pinned
+// directly above the Chat view's message box (PinnedSuggestion, as Play's home places it). The
+// day's brief (US-G06): the Chat view's rows keep a message's brief (threadRows' briefs, as Play's
+// thread), drawn in Auto's bubble (ChatEntry). An approval (US-G08, useHudApproval): a card waiting
+// with an ApprovalView opens its answer sheet by itself, once; closed unanswered, its way back in
+// sits under the stage's state pill.
 
+import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaFrame } from 'react-native-safe-area-context';
 
+import { useHudApproval } from '../../approvals/use-hud-approval';
 import { AttachMenu } from '../../chat/attachments/AttachMenu';
 import { AttachmentChips } from '../../chat/attachments/AttachmentChips';
 import { DiscussionBar } from '../../chat/discussion/DiscussionBar';
 import { HomeMenu } from '../../chat/home/HomeMenu';
 import type { ThreadReport } from '../../chat/report/report';
 import { useMessageReport } from '../../chat/report/use-message-report';
+import { PinnedSuggestion } from '../../suggestions/PinnedSuggestion';
+import { useIdeas } from '../../suggestions/use-ideas';
 import { ReportSheet, Screen } from '../../ui';
 import { useCandyHomeVoice, type CandyHomeVoice } from '../../voice/home/use-candy-home-voice';
 import { portraitState } from '../arcade/sprite/turn-state';
@@ -42,9 +54,11 @@ import { CandyTalkButton } from '../candy/home/TalkButton';
 import { TodayView } from '../candy/home/TodayView';
 import { ShelfView } from '../candy/home/ShelfView';
 import { TeamView } from '../candy/home/TeamView';
+import { ideasPill } from '../candy/home/today';
 import { VoiceWindow } from '../candy/home/VoiceWindow';
 import { TabBar } from '../candy/parts/TabBar';
 import { useCandyPaint } from '../candy/parts/use-candy-paint';
+import type { SpaceName } from '../tokens';
 import { showsTabBar, type CandyView } from './candy-home';
 import { useOneShotEnd } from './use-arcade-home';
 import { useCandyChat, useCandyComposer, useChatTitle, useStageBack } from './use-candy-chat';
@@ -54,6 +68,8 @@ import type { HomeThread } from './use-home-thread';
 /** The home draws its own safe area: the band runs under the status bar, the tab bar over the foot. */
 const SIDES = Object.freeze(['left', 'right'] as const);
 const KEYBOARD_BEHAVIOUR = Platform.OS === 'ios' ? 'padding' : undefined;
+/** The pinned suggestion lines up with the message box: its 14 in from the sides (composer.ts). */
+const COMPOSER_INSET: SpaceName = 'space6';
 
 export type CandyHomeProps = {
   /** The conversation to open (checked first), or null for a draft. */
@@ -93,6 +109,8 @@ type ChatPaneProps = {
   readonly stage: Stage;
   readonly menu: MenuCircleProps;
   readonly onBack: () => void;
+  /** The approval sheet's line, under the stage's state pill (useHudApproval). */
+  readonly approval: ReactNode;
 };
 
 /** The message box over A2's composer state, its files in the slots, hold to talk beside it. */
@@ -121,8 +139,11 @@ function ChatComposer({ home, voice }: Pick<ChatPaneProps, 'home' | 'voice'>) {
   );
 }
 
-/** P2 Chat: the stage, A2's discussion bar, the thread, the voice window and the message box. */
-function ChatPane({ home, voice, report, stage, menu, onBack }: ChatPaneProps) {
+/**
+ * P2 Chat: the stage, A2's discussion bar, the thread, the voice window, the newest of Auto's open
+ * suggestions and the message box.
+ */
+function ChatPane({ home, voice, report, stage, menu, onBack, approval }: ChatPaneProps) {
   const { vars } = useCandyPaint();
   const { y: stackTop } = useSafeAreaFrame();
   const chat = useCandyChat(home);
@@ -130,7 +151,7 @@ function ChatPane({ home, voice, report, stage, menu, onBack }: ChatPaneProps) {
   const title = useChatTitle(state);
   return (
     <View style={[styles.fill, { backgroundColor: vars.page }]}>
-      <ChatStage stage={stage} title={title} onBack={onBack} menu={menu} />
+      <ChatStage stage={stage} title={title} onBack={onBack} menu={menu} approval={approval} />
       <DiscussionBar state={home.discussion} messages={state.messages} />
       <KeyboardAvoidingView
         behavior={KEYBOARD_BEHAVIOUR}
@@ -145,6 +166,7 @@ function ChatPane({ home, voice, report, stage, menu, onBack }: ChatPaneProps) {
           report={report}
         />
         {voice.available ? <VoiceWindow voice={{ ...voice, ...chatViewVoice(voice) }} /> : null}
+        <PinnedSuggestion inset={COMPOSER_INSET} />
         <ChatComposer home={home} voice={voice} />
       </KeyboardAvoidingView>
     </View>
@@ -155,6 +177,8 @@ export function CandyHome({ chatId, ticketId = null, onBack, view }: CandyHomePr
   const { home, needsYou, menu, views, today } = useCandyHome(chatId, ticketId, view);
   const voice = useCandyHomeVoice(home, views.showChat);
   const { report, sheet } = useMessageReport();
+  const ideas = useIdeas();
+  const approval = useHudApproval(home.thread.state, home.thread.settleCard);
   const room = useTabBarRoom();
   useOneShotEnd(home.mascot);
   const stage = stageOf(portraitState(home.mascot.driver.mascot), voice.stage);
@@ -168,6 +192,7 @@ export function CandyHome({ chatId, ticketId = null, onBack, view }: CandyHomePr
           stage={stage}
           menu={menuCircle}
           language={voice.language}
+          ideas={ideasPill(ideas.button)}
           footRoom={room.foot}
         />
       ) : null}
@@ -179,6 +204,7 @@ export function CandyHome({ chatId, ticketId = null, onBack, view }: CandyHomePr
           stage={stage}
           menu={menuCircle}
           onBack={back}
+          approval={approval.line}
         />
       ) : null}
       {views.view === 'shelf' ? (
@@ -188,6 +214,7 @@ export function CandyHome({ chatId, ticketId = null, onBack, view }: CandyHomePr
         <TeamView menu={menuCircle} footRoom={room.foot} needsYou={needsYou.rows} />
       ) : null}
       <Floating views={views} voice={voice} room={room} />
+      {ideas.sheet}
       <HomeMenu menu={menu} needsYou={needsYou.total} />
       <ReportSheet {...sheet} />
     </Screen>

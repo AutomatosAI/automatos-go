@@ -2,8 +2,9 @@
 // the band 440 tall behind the top of the view, then a column 20 in from each side, 18 apart: the
 // header at the top inset + 8 — the greeting (Outfit 600 28), needs-you's total in words under it
 // (Nunito 700 14, the band's quiet text; hidden until needs-you answers), Auto at 56 in the turn's
-// state (or the voice's) and the home menu circle — with the pause control and the EN/PT switch under
-// it; the orb (200, needs-you's number, 'need you'); the stat cards; the Needs you window. Auto
+// state (or the voice's) and the home menu circle — with 'Ideas · N' (PRD-268 US-G01, where
+// discovery lists `suggestions` and one is open), the pause control and the EN/PT switch under it;
+// the orb (200, needs-you's number, 'need you'); the stat cards; the Needs you window. Auto
 // floats and the orb's arc turns, so the pause control is drawn here (D-CAN-5, WCAG 2.2.2). The
 // column scrolls when Dynamic Type leaves it no room, and its foot clears the floating tab bar.
 
@@ -21,10 +22,12 @@ import { Orb } from '../parts/Orb';
 import { PAGE_GUTTER } from '../parts/orb-model';
 import { useCandyPaint } from '../parts/use-candy-paint';
 import { CANDY_TODAY_COPY } from '../strings';
+import { HeaderPill } from './HeaderPill';
 import { LanguagePill } from './LanguagePill';
 import { MenuCircle, type MenuCircleProps } from './MenuCircle';
 import { NeedsWindow } from './NeedsWindow';
 import { StatCards } from './StatCards';
+import type { HeaderPillView } from './today';
 
 /** The design's measures: the band, the header under the top inset, Auto, and the gaps. */
 const TODAY = Object.freeze({ band: 440, top: 8, auto: 56, gap: 18, headerGap: 12, controlGap: 8 });
@@ -36,13 +39,15 @@ export type TodayViewProps = {
   readonly menu: MenuCircleProps;
   /** The EN/PT switch for someone who may talk. */
   readonly language?: HudLanguage;
+  /** 'Ideas · N', opening the sheet of Auto's suggestions (today.ts ideasPill); none, nothing. */
+  readonly ideas?: HeaderPillView | null;
   /** The room the floating tab bar takes at the view's foot. */
   readonly footRoom: number;
 };
 
-type HeaderProps = Pick<TodayViewProps, 'today' | 'stage' | 'menu' | 'language'>;
+type HeaderProps = Pick<TodayViewProps, 'today' | 'stage' | 'menu' | 'language' | 'ideas'>;
 
-function TodayHeader({ today, stage, menu, language }: HeaderProps) {
+function TodayHeader({ today, stage, menu, language, ideas }: HeaderProps) {
   const { vars, type } = useCandyPaint();
   return (
     <View style={styles.headerBlock}>
@@ -59,6 +64,7 @@ function TodayHeader({ today, stage, menu, language }: HeaderProps) {
         <MenuCircle {...menu} />
       </View>
       <View style={styles.controls}>
+        {ideas ? <HeaderPill {...ideas} /> : null}
         <CandyPauseButton />
         {language ? <LanguagePill language={language} /> : null}
       </View>
@@ -66,7 +72,7 @@ function TodayHeader({ today, stage, menu, language }: HeaderProps) {
   );
 }
 
-export function TodayView({ today, stage, menu, language, footRoom }: TodayViewProps) {
+export function TodayView({ today, stage, menu, language, ideas, footRoom }: TodayViewProps) {
   const insets = useSafeAreaInsets();
   const pad = { paddingTop: insets.top + TODAY.top, paddingBottom: footRoom };
   return (
@@ -76,7 +82,7 @@ export function TodayView({ today, stage, menu, language, footRoom }: TodayViewP
       keyboardShouldPersistTaps="handled"
     >
       <Band height={TODAY.band} />
-      <TodayHeader today={today} stage={stage} menu={menu} language={language} />
+      <TodayHeader today={today} stage={stage} menu={menu} language={language} ideas={ideas} />
       <View style={styles.orb}>
         <Orb figure={today.figure} caption={CANDY_TODAY_COPY.orbCaption} />
       </View>

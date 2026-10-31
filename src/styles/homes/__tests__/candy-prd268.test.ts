@@ -1,0 +1,156 @@
+// PRD-268 in Candy (D-CAN-8, US-023n): the day's brief on the Chat view's rows (threadRows' briefs,
+// as Play's and Arcade's homes read it), 'Ideas · N' in Today's header (today.ts ideasPill over
+// use-ideas.tsx's button), and what Candy draws while a feature is not offered: no brief where
+// discovery does not list `brief`, no pill without an open suggestion, no approval line while no
+// card waits with an ApprovalView. The components load React Native, so how they are wired is read
+// from the product files as the release audits read them (codeOf: comments removed).
+
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+
+import { describe, expect, it } from 'vitest';
+
+import { canBrief, type GateInput } from '../../../api/capabilities';
+import { VIEW } from '../../../approvals/__tests__/fixtures';
+import { waitingSheetCard } from '../../../approvals/waiting';
+import { PROSE, WIRE_BRIEF, briefMessage } from '../../../brief/__tests__/fixtures';
+import { saved } from '../../../chat/__tests__/thread-fixtures';
+import { opened, streaming } from '../../../chat/__tests__/view-model-fixtures';
+import { reportTarget } from '../../../chat/report/report';
+import { threadRows } from '../../../chat/view-model';
+import { parseLine, type Frame } from '../../../core/ai-sdk-stream';
+import { codeOf } from '../../../release/__tests__/support/code';
+import { countText } from '../../../suggestions/model';
+import { SUGGESTION_COPY } from '../../../suggestions/strings';
+import { chatEntries, type ChatEntry } from '../../candy/home/chat';
+import { COMPOSER } from '../../candy/home/composer';
+import { ideasPill } from '../../candy/home/today';
+import { STUDIO_SPACING } from '../../tokens/studio';
+import { TOOL_APPROVAL } from './fixtures';
+
+const ASKED = saved('u1', 'user', 'Brief me');
+const REPLY = saved('a1', 'assistant', 'Here it is.');
+const OFFERED: GateInput = { capabilities: ['brief'], push: { expo: true } };
+const NOT_OFFERED: GateInput = { capabilities: ['suggestions'], push: { expo: true } };
+const NO_PLACES = new Map();
+
+const HOME = 'src/styles/homes/CandyHome.tsx';
+const CHAT = 'src/styles/homes/use-candy-chat.ts';
+const ENTRY = 'src/styles/candy/home/ChatEntry.tsx';
+const STAGE = 'src/styles/candy/home/ChatStage.tsx';
+const TODAY = 'src/styles/candy/home/TodayView.tsx';
+
+/** The Chat view's entries over these messages, gated as useCandyChat gates them. */
+function entriesOf(discovery: GateInput) {
+  const state = opened([ASKED, REPLY, briefMessage()]);
+  return chatEntries(threadRows(state, { briefs: canBrief(discovery) }), NO_PLACES);
+}
+
+function briefEntry(entries: readonly ChatEntry[]) {
+  const entry = entries.find((each) => each.key === 'm-brief');
+  if (entry?.kind !== 'auto') throw new Error('no reply entry for the brief’s message');
+  return entry;
+}
+
+describe('the day’s brief on the Chat view', () => {
+  it('keeps the brief on its reply where discovery lists `brief`, its words still the text', () => {
+    const { row } = briefEntry(entriesOf(OFFERED));
+    expect(row.brief?.greeting).toBe(WIRE_BRIEF.greeting);
+    expect(row.answer).toBe(PROSE);
+  });
+
+  it('keeps Report this on the brief’s message', () => {
+    const { row } = briefEntry(entriesOf(OFFERED));
+    expect(reportTarget(row, true)).toEqual({ target_type: 'message', target_id: 'm-brief' });
+  });
+
+  it('draws the text alone where discovery does not list `brief`', () => {
+    expect(canBrief(NOT_OFFERED)).toBe(false);
+    expect(canBrief(null)).toBe(false);
+    const { row } = briefEntry(entriesOf(NOT_OFFERED));
+    expect(row.brief).toBeNull();
+    expect(row.answer).toBe(PROSE);
+  });
+
+  it('leaves the other replies as they were', () => {
+    const other = entriesOf(OFFERED).find((entry) => entry.key === 'a1');
+    expect(other?.kind === 'auto' ? [other.row.answer, other.row.brief] : null).toEqual([
+      'Here it is.',
+      null,
+    ]);
+  });
+});
+
+describe("'Ideas · N' in Today's header", () => {
+  const onPress = () => undefined;
+
+  it('shows the count every header shows, with its own label for VoiceOver', () => {
+    const text = countText(3) ?? '';
+    const label = SUGGESTION_COPY.countLabel(3);
+    expect(ideasPill({ text, label, onPress })).toEqual({ text, label, onPress });
+    expect(text).toBe('Ideas · 3');
+  });
+
+  it('shows nothing when the header count shows nothing', () => {
+    expect(ideasPill(null)).toBeNull();
+  });
+});
+
+/** A tool approval raised live, as the stream reads it; with `view`, it carries ApprovalView@1. */
+function raised(view: boolean): Frame {
+  const card = { grant_id: 41, action: 'send_email', ...(view ? { approval_view: VIEW } : {}) };
+  return parseLine(`d:${JSON.stringify({ type: 'tool-data', data: { tool_approval: card } })}`);
+}
+
+describe('the approval line', () => {
+  it('has nothing to show while no card waits with an ApprovalView', () => {
+    expect(waitingSheetCard(threadRows(opened([ASKED, REPLY])))).toBeNull();
+    expect(waitingSheetCard(threadRows(streaming(TOOL_APPROVAL)))).toBeNull();
+    expect(waitingSheetCard(threadRows(streaming(raised(false))))).toBeNull();
+    expect(waitingSheetCard(threadRows(streaming(raised(true))))?.kind).toBe('tool');
+  });
+});
+
+describe('how the home wires them', () => {
+  it('runs useIdeas and useHudApproval on the home’s one thread, and mounts the ideas sheet once', () => {
+    const home = codeOf(HOME);
+    expect(home).toMatch(/const ideas = useIdeas\(\);/);
+    expect(home).toMatch(
+      /const approval = useHudApproval\(home\.thread\.state, home\.thread\.settleCard\);/,
+    );
+    expect(home.match(/\{ideas\.sheet\}/g)).toHaveLength(1);
+    expect(home).toMatch(/<TodayView\b[^>]*ideas=\{ideasPill\(ideas\.button\)\}/);
+    expect(home).toMatch(/<ChatPane\b[^>]*approval=\{approval\.line\}/);
+  });
+
+  it('pins the newest suggestion directly above the message box, lined up with it', () => {
+    const home = codeOf(HOME);
+    expect(home).toMatch(/<PinnedSuggestion inset=\{COMPOSER_INSET\}\s*\/>\s*<ChatComposer\b/);
+    expect(home).toMatch(/const COMPOSER_INSET: SpaceName = 'space6';/);
+    expect(STUDIO_SPACING.space6).toBe(COMPOSER.side);
+  });
+
+  it('gates the Chat view’s rows on `brief`, and draws a brief in Auto’s bubble with its entrance', () => {
+    expect(codeOf(CHAT)).toMatch(/const briefs = canBrief\(useAppSession\(\)\.discovery\);/);
+    expect(codeOf(CHAT)).toMatch(/threadRows\(state, \{ briefs \}\)/);
+    expect(codeOf(ENTRY)).toMatch(
+      /row\.brief \? \(<BriefEntrance brief=\{row\.brief\}>\s*<AutoBubble>\s*<BriefBody brief=\{row\.brief\} onLink=\{onLink\}\s*\/>/,
+    );
+  });
+
+  it('puts the approval line under the stage’s state pill, and Ideas beside Today’s pause', () => {
+    expect(codeOf(STAGE)).toMatch(
+      /<StatePill stage=\{stage\}\s*\/>[\s\S]*?<\/View>\s*<ApprovalLine approval=\{approval\}\s*\/>/,
+    );
+    expect(codeOf(TODAY)).toMatch(
+      /\{ideas \? <HeaderPill \{\.\.\.ideas\}\s*\/> : null\}\s*<CandyPauseButton\s*\/>/,
+    );
+  });
+});
+
+describe('the pure module', () => {
+  it('today.ts imports no React, React Native, Expo or Skia (D-SHAPE)', () => {
+    const source = readFileSync(path.resolve(__dirname, '../../candy/home/today.ts'), 'utf8');
+    expect(source).not.toMatch(/from '(react|react-native[^']*|expo[^']*|@shopify\/[^']*)'/);
+  });
+});

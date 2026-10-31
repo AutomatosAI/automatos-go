@@ -1,9 +1,10 @@
 # Styles and themes (the phone's side)
 
-How Automatos Go paints itself: four built-in styles (Studio, Play, HUD and Arcade), each with its
-own layout, installed workspace themes, and "Same as Studio". Which theme gets which layout: under
-Same as Studio, `automatos/play`, `automatos/hud` and `automatos/arcade` switch the phone to that
-style's own layout; every other theme paints the Studio layout through its `mobile` skin. This page
+How Automatos Go paints itself: five built-in styles (Studio, Play, HUD, Arcade and Candy), each
+with its own layout, installed workspace themes, and "Same as Studio". Which theme gets which
+layout: under Same as Studio, `automatos/play`, `automatos/hud`, `automatos/arcade` and
+`automatos/candy` switch the phone to that style's own layout; every other theme paints the Studio
+layout through its `mobile` skin. This page
 covers the phone only. The theme package, the `mobile` block in `theme.json` and the server routes
 are owned by the Themes docs in automatos-ai: see
 [docs/theme-host/mobile.md](https://github.com/AutomatosAI/automatos-ai/blob/main/docs/theme-host/mobile.md)
@@ -12,9 +13,9 @@ for the contract, and the Themes pages for people who install themes,
 [on-your-phone.md](https://github.com/AutomatosAI/automatos-ai/blob/main/docs/themes/on-your-phone.md)). The Themes pages
 merged in automatos-ai #1304, which also revised mobile.md (first merged in #1258).
 
-State on 30 Oct 2026. Studio, Play and HUD are on `main` (A5, #14). Arcade is wave A8 (PRD-001
-§4.6.1, US-022) on the branch `feat/a8-arcade`, not on `main` yet; the parts of this page about
-Arcade describe that branch.
+State on 31 Oct 2026. Studio, Play and HUD are on `main` (A5, #14), and Arcade too (A8, #35; its
+PRD-268 slots #37). Candy is wave A9 (PRD-001 §4.6.2, US-023) on the branch `feat/a9-candy`, not on
+`main` yet; the parts of this page about Candy describe that branch.
 
 ## Status
 
@@ -28,17 +29,19 @@ Arcade describe that branch.
 | Play and HUD looks kept in step with the web; `StyleSync` mounted once in the signed-in shell | On `main` (A5) |
 | Auto the mascot (clips, stills, ring) | On `main` (A5) |
 | The Command Centre, sheets, settings, the edge screens and the voice screen dressed per style | On `main` (A5, A6) |
-| Arcade: the fourth style, its looks and Options (`/settings/look/arcade`), Press Start 2P and Pixelify Sans, Auto as a pixel sprite, the handheld home with its party, Quests and Inventory, the shared screens in its dress | Branch `feat/a8-arcade` (A8) |
+| Arcade: the fourth style, its looks and Options (`/settings/look/arcade`), Press Start 2P and Pixelify Sans, Auto as a pixel sprite, the handheld home with its party, Quests and Inventory, the shared screens in its dress | On `main` (A8, #35) |
+| Candy: the fifth style, its looks and Make it sweet (`/settings/look/candy`), Outfit and Nunito, Auto drawn with Skia, the home's Today, Chat, Shelf and Team behind the floating tab bar, the shared screens in its dress, PRD-268's brief, suggestions and approval line | Branch `feat/a9-candy` (A9) |
 
-The kits are `scripts/ralph/prd-001-styles.json` (A5) and `scripts/ralph/prd-001-arcade.json`
-(A8); each story's `passes` is the truth.
+The kits are `scripts/ralph/prd-001-styles.json` (A5), `scripts/ralph/prd-001-arcade.json` (A8)
+and `scripts/ralph/prd-001-candy.json` (A9); each story's `passes` is the truth.
 
 The AI label stays the same in every style: one small muted caption, "Auto is an AI" (or "{agent}
 is an AI"), at the top of each thread ([src/styles/ai-label.tsx](../src/styles/ai-label.tsx)). It
 never blocks typing. In Arcade it is the story window's first row and scrolls away with it;
-scanlines are never drawn over it.
+scanlines are never drawn over it. In Candy it is the Chat view's first row, and it opens the voice
+window over the tab bar while Auto listens, thinks or speaks there; nothing is drawn over it.
 
-## The four layouts
+## The five layouts
 
 Every home talks to the same Auto over A2's one thread (`src/chat/controller`). The resolved
 style's layout picks the home ([src/styles/homes/layout.ts](../src/styles/homes/layout.ts),
@@ -50,6 +53,7 @@ style's layout picks the home ([src/styles/homes/layout.ts](../src/styles/homes/
 | **Play** | The Companion chat (Ember 01-02): the chat's title, "Shelf +N" and the needs line, Auto's row with his state, the thread, Play's message box; Conversations and the Shelf of Deliverables behind it |
 | **HUD** | The voice-first core: the ring core with Auto and the state chip, the YOU / AUTO transcript, the waveform, TYPE · HOLD TO TALK · STOP, COMMAND and LOOK |
 | **Arcade** | The handheld: the status bar (Auto's mark, the counters, the pause control), the party strip (your agents, each with its state word), and a screen the D-pad switches: ◀ Chat (the story window over the thread, then the dialogue window with Auto's portrait and his reply typing out), ▲ Quests (the overworld map, the Board's tickets as quests) and ▶ Inventory (the item grid with tabs, the Deliverables as items); ▼ Menu opens the header menu; hold to talk in the round surround |
+| **Candy** | Four views switched in place: Today (the greeting, Auto, the orb with the needs-you number, the stat cards, Needs you), Chat (Auto's stage with his state pill and the pause control, the thread with the AI label first, the message box with hold to talk), Shelf (the Deliverables as candy tiles under type chips) and Team (the chat's agents and their states). Today, Shelf and Team sit behind the floating tab bar with hold to talk raised in its centre; Auto is drawn with Skia |
 
 An installed theme paints the Studio layout, so it has Studio's home. The Command Centre, sheets,
 settings, the edge screens (First open, Not running, Something went wrong, Lost) and the voice
@@ -126,7 +130,62 @@ the accent. The dress's `glyphPaint` is `'state-role'`, through `src/ui/state-to
   - needs you, working, done and failed are at least ΔE 30 apart (CIE76 in CIELAB);
   - every other status is at least ΔE 20 from needs you.
 
-## The four styles in the picker
+**Candy's home** ([src/styles/homes/CandyHome.tsx](../src/styles/homes/CandyHome.tsx), the views
+in `src/styles/candy/home/`, the parts in `src/styles/candy/parts/`). It shows only data the app
+already reads; there is no new endpoint (D-CAN-6). The home's route opens Today and a
+conversation's route opens Chat; a tab switches the view in place, never a route, so the thread,
+Auto and the voice hold across them. The Chat view has no tab bar: its back circle and menu circle
+are its ways out.
+
+- **Today**: the greeting by the phone's hour (no name: the app reads none), the needs-you total in
+  words, Auto at 56, the orb with the needs-you number and "need you" ("—" until it answers; a
+  Board row carries no completion time, so there is no "completed today"), the stat cards (Working
+  now: the Board's top-level In progress; Needs you; In queue: the Board's top-level Inbox and
+  Assigned; a card waits for its read, never shown as 0) and the Needs you window (the first two
+  cards of the needs strip, opened as Studio's strip opens them).
+- **Chat**: Auto's stage (the violet card gradient, Auto at 128 in his turn's or the voice's state,
+  his state as a glyph and a word, the pause control), A2's discussion bar for a ticket, A2's one
+  thread with the AI label as its first row and A2's own cards, the voice window while the voice
+  works, and the message box with hold to talk beside it.
+- **Shelf**: the Deliverables gallery as two columns of candy tiles under six type chips, with
+  More and All Deliverables.
+- **Team**: the chat's agents (`GET /api/chat/agents`), the active ones first in a row of rings,
+  then every agent with its state (Needs you, Working or Ready, from what the app reads, as
+  Arcade's party).
+- Each view's header has the 44 pt menu circle with the needs-you number, which opens the header
+  menu (New chat, Chats, the Command Centre, Settings).
+
+Auto is the design kit's own drawing, vendored from `themes/candy` at `3920359d5` with each
+source's sha256 in the file's header (`src/styles/candy/auto/`: `auto-geometry.ts`,
+`auto-path.ts`, `state-words.ts`), drawn with Skia in twelve states, never the bundled clips. While
+Candy moves, Auto floats and blinks, the orb's arc turns once every 20 s, the writing dots bounce
+and the voice screen's orb core (Auto in a 240 pt orb, its rings and waveform in the card
+gradient) moves, all on one clock. Reduce Motion, the look's Motion `paused`, or the pause control
+stills every one of them and shows Auto at rest. The control (Pause / Play; none under Reduce
+Motion or a paused look) sits wherever Candy loops: in Today's, the Shelf's and Team's headers, on
+the Chat view's stage beside the state pill, at the top end of each edge screen's window (First
+open, Not running, Something went wrong, Lost), in the voice screen's core slot in Candy, and
+beside the way back on Make it sweet. Every copy sets the one stored value, so one tap stills Candy
+everywhere (`src/styles/candy/__tests__/pause-reach.test.ts` holds each moving part to its
+screen's control). The picker's Candy card draws none and moves nothing.
+
+**PRD-268 in Candy** (D-CAN-8). Candy has the three phone features every layout has, on the same
+hooks and data, each shown only where discovery lists its capability:
+
+- **The day's brief** (US-G06, `brief`). The Chat view's rows keep a message's brief as Play's
+  thread does (`threadRows(state, { briefs })`, `use-candy-chat.ts`). The reply draws the brief's
+  own view (`BriefCard.tsx` `BriefBody`) in Auto's bubble in place of its words, with the brief
+  card's one entrance (`BriefEntrance`), as Studio draws it in Auto's box. Report this stays on the
+  message.
+- **Auto's suggestions** (US-G01, `suggestions`). 'Ideas · N' in Today's header, beside the pause
+  control, opens the sheet of them all (`useIdeas`). The newest open suggestion is pinned directly
+  above the Chat view's message box (`PinnedSuggestion`), as on Play's home.
+- **The approval sheet** (US-G08). A card waiting with an ApprovalView opens its answer sheet by
+  itself, once. If the sheet is closed unanswered, '◆ WAITING FOR YOU · OPEN' under the stage's
+  state pill opens it again (`src/approvals/use-hud-approval.tsx`, as HUD mounts it under its
+  chip), on the window's fill so its outline button keeps its pair.
+
+## The five styles in the picker
 
 | Style | Picker line | Look page |
 |---|---|---|
@@ -134,13 +193,14 @@ the accent. The dress's `glyphPaint` is `'state-role'`, through `src/ui/state-to
 | **Play** | "Auto and the Ember look" | **Make it yours →** (`/settings/look/play`) |
 | **HUD** | "Voice first, glow and grid" | **Looks →** (`/settings/look/hud`) |
 | **Arcade** | "Your agents as a party, Auto in the dialogue box" | **Options →** (`/settings/look/arcade`) |
+| **Candy** | "Bright, glossy and round" | **Make it sweet →** (`/settings/look/candy`) |
 
 Copy: [src/styles/strings.ts](../src/styles/strings.ts). Screens: `app/(app)/settings/style.tsx`
-and `app/(app)/settings/look/{play,hud,arcade}.tsx`; paths in
+and `app/(app)/settings/look/{play,hud,arcade,candy}.tsx`; paths in
 [src/styles/nav.ts](../src/styles/nav.ts). The registry
 ([src/styles/registry/registry.ts](../src/styles/registry/registry.ts)) gives each style its look
-page and whether the bundled Auto shows: Studio and Arcade never, Play always, HUD when the look
-turns him on.
+page and whether the bundled Auto shows: Studio, Arcade and Candy never, Play always, HUD when the
+look turns him on.
 
 **The flip** ([src/styles/provider/flip.ts](../src/styles/provider/flip.ts)). Tapping a card
 stores the choice on the phone, plays one haptic tick and crossfades the whole app over 180 ms (at
@@ -165,6 +225,7 @@ is chosen, the phone paints what Studio shows this member, from `GET /api/themes
 | `automatos/play` | Play, the phone's built-in style |
 | `automatos/hud` | HUD, the phone's built-in style |
 | `automatos/arcade` | Arcade, the phone's built-in style (A8; a build from before Arcade: see below) |
+| `automatos/candy` | Candy, the phone's built-in style (A9; a build from before Candy: see below) |
 | Any other theme whose install has a `mobile` block the phone can paint | The Studio layout in that theme's colours, fonts and mascot |
 | `studio` / `classic`, no theme, a theme revoked with `disable` (`revoked` on `/active`'s answer, or `theme.revoked.level` `disable`), or no `mobile` block | Studio |
 
@@ -175,10 +236,11 @@ Only a `disable` revocation sends the phone to Studio (`src/styles/themes/follow
 `/active`'s theme is the member's own choice in Studio, else the workspace default (automatos-ai
 `orchestrator/services/themes/defaults.py`, `resolve_active`), not whatever is installed. The phone
 follows it only while it is on Same as Studio (`src/styles/registry/style-id.ts`,
-`paintedChoice`). So choosing Play, HUD or Arcade in Studio, or making it the workspace default,
-switches the phone to that built-in style: its layout and home, tokens, dress, type, ground and
-Auto. Any other theme repaints Studio. Play then paints the member's Play look, HUD the member's
-HUD look and Arcade the member's Arcade look (see "Looks").
+`paintedChoice`). So choosing Play, HUD, Arcade or Candy in Studio, or making it the workspace
+default, switches the phone to that built-in style: its layout and home, tokens, dress, type,
+ground and Auto. Any other theme repaints Studio. Play then paints the member's Play look, HUD the
+member's HUD look, Arcade the member's Arcade look and Candy the member's Candy look (see
+"Looks").
 
 **A build from before Arcade.** The theme ids that are a built-in style are one map,
 `BUILT_IN_THEME_STYLES` in [src/styles/themes/follow.ts](../src/styles/themes/follow.ts); A8 adds
@@ -188,6 +250,14 @@ Studio it paints `automatos/arcade`'s `mobile` skin on the Studio layout (D-ARC-
 `theme.json` at `034fa629c`: colours from its looks, Press Start 2P and Pixelify Sans as its two
 faces, the mascot as stills), and the picker lists it under Studio as "{name} · {version}". It never
 draws the handheld: that layout is app code, and a theme brings data only.
+
+**A build from before Candy.** A9 adds `'automatos/candy': 'candy'` to the same map. A build
+without that entry (anything from `main` before A9 merges, TestFlight builds included) treats
+`automatos/candy` as any other theme: under Same as Studio it paints `automatos/candy`'s `mobile`
+skin on the Studio layout (the kit's `theme.json` at `3920359d5`: colours from its looks, Outfit
+SemiBold for titles and Nunito Regular for body and chat as its two faces, the mascot as stills),
+and the picker lists it under Studio as "{name} · {version}". It never draws Today, Chat, Shelf and
+Team or the Skia Auto: that layout is app code, and a theme brings data only.
 
 A theme picked on the phone that goes away (uninstalled, withdrawn, no longer offered) puts the
 phone back on Studio, with one toast when it was on screen: "That theme isn't available any more,
@@ -204,7 +274,7 @@ sorted by name, only when the server's discovery lists `mobile_theme`
 (`src/styles/themes/installed.ts`). automatos-ai `main` lists it (#1295).
 
 For each install that is not withdrawn and is not a built-in style's own web theme (Play's, HUD's
-or, from A8, Arcade's: `builtInStyleOf` in `follow.ts`), the phone asks
+or, from A8, Arcade's, or, from A9, Candy's: `builtInStyleOf` in `follow.ts`), the phone asks
 `GET /api/themes/mobile/{install_id}`, at most 4 at a time and at most 100 installs per read. An
 install is offered when its answer carries a `mobile` block the phone can paint. A 404 skips that
 install; any other failure fails the whole read, so a network fault never reads as every theme
@@ -239,23 +309,29 @@ headers. Both need the configured server itself to misbehave.
 
 ## Looks
 
-A look is one person's settings for Play, HUD or Arcade. The phone keeps them in step with the web
-through `GET` and `PUT /api/themes/looks/{theme_id}`, with `automatos/play`, `automatos/hud` and
-(A8) `automatos/arcade` as path segments (`src/styles/sync/look-themes.ts`, `src/styles/play/looks-api.ts`).
+A look is one person's settings for Play, HUD, Arcade or Candy. The phone keeps them in step with
+the web through `GET` and `PUT /api/themes/looks/{theme_id}`, with `automatos/play`,
+`automatos/hud`, (A8) `automatos/arcade` and (A9) `automatos/candy` as path segments, never
+`%2F` (`/api/themes/looks/automatos/candy`; `src/styles/sync/look-themes.ts`,
+`src/styles/play/looks-api.ts`).
 
 - The server's copy wins, except for a part changed on the phone and not yet kept by the server,
   which is sent next. The first sync merges: the server's saved looks first, then each look only
   the phone has (`src/styles/play/look-sync.ts`, `src/styles/sync/look-sync-run.ts`).
 - A `PUT` sends `{looks, active}`, both every time, one save at a time.
 - The phone keeps looks per owner: server, workspace and person.
-- Stored on the phone under `styles.play.looks`, `styles.hud.looks` and `styles.arcade.looks`,
-  with sync marks under `styles.play.looks.sync`, `styles.hud.looks.sync` and
-  `styles.arcade.looks.sync`. Arcade's pause is the phone's alone, under
-  `styles.arcade.motionPaused`, and never synced.
+- Stored on the phone under `styles.play.looks`, `styles.hud.looks`, `styles.arcade.looks` and
+  `styles.candy.looks`, with sync marks under `styles.play.looks.sync`, `styles.hud.looks.sync`,
+  `styles.arcade.looks.sync` and `styles.candy.looks.sync`. Arcade's pause is the phone's alone,
+  under `styles.arcade.motionPaused`, and never synced; so is Candy's, under
+  `styles.candy.motionPaused`. Candy's look has its own Motion knob (`on` or `paused`), which is
+  synced like every other knob; the pause control is not.
 - If the theme is not installed in the workspace (404), the looks stay on the phone. Play's look
   page says "Kept on this phone only" and "Install Play in Studio to keep your looks in step with
   the web."; Arcade's Options says "Kept on this phone only" and "Arcade isn't installed in this
-  workspace, so your looks stay on this phone." HUD says nothing.
+  workspace, so your looks stay on this phone."; Candy's Make it sweet says "Kept on this phone
+  only" and "Candy isn't installed in this workspace, so your looks stay on this phone." HUD says
+  nothing.
 
 **Play's "Make it yours"** (`src/styles/play/look-page/`): six controls (Accent, Background,
 Type, Auto's shell, Auto's light · eyes + ring, Glow), the presets Ember, Obsidian, Aurora, Workshop
@@ -281,6 +357,17 @@ saved looks, with a long press for Rename or Delete. The schema, presets and rul
 from the design kit's `themes/arcade` at `034fa629c` (`src/styles/arcade/look-schema.ts`,
 `src/styles/tokens/arcade-catalogue.ts`), with each source's sha256 in the file's header.
 
+**Candy's Make it sweet** (A9, `src/styles/candy/look-page/`): Candy in the look being edited,
+whatever style the phone is on. The three presets as cards (Blush, Lilac, Night bloom), the saved
+looks as pills with a long press for Rename or Delete (Play's sheet), the design kit's six knobs
+(Palette, Card colours, Gradient, Roundness, Glow 0–10, Motion), a live preview, **Save look**
+(always a new look) and **Reset**, with the pause control beside the way back. The schema, presets
+and rules are vendored from the design kit's `themes/candy` at `3920359d5`
+(`src/styles/candy/look-schema.ts`, `src/styles/tokens/candy-catalogue.ts`), with each source's
+sha256 in the file's header. Candy's faces are bundled (Outfit for titles and figures, Nunito for
+words; `assets/fonts/outfit/`, `assets/fonts/nunito/`, `assets/fonts/SOURCES.md`), and none of
+Candy's own text steps is under 12 pt.
+
 ## Auto the mascot
 
 `src/styles/mascot/media.ts` picks how Auto shows in each state:
@@ -293,8 +380,8 @@ from the design kit's `themes/arcade` at `034fa629c` (`src/styles/arcade/look-sc
 | A theme that brings Auto | That theme's own files, untinted; a state not on the phone yet keeps the bundled Auto |
 | A theme with mascot mode `none` | No mascot |
 
-Arcade never shows the bundled clips (the registry's `'never'`): Auto there is the pixel sprite
-(see "The four layouts").
+Arcade never shows the bundled clips (the registry's `'never'`): Auto there is the pixel sprite.
+Candy never shows them either: Auto there is drawn with Skia (see "The five layouts").
 
 The ring around Auto is drawn by the app. VoiceOver hears "Auto, {what he is doing}".
 `MASCOT_TINTED_CLIPS` is one constant: if a device shows a black box where Auto should be, it can be
@@ -307,7 +394,7 @@ time the app comes back to the foreground. There are no timers and no polling
 (`src/styles/sync/foreground.ts`). One read runs at a time per server and workspace, and a read
 that finishes after the session changed is dropped.
 
-The Style and look screen and the look pages (Play, HUD and Arcade) mount `StyleSync`, so their
+The Style and look screen and the look pages (Play, HUD, Arcade and Candy) mount `StyleSync`, so their
 data is read when they open, and the signed-in shell mounts it once (`src/styles/sync/ShellStyleSync.tsx`, handed in by `StyleSyncSlot` in `app/_layout.tsx`),
 and a per-process guard lets only one instance read (`src/styles/sync/reader-guard.ts`).
 
@@ -321,7 +408,7 @@ and a per-process guard lets only one instance read (`src/styles/sync/reader-gua
 | `GET /api/themes/active` | What this member sees in Studio: `{choice, source, theme, revoked?}` |
 | `GET /api/themes/mobile/{install_id}` | One install as phone data (on the server since the re-pin to `8c9361687`) |
 | `GET /api/themes/files/{digest}/{path}` | A font or mascot file the answer above names |
-| `GET /api/themes/looks/{theme_id}` | This member's looks for Play or HUD |
+| `GET /api/themes/looks/{theme_id}` | This member's looks for Play, HUD, Arcade or Candy |
 | `PUT /api/themes/looks/{theme_id}` | Replaces them: `{looks, active}` |
 
 A paired phone (self-hosted only) counts as a member of exactly the workspace it paired to
