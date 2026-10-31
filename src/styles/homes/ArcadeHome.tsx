@@ -28,7 +28,11 @@
 // 'IDEAS · N' under the status bar opens the sheet of them all (useIdeas().sheet), and the newest
 // is the NEXT line under it (ArcadeIdeas, ArcadeNext). An approval (US-G08,
 // src/approvals/use-hud-approval.tsx): a card waiting with an ApprovalView opens its answer sheet by
-// itself, once; closed unanswered, its way back in sits under the dialogue window.
+// itself, once; closed unanswered, its way back in sits under the dialogue window. A suggestion
+// Auto posted is its card's window in the story (StoryEntry, ThreadSuggestion), its words the
+// dialogue's when it is the newest reply. The story opens at its focus message (US-G03), the chat
+// route's or the brief on open's (useThreadFocus, as Studio's and Play's threads), once the chat is
+// on the handheld's screen: scrolled there, or settled at once when the dialogue says it.
 
 import { ScrollView, StyleSheet, View } from 'react-native';
 
@@ -40,6 +44,7 @@ import { HomeMenu } from '../../chat/home/HomeMenu';
 import { menuHere } from '../../chat/home/menu';
 import { useHomeMenu } from '../../chat/home/use-home-menu';
 import { useMessageReport } from '../../chat/report/use-message-report';
+import { useThreadFocus } from '../../chat/use-thread-focus';
 import { useIdeas } from '../../suggestions/use-ideas';
 import { ReportSheet, Screen, Sheet } from '../../ui';
 import { useArcadeHomeVoice, type ArcadeHomeVoice } from '../../voice/home/use-arcade-home-voice';
@@ -71,6 +76,8 @@ export type ArcadeHomeProps = {
   readonly chatId: string | null;
   /** The ticket a new conversation discusses; none by default. */
   readonly ticketId?: string | null;
+  /** The message the story opens at (the chat route's focus param, PRD-268 US-G03). */
+  readonly focusMessageId?: string | null;
 };
 
 type DialogueControlsProps = {
@@ -96,10 +103,11 @@ function DialogueControls({ onType, voice, onBrief }: DialogueControlsProps) {
   );
 }
 
-export function ArcadeHome({ chatId, ticketId = null }: ArcadeHomeProps) {
+export function ArcadeHome({ chatId, ticketId = null, focusMessageId = null }: ArcadeHomeProps) {
   const home = useHomeThread(chatId, ticketId);
   const needsYou = useNeedsYou();
   const { state, stop } = home.thread;
+  const { focus, settle } = useThreadFocus(state.chatId, focusMessageId);
   const menu = useHomeMenu(menuHere(state, ticketId));
   const voice = useArcadeHomeVoice(home);
   const { report, sheet } = useMessageReport();
@@ -132,6 +140,9 @@ export function ArcadeHome({ chatId, ticketId = null }: ArcadeHomeProps) {
               onLink={story.onLink}
               report={report}
               onBrief={brief.open}
+              focusMessageId={chatShown ? focus : null}
+              onFocused={settle}
+              sayingId={story.sayingId}
             />
             <DialogueWindow
               state={portraitState(home.mascot.driver.mascot)}

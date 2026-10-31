@@ -91,10 +91,11 @@ describe('the suggestion row', () => {
     expect(threadPlaces(rows)[1]).toMatchObject({ side: 'auto', avatar: 'header' });
   });
 
-  it("is its words on Arcade's story, which draws no card yet", () => {
-    const words = (rows: ChatRow[]) =>
-      storyEntries(rows, new Map(), null).map((entry) => ('words' in entry ? entry.words : null));
-    expect(words(rowsOf([post()]))).toEqual(words(rowsOf([post()], false)));
+  it("is its card's entry on Arcade's story, its words the fallback as before", () => {
+    const [entry] = storyEntries(rowsOf([post()]), new Map(), null);
+    expect(entry).toMatchObject({ kind: 'suggestion', key: 'm-idea', suggestionId: ID });
+    const [plain] = storyEntries(rowsOf([post()], false), new Map(), null);
+    expect(entry?.kind === 'suggestion' ? entry.text : null).toEqual(plain);
   });
 });
 

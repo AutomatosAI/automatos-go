@@ -3,7 +3,10 @@
 // (D-AI-LABEL: A2's untouched AiLabel, its first row, scrolling away with it; the window's scanlines
 // sit behind its content, never over it). Each entry is StoryEntry's. It scrolls to the end when an
 // entry is added (A2's shouldScrollToEnd), never as one grows, and not animated under Reduce
-// Motion. The window takes the room the home leaves it, and keeps at least a share of the screen.
+// Motion. Given a focus message (PRD-268 US-G03, the Auto thread opened at the day's brief), it
+// scrolls there once instead, its entry's top at the window's top (use-story-focus.ts; the reply the
+// dialogue window says settles without a scroll). The window takes the room the home leaves it,
+// and keeps at least a share of the screen.
 
 import { useCallback, useLayoutEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
@@ -14,6 +17,7 @@ import { AiLabel } from '../../ai-label';
 import { ARCADE_HOME_COPY } from '../../strings';
 import { ArcadeWindow } from '../parts/ArcadeWindow';
 import { StoryEntryRow, type StoryEntryProps } from './StoryEntry';
+import { useStoryFocus } from './use-story-focus';
 
 /** The window's padding and the room between entries; its least height as a share of the screen. */
 const STORY = Object.freeze({ pad: 12, gap: 14, minShare: 0.28 });
@@ -28,21 +32,35 @@ function useScrollOnAdd(count: number) {
     if (shouldScrollToEnd(previous.current, count)) pending.current = true;
     previous.current = count;
   }, [count]);
-  const onContentSizeChange = useCallback(() => {
+  const scrollOnAdd = useCallback(() => {
     if (!pending.current) return;
     pending.current = false;
     scroller.current?.scrollToEnd({ animated });
   }, [animated]);
-  return { scroller, onContentSizeChange };
+  return { scroller, scrollOnAdd };
 }
 
 export type StoryWindowProps = Omit<StoryEntryProps, 'entry'> & {
   readonly entries: readonly StoryEntryProps['entry'][];
+  /** The message the story opens at, scrolled to once (PRD-268 US-G03, use-thread-focus.ts). */
+  readonly focusMessageId?: string | null;
+  /** The story scrolled to the focus message, or the dialogue says it. */
+  readonly onFocused?: (messageId: string) => void;
+  /** The message the dialogue window says (useArcadeStory's saying): a focus there never scrolls. */
+  readonly sayingId?: string | null;
 };
 
-export function StoryWindow({ entries, ...shared }: StoryWindowProps) {
+export function StoryWindow(props: StoryWindowProps) {
+  const { entries, focusMessageId = null, onFocused, sayingId = null, ...shared } = props;
   const { height } = useWindowDimensions();
-  const { scroller, onContentSizeChange } = useScrollOnAdd(entries.length);
+  const { scroller, scrollOnAdd } = useScrollOnAdd(entries.length);
+  const focus = useStoryFocus(scroller, { entries, focus: focusMessageId, sayingId, onFocused });
+  const { run: focusRun, onPlaced } = focus;
+  // the focus runs after the jump to the end, so a story opened at a message stays there
+  const onContentSizeChange = useCallback(() => {
+    scrollOnAdd();
+    focusRun();
+  }, [scrollOnAdd, focusRun]);
   return (
     <ArcadeWindow
       title={ARCADE_HOME_COPY.story}
@@ -60,7 +78,9 @@ export function StoryWindow({ entries, ...shared }: StoryWindowProps) {
           <AiLabel />
         </View>
         {entries.map((entry) => (
-          <StoryEntryRow key={entry.key} entry={entry} {...shared} />
+          <View key={entry.key} onLayout={(event) => onPlaced(entry.key, event.nativeEvent.layout)}>
+            <StoryEntryRow entry={entry} {...shared} />
+          </View>
         ))}
       </ScrollView>
     </ArcadeWindow>

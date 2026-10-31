@@ -11,6 +11,10 @@
 //   BRIEF    a reply carrying the day's brief (row.brief, where discovery lists `brief`; PRD-268
 //            US-G06) that the dialogue is not saying: a window, '★ Today's brief' (or the brief's
 //            date when it is another day's), its greeting and OPEN BRIEF, never its markdown
+//   IDEA     a suggestion Auto posted (a 'suggestion' row, where discovery lists `suggestions`;
+//            PRD-268 §6.5.1): its card in a window while the open list has it and the NEXT line
+//            does not (ThreadSuggestion), else its AUTO line. It is one of Auto's replies to the
+//            dialogue (autoRowOf): the newest says its words there, and the story keeps the card
 //   ITEM RECEIVED  a window for each Deliverable the turn made (shelf.ts files them), with OPEN
 //   choices A2's own approval cards (a plan, a tool), unchanged, each under '! A choice awaits'
 //            while it is open and 'A choice was made' once answered; a choice whose reply never came
@@ -22,7 +26,14 @@
 import { briefDateLabel } from '../../brief/model';
 import type { Brief } from '../../brief/schema';
 import type { CardRow } from '../../chat/cards/view';
-import type { AutoRow, ChatRow, Notice, ReceiptRow, ToolLineRow } from '../../chat/view-model';
+import type {
+  AutoRow,
+  ChatRow,
+  Notice,
+  ReceiptRow,
+  ThreadSuggestionRow,
+  ToolLineRow,
+} from '../../chat/view-model';
 import {
   KIND_WORDS,
   isDeliverableId,
@@ -77,20 +88,35 @@ export type StoryBrief = {
   readonly brief: Brief;
 };
 
+/** One of Auto's replies: its ★ and ✕ lines, its words, its brief, items and cards. */
+export type AutoStoryEntry = {
+  readonly kind: 'auto';
+  readonly key: string;
+  readonly row: AutoRow;
+  readonly events: readonly EventLine[];
+  /** Auto's answer (markdown) shown here; '' when the dialogue window says it, or a brief. */
+  readonly words: string;
+  /** The day's brief as its window; null when the row carries none or the dialogue says it. */
+  readonly brief: StoryBrief | null;
+  readonly items: readonly StoryItem[];
+  readonly cards: StoryCards;
+};
+
+/** A suggestion Auto posted: its card while it shows, else its post as Auto's reply (`text`). */
+export type SuggestionStoryEntry = {
+  readonly kind: 'suggestion';
+  /** The post's message id, as its Auto row's key. */
+  readonly key: string;
+  /** The suggestion it delivered: ThreadSuggestion draws its card from the open list by this id. */
+  readonly suggestionId: string;
+  /** The post as an AUTO entry, drawn whenever the card is not; no words while the dialogue says it. */
+  readonly text: AutoStoryEntry;
+};
+
 export type StoryEntry =
   | { readonly kind: 'you'; readonly key: string; readonly text: string; readonly label: string }
-  | {
-      readonly kind: 'auto';
-      readonly key: string;
-      readonly row: AutoRow;
-      readonly events: readonly EventLine[];
-      /** Auto's answer (markdown) shown here; '' when the dialogue window says it, or a brief. */
-      readonly words: string;
-      /** The day's brief as its window; null when the row carries none or the dialogue says it. */
-      readonly brief: StoryBrief | null;
-      readonly items: readonly StoryItem[];
-      readonly cards: StoryCards;
-    }
+  | AutoStoryEntry
+  | SuggestionStoryEntry
   | { readonly kind: 'notice'; readonly key: string; readonly notice: Notice }
   | {
       readonly kind: 'loose';
@@ -170,14 +196,24 @@ export function storyItem(ref: DeliverableRef): StoryItem {
 }
 
 /**
- * The row the dialogue window is saying: the newest of Auto's rows with no message of the user's
- * after it (the newest reply, as hudTurn reads it); null when the user's message is the newest.
+ * The row as one of Auto's replies: an Auto row, or a suggestion's post as its text (PRD-268
+ * §6.5.1: the dialogue says it as it says any reply); null for any other row.
+ */
+export function autoRowOf(row: ChatRow): AutoRow | null {
+  if (row.type === 'auto') return row;
+  return row.type === 'suggestion' ? row.text : null;
+}
+
+/**
+ * The row the dialogue window is saying: the newest of Auto's rows (a suggestion's post among them)
+ * with no message of the user's after it (the newest reply, as hudTurn reads it); null when the
+ * user's message is the newest.
  */
 export function sayingRowKey(rows: readonly ChatRow[]): string | null {
   for (let index = rows.length - 1; index >= 0; index -= 1) {
     const row = rows[index];
     if (row.type === 'user') return null;
-    if (row.type === 'auto') return row.key;
+    if (autoRowOf(row) !== null) return row.key;
   }
   return null;
 }
@@ -207,7 +243,7 @@ type EntryContext = {
   readonly today: string | null;
 };
 
-function autoEntry(row: AutoRow, { places, sayingKey, today }: EntryContext): StoryEntry {
+function autoEntry(row: AutoRow, { places, sayingKey, today }: EntryContext): AutoStoryEntry {
   const said = row.key === sayingKey;
   return {
     kind: 'auto',
@@ -218,6 +254,19 @@ function autoEntry(row: AutoRow, { places, sayingKey, today }: EntryContext): St
     brief: row.brief !== null && !said ? storyBrief(row.brief, today) : null,
     items: (places.get(row.key) ?? NO_ITEMS).map(storyItem),
     cards: storyCards(row.cards, ARCADE_HOME_COPY.choiceAwaits),
+  };
+}
+
+/**
+ * A suggestion's post: its card's window, its AUTO line the fallback. The post's key is its Auto
+ * row's, so the dialogue saying it (sayingRowKey) leaves the fallback without words, as any reply.
+ */
+function suggestionEntry(row: ThreadSuggestionRow, context: EntryContext): SuggestionStoryEntry {
+  return {
+    kind: 'suggestion',
+    key: row.key,
+    suggestionId: row.suggestionId,
+    text: autoEntry(row.text, context),
   };
 }
 
@@ -239,7 +288,7 @@ function entryOf(row: ChatRow, context: EntryContext): StoryEntry | null {
     case 'working':
       return null; // the dialogue window's '…'
     case 'suggestion':
-      return autoEntry(row.text, context); // its words until Arcade draws the card (PRD-268 §6.5.1)
+      return suggestionEntry(row, context);
   }
 }
 

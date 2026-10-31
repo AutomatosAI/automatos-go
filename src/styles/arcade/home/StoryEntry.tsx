@@ -8,7 +8,10 @@
 // is an ITEM RECEIVED window whose OPEN opens its page. A reply carrying the day's brief that the
 // dialogue is not saying (PRD-268 US-G06, D-ARC-7) is a window, '★ Today's brief' and its greeting,
 // whose OPEN BRIEF opens the whole brief in the home's sheet (onBrief); Report this stays on it.
-// Entries are memoised by value: a streamed delta redraws only the entry that changed.
+// A suggestion Auto posted (PRD-268 §6.5.1) is the foundation's ThreadSuggestion: its card in an
+// Arcade window while it is open and not on the NEXT line, 'Started. Auto is on it.' there after a
+// Start from it, else its AUTO line (the same entry a reply draws; no words while the dialogue says
+// them). Entries are memoised by value: a streamed delta redraws only the entry that changed.
 
 import { useRouter } from 'expo-router';
 import { memo, type ReactNode } from 'react';
@@ -28,14 +31,17 @@ import {
   type ThreadReport,
 } from '../../../chat/report/report';
 import { routes } from '../../../navigation/routes';
+import { ThreadSuggestion } from '../../../suggestions/ThreadSuggestion';
 import { Text } from '../../../ui';
 import { MIN_TOUCH } from '../../../ui/paint';
 import type {
+  AutoStoryEntry,
   EventLine,
   StoryBrief,
   StoryCards,
   StoryEntry,
   StoryItem,
+  SuggestionStoryEntry,
 } from '../../homes/arcade-story';
 import { ARCADE_HOME_COPY } from '../../strings';
 import { ArcadeButton } from '../parts/ArcadeButton';
@@ -196,9 +202,7 @@ export type StoryEntryProps = {
   readonly onBrief: (brief: Brief) => void;
 };
 
-type AutoProps = Omit<StoryEntryProps, 'entry'> & {
-  readonly entry: Extract<StoryEntry, { kind: 'auto' }>;
-};
+type AutoProps = Omit<StoryEntryProps, 'entry'> & { readonly entry: AutoStoryEntry };
 
 function AutoEntry({ entry, onRetry, onCard, onLink, report, onBrief }: AutoProps) {
   const { row, words, brief } = entry;
@@ -234,6 +238,24 @@ function AutoEntry({ entry, onRetry, onCard, onLink, report, onBrief }: AutoProp
   );
 }
 
+/** The suggestion's card in a window, as the story's other windows are. */
+const inWindow = (card: ReactNode) => (
+  <ArcadeWindow contentStyle={styles.card}>{card}</ArcadeWindow>
+);
+
+type SuggestionProps = Omit<StoryEntryProps, 'entry'> & { readonly entry: SuggestionStoryEntry };
+
+/** A suggestion Auto posted: its card's window while ThreadSuggestion shows it, else its AUTO line. */
+function SuggestionEntry({ entry, ...shared }: SuggestionProps) {
+  return (
+    <ThreadSuggestion
+      suggestionId={entry.suggestionId}
+      frame={inWindow}
+      fallback={<AutoEntry {...shared} entry={entry.text} />}
+    />
+  );
+}
+
 function StoryEntryView(props: StoryEntryProps) {
   const { entry } = props;
   const { vars, type } = useArcadePaint();
@@ -251,6 +273,8 @@ function StoryEntryView(props: StoryEntryProps) {
       );
     case 'auto':
       return <AutoEntry {...props} entry={entry} />;
+    case 'suggestion':
+      return <SuggestionEntry {...props} entry={entry} />;
     case 'notice':
       return <TurnNotice notice={entry.notice} onRetry={props.onRetry} />;
     case 'loose':
@@ -281,6 +305,7 @@ const styles = StyleSheet.create({
     padding: STORY_LINE.gap,
   },
   itemText: { flexGrow: 1, flexBasis: STORY_LINE.itemWords, gap: STORY_LINE.itemGap },
+  card: { padding: STORY_LINE.gap },
   choice: { gap: STORY_LINE.inner },
   link: { minHeight: MIN_TOUCH, justifyContent: 'center' },
 });

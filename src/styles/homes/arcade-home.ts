@@ -13,7 +13,10 @@
 //   was seen for its key) types; one already there when the chat opened shows whole and is not said
 //   again (the window cannot tell a chat switch, so the home does). A later message after the same
 //   question is its own reply (keyed by its id too): typed when it lands on screen, whole when the
-//   chat opened with it (openedChat).
+//   chat opened with it (openedChat). A suggestion Auto posted (PRD-268 §6.5.1, where discovery
+//   lists `suggestions`) is one of his replies here: when it is the newest, the dialogue says its
+//   words as it says any reply (sayingOf reads its Auto row, arcade-story.ts autoRowOf), and the
+//   story keeps only its card.
 //   The day's brief (PRD-268 US-G06, D-ARC-7): where the reply the dialogue says carries one
 //   (threadRows' row.brief, only where discovery lists `brief`), the dialogue says its greeting and
 //   Auto's Read as plain words (hud-turn.ts plainText), keyed by its message, and offers OPEN
@@ -43,6 +46,7 @@ import type { CounterValues } from '../arcade/parts/counters';
 import type { DialogueReply } from '../arcade/parts/dialogue';
 import type { DPadId } from '../arcade/parts/pad-grid';
 import { ARCADE_HOME_COPY } from '../strings';
+import { autoRowOf } from './arcade-story';
 import { plainText, sayingTurn } from './hud-turn';
 
 // ── The dialogue ─────────────────────────────────────────────────────────────────────────────
@@ -93,15 +97,16 @@ function line(id: string, text: string): DialogueSay {
 /**
  * The reply the dialogue says, as the story's rows have it (sayingRowKey's row): its saved
  * message's id (null for the reply still being written) and the day's brief it carries, where
- * threadRows kept one (discovery lists `brief`).
+ * threadRows kept one (discovery lists `brief`). A suggestion's post is read as its Auto row.
  */
 export type Saying = { readonly messageId: string | null; readonly brief: Brief | null };
 
 /** The saying row's message and brief; null when no row is the dialogue's. */
 export function sayingOf(rows: readonly ChatRow[], sayingKey: string | null): Saying | null {
   if (sayingKey === null) return null;
-  const row = rows.find((each) => each.key === sayingKey);
-  if (row?.type !== 'auto') return null;
+  const found = rows.find((each) => each.key === sayingKey);
+  const row = found ? autoRowOf(found) : null;
+  if (row === null) return null;
   return Object.freeze({ messageId: row.messageId, brief: row.brief });
 }
 
