@@ -53,7 +53,9 @@ OFL_COMMITS="29e94d990c84a54f83644e7c43f42dfc9e1a4ac7 a5bd0ea86b2576f86672aab557
 KIT_FILES_RE='^scripts/ralph/(prd-001-candy\.json|PROMPT_build_prd001-candy\.md|PROMPT_review_prd001-candy\.md|acceptance-prd001-candy\.sh|overnight-prd001-candy\.sh|launch-prd001-candy\.sh)$'
 TEST_RE='(^|/)__tests__/|\.test\.tsx?$'
 # KA1-FILES: the only paths this wave may add or change (the tests beside each included).
-KA1_ALLOWED='^(src/chat/|src/cc/|src/release/__tests__/support/(surfaces|a11y-allowed)\.ts$|src/config/__tests__/app-config\.test\.ts$|src/styles/|src/ui/(Slider\.tsx|dressed\.ts)$|src/ui/__tests__/|src/voice/home/(use-)?candy-home-voice\.ts$|src/voice/home/__tests__/|src/voice/screen/|src/voice/nav\.ts$|src/voice/__tests__/|app/\(app\)/settings/look/candy\.tsx$|assets/fonts/(outfit/|nunito/|SOURCES\.md$)|app\.json$|docs/styles-and-themes\.md$|docs/prd/PRD-001-AUTOMATOS-GO-V1\.md$|CLAUDE\.md$|src/(brief|suggestions|approvals)/)'
+# surfaces.test.ts: the lead's 3b366c3 only (a named 30 s timeout on the AI-label surface scan, as main's 5788f46;
+# assertions unchanged), approved 31 Oct 04:30.
+KA1_ALLOWED='^(src/chat/|src/cc/|src/release/__tests__/support/(surfaces|a11y-allowed)\.ts$|src/release/__tests__/surfaces\.test\.ts$|src/config/__tests__/app-config\.test\.ts$|src/styles/|src/ui/(Slider\.tsx|dressed\.ts)$|src/ui/__tests__/|src/voice/home/(use-)?candy-home-voice\.ts$|src/voice/home/__tests__/|src/voice/screen/|src/voice/nav\.ts$|src/voice/__tests__/|app/\(app\)/settings/look/candy\.tsx$|assets/fonts/(outfit/|nunito/|SOURCES\.md$)|app\.json$|docs/styles-and-themes\.md$|docs/prd/PRD-001-AUTOMATOS-GO-V1\.md$|CLAUDE\.md$|src/(brief|suggestions|approvals)/)'
 # KA3: each vendored file and the kit source (under themes/candy/) whose sha256 its header must carry.
 VENDORED="src/styles/tokens/candy-catalogue.ts=src/looks/catalogue.ts
 src/styles/candy/look-schema.ts=looks/schema.json
