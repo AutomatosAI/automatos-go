@@ -297,5 +297,6 @@ From PRD-001 §4.11 and [CLAUDE.md](../CLAUDE.md):
 ## Related
 
 - [connecting.md](connecting.md): hosted sign-in and pairing with your own server.
+- [proactive-auto.md](proactive-auto.md): the brief, suggestions, approval sheet, readiness and status words (PRD-268); [user/proactive-auto.md](user/proactive-auto.md) for the user view.
 - [native-modules.md](native-modules.md): every native module, usage string and config plugin.
 - [release.md](release.md): CI, EAS Workflows, updates and builds.

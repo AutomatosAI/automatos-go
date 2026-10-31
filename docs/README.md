@@ -44,6 +44,11 @@ reply spoken by the phone or by Auto's server voice, the AI notice once per voic
 languages (English and Portuguese (Brazil), with a one-tap EN/PT switch) and, later, Auto Live
 through Retell. Quick-ask, the server voice and the languages are on `main`; Auto Live is not built.
 
+**[proactive-auto.md](proactive-auto.md).** PRD-268 on the phone: the daily brief, suggestions, the approval
+sheet, "What Auto depends on" and the status vocabulary. The modules, capability gates, routes, view models
+per layout, how push taps route, and the tests that pin each. All on `main`. The people-facing version is
+[user/proactive-auto.md](user/proactive-auto.md).
+
 **[release.md](release.md).** How a merge reaches phones. GitHub CI checks; EAS Workflows ship.
 `testflight.yml` takes the fingerprint and either publishes an over-the-air update or builds iOS and
 sends it to TestFlight; `pr-check.yml` says on each PR which it will be. Also the manual run while
