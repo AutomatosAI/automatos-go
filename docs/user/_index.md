@@ -8,4 +8,5 @@ A page says so when part of it needs something the server has to switch on.
 
 ## Pages
 
-None yet.
+- [Arcade](arcade.md): Automatos as a 16-bit role-playing game. Choosing it, the handheld home, Quests,
+  Inventory, Auto and PAUSE, Options, and Auto's brief, ideas and approvals.
