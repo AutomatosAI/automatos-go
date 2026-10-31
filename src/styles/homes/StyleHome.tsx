@@ -52,7 +52,7 @@ export function StyleHome() {
 
 /**
  * app/(app)/chat/[id].tsx: one conversation in the style's layout, opened at its focus message in
- * Studio's and Play's threads (PRD-268 US-G03; HUD shows only the newest turn, Arcade hooks it up).
+ * Studio's and Play's threads and Arcade's story (PRD-268 US-G03; HUD shows only the newest turn).
  */
 export function StyleChat({
   chatId,
@@ -71,7 +71,8 @@ export function StyleChat({
       />
     );
   if (kind === 'hud') return <HudHome chatId={chatId} ticketId={ticketId} />;
-  if (kind === 'arcade') return <ArcadeHome chatId={chatId} ticketId={ticketId} />;
+  if (kind === 'arcade')
+    return <ArcadeHome chatId={chatId} ticketId={ticketId} focusMessageId={focusMessageId} />;
   return (
     <ChatScreen
       chatId={chatId}

@@ -73,8 +73,8 @@ screen's window (First open, Not running, Something went wrong, Lost) and beside
 Options. Every copy sets the one stored value, so one tap stills Arcade everywhere. The picker's
 Arcade card draws none and moves nothing.
 
-**PRD-268 on the handheld** (D-ARC-7). Arcade has the three phone features every layout has,
-on the same hooks and data, each shown only where discovery lists its capability:
+**PRD-268 on the handheld** (D-ARC-7). Arcade has PRD-268's phone features on the same hooks
+and data as the other layouts; a feature with a capability shows only where discovery lists it:
 
 - **The day's brief** (US-G06, `brief`). The thread keeps a message's brief as Play's thread does
   (`threadRows(state, { briefs })`). The dialogue window says the reply the story leaves out
@@ -89,6 +89,21 @@ on the same hooks and data, each shown only where discovery lists its capability
   of them all (`useIdeas`). Under it the NEXT line ('▶ NEXT', the newest open suggestion's title,
   START and HIDE) is HUD's NEXT ▸ in Arcade's dress. It says 'Started. Auto is on it.' for 4 s
   after a Start (`src/styles/arcade/home/ArcadeNext.tsx`, `next.ts`).
+- **The thread's suggestion card** (§6.5.1, `suggestions`). The story asks for suggestion rows as
+  Studio's and Play's threads do (`threadRows(state, { briefs, suggestions })`). A suggestion Auto
+  posted is the foundation's card (`src/suggestions/ThreadSuggestion.tsx`) in an Arcade window while
+  it is open, 'Started. Auto is on it.' there after a Start from it, else its AUTO line
+  (`arcade-story.ts` `suggestionEntry`). The newest open suggestion is on the NEXT line, so its post
+  draws as words: only one place offers START. To the dialogue the post is one of Auto's replies
+  (`autoRowOf`). When it is the newest after the person's last message, the dialogue says its words
+  as a normal reply, with Report this, and the story keeps only the card.
+- **Opening at a message** (US-G03). ArcadeHome takes the chat route's `focus` param and the brief
+  on open's request through `useThreadFocus`, as Studio's and Play's threads do. The story window is
+  a ScrollView inside the handheld's own ScrollView (a FlatList there would nest one list in
+  another). So it records each entry's top as it is laid out and scrolls there once, not animated,
+  by `src/chat/focus.ts`'s rules (`src/styles/arcade/home/story-focus.ts`, `use-story-focus.ts`).
+  A focus on the reply the dialogue says settles at once, without a scroll: the dialogue shows it.
+  The focus waits while Quests or Inventory is on the handheld's screen.
 - **The approval sheet** (US-G08). A card waiting with an ApprovalView opens its answer sheet by
   itself, once. If the sheet is closed unanswered, '◆ WAITING FOR YOU · OPEN' under the dialogue
   window opens it again (`src/approvals/use-hud-approval.tsx`, as HUD mounts it under its chip).
