@@ -1,11 +1,11 @@
 // Face ID before approve or answer in A2's and A3's buttons (D19, KP13; US-015e), and before a
-// row's Try again and a suggestion's Start (PRD-268). Through the real
-// gate (createStepUp over a fake LocalAuthentication, the switch on), each of the gated writes
+// row's Try again, a suggestion's Start and the approval sheet a push opens (PRD-268). Through the
+// real gate (createStepUp over a fake LocalAuthentication, the switch on), each of the gated writes
 // sends nothing on a cancelled, missed, locked-out or failed check, and on a pass sends one request,
 // exactly what A2's or A3's sender sent before. Read from the source: each gated route is named by
-// one sender only, and every module in src/chat and src/cc that calls a sender (other than the
-// senders' own modules) is a gated module that imports src/step-up; guard( runs only there, for its
-// own actions, and never for the KP13 writes.
+// one sender only, and every module in src/chat, src/cc, src/suggestions and src/approvals that
+// calls a sender (other than the senders' own modules) is a gated module that imports src/step-up;
+// guard( runs only there, for its own actions, and never for the KP13 writes.
 
 import path from 'node:path';
 
@@ -102,6 +102,7 @@ const MODULES = [
   ...sources(path.join(ROOT, 'src/chat')),
   ...sources(path.join(ROOT, 'src/cc')),
   ...sources(path.join(ROOT, 'src/suggestions')),
+  ...sources(path.join(ROOT, 'src/approvals')),
 ]
   .filter(({ file }) => !/__tests__|\.test\.tsx?$/.test(file))
   .map(({ file, text }) => ({ file: relative(file), text, code: code(text) }));
@@ -296,6 +297,7 @@ describe('every gated write goes through src/step-up (read from the source)', ()
       .filter((m) => !(m.file in GATED_MODULES))
       .map((m) => m.file);
     expect(users.sort()).toEqual([
+      'src/approvals/PushApprovalSheet.tsx',
       'src/cc/questions/use-questions.ts',
       'src/cc/social/use-social.ts',
       'src/cc/status/use-retry.ts',

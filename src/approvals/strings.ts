@@ -41,6 +41,9 @@ export const APPROVAL_SHEET_COPY = Object.freeze({
     `This changes your rule "${sentence}", so Auto stops asking for this. You set it in Studio.`,
   alwaysAllowOpen: 'Open in Studio',
   cancel: 'Cancel',
+  /** A push's sheet could not show the request: it was decided or lapsed (404), or not read. */
+  pushGone: 'That approval was already decided.',
+  pushUnreadable: 'Auto couldn’t open this approval. Its card is in the chat it was asked in.',
   /** HUD: the waiting approval's way back in once its sheet was closed. */
   hudOpen: '◆ WAITING FOR YOU · OPEN',
   hudOpenLabel: 'An approval is waiting for you. Opens it',

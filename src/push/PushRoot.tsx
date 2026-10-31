@@ -10,20 +10,26 @@
 // to the phone link. It listens to the provider's onExpired: an own server that ended the pairing
 // leaves push, a hosted session that expired clears the badge and the delivered notifications.
 // Unmount takes every listener, the handler and the link away and closes the registrar. It renders
-// only the in-context ask, never while the person's Remove this phone holds (promptStatusOf). Push
-// is wired again only when the session's server or push gates change (sessionKeyOf), never for a
-// rebuilt object.
+// only the in-context ask, never while the person's Remove this phone holds (promptStatusOf), and the
+// approval sheet a tap on an approval's push opens (PRD-268 US-G08: where discovery lists
+// approval_view and the role may approve; src/approvals/PushApprovalSheet.tsx). Push is wired again
+// only when the session's server or push gates change (sessionKeyOf), never for a rebuilt object.
 
 import { useQueryClient } from '@tanstack/react-query';
 import { usePathname } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 
+import { canApprovalView } from '../api/capabilities';
 import { workspaceIdStore } from '../api/workspace';
 import { useAppSession } from '../app-state/session';
+import { PushApprovalSheet } from '../approvals/PushApprovalSheet';
+import { pushApprovals } from '../approvals/push-sheet';
+import { roleCan } from '../auth/role';
 import { logger } from '../lib/logger';
 import { appStorage } from '../storage/mmkv';
 import { useAppBadge } from './badge';
+import type { PushApprovalSheet as ApprovalSheetPort } from './inbound/handler';
 import { handleIncoming } from './inbound/receive';
 import { useNotificationResponses } from './inbound/use-notification-responses';
 import { pushNatives } from './natives';
@@ -66,12 +72,26 @@ function useStableSession(session: PushSession): PushSession {
   return session;
 }
 
+/**
+ * A tap on an approval's push opens its sheet (PRD-268 US-G08) where discovery lists approval_view
+ * and the role may approve, both read when the tap lands; elsewhere the tap opens what it did.
+ */
+function useApprovalSheet(): ApprovalSheetPort {
+  const { discovery, workspace } = useAppSession();
+  const gate = useLatest(canApprovalView(discovery) && roleCan(workspace.role, 'approve'));
+  return useMemo(
+    () => Object.freeze({ offered: () => gate.current, open: pushApprovals.open }),
+    [gate],
+  );
+}
+
 function useWiring(given: PushSession, onOutcome: (outcome: RegistrationOutcome) => void) {
   const session = useStableSession(given);
   const { client, workspace } = useAppSession();
   const queryClient = useQueryClient();
   const route = useLatest<string | null>(usePathname());
   const role = useLatest(workspace.role);
+  const approvals = useApprovalSheet();
   const workspaceId = workspace.id;
   return useMemo(
     () =>
@@ -85,10 +105,11 @@ function useWiring(given: PushSession, onOutcome: (outcome: RegistrationOutcome)
           queryClient,
           currentRoute: () => route.current,
           onOutcome,
+          approvals,
         },
         NATIVES,
       ),
-    [session, workspaceId, client, queryClient, onOutcome, role, route],
+    [session, workspaceId, client, queryClient, onOutcome, role, route, approvals],
   );
 }
 
@@ -183,5 +204,10 @@ export function PushRoot({ session }: PushRootProps) {
     await askPermission();
     await registrar.run(FORCED);
   }, [askPermission, registrar]);
-  return <PushPrompt status={status} counts={counts} onDecline={decline} onTurnOn={turnOn} />;
+  return (
+    <>
+      <PushPrompt status={status} counts={counts} onDecline={decline} onTurnOn={turnOn} />
+      <PushApprovalSheet />
+    </>
+  );
 }

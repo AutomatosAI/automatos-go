@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  canApprovalView,
   canBrief,
   canDigest,
   canDigestNow,
@@ -33,6 +34,7 @@ const GATES: readonly [Capability, (discovery: GateInput) => boolean][] = [
   ['brief', canBrief],
   ['suggestions', canSuggestions],
   ['readiness', canReadiness],
+  ['approval_view', canApprovalView],
 ];
 
 describe('capability gates', () => {
