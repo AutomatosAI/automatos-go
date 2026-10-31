@@ -585,14 +585,14 @@
       "title": "Make it sweet: Auto celebrates a save only once the phone kept it; resolve.ts's Candy row names Candy's type",
       "description": "Review finding (LOW). src/styles/candy/look-page/use-sweet-page.ts:104-107 saveLook calls applyChange(saved, savedSaid(saved)) and then start() whenever saved.ok, but apply (:53-58) sets NOT_KEPT when the store's setCandyLooks returns false (src/styles/provider/store.ts:224-228: the phone's storage refused the write). The foot then says 'This phone couldn't keep that change. It lasts until Automatos Go closes.' (NOT_KEPT, src/styles/candy/look-page/sweet.ts:101, PLAY_LOOK_COPY.notKept in src/styles/strings.ts:148) while the preview's Auto celebrates the save for CELEBRATE_MS (CandyLookPage.tsx:93 SweetPreview celebrating). Separately, src/styles/provider/resolve.ts:13-15's Candy row still says \"Studio's type until Candy's faces land (US-023d)\", but candy() paints styleType({ layout: 'candy' }) (Outfit and Nunito) since 1d1067c.",
       "acceptanceCriteria": [
-        "Cause: saveLook (src/styles/candy/look-page/use-sweet-page.ts:104-107) starts the celebration on saved.ok alone, though apply (:53-58) may have refused to keep it (setCandyLooks false → NOT_KEPT); resolve.ts:13-15's header names Studio's type for Candy",
-        "Change: apply returns whether the change was kept (true when nothing changed or setCandyLooks returned true; false when it returned false) and saveLook starts the celebration only when the save was made and kept, through a pure celebratesSave(change: CandyLooksChange, kept: boolean): boolean in src/styles/candy/look-page/sweet.ts (true only when change.ok and kept); rename and remove still return the CandyLooksChange the shared LookSheet reads (its contract unchanged); resolve.ts's Candy row says Candy's type is Outfit and Nunito (typeface/candy-type.ts) instead of Studio's",
-        "Test (src/styles/candy/look-page/__tests__/sweet.test.ts): celebratesSave(an ok change, true) is true, (an ok change, false) false, (refused 'full', true) false; a source assertion on use-sweet-page.ts that saveLook calls celebratesSave and no longer has `if (saved.ok) start()`",
-        "No SEAM EDIT (every changed path is under src/styles/); no FOUNDATION GAP",
-        "npm run typecheck passes",
-        "npm run lint passes (0 errors)",
-        "npx vitest run passes",
-        "bash scripts/ralph/acceptance-prd001-candy.sh --no-ci passes"
+        "Cause: saveLook (src/styles/candy/look-page/use-sweet-page.ts:104-107) starts the celebration on saved.ok alone, though apply (:53-58) may have refused to keep it (setCandyLooks false → NOT_KEPT); resolve.ts:13-15's header names Studio's type for Candy → DONE — use-sweet-page.ts:104-107 saveLook called applyChange(saved, savedSaid(saved)) then start() on saved.ok alone, while apply (:53-58) set NOT_KEPT when store.ts setCandyLooks returned false; resolve.ts:13-15 said \"Studio's type until Candy's faces land (US-023d)\" though candy() paints styleType({ layout: 'candy' })",
+        "Change: apply returns whether the change was kept (true when nothing changed or setCandyLooks returned true; false when it returned false) and saveLook starts the celebration only when the save was made and kept, through a pure celebratesSave(change: CandyLooksChange, kept: boolean): boolean in src/styles/candy/look-page/sweet.ts (true only when change.ok and kept); rename and remove still return the CandyLooksChange the shared LookSheet reads (its contract unchanged); resolve.ts's Candy row says Candy's type is Outfit and Nunito (typeface/candy-type.ts) instead of Studio's → DONE — apply answers kept (true when next is current() or setCandyLooks kept it, false when it refused); applyChange answers apply's kept for an ok change and true for a refused one (nothing changed); saveLook: `const kept = applyChange(saved, savedSaid(saved)); if (celebratesSave(saved, kept)) start();`; celebratesSave(change, kept) in sweet.ts, pure (change.ok && kept); rename and remove return the CandyLooksChange through a local answer() (LookSheet's contract unchanged); resolve.ts's Candy row: \"Candy's type, Outfit and Nunito (typeface/candy-type.ts)\" (b184682)",
+        "Test (src/styles/candy/look-page/__tests__/sweet.test.ts): celebratesSave(an ok change, true) is true, (an ok change, false) false, (refused 'full', true) false; a source assertion on use-sweet-page.ts that saveLook calls celebratesSave and no longer has `if (saved.ok) start()` → DONE — sweet.test.ts: celebratesSave(saveAsNew(INITIAL_CANDY_LOOKS), true) true, (same, false) false, ({ ok: false, reason: 'full' }, true) false; source assertion reads use-sweet-page.ts's saveLook action body: it matches celebratesSave(saved, kept)) start() and the file has no `if (saved.ok) start()`. Red against HEAD's use-sweet-page.ts (no celebratesSave call; has `if (saved.ok) start()`)",
+        "No SEAM EDIT (every changed path is under src/styles/); no FOUNDATION GAP → DONE — every changed path is under src/styles/ (use-sweet-page.ts, sweet.ts, sweet.test.ts, provider/resolve.ts): no SEAM EDIT; no FOUNDATION GAP",
+        "npm run typecheck passes → DONE — npm run typecheck clean (b184682)",
+        "npm run lint passes (0 errors) → DONE — npm run lint 0 errors (2 existing warnings: src/cc/strings.ts 452 lines, src/styles/strings.ts 784)",
+        "npx vitest run passes → DONE — npx vitest run: 497 files, 9043 tests passed (b184682)",
+        "bash scripts/ralph/acceptance-prd001-candy.sh --no-ci passes → DONE — gate --no-ci at b184682: 47 checks PASS, red only on the kit's completion pair (every story passes:true, every AC DONE), until this mark"
       ],
       "files": [
         "src/styles/candy/look-page/use-sweet-page.ts",
@@ -601,8 +601,8 @@
         "src/styles/provider/resolve.ts"
       ],
       "priority": 16,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "P001C-RVW-2 DONE (commit b184682): Auto celebrates a save in Make it sweet only when the phone kept it (celebratesSave(change, kept), apply and applyChange answer kept), so it never celebrates beside NOT_KEPT; rename and remove still hand LookSheet the change; resolve.ts's Candy row names Outfit and Nunito; every file is under src/styles, so no SEAM EDIT; no FOUNDATION GAP; no CANDY_STAND_IN left"
     }
   ]
 }
