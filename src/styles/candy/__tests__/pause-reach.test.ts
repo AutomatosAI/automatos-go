@@ -4,8 +4,8 @@
 // under src/styles and src/voice that mounts a moving Candy part — Auto not held still, the orb not
 // held still, the writing dots, or the voice core's Candy Auto (a <CandyAuto in src/voice) — is
 // listed with the screen that shows it and the file on that screen that draws CandyPauseButton; a
-// moving file listed nowhere fails. US-023h, US-023l and US-023m add their entries; the picker's
-// Candy card moves nothing.
+// moving file listed nowhere fails. US-023h listed the Chat view's; US-023l and US-023m add theirs;
+// the picker's Candy card moves nothing.
 
 import path from 'node:path';
 
@@ -23,6 +23,8 @@ const MOVING: readonly RegExp[] = [
 
 const HOME = 'src/styles/homes/CandyHome.tsx';
 const TODAY = 'src/styles/candy/home/TodayView.tsx';
+const CHAT_STAGE = 'src/styles/candy/home/ChatStage.tsx';
+const CHAT_VIEW = 'src/styles/candy/home/ChatView.tsx';
 
 /**
  * Where a moving file shows: `mountedBy`, the components from its screen down to it (the screen
@@ -33,6 +35,9 @@ type Reach = { readonly host: string; readonly mountedBy: readonly string[] };
 
 const REACH: Readonly<Record<string, Reach>> = Object.freeze({
   [TODAY]: { host: TODAY, mountedBy: [HOME] },
+  // the Chat view: Auto on the stage, and the writing dots in the thread under it (US-023h)
+  [CHAT_STAGE]: { host: CHAT_STAGE, mountedBy: [HOME] },
+  [CHAT_VIEW]: { host: CHAT_STAGE, mountedBy: [HOME] },
 });
 
 const componentOf = (file: string) => path.posix.basename(file, '.tsx');
@@ -79,6 +84,13 @@ describe('where the control sits', () => {
     expect(today).toMatch(/function TodayHeader\([\s\S]*?<CandyPauseButton\s*\/>[\s\S]*?\n\}/);
     expect(today).toMatch(/function TodayHeader\([\s\S]*?<CandyAuto\b[\s\S]*?\n\}/);
     expect(today).toMatch(/<TodayHeader\b[\s\S]*<Orb\b/);
+  });
+
+  it("is on the Chat view's stage in its outline (it sits on the violet gradient), beside Auto", () => {
+    const stage = codeOf(CHAT_STAGE);
+    expect(stage).toMatch(/<CandyPauseButton variant="outline"\s*\/>/);
+    expect(stage).toMatch(/<CandyAuto\b[\s\S]*<CandyPauseButton\b/);
+    expect(codeOf(HOME)).toMatch(/<ChatStage\b[\s\S]*<ChatView\b/);
   });
 
   it('is never needed by a part that is held still, so the patterns skip `still`', () => {

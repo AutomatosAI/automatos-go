@@ -73,11 +73,29 @@ export const CANDY_VOICE_COPY = Object.freeze({
   stopHint: 'Stops Auto’s reply',
 });
 
-/** The Chat view until US-023h builds it: its words, and the way back to Today. */
-// CANDY_STAND_IN US-023h
-export const CANDY_CHAT_SOON_COPY = Object.freeze({
-  message: 'Chat with Auto opens here in this update.',
+/** P2 Chat (US-023h): the stage, the thread's chips and Deliverables, and the message box. */
+export const CANDY_CHAT_COPY = Object.freeze({
+  /** The stage's title before the chat has its own. */
+  newChat: 'New chat',
   back: 'Back',
+  /** The back circle's glyph; VoiceOver hears 'Back'. */
+  backGlyph: '‹',
+  /** The state pill: Auto's state as a glyph and a word ('● Listening'). */
+  state: (glyph: string, word: string) => `${glyph} ${word}`,
+  /** A tool chip's glyph by how the call went (the kit's CHIP_GLYPHS): never colour alone. */
+  chipGlyph: Object.freeze({ done: '✓', running: '●', failed: '✕' }),
+  open: 'Open',
+  openHint: 'Opens the Deliverable',
+  /** What VoiceOver hears for a Deliverable's row ('Spring launch post, Document'). */
+  deliverableLabel: (title: string, kind: string) => `${title}, ${kind}`,
+  /** What VoiceOver hears for the thread as a whole. */
+  threadLabel: 'Conversation with Auto',
+  composer: Object.freeze({
+    placeholder: 'Message Auto',
+    send: 'Send',
+    stop: 'Stop',
+    stopHint: 'Stops Auto’s reply',
+  }),
 });
 
 /** The Shelf view until US-023i builds it. */

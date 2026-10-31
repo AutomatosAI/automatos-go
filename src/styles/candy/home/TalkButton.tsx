@@ -6,6 +6,7 @@
 // the hint saying how to use it (voiceView's, KV8). Its words twin is the voice window's caption
 // while it works ('Listening'), and a tap that is too short says to hold (the window's line). The
 // circle stays 64 at every text size: it holds no words, and the tab bar's centre column is fixed.
+// Beside the Chat view's message box it is the same control at 56 (US-023h, the P2 mock).
 
 import Mic from 'lucide-react-native/icons/mic';
 import { Pressable, StyleSheet } from 'react-native';
@@ -21,11 +22,14 @@ const MIC_SIZE = 26;
 export type CandyTalkButtonProps = {
   /** The voice's talk button: its words, state and hold (useCandyHomeVoice). */
   readonly talk: HudTalk;
+  /** The circle's side: the tab bar's 64 by default, 56 beside the message box. */
+  readonly size?: number;
 };
 
-export function CandyTalkButton({ talk }: CandyTalkButtonProps) {
+export function CandyTalkButton({ talk, size = TAB_BAR.voice }: CandyTalkButtonProps) {
   const { vars } = useCandyPaint();
   const lit = talk.active;
+  const circle = { width: size, height: size, borderRadius: size / 2 };
   return (
     <Pressable
       {...talkHandlers(talk)}
@@ -36,6 +40,7 @@ export function CandyTalkButton({ talk }: CandyTalkButtonProps) {
       accessibilityState={{ disabled: !talk.enabled, selected: lit }}
       style={[
         styles.talk,
+        circle,
         { backgroundColor: lit ? vars.accent : vars.win },
         { opacity: talk.enabled ? 1 : DISABLED_OPACITY },
       ]}
@@ -46,11 +51,5 @@ export function CandyTalkButton({ talk }: CandyTalkButtonProps) {
 }
 
 const styles = StyleSheet.create({
-  talk: {
-    width: TAB_BAR.voice,
-    height: TAB_BAR.voice,
-    borderRadius: TAB_BAR.voice / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  talk: { alignItems: 'center', justifyContent: 'center' },
 });

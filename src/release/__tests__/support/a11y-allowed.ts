@@ -52,6 +52,13 @@ export const ALLOWED: readonly AllowedA11y[] = [
       "Play's way to the notifications inbox (D73: Play has no header menu): lucide's bell in Play's own round chip (the avatar chip's ground paint beside it, KS10) with the CountBadge BESIDE it while something is unread, in a chip that grows to hold the badge. IconButton is a fixed square with no badge slot and paints from the dress, not Play's ground. Its label is inboxButtonLabel's, always set, and carries the count ('Notifications, 3 unread').",
   },
   {
+    file: 'src/styles/candy/home/CandyComposer.tsx',
+    text: 'Pressable in SendButton',
+    rule: 'ICON_ONLY',
+    reason:
+      "Candy's Send / Stop (US-023h; CANDY-LAYOUT §4 P2): one 44 pt accent circle in the message box's pill holding lucide's arrow up in the accent's ink for Send, or a 12 pt rounded square for Stop. IconButton takes a lucide icon only and paints from the dress's variants, so it can draw neither the square nor the accent fill. Its accessibilityLabel is candyComposerView's label ('Send' / 'Stop', with Stop's hint), always set.",
+  },
+  {
     file: 'src/styles/candy/home/TalkButton.tsx',
     text: 'Pressable in CandyTalkButton',
     rule: 'ICON_ONLY',

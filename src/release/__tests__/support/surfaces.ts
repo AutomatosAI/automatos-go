@@ -29,6 +29,7 @@ export const SEND_MARKERS: readonly SendMarker[] = [
     pattern: /<CandyTalkButton\b/,
     what: "renders Candy's hold to talk, whose press sends the words heard to Auto (A6's quick-ask)",
   },
+  { id: 'candy-composer', pattern: /<CandyComposer\b/, what: "renders Candy's message box" },
 ];
 
 /** The words some marker's match must contain, read on the raw file before it is parsed. */
@@ -69,6 +70,7 @@ export const ARCADE_HOME = 'src/styles/homes/ArcadeHome.tsx';
 const STORY_WINDOW = 'src/styles/arcade/home/StoryWindow.tsx';
 export const CANDY_HOME = 'src/styles/homes/CandyHome.tsx';
 const CANDY_VOICE_WINDOW = 'src/styles/candy/home/VoiceWindow.tsx';
+const CANDY_CHAT_VIEW = 'src/styles/candy/home/ChatView.tsx';
 export const VOICE_SCREEN = 'src/voice/screen/VoiceScreen.tsx';
 export const FIRST_OPEN = 'src/styles/edges/FirstOpen.tsx';
 export const FIRST_OPEN_THREAD = 'src/styles/homes/FirstOpenThread.tsx';
@@ -108,10 +110,17 @@ export const SEND_SURFACES: readonly SendSurface[] = [
   },
   {
     file: CANDY_HOME,
-    sends: ['candy-talk'],
-    labels: [[CANDY_VOICE_WINDOW]],
+    sends: ['candy-talk', 'candy-composer'],
+    labels: [[CANDY_VOICE_WINDOW], [CANDY_CHAT_VIEW]],
     reason:
-      "Candy's home (US-023g): hold to talk in the tab bar's raised centre; from the press on, the voice window over the bar opens with the caption, while Auto listens, thinks and speaks",
+      "Candy's home (US-023g, US-023h): hold to talk in the tab bar's raised centre, whose voice window over the bar opens with the caption while Auto listens, thinks and speaks; the Chat view's message box and hold to talk sit under its thread, whose first row is the caption",
+  },
+  {
+    file: 'src/styles/candy/home/CandyComposer.tsx',
+    sends: ['candy-talk'],
+    inside: [CANDY_HOME],
+    reason:
+      "Candy's message box (US-023h): hold to talk at 56 beside the pill; used only by CandyHome's Chat view, under the thread the caption opens",
   },
   {
     file: VOICE_SCREEN,
@@ -201,7 +210,7 @@ export const REPORT_MOUNTS: readonly ReportMount[] = [
     target: 'message',
     opener: MESSAGE_REPORT,
     reason:
-      "Candy's home (US-023g): mounted once beside its views; the Chat view takes `report` for a long-press or the accessible action on Auto's bubbles (US-023h)",
+      "Candy's home (US-023g, US-023h): mounted once beside its views; a long-press or the accessible action on Auto's bubbles in the Chat view's thread",
   },
   {
     file: VOICE_SCREEN,

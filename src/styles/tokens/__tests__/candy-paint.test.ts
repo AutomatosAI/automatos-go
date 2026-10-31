@@ -23,6 +23,7 @@ import {
   bandGradient,
   cardGradient,
   orbPaint,
+  userGradient,
   type LinearPaint,
 } from '../candy-paint';
 import { PREPAINT_BANDS, PREPAINT_LAYERS, PREPAINT_ROUNDNESS } from './candy-prepaint';
@@ -270,6 +271,22 @@ describe('bandGradient', () => {
       expect(dy).toBeCloseTo(ey, 12);
     },
   );
+});
+
+describe('userGradient', () => {
+  it.each(PALETTES)("runs $id's user bubble from userA to userB at 150° (--candy-user)", (palette) => {
+    const paint = userGradient(look({ palette: palette.id }), { w: 240, h: 64 });
+    expect(paint.colours).toEqual([palette.colours.userA, palette.colours.userB]);
+    expect(paint.positions).toEqual([0, 1]);
+    const [dx, dy] = directionOf(paint);
+    const [ex, ey] = cssDirection(150);
+    expect(dx).toBeCloseTo(ex, 12);
+    expect(dy).toBeCloseTo(ey, 12);
+    expect((paint.start.x + paint.end.x) / 2).toBeCloseTo(120, 9);
+    expect((paint.start.y + paint.end.y) / 2).toBeCloseTo(32, 9);
+    const length = Math.hypot(paint.end.x - paint.start.x, paint.end.y - paint.start.y);
+    expect(length).toBeCloseTo(240 * Math.abs(ex) + 64 * Math.abs(ey), 9);
+  });
 });
 
 describe('orbPaint', () => {

@@ -4,7 +4,8 @@
 // D73: Auto speaks here, so he is named an AI here), then the voice's state words as a glyph and a
 // word ('● Listening', the lit circle's text twin, announced as they change), A6's own VoiceLine
 // (why the mic cannot start, Open Settings, Download, 'See it in the chat', which opens the Chat
-// view) and Stop (quick-ask's, and A2's for a typed turn). The home places it over the tab bar.
+// view) and Stop (quick-ask's, and A2's for a typed turn). The home places it over the tab bar; on
+// the Chat view it sits in the column over the message box (US-023h, chat.ts chatViewVoice).
 
 import { StyleSheet, View } from 'react-native';
 
@@ -23,8 +24,8 @@ type WindowVoice = Pick<CandyHomeVoice, 'caption' | 'line' | 'lineAction' | 'sto
 
 export type VoiceWindowProps = {
   readonly voice: WindowVoice;
-  /** How far over the screen's foot it sits (above the tab bar and its voice). */
-  readonly bottom: number;
+  /** How far over the screen's foot it floats (above the tab bar); in the column when omitted. */
+  readonly bottom?: number;
 };
 
 /** Whether the window has anything to say. */
@@ -40,7 +41,8 @@ export function VoiceWindow({ voice, bottom }: VoiceWindowProps) {
     <View
       style={[
         styles.window,
-        { bottom, borderRadius: rs, backgroundColor: vars.win },
+        bottom === undefined ? styles.inColumn : [styles.floating, { bottom }],
+        { borderRadius: rs, backgroundColor: vars.win },
         shadow,
       ]}
     >
@@ -67,10 +69,9 @@ export function VoiceWindow({ voice, bottom }: VoiceWindowProps) {
 }
 
 const styles = StyleSheet.create({
+  floating: { position: 'absolute', left: TAB_BAR.side, right: TAB_BAR.side },
+  inColumn: { marginHorizontal: TAB_BAR.side },
   window: {
-    position: 'absolute',
-    left: TAB_BAR.side,
-    right: TAB_BAR.side,
     paddingVertical: WINDOW.padV,
     paddingHorizontal: WINDOW.padH,
     gap: WINDOW.gap,

@@ -152,7 +152,7 @@ export type ArcadeStory = {
  * Try again as one function for the screen's life, asking the newest state's last message again
  * (A2's MessageList): the memoised entries then hold while a reply streams.
  */
-function useTryAgain(state: ThreadState, send: ThreadView['send']): () => void {
+export function useTryAgain(state: ThreadState, send: ThreadView['send']): () => void {
   const latest = useRef(state);
   useLayoutEffect(() => {
     latest.current = state;

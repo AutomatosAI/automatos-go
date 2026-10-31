@@ -7,11 +7,12 @@
 // Sources: AutomatosAI/automatos-design-kit themes/candy at 3920359d5 — src/looks/prepaint.ts
 // (GRADIENT_LAYERS: the highlight's place, colour and reach, Vivid's glows, the middle stop; bandOf
 // and auraOf: the band's and the aura's stops), src/app/theme.css (how --candy-card-1…3, the band,
-// the aura and --candy-orb compose them) and src/art/orb.module.css (the arc and the ring).
-// CANDY-LAYOUT §3 turns them into Skia's terms: the card's 155° runs from (0, 0) to (0.42w, h), a
-// highlight's radius is 0.46 × the longer side, the orb's conic is a sweep from 210°, the aura is
-// three circles of half the width under a blur of 40. A see-through stop fades to its own colour
-// at 0, never 'transparent' (Skia blends a gradient unpremultiplied, so that would grey the fade).
+// the aura, --candy-user and --candy-orb compose them) and src/art/orb.module.css (the arc and the
+// ring). CANDY-LAYOUT §3 turns them into Skia's terms: the card's 155° runs from (0, 0) to
+// (0.42w, h), a highlight's radius is 0.46 × the longer side, the orb's conic is a sweep from 210°,
+// the aura is three circles of half the width under a blur of 40. A see-through stop fades to its
+// own colour at 0, never 'transparent' (Skia blends a gradient unpremultiplied, so that would grey
+// the fade).
 
 import { rgba } from '../../core/web/lib/look-kit/css';
 import { candyCardOrder, candyPalette, type CandyPaintPicks } from './candy';
@@ -58,6 +59,7 @@ const SPOTS = Object.freeze({
 /** The band's angles (bandOf) as the direction each runs, x right and y down: sin θ and −cos θ, written out. */
 const DIRECTIONS = Object.freeze({
   120: Object.freeze([0.8660254037844386, 0.5] as const),
+  150: Object.freeze([0.5, 0.8660254037844386] as const),
   160: Object.freeze([0.3420201433256687, 0.9396926207859084] as const),
 });
 /** Rich and Vivid's band: its middle stop at 52 %. */
@@ -181,6 +183,19 @@ export function bandGradient(
     ...across(size, 120),
     colours: [c.band1, c.band2, c.band3],
     positions: [0, BAND_MID, 1],
+  });
+}
+
+// ── The user's bubble ──────────────────────────────────────────────────────────────────────
+
+/** The user's bubble in the Chat view (theme.css --candy-user): userA to userB at 150°. */
+export function userGradient(look: Pick<CandyPaintPicks, 'palette'>, size: PaintSize): LinearPaint {
+  const c = candyPalette(look.palette).colours;
+  return Object.freeze({
+    kind: 'linear',
+    ...across(size, 150),
+    colours: [c.userA, c.userB],
+    positions: [0, 1],
   });
 }
 

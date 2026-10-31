@@ -11,24 +11,43 @@
 // Auto has no clip boundary in Candy, so a one-shot (hello, celebrate) ends on Arcade's timer.
 // Today is unmounted under the other views: it announces nothing (the thread's live words are the
 // Chat view's, and the voice window's caption stays over the tab bar on every view that has one).
+//   P2 Chat (US-023h): Auto's stage (his state, the state pill and the pause control), A2's
+// discussion bar for a ticket, the thread (the AI label first), then, lifted over the keyboard on
+// iOS, the voice window while the voice works and the message box with hold to talk beside it.
 
+import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { useSafeAreaFrame } from 'react-native-safe-area-context';
+
+import { AttachMenu } from '../../chat/attachments/AttachMenu';
+import { AttachmentChips } from '../../chat/attachments/AttachmentChips';
+import { DiscussionBar } from '../../chat/discussion/DiscussionBar';
 import { HomeMenu } from '../../chat/home/HomeMenu';
+import type { ThreadReport } from '../../chat/report/report';
 import { useMessageReport } from '../../chat/report/use-message-report';
 import { ReportSheet, Screen } from '../../ui';
 import { useCandyHomeVoice, type CandyHomeVoice } from '../../voice/home/use-candy-home-voice';
 import { portraitState } from '../arcade/sprite/turn-state';
-import { stageOf } from '../candy/auto/stage';
+import { stageOf, type Stage } from '../candy/auto/stage';
+import { CandyComposer } from '../candy/home/CandyComposer';
+import { chatViewVoice } from '../candy/home/chat';
+import { ChatStage } from '../candy/home/ChatStage';
+import { ChatView } from '../candy/home/ChatView';
+import type { MenuCircleProps } from '../candy/home/MenuCircle';
 import { CandyTalkButton } from '../candy/home/TalkButton';
 import { TodayView } from '../candy/home/TodayView';
-import { ChatStandIn, ShelfStandIn, TeamStandIn } from '../candy/home/ViewStandIn';
+import { ShelfStandIn, TeamStandIn } from '../candy/home/ViewStandIn';
 import { VoiceWindow } from '../candy/home/VoiceWindow';
 import { TabBar } from '../candy/parts/TabBar';
+import { useCandyPaint } from '../candy/parts/use-candy-paint';
 import { showsTabBar, type CandyView } from './candy-home';
 import { useOneShotEnd } from './use-arcade-home';
+import { useCandyChat, useCandyComposer, useChatTitle, useStageBack } from './use-candy-chat';
 import { useCandyHome, useTabBarRoom, type CandyViews, type TabBarRoom } from './use-candy-home';
+import type { HomeThread } from './use-home-thread';
 
 /** The home draws its own safe area: the band runs under the status bar, the tab bar over the foot. */
 const SIDES = Object.freeze(['left', 'right'] as const);
+const KEYBOARD_BEHAVIOUR = Platform.OS === 'ios' ? 'padding' : undefined;
 
 export type CandyHomeProps = {
   /** The conversation to open (checked first), or null for a draft. */
@@ -61,6 +80,71 @@ function Floating({ views, voice, room }: FloatingProps) {
   );
 }
 
+type ChatPaneProps = {
+  readonly home: HomeThread;
+  readonly voice: CandyHomeVoice;
+  readonly report: ThreadReport;
+  readonly stage: Stage;
+  readonly menu: MenuCircleProps;
+  readonly onBack: () => void;
+};
+
+/** The message box over A2's composer state, its files in the slots, hold to talk beside it. */
+function ChatComposer({ home, voice }: Pick<ChatPaneProps, 'home' | 'voice'>) {
+  const composer = useCandyComposer(home, voice.typed);
+  const { files } = home;
+  return (
+    <CandyComposer
+      value={composer.text}
+      onChangeText={composer.setText}
+      onSend={composer.send}
+      onStop={composer.stop}
+      onFocus={composer.onFocus}
+      onBlur={composer.onBlur}
+      composerState={composer.state}
+      talk={voice.available ? voice.talk : null}
+      above={<AttachmentChips chips={files.chips} onRemove={files.remove} />}
+      leading={
+        <AttachMenu
+          disabled={!composer.state.inputEditable}
+          room={files.room}
+          onPicked={files.add}
+        />
+      }
+    />
+  );
+}
+
+/** P2 Chat: the stage, A2's discussion bar, the thread, the voice window and the message box. */
+function ChatPane({ home, voice, report, stage, menu, onBack }: ChatPaneProps) {
+  const { vars } = useCandyPaint();
+  const { y: stackTop } = useSafeAreaFrame();
+  const chat = useCandyChat(home);
+  const { state } = home.thread;
+  const title = useChatTitle(state);
+  return (
+    <View style={[styles.fill, { backgroundColor: vars.page }]}>
+      <ChatStage stage={stage} title={title} onBack={onBack} menu={menu} />
+      <DiscussionBar state={home.discussion} messages={state.messages} />
+      <KeyboardAvoidingView
+        behavior={KEYBOARD_BEHAVIOUR}
+        keyboardVerticalOffset={stackTop}
+        style={styles.fill}
+      >
+        <ChatView
+          entries={chat.entries}
+          onRetry={chat.onRetry}
+          onCard={chat.onCard}
+          onLink={chat.onLink}
+          report={report}
+        />
+        {voice.available ? <VoiceWindow voice={{ ...voice, ...chatViewVoice(voice) }} /> : null}
+        <ChatComposer home={home} voice={voice} />
+      </KeyboardAvoidingView>
+    </View>
+  );
+}
+
 export function CandyHome({ chatId, ticketId = null, onBack, view }: CandyHomeProps) {
   const { home, needsYou, menu, views, today } = useCandyHome(chatId, ticketId, view);
   const voice = useCandyHomeVoice(home, views.showChat);
@@ -69,6 +153,7 @@ export function CandyHome({ chatId, ticketId = null, onBack, view }: CandyHomePr
   useOneShotEnd(home.mascot);
   const stage = stageOf(portraitState(home.mascot.driver.mascot), voice.stage);
   const menuCircle = { needsYou: needsYou.total, expanded: menu.visible, onPress: menu.open };
+  const back = useStageBack(views.showToday, onBack);
   return (
     <Screen ground="chat" edges={SIDES}>
       {views.view === 'today' ? (
@@ -80,9 +165,15 @@ export function CandyHome({ chatId, ticketId = null, onBack, view }: CandyHomePr
           footRoom={room.foot}
         />
       ) : null}
-      {/* CANDY_STAND_IN US-023h */}
       {views.view === 'chat' ? (
-        <ChatStandIn report={report} onBack={onBack ?? views.showToday} />
+        <ChatPane
+          home={home}
+          voice={voice}
+          report={report}
+          stage={stage}
+          menu={menuCircle}
+          onBack={back}
+        />
       ) : null}
       {/* CANDY_STAND_IN US-023i */}
       {views.view === 'shelf' ? <ShelfStandIn footRoom={room.foot} menu={menuCircle} /> : null}
@@ -94,3 +185,7 @@ export function CandyHome({ chatId, ticketId = null, onBack, view }: CandyHomePr
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  fill: { flex: 1 },
+});
