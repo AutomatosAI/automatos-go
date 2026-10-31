@@ -5,9 +5,10 @@
 // and Stop show as it draws them), Shelf and Team. Each tab is a circle with its dot over its word,
 // a tab for VoiceOver with its selected state; the view on screen fills with the accent.
 // tabBarMetrics (tab-bar.ts) sizes it for the phone's text size: a tab never wider than its column
-// nor under 44 pt, its word free to wrap, so the bar grows taller and never wider. The bar keeps room
-// above its pill for the raised voice (voiceOver), so the voice lies inside the bar's own box and
-// takes a touch at every point. The home places the bar and pads its views by tabBarSpace.
+// nor under 44 pt, its word free to wrap, so the bar grows taller and never wider; its height counts
+// the lines the words wrap to (tabWordLines), so the room the home keeps is the bar's own. The bar
+// keeps room above its pill for the raised voice (voiceOver), so the voice lies inside the bar's own
+// box and takes a touch at every point. The home places the bar and pads its views by tabBarSpace.
 
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';

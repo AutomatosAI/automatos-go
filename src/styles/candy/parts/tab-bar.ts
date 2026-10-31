@@ -7,15 +7,69 @@
 //
 // Dynamic Type (D-A11Y; the D-pad's lesson, A8 P001A-RVW-2): a tab grows with the text size up to
 // its column and never past it, its word wraps, and a word that wraps makes the tab taller, so the
-// bar grows taller and never wider; every tab stays at least 44 pt each way. Pure: no React, React
-// Native, Expo or Skia.
+// bar grows taller and never wider; every tab stays at least 44 pt each way. A tab's height counts
+// every line its longest word wraps to (tabWordLines, from the face's own advance widths), so the
+// room the bar takes (tabBarSpace) is the bar's real height. Pure: no React, React Native, Expo or
+// Skia.
 
 import { CARD_START_VARS, type CandyVarName } from '../../tokens/candy';
 import { CANDY_LEADING, CANDY_STEPS } from '../../typeface/candy-type';
 import type { CardSet } from '../sets';
+import { CANDY_COPY } from '../strings';
 
 export const CANDY_TABS = Object.freeze(['today', 'chat', 'shelf', 'team'] as const);
 export type CandyTab = (typeof CANDY_TABS)[number];
+
+/** The four tabs' words, which the tabs are sized for. */
+const TAB_WORDS: readonly string[] = Object.freeze(CANDY_TABS.map((tab) => CANDY_COPY.tabs[tab]));
+
+/**
+ * Each character of the tabs' words: its advance width in em in Nunito ExtraBold, the tab's face
+ * (assets/fonts/nunito/Nunito-ExtraBold.ttf, its hmtx advance ÷ unitsPerEm 1000). Candy sets no
+ * tracking, so a word is as wide as its characters.
+ */
+export const TAB_GLYPH_EM: Readonly<Record<string, number>> = Object.freeze({
+  C: 0.684,
+  S: 0.641,
+  T: 0.632,
+  a: 0.557,
+  d: 0.61,
+  e: 0.549,
+  f: 0.382,
+  h: 0.595,
+  l: 0.333,
+  m: 0.889,
+  o: 0.589,
+  t: 0.404,
+  y: 0.533,
+});
+
+/** A character with no entry counts as the widest one measured, so a tab is never sized short. */
+const WIDEST_GLYPH_EM = Math.max(...Object.values(TAB_GLYPH_EM));
+
+/** A text size that is not a positive number reads as the default. */
+function readScale(fontScale: number): number {
+  return Number.isFinite(fontScale) && fontScale > 0 ? fontScale : 1;
+}
+
+/** The lines a word has taken so far, and how much of the last one its characters fill. */
+type WordLine = { readonly lines: number; readonly used: number };
+
+/**
+ * The lines a word takes at the tab's size × this text size in a box `width` wide. iOS breaks a
+ * word wider than its box between characters, so a line takes characters until the next would pass
+ * the width: one at least on each line, and at least one line.
+ */
+export function tabWordLines(word: string, fontScale: number, width: number): number {
+  const size = CANDY_STEPS.tab * readScale(fontScale);
+  const start: WordLine = { lines: 1, used: 0 };
+  return [...word].reduce<WordLine>((line, character) => {
+    const advance = (TAB_GLYPH_EM[character] ?? WIDEST_GLYPH_EM) * size;
+    return line.used > 0 && line.used + advance > width
+      ? { lines: line.lines + 1, used: advance }
+      : { lines: line.lines, used: line.used + advance };
+  }, start).lines;
+}
 
 /** The kit's TABS: each tab's dot in a card set's start colour. */
 export const TAB_DOT_SET: Readonly<Record<CandyTab, CardSet>> = Object.freeze({
@@ -69,15 +123,20 @@ function labelLine(scale: number): number {
   return CANDY_STEPS.tab * scale * CANDY_LEADING.label;
 }
 
-/** The bar's measures at this text size on a screen this wide. */
-export function tabBarMetrics(fontScale: number, width: number): TabBarMetrics {
-  const scale = Number.isFinite(fontScale) && fontScale > 0 ? fontScale : 1;
+/** The bar's measures at this text size on a screen this wide, its tabs tall enough for `words`. */
+export function tabBarMetrics(
+  fontScale: number,
+  width: number,
+  words: readonly string[] = TAB_WORDS,
+): TabBarMetrics {
+  const scale = readScale(fontScale);
   const grow = Math.max(1, scale);
   const barWidth = (Number.isFinite(width) ? width : REFERENCE_WIDTH) - TAB_BAR.side * 2;
   const column = (barWidth - TAB_BAR.padH * 2 - TAB_BAR.centre) / TAB_COLUMNS;
   const grown = Math.max(TAB_BAR.item, Math.round(TAB_BAR.item * grow));
   const itemWidth = Math.max(TAB_BAR.target, Math.min(Math.floor(column), grown));
-  const content = TAB_BAR.dot + TAB_BAR.gap + labelLine(scale) + TAB_BAR.itemPadV * 2;
+  const lines = Math.max(1, ...words.map((word) => tabWordLines(word, scale, itemWidth)));
+  const content = TAB_BAR.dot + TAB_BAR.gap + lines * labelLine(scale) + TAB_BAR.itemPadV * 2;
   const minHeight = Math.max(itemWidth, Math.ceil(content));
   return Object.freeze({
     barWidth,
