@@ -48,9 +48,12 @@ export function createPushApprovals(): PushApprovals {
 /** The app's one: the push handler opens it, PushApprovalSheet draws it. */
 export const pushApprovals: PushApprovals = createPushApprovals();
 
-/** The view's query key, under the approval grants' family (src/api/query-keys.ts: memory only). */
+/**
+ * The view's query key. No family in src/api/query-keys.ts claims it, so it is memory only and no
+ * other screen's invalidation refetches it under the open sheet.
+ */
 export function approvalViewKey(grantId: string) {
-  return ['approval-grants', 'view', grantId] as const;
+  return ['approval-view', grantId] as const;
 }
 
 /** The line a push's sheet says when the view cannot be read; never the server's words. */

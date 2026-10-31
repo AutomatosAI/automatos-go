@@ -8,7 +8,7 @@
 // that may approve; the thread's card stays the record (D30). Memory only.
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 
 import { matchesFamily, type KeyFamilyName } from '../api/query-keys';
 import { useAppSession } from '../app-state/session';
@@ -31,24 +31,26 @@ function GrantSheet({ grantId, visible }: { readonly grantId: string; readonly v
   const { guard } = useStepUp();
   const queryClient = useQueryClient();
   const toast = useToast();
+  const key = useMemo(() => approvalViewKey(grantId), [grantId]);
+  // never an earlier answer: gone once the sheet goes, and read afresh when it opens again
   const view = useQuery({
-    queryKey: approvalViewKey(grantId),
+    queryKey: key,
     queryFn: ({ signal }) => fetchApprovalView(client, grantId, signal),
     retry: false,
     staleTime: 0,
+    gcTime: 0,
   });
-  const { error, isError, refetch } = view;
-  // opened again for the same grant: read it again, it may have been answered since
+  const { error, isError, isFetching } = view;
   const wasVisible = useRef(visible);
   useEffect(() => {
-    if (visible && !wasVisible.current) void refetch();
+    if (visible && !wasVisible.current) void queryClient.resetQueries({ queryKey: key });
     wasVisible.current = visible;
-  }, [visible, refetch]);
+  }, [visible, queryClient, key]);
   useEffect(() => {
-    if (!isError) return;
+    if (!isError || isFetching) return;
     toast.show(viewFailureLine(error));
     pushApprovals.close();
-  }, [isError, error, toast]);
+  }, [isError, isFetching, error, toast]);
   const settled = useCallback(
     (_key: string, outcome: CardOutcome) => {
       pushApprovals.close();
