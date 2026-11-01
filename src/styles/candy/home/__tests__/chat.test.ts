@@ -99,7 +99,7 @@ describe('the entries', () => {
     ]);
   });
 
-  it("draws a suggestion Auto posted as his words, as Arcade does until the card comes (PRD-268 §6.5.1)", () => {
+  it("keeps a suggestion Auto posted as its own entry: the card's id, and his words for when it is not open (PRD-268 §6.5.1)", () => {
     const text = autoRowOf(threadRows(opened([saved('m-idea', 'assistant', 'Want a weekly recap?')])));
     const posted: ChatRow = {
       type: 'suggestion',
@@ -108,7 +108,10 @@ describe('the entries', () => {
       suggestionId: 's-1',
       text,
     };
-    expect(entriesOf([posted])).toEqual(entriesOf([text]));
+    const [auto] = entriesOf([text]);
+    expect(entriesOf([posted])).toEqual([
+      { kind: 'suggestion', key: 'm-idea', suggestionId: 's-1', text: auto },
+    ]);
   });
 });
 

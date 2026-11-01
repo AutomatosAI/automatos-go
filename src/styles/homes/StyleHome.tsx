@@ -55,8 +55,8 @@ export function StyleHome() {
 
 /**
  * app/(app)/chat/[id].tsx: one conversation in the style's layout, opened at its focus message in
- * Studio's and Play's threads and Arcade's story (PRD-268 US-G03; HUD shows only the newest turn, Candy's
- * chat view opens at its newest turn).
+ * Studio's and Play's threads, Arcade's story and Candy's Chat view (PRD-268 US-G03; HUD shows only
+ * the newest turn).
  */
 export function StyleChat({
   chatId,
@@ -78,7 +78,15 @@ export function StyleChat({
   if (kind === 'arcade')
     return <ArcadeHome chatId={chatId} ticketId={ticketId} focusMessageId={focusMessageId} />;
   if (kind === 'candy')
-    return <CandyHome chatId={chatId} ticketId={ticketId} onBack={onBack} view="chat" />;
+    return (
+      <CandyHome
+        chatId={chatId}
+        ticketId={ticketId}
+        onBack={onBack}
+        view="chat"
+        focusMessageId={focusMessageId}
+      />
+    );
   return (
     <ChatScreen
       chatId={chatId}

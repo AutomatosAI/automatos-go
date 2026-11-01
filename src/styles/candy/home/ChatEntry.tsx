@@ -9,7 +9,8 @@
 // changed. A reply carrying the day's brief (row.brief, PRD-268 US-G06; only where discovery lists
 // `brief`) draws the brief's own view (BriefBody) in Auto's bubble in place of its words, with the
 // brief card's one entrance, as Studio's StudioBriefCard draws it in Auto's box; Report this stays
-// on the message.
+// on the message. A suggestion Auto posted (PRD-268 §6.5.1) draws its card while it is open, else
+// its message as Auto's reply (ThreadSuggestion, as Play's thread draws it).
 
 import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -23,6 +24,7 @@ import { sameValue } from '../../../chat/components/row-same';
 import { TurnNotice } from '../../../chat/components/TurnNotice';
 import { Markdown } from '../../../chat/markdown/Markdown';
 import { reportTarget, type ThreadReport } from '../../../chat/report/report';
+import { ThreadSuggestion } from '../../../suggestions/ThreadSuggestion';
 import { useReportActions } from '../../arcade/parts/use-report-actions';
 import type { ChatEntry, DeliverableRow } from './chat';
 import { AutoBubble, DeliverableRowView, ToolChipView, UserBubble } from './ChatBubbles';
@@ -90,6 +92,13 @@ function ChatEntryView(props: ChatEntryProps) {
       return <UserBubble text={entry.text} label={entry.label} />;
     case 'auto':
       return <AutoEntry {...props} entry={entry} />;
+    case 'suggestion':
+      return (
+        <ThreadSuggestion
+          suggestionId={entry.suggestionId}
+          fallback={<AutoEntry {...props} entry={entry.text} />}
+        />
+      );
     case 'notice':
       return <TurnNotice notice={entry.notice} onRetry={props.onRetry} />;
     case 'loose':

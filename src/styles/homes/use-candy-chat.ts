@@ -8,22 +8,28 @@
 // listens while the box has the keyboard (its focus is his 'input-focus', as Arcade's TYPE sheet).
 // Where discovery lists `brief`, a message carrying the day's brief keeps it on its row
 // (threadRows' briefs, as Play's and Arcade's homes read it, PRD-268 US-G06): ChatEntry draws it.
+// Where it lists `suggestions`, a suggestion Auto posted is a row of its own, its card while open
+// (threadRows' suggestions, §6.5.1). The thread opens at its focus message, the route's or the
+// brief on open's (useThreadFocus, US-G03), as Play's thread does. The route's focus is kept by the
+// home (useRouteFocus), which outlives the Chat view: once scrolled to, it is spent.
 
 import { skipToken, useQuery } from '@tanstack/react-query';
 import { usePathname, useRouter } from 'expo-router';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
-import { canBrief } from '../../api/capabilities';
+import { canBrief, canSuggestions } from '../../api/capabilities';
 import { queryKeys } from '../../api/query-keys';
 import { useAppSession } from '../../app-state/session';
 import type { SettleCard } from '../../chat/cards/model';
 import { useFollowLink, type FollowLink } from '../../chat/components/follow-link';
 import type { ThreadState } from '../../chat/controller/thread';
 import type { ChatThread } from '../../chat/schemas';
+import { useThreadFocus } from '../../chat/use-thread-focus';
 import { LIVE_AUTO_KEY, threadRows } from '../../chat/view-model';
 import { routes } from '../../navigation/routes';
 import { typingEvent } from '../arcade/sprite/turn-state';
 import { chatEntries, chatTitle, stageBack, type ChatEntry } from '../candy/home/chat';
+import { routeFocusLeft, withScrolled } from './candy-home';
 import { placeReports } from './shelf';
 import { useTryAgain } from './use-arcade-home';
 import type { HomeThread } from './use-home-thread';
@@ -34,21 +40,56 @@ export type CandyChat = {
   readonly onRetry: () => void;
   readonly onCard: SettleCard;
   readonly onLink: FollowLink;
+  /** The message the thread opens at; null for none. */
+  readonly focus: string | null;
+  /** The thread scrolled there. */
+  readonly onFocused: (messageId: string) => void;
 };
 
-/** The Chat view's entries and handlers over the home's thread. */
-export function useCandyChat(home: HomeThread): CandyChat {
+export type RouteFocus = {
+  /** The route's focus message, until the Chat view has scrolled to it; null for none. */
+  readonly focus: string | null;
+  /** The Chat view scrolled to this message. */
+  readonly scrolled: (messageId: string) => void;
+};
+
+const NO_SCROLLS: ReadonlySet<string> = new Set();
+const NO_ROUTE_FOCUS: RouteFocus = Object.freeze({ focus: null, scrolled: () => undefined });
+
+/** The chat route's focus, kept by the home: the Chat view mounts again, the focus stays spent. */
+export function useRouteFocus(focusMessageId: string | null): RouteFocus {
+  const [done, setDone] = useState(NO_SCROLLS);
+  const scrolled = useCallback((id: string) => setDone((now) => withScrolled(now, id)), []);
+  return { focus: routeFocusLeft(focusMessageId, done), scrolled };
+}
+
+/** The Chat view's entries and handlers over the home's thread, opened at the route's focus. */
+export function useCandyChat(home: HomeThread, route: RouteFocus = NO_ROUTE_FOCUS): CandyChat {
   const { state, send, settleCard } = home.thread;
   const onLink = useFollowLink();
   const shelf = useShelf(state);
-  const briefs = canBrief(useAppSession().discovery);
-  const rows = useMemo(() => threadRows(state, { briefs }), [state, briefs]);
+  const { discovery } = useAppSession();
+  const briefs = canBrief(discovery);
+  const suggestions = canSuggestions(discovery);
+  const { focus, settle } = useThreadFocus(state.chatId, route.focus);
+  const { scrolled } = route;
+  const onFocused = useCallback(
+    (messageId: string) => {
+      settle(messageId);
+      scrolled(messageId);
+    },
+    [settle, scrolled],
+  );
+  const rows = useMemo(
+    () => threadRows(state, { briefs, suggestions }),
+    [state, briefs, suggestions],
+  );
   const entries = useMemo(() => {
     const places = placeReports(shelf, state, LIVE_AUTO_KEY, new Set(rows.map((row) => row.key)));
     return chatEntries(rows, places);
   }, [shelf, state, rows]);
   const onRetry = useTryAgain(state, send);
-  return { entries, onRetry, onCard: settleCard, onLink };
+  return { entries, onRetry, onCard: settleCard, onLink, focus, onFocused };
 }
 
 /** The stage's title: the chat's own once A2's check cached it, never a second fetch. */

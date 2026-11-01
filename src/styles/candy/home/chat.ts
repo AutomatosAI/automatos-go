@@ -10,6 +10,8 @@
 //              then Auto's bubble (A2's markdown), a row for each Deliverable the turn made
 //              (shelf.ts files them; its square in its kind's gradient, kinds.ts), and A2's own
 //              notices, ticket cards and cards, placed as A2 draws them
+//   suggestion a suggestion Auto posted (threadRows' suggestions, PRD-268 §6.5.1): its card while the
+//              open list has it, else the message as its 'auto' entry (`text`), as Play draws it
 //   writing    'Auto is writing' while A2's isWorking has no words yet (its 'working' row)
 //   notice     A2's one notice under the thread (a stop, a failure with Try again)
 //   loose      cards whose reply never came, and the Deliverables no drawn reply holds
@@ -69,14 +71,24 @@ export type DeliverableRow = {
   readonly openable: boolean;
 };
 
+export type AutoEntry = {
+  readonly kind: 'auto';
+  readonly key: string;
+  readonly row: AutoRow;
+  readonly chips: readonly ToolChip[];
+  readonly deliverables: readonly DeliverableRow[];
+};
+
 export type ChatEntry =
   | { readonly kind: 'you'; readonly key: string; readonly text: string; readonly label: string }
+  | AutoEntry
   | {
-      readonly kind: 'auto';
+      readonly kind: 'suggestion';
       readonly key: string;
-      readonly row: AutoRow;
-      readonly chips: readonly ToolChip[];
-      readonly deliverables: readonly DeliverableRow[];
+      /** The card is drawn from the open list by this id. */
+      readonly suggestionId: string;
+      /** The message as Auto's entry: drawn whenever the card is not. */
+      readonly text: AutoEntry;
     }
   | { readonly kind: 'writing'; readonly key: string }
   | { readonly kind: 'notice'; readonly key: string; readonly notice: Notice }
@@ -130,7 +142,7 @@ export function deliverableRow(ref: DeliverableRef): DeliverableRow {
 
 type Places = ReadonlyMap<string, readonly DeliverableRef[]>;
 
-function autoEntry(row: AutoRow, places: Places): ChatEntry {
+function autoEntry(row: AutoRow, places: Places): AutoEntry {
   return {
     kind: 'auto',
     key: row.key,
@@ -153,7 +165,12 @@ function entryOf(row: ChatRow, places: Places): ChatEntry {
     case 'cards':
       return { kind: 'loose', key: row.key, cards: row.cards, deliverables: [] };
     case 'suggestion':
-      return autoEntry(row.text, places); // its words until Candy draws the card (PRD-268 §6.5.1)
+      return {
+        kind: 'suggestion',
+        key: row.key,
+        suggestionId: row.suggestionId,
+        text: autoEntry(row.text, places),
+      };
   }
 }
 

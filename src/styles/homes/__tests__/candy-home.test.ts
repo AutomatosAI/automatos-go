@@ -4,7 +4,14 @@
 import { describe, expect, it } from 'vitest';
 
 import { routes } from '../../../navigation/routes';
-import { CANDY_VIEWS, openingView, showsTabBar, tabAction } from '../candy-home';
+import {
+  CANDY_VIEWS,
+  openingView,
+  routeFocusLeft,
+  showsTabBar,
+  tabAction,
+  withScrolled,
+} from '../candy-home';
 
 describe("Candy's views", () => {
   it('are Today, Chat, Shelf and Team, in the tab bar’s order', () => {
@@ -39,5 +46,35 @@ describe('the view a route opens', () => {
   it('is the one the caller names', () => {
     expect(openingView(routes.home, 'chat')).toBe('chat');
     expect(openingView(routes.chat('c-1'), 'today')).toBe('today');
+  });
+});
+
+describe("the route's focus, kept by the home", () => {
+  const NONE: ReadonlySet<string> = new Set();
+
+  it('is the route’s message until the Chat view has scrolled to it, then none', () => {
+    expect(routeFocusLeft('m-brief', NONE)).toBe('m-brief');
+    const scrolled = withScrolled(NONE, 'm-brief');
+    expect(routeFocusLeft('m-brief', scrolled)).toBeNull();
+  });
+
+  it('stays spent when the Chat view mounts again (Today, then Chat)', () => {
+    const scrolled = withScrolled(NONE, 'm-brief');
+    expect(routeFocusLeft('m-brief', scrolled)).toBeNull();
+    expect(routeFocusLeft('m-brief', withScrolled(scrolled, 'm-brief'))).toBeNull();
+  });
+
+  it('takes a different message, and none for no focus', () => {
+    const scrolled = withScrolled(NONE, 'm-brief');
+    expect(routeFocusLeft('m-later', scrolled)).toBe('m-later');
+    expect(routeFocusLeft(null, NONE)).toBeNull();
+  });
+
+  it('keeps the same set when the message is there already, a new one when not', () => {
+    const scrolled = withScrolled(NONE, 'm-brief');
+    expect(withScrolled(scrolled, 'm-brief')).toBe(scrolled);
+    expect(withScrolled(scrolled, 'm-later')).not.toBe(scrolled);
+    expect([...withScrolled(scrolled, 'm-later')]).toEqual(['m-brief', 'm-later']);
+    expect([...scrolled]).toEqual(['m-brief']);
   });
 });
