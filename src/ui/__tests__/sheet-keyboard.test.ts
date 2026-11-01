@@ -1,6 +1,6 @@
 // The Sheet with the keyboard up, read from source (vitest runs in node with no React renderer, and
 // the Sheet loads React Native): its tallest and its bottom padding follow the keyboard's height
-// (useKeyboardHeight, from iOS's will-show / will-hide), through overlay.ts's sheetMaxHeight and
+// (useKeyboardHeight: iOS's will-show / will-hide, Android's did-show / did-hide), through overlay.ts's sheetMaxHeight and
 // sheetBottomPadding, which overlay.test.ts proves.
 
 import { readFileSync } from 'node:fs';
@@ -13,6 +13,11 @@ const read = (file: string) => readFileSync(path.join(UI, file), 'utf8');
 
 describe('the Sheet and the keyboard', () => {
   const sheet = read('Sheet.tsx');
+
+  it('moves itself for the keyboard on both platforms: Android’s edge-to-edge window does not resize', () => {
+    expect(sheet).toMatch(/const KEYBOARD_BEHAVIOUR = 'padding';/);
+    expect(sheet).not.toMatch(/Platform\.OS === 'ios' \? 'padding' : undefined/);
+  });
 
   it('caps its height at the room the keyboard leaves under the safe area’s top', () => {
     expect(sheet).toMatch(/const keyboard = useKeyboardHeight\(\);/);
@@ -31,11 +36,17 @@ describe('the Sheet and the keyboard', () => {
 describe('useKeyboardHeight', () => {
   const hook = read('use-keyboard-height.ts');
 
-  it('follows iOS’s will-show and will-hide, and lets go of both', () => {
+  it('follows iOS’s will-show and will-hide, Android’s did-show and did-hide, and lets go of both', () => {
     expect(hook).toMatch(
-      /Keyboard\.addListener\('keyboardWillShow', \(event\) =>\s*setHeight\(event\.endCoordinates\.height\)/,
+      /const SHOW = Platform\.OS === 'ios' \? 'keyboardWillShow' : 'keyboardDidShow';/,
     );
-    expect(hook).toMatch(/Keyboard\.addListener\('keyboardWillHide', \(\) => setHeight\(0\)\)/);
+    expect(hook).toMatch(
+      /const HIDE = Platform\.OS === 'ios' \? 'keyboardWillHide' : 'keyboardDidHide';/,
+    );
+    expect(hook).toMatch(
+      /Keyboard\.addListener\(SHOW, \(event\) => setHeight\(event\.endCoordinates\.height\)\)/,
+    );
+    expect(hook).toMatch(/Keyboard\.addListener\(HIDE, \(\) => setHeight\(0\)\)/);
     expect(hook).toMatch(/shown\.remove\(\);\s*hidden\.remove\(\);/);
   });
 

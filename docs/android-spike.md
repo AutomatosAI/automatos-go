@@ -69,6 +69,20 @@ and that hardware OpenGL is deprecated on macOS. With `-gpu swiftshader_indirect
 the paired home screen without a crash. So this is the emulator's GL driver, not the app, but Skia on
 real Android GPUs is still worth a real-device check.
 
+## The keyboard
+
+With the composer open (Arcade's TYPE), the on-screen keyboard covered the message box: typing went
+in, out of sight. The Sheet moved for the keyboard on iOS only. `useKeyboardHeight` listened for
+`keyboardWillShow` / `keyboardWillHide`, which only iOS sends, and the Sheet's `KeyboardAvoidingView`
+had no behaviour on Android, on the assumption that Android resizes the window for the keyboard. It
+doesn't here: React Native 0.81 draws edge to edge (`edgeToEdgeEnabled`). The fix listens for
+`keyboardDidShow` / `keyboardDidHide` on Android and gives the Sheet `padding` on both platforms; with
+it, the box sits above the keyboard and a message sends and gets Auto's answer.
+
+Return in the box inserts a new line on both platforms by design (PRD-001 US-009a, D-COMPOSER); the
+send button sends. `ChatFrame`, `FirstOpen`, `CandyHome`, `PlayHome` and `PinnedSuggestion` use the same
+iOS-only `KeyboardAvoidingView` pattern and likely need the same change; not yet checked on Android.
+
 ## Changes on this branch
 
 - `app.json`, `expo-build-properties`: `compileSdkVersion` 37 and `buildToolsVersion` "37.0.0"

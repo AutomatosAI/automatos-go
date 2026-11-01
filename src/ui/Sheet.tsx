@@ -11,7 +11,6 @@ import { useEffect, useState, type ReactNode } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -45,7 +44,8 @@ import { UI_COPY } from './strings';
 import { useKeyboardHeight } from './use-keyboard-height';
 
 const EASING = Easing.bezier(...SHEET_EASING);
-const KEYBOARD_BEHAVIOUR = Platform.OS === 'ios' ? 'padding' : undefined;
+// 'padding' on both: Android's window doesn't resize for the keyboard when the app draws edge to edge.
+const KEYBOARD_BEHAVIOUR = 'padding';
 
 export type SheetProps = {
   readonly visible: boolean;
