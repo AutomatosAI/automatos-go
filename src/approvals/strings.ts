@@ -5,6 +5,7 @@
 // Mission plan, exactly the thread cards' own (src/chat/strings.ts).
 
 import { CARD_COPY, GRANT_COPY } from '../chat/strings';
+import { CHECK_COPY } from '../step-up/check-copy';
 
 export const APPROVAL_SHEET_COPY = Object.freeze({
   /** 'Auto asks' / 'SCRIBE asks'. */
@@ -25,9 +26,9 @@ export const APPROVAL_SHEET_COPY = Object.freeze({
   allow: GRANT_COPY.approve,
   refuseTool: GRANT_COPY.deny,
   refusePlan: CARD_COPY.reject,
-  /** VoiceOver's hint on Allow: Face ID comes first; Refuse needs none. */
-  allowHint: 'Asks for Face ID first.',
-  faceIdNote: 'Face ID to allow. Refusing needs none.',
+  /** VoiceOver's hint on Allow: the phone's check comes first; Refuse needs none. */
+  allowHint: `Asks for ${CHECK_COPY.first} first.`,
+  faceIdNote: `${CHECK_COPY.name} to allow. Refusing needs none.`,
   expiresIn: (minutes: number) =>
     minutes <= 1 ? 'Waiting · less than a minute left' : `Waiting · ${minutes} min left`,
   expired: 'This request has expired.',
