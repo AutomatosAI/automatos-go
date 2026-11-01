@@ -48,6 +48,27 @@ Running three emulators and a full Gradle build on a 16 GB Mac swapped heavily: 
 hung twice ("Process system isn't responding", then QEMU's CPU threads stopped). Run one emulator during a
 build.
 
+## Pairing (build C, Android 17)
+
+The local edition in `paired` mode (`LOCAL_REMOTE_ACCESS=paired`), a code from
+`python -m scripts.mint_pairing_code`, and the address `http://10.0.2.2:8000` typed into "Connect to
+your own server":
+
+- The "Pair with this server?" card showed the edition, the address and the unencrypted-network warning,
+  and paired nothing before **Pair**. `POST /api/v1/mobile/pair` returned 200.
+- The AI notice listed the server's providers (AWS Bedrock, Claude Code, OpenRouter).
+- The app then loaded the paired workspace: chat history, tasks, agents, "needs you", suggestions,
+  notifications, and the installed themes. It drew the workspace's chosen theme (Arcade, with the
+  member's saved look) from the phone block.
+- `POST /api/proactive/brief/open` answered `404 brief_off`, as designed while Proactive Auto is off.
+
+On the emulator's default GPU mode (host OpenGL), the app crashed on its first home screen: a SIGSEGV in
+`libEGL_emulation.so` (`createNativeSync` inside `eglSwapBuffers`), with React Native Skia's
+`OpenGLWindowContext::present()` as the caller. The emulator warns at boot that API 37 needs GLES 3.1
+and that hardware OpenGL is deprecated on macOS. With `-gpu swiftshader_indirect` the same build runs
+the paired home screen without a crash. So this is the emulator's GL driver, not the app, but Skia on
+real Android GPUs is still worth a real-device check.
+
 ## Changes on this branch
 
 - `app.json`, `expo-build-properties`: `compileSdkVersion` 37 and `buildToolsVersion` "37.0.0"
@@ -88,8 +109,6 @@ Google Play asks for target 36, so 37 gains nothing yet. Raising it is its own c
 
 - Signing in with Clerk: this build has no `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` ("Sign-in is not configured
   in this build").
-- Pairing with a local server: needs `LOCAL_REMOTE_ACCESS=paired`, which also closes the local edition's
-  no-sign-in lane for the browser. Not switched for this spike.
 - Push (needs a Firebase project and `google-services.json`), answering from a notification while the app is
   closed, App Links verification (needs the signing key's SHA-256 in `assetlinks.json`), passkeys, voice
   (speech recognition, the spoken reply, LiveKit), the camera QR scanner, TalkBack, tablets, and real phones.
@@ -98,7 +117,7 @@ Google Play asks for target 36, so 37 gains nothing yet. Raising it is its own c
 
 ## Next
 
-1. Pair with a local server in `paired` mode, then walk the app's screens on Android 17.
+1. Walk the paired app's screens on Android 17, and check Skia's drawing on a real Android phone.
 2. Decide on the install-referrer service: block it, or keep it and say why in the Data Safety work.
 3. With the Play Console and Firebase set up: push, App Links, and the first EAS Android build. If it runs
    out of Metaspace, set `GRADLE_OPTS` in `eas.json` (docs/native-modules.md, "Gradle memory").
