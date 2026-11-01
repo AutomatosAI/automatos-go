@@ -179,9 +179,10 @@ paired workspace's data; no JavaScript error was logged.
   the iPhone's copy is unchanged).
 - **As designed:** Settings → Voice names Google's on-device voices from their codes ("Voice IOB
   (en-US)", `voiceName`): Android gives them no friendly names.
-- **Not Android's:** in Arcade, Chats' and Notifications' titles are cut short ("Conversation…",
-  "Notificat…") beside their header buttons. The pixel face is wide; a 390 pt iPhone is narrower
-  still.
+- **Fixed, not Android's:** in Arcade, Chats' and Notifications' titles were cut short
+  ("Conversation…", "Notificat…") beside their header buttons: the pixel face is wide, and a 390 pt
+  iPhone is narrower still. `Text`'s `fit` now shrinks a one-line title to fit before cutting it,
+  never below 11 pt (D38, `fitScale`); a title that already fits is unchanged.
 
 ## Next
 

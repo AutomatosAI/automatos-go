@@ -27,13 +27,7 @@ export function ChatsHeader({ onBack, onNewChat }: ChatsHeaderProps) {
         variant="ghost"
         size="md"
       />
-      <Text
-        variant="title"
-        level={TITLE_LEVEL}
-        accessibilityRole="header"
-        numberOfLines={1}
-        style={styles.title}
-      >
+      <Text variant="title" level={TITLE_LEVEL} accessibilityRole="header" fit style={styles.title}>
         {HISTORY_COPY.title}
       </Text>
       <Button
