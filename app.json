@@ -305,6 +305,9 @@
         "expo-build-properties",
         {
           "android": {
+            "compileSdkVersion": 37,
+            "targetSdkVersion": 37,
+            "buildToolsVersion": "37.0.0",
             "usesCleartextTraffic": true,
             "packagingOptions": {
               "exclude": ["META-INF/versions/9/OSGI-INF/MANIFEST.MF"]
@@ -326,7 +329,8 @@
         }
       ],
       "./plugins/with-pinned-background-modes",
-      "./plugins/with-sentry-upload-guard"
+      "./plugins/with-sentry-upload-guard",
+      "./plugins/with-gradle-memory"
     ],
     "extra": {
       "router": {},
