@@ -7,6 +7,13 @@
 import { useEffect, useState } from 'react';
 import { Keyboard, Platform } from 'react-native';
 
+/**
+ * How every KeyboardAvoidingView in the app moves for the keyboard, on both platforms: Android's
+ * window doesn't resize for the keyboard while the app draws edge to edge, so padding is needed
+ * there as on iOS.
+ */
+export const KEYBOARD_AVOIDING_BEHAVIOUR = 'padding';
+
 const SHOW = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
 const HIDE = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 

@@ -80,8 +80,31 @@ doesn't here: React Native 0.81 draws edge to edge (`edgeToEdgeEnabled`). The fi
 it, the box sits above the keyboard and a message sends and gets Auto's answer.
 
 Return in the box inserts a new line on both platforms by design (PRD-001 US-009a, D-COMPOSER); the
-send button sends. `ChatFrame`, `FirstOpen`, `CandyHome`, `PlayHome` and `PinnedSuggestion` use the same
-iOS-only `KeyboardAvoidingView` pattern and likely need the same change; not yet checked on Android.
+send button sends.
+
+`ChatFrame`, `FirstOpen`, `CandyHome` and `PlayHome` had the same iOS-only `KeyboardAvoidingView`
+behaviour. Every one now takes `KEYBOARD_AVOIDING_BEHAVIOUR` ('padding') from `use-keyboard-height.ts`,
+and `src/ui/__tests__/sheet-keyboard.test.ts` fails on any `KeyboardAvoidingView` in `src/` or `app/`
+that doesn't. `PinnedSuggestion` shrinks to one line while the keyboard is up through
+`useKeyboardHeight`, so it now does that on Android too. Checked on Android 17 with the on-screen
+keyboard, typing into each style's message box:
+
+| Style  | Where                             | Result                                      |
+| ------ | --------------------------------- | ------------------------------------------- |
+| Studio | the home's thread (`ChatFrame`)   | box above the keyboard                      |
+| Play   | the home, a new chat (`PlayHome`) | box above the keyboard                      |
+| HUD    | TYPE (`Sheet`)                    | box above the keyboard                      |
+| Arcade | TYPE (`Sheet`)                    | box above the keyboard; sent, Auto answered |
+| Candy  | Chat (`CandyHome`)                | box above the keyboard                      |
+
+`FirstOpen`'s whole screen isn't mounted anywhere yet (Play shows its hello inside `PlayHome`), so it
+was changed to match but not seen. Candy leaves a gap about the height of the home indicator's inset
+between its box and the keyboard; a cosmetic follow-up.
+
+The emulator's own keyboard: the AVDs were made with `hw.keyboard=no`, so the Mac's keyboard typed
+nothing. With `hw.keyboard=yes` in the AVD's `config.ini` and
+`adb shell settings put secure show_ime_with_hard_keyboard 1`, the Mac's keyboard types and the
+on-screen one still shows.
 
 ## Changes on this branch
 

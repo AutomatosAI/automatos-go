@@ -7,7 +7,7 @@
 // draft: the brand line, Auto's hello and the three starters, which fill the box and never send
 // (KS13); the box's Send in the accent, A6's voice button beside it (US-019k: the conversation's id,
 // none for a viewer), and the EN/PT switch just before it (LanguageChip, none for a viewer). The frame is First open's: the ground's light where the
-// screen kind puts it, everything lifted over the keyboard on iOS. Report this opens A2's one
+// screen kind puts it, everything lifted over the keyboard. Report this opens A2's one
 // ReportSheet. Chats goes back on the chat route, else to the history; Shelf to the Deliverables.
 // Where discovery lists `brief`, the day's brief draws as Play's brief card in the thread (US-G06),
 // and the thread opens at its focus message, the route's or the brief on open's (US-G03). Where it
@@ -15,7 +15,7 @@
 
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, StyleSheet, View } from 'react-native';
 import { useSafeAreaFrame } from 'react-native-safe-area-context';
 
 import { canBrief, canSuggestions } from '../../api/capabilities';
@@ -32,6 +32,7 @@ import { routes } from '../../navigation/routes';
 import { PinnedSuggestion } from '../../suggestions/PinnedSuggestion';
 import { useIdeas } from '../../suggestions/use-ideas';
 import { ReportSheet, Screen } from '../../ui';
+import { KEYBOARD_AVOIDING_BEHAVIOUR } from '../../ui/use-keyboard-height';
 import { LanguageChip } from '../../voice/language/LanguageChip';
 import { EdgeBrand } from '../edges/parts';
 import { AutoRow, PlayComposer, PlayHeader } from '../play/companion';
@@ -44,8 +45,6 @@ import { PlayThread } from './PlayThread';
 import { placeReports, shelfCount, type ShelfMemory } from './shelf';
 import { useHomeThread, type HomeThread } from './use-home-thread';
 import { usePlayComposer, usePlayTitle, useShelf, type PlayComposerModel } from './use-play-home';
-
-const KEYBOARD_BEHAVIOUR = Platform.OS === 'ios' ? 'padding' : undefined;
 
 export type PlayHomeProps = {
   /** The conversation to open (checked first), or null for a draft. */
@@ -182,7 +181,7 @@ export function PlayHome(props: PlayHomeProps) {
       )}
       <DiscussionBar state={home.discussion} messages={state.messages} />
       <KeyboardAvoidingView
-        behavior={KEYBOARD_BEHAVIOUR}
+        behavior={KEYBOARD_AVOIDING_BEHAVIOUR}
         keyboardVerticalOffset={stackTop}
         style={styles.fill}
       >

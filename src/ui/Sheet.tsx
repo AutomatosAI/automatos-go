@@ -41,11 +41,9 @@ import {
   sheetOpacity,
 } from './overlay';
 import { UI_COPY } from './strings';
-import { useKeyboardHeight } from './use-keyboard-height';
+import { KEYBOARD_AVOIDING_BEHAVIOUR, useKeyboardHeight } from './use-keyboard-height';
 
 const EASING = Easing.bezier(...SHEET_EASING);
-// 'padding' on both: Android's window doesn't resize for the keyboard when the app draws edge to edge.
-const KEYBOARD_BEHAVIOUR = 'padding';
 
 export type SheetProps = {
   readonly visible: boolean;
@@ -110,7 +108,7 @@ export function Sheet({ visible, onClose, children }: SheetProps) {
         />
       </Animated.View>
       <KeyboardAvoidingView
-        behavior={KEYBOARD_BEHAVIOUR}
+        behavior={KEYBOARD_AVOIDING_BEHAVIOUR}
         style={styles.dock}
         pointerEvents="box-none"
       >
