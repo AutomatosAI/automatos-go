@@ -104,6 +104,12 @@ already covers the inset. It now pads through `useKeyboardSafeBottom` (the Sheet
 only while the keyboard is down) and sits its own 28 above the keyboard. The guard test fails on any
 file with a `TextInput` that reads the raw bottom inset; CLAUDE.md's Traps carry the rule.
 
+The threads also kept their scroll place as the keyboard shrank them, so the newest replies slid
+under the box and the top of a bubble peeked above it (Studio's, Play's and Candy's threads scroll to
+the end only when a row is added). `use-end-in-view.ts` now follows a shrink while someone is at the
+end (someone scrolled back up stays put), to the content's foot: FlatList's `scrollToEnd` stops at
+the last row, short of the thread's bottom padding. HUD's transcript already followed its end.
+
 The emulator's own keyboard: the AVDs were made with `hw.keyboard=no`, so the Mac's keyboard typed
 nothing. With `hw.keyboard=yes` in the AVD's `config.ini` and
 `adb shell settings put secure show_ime_with_hard_keyboard 1`, the Mac's keyboard types and the

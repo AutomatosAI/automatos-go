@@ -1,16 +1,16 @@
 // Candy's message box (PRD-001 §4.6.2, US-023h; CANDY-LAYOUT §4 P2, the 390 mock and the kit's
 // chat/composer.tsx at 3920359d5), as play/companion/PlayComposer.tsx is Play's: 14 in from the
-// screen's sides and 28 above the bottom inset (above the keyboard while it is up: the keyboard covers
-// the inset), a pill at least 56 tall in the window's fill under the palette's tinted shadow,
-// 'Message Auto' in the quiet text, and a 44 pt accent circle that
-// sends (lucide's arrow up in the accent's ink, 'Send') and is Stop while Auto answers (its square,
-// 'Stop' with its hint). Return inserts a newline: only the button sends (A2's D-COMPOSER). A2's
-// composerState (composer.ts candyComposerView) says when the pill takes no typing and the button
-// does nothing, and gives a viewer's notice above it. A2's attachments sit in the slots: their
-// chips above the pill, the [+] at its start. To its right, A6's hold to talk at 56 (Candy's talk
-// button over useCandyHomeVoice; none for a viewer). No AI label sits beside it (D73: the caption
-// opens the thread). The keyboard takes the palette's tone (keyboardAppearanceFor); the home hears
-// the pill's focus and blur (Auto listens while it has the keyboard).
+// screen's sides and 28 above the bottom inset (above the keyboard while it is up: the keyboard
+// covers the inset), a pill at least 56 tall in the window's fill under the palette's tinted
+// shadow, 'Message Auto' in the quiet text, and a 44 pt accent circle that sends (lucide's arrow up
+// in the accent's ink, 'Send') and is Stop while Auto answers (its square, 'Stop' with its hint).
+// Return inserts a newline: only the button sends (A2's D-COMPOSER). A2's composerState
+// (composer.ts candyComposerView) says when the pill takes no typing and the button does nothing,
+// and gives a viewer's notice above it. A2's attachments sit in the slots: their chips above the
+// pill, the [+] at its start. To its right, A6's hold to talk at 56 (Candy's talk button over
+// useCandyHomeVoice; none for a viewer). No AI label sits beside it (D73: the caption opens the
+// thread). The keyboard takes the palette's tone (keyboardAppearanceFor); the home hears the pill's
+// focus and blur (Auto listens while it has the keyboard).
 
 import ArrowUp from 'lucide-react-native/icons/arrow-up';
 import type { ReactNode } from 'react';

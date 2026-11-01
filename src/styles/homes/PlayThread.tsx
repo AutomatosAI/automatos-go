@@ -7,8 +7,9 @@
 // primitives. 'Auto is thinking' is not a row here: Auto's row under the thread says it (its text
 // twin). Report this long-presses Auto's message and is each block's accessible action, as on A2's
 // thread (AutoMessage.tsx is the reference). The list scrolls to the end only when a row is added
-// (A2's shouldScrollToEnd). A message carrying the day's brief (row.brief, PRD-268 US-G06) draws
-// Play's brief card in place of its words: the card holds the same words (Auto's Read). Given a
+// (A2's shouldScrollToEnd), and keeps its end in view as the keyboard shrinks it
+// (use-end-in-view.ts). A message carrying the day's brief (row.brief, PRD-268 US-G06) draws Play's
+// brief card in place of its words: the card holds the same words (Auto's Read). Given a
 // focus message (US-G03), the list scrolls there once (use-focus-scroll.ts), as A2's thread does.
 // A suggestion Auto posted draws its card while it is open, else its message (ThreadSuggestion).
 
@@ -22,6 +23,7 @@ import { ThreadCards } from '../../chat/cards/ThreadCards';
 import type { SettleCard } from '../../chat/cards/model';
 import { TicketCards } from '../../chat/cards/TaskCard';
 import { TurnNotice } from '../../chat/components/TurnNotice';
+import { useEndInView } from '../../chat/components/use-end-in-view';
 import { useFocusScroll } from '../../chat/components/use-focus-scroll';
 import { Markdown } from '../../chat/markdown/Markdown';
 import {
@@ -209,6 +211,7 @@ export function PlayThread(props: PlayThreadProps) {
     scrollOnAdd();
     focusRun();
   }, [scrollOnAdd, focusRun]);
+  const endInView = useEndInView(list, onContentSizeChange);
   const loose = reports.get(LOOSE_REPORTS) ?? NO_REPORTS;
   const { onLink, onRetry, onCard, report } = shared;
   const renderItem = useCallback<ListRenderItem<ChatRow>>(
@@ -235,7 +238,7 @@ export function PlayThread(props: PlayThreadProps) {
       renderItem={renderItem}
       ListHeaderComponent={PlayThreadCaption}
       ListFooterComponent={loose.length > 0 ? <Reports refs={loose} /> : null}
-      onContentSizeChange={onContentSizeChange}
+      {...endInView}
       onScrollToIndexFailed={focus.onScrollToIndexFailed}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"

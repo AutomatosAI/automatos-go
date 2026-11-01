@@ -4,7 +4,8 @@
 // scrolling away with the thread). Each entry is ChatEntry's; while A2's isWorking has no words
 // yet, the writing chip ('Auto is writing', its dots bouncing on Candy's one clock, still under the
 // pause the stage draws). The list scrolls to the end only when an entry is added (A2's
-// shouldScrollToEnd), not animated under Reduce Motion, and the keyboard closes as it is dragged.
+// shouldScrollToEnd), not animated under Reduce Motion, keeps its end in view as the keyboard
+// shrinks it (use-end-in-view.ts), and the keyboard closes as it is dragged.
 // Given a focus message (PRD-268 US-G03), it scrolls there once instead (use-focus-scroll.ts, as
 // Play's thread does).
 
@@ -12,6 +13,7 @@ import { useCallback, useLayoutEffect, useRef } from 'react';
 import { FlatList, StyleSheet, View, type ListRenderItem } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
+import { useEndInView } from '../../../chat/components/use-end-in-view';
 import { useFocusScroll } from '../../../chat/components/use-focus-scroll';
 import { shouldScrollToEnd } from '../../../chat/view-model';
 import { AiLabel } from '../../ai-label';
@@ -69,6 +71,7 @@ export function ChatView(props: ChatViewProps) {
     scrollOnAdd();
     focusRun();
   }, [scrollOnAdd, focusRun]);
+  const endInView = useEndInView(list, onContentSizeChange);
   const renderItem = useCallback<ListRenderItem<ChatEntry>>(
     ({ item }) => (
       <View style={styles.item}>
@@ -94,7 +97,7 @@ export function ChatView(props: ChatViewProps) {
       keyExtractor={keyOf}
       renderItem={renderItem}
       ListHeaderComponent={ChatCaption}
-      onContentSizeChange={onContentSizeChange}
+      {...endInView}
       onScrollToIndexFailed={focus.onScrollToIndexFailed}
       accessibilityLabel={CANDY_CHAT_COPY.threadLabel}
       keyboardShouldPersistTaps="handled"

@@ -5,19 +5,20 @@
 // Auto's run. 'Auto is thinking' takes Auto's slot until the answer replaces it there, and a turn's
 // notice lands inside the box of the reply it ends (foldNotices). Only the live rows move in (the
 // message just sent rises, the thinking pill fades); history never replays, and Reduce Motion
-// stills both.
-// The list scrolls to the end only when a row is added (a message, the thinking pill, a notice),
-// never while a reply grows (README 'Interactions'); the scroll waits for the new content's size,
-// and it is not animated under Reduce Motion. What sits above the thread on home (the needs strip)
-// stays outside the list, as the handoff draws it. Cards whose reply was never saved are drawn
-// after the saved messages (their own row). Report this goes only to the Auto messages report.ts
-// names. Every row is built anew on each streamed delta, so each row is memoised on row-same.ts's
-// sameThreadRow (equal in value, the same handlers) and Try again is one stable function that
-// calls the screen's latest: only the row that changed draws again.
-// The list says whether the day's brief card is on screen (PRD-268 US-G06: home's needs strip then
-// shrinks to its count, src/brief/on-screen.tsx); outside home nobody listens. Given a focus message
-// (US-G03: the Auto thread opened at the day's brief), it scrolls there once (use-focus-scroll.ts).
-// A suggestion Auto posted draws its card while it is open, else its message (ThreadSuggestion).
+// stills both. The list scrolls to the end only when a row is added (a message, the thinking pill,
+// a notice), never while a reply grows (README 'Interactions'); the scroll waits for the new
+// content's size, and it is not animated under Reduce Motion; when the keyboard shrinks the list
+// under someone at its end, it keeps the end in view (use-end-in-view.ts). What sits above the
+// thread on home (the needs strip) stays outside the list, as the handoff draws it. Cards whose
+// reply was never saved are drawn after the saved messages (their own row). Report this goes only
+// to the Auto messages report.ts names. Every row is built anew on each streamed delta, so each row
+// is memoised on row-same.ts's sameThreadRow (equal in value, the same handlers) and Try again is
+// one stable function that calls the screen's latest: only the row that changed draws again. The
+// list says whether the day's brief card is on screen (PRD-268 US-G06: home's needs strip then
+// shrinks to its count, src/brief/on-screen.tsx); outside home nobody listens. Given a focus
+// message (US-G03: the Auto thread opened at the day's brief), it scrolls there once
+// (use-focus-scroll.ts). A suggestion Auto posted draws its card while it is open, else its message
+// (ThreadSuggestion).
 
 import {
   memo,
@@ -55,6 +56,7 @@ import {
   type RowPlace,
 } from './thread-look';
 import { TurnNotice } from './TurnNotice';
+import { useEndInView } from './use-end-in-view';
 import { useFocusScroll } from './use-focus-scroll';
 import { UserBubble } from './UserBubble';
 import { WorkingIndicator } from './WorkingIndicator';
@@ -254,6 +256,7 @@ export function MessageList(props: MessageListProps) {
     scrollOnAdd();
     focusRun();
   }, [scrollOnAdd, focusRun]);
+  const endInView = useEndInView(list, onContentSizeChange);
   const places = useMemo(() => threadPlaces(shown), [shown]);
   const renderItem = useCallback<ListRenderItem<ChatRow>>(
     ({ item, index }) => (
@@ -277,7 +280,7 @@ export function MessageList(props: MessageListProps) {
       keyExtractor={keyOf}
       renderItem={renderItem}
       ListHeaderComponent={ThreadCaption}
-      onContentSizeChange={onContentSizeChange}
+      {...endInView}
       onScrollToIndexFailed={focus.onScrollToIndexFailed}
       onViewableItemsChanged={onViewableItemsChanged}
       viewabilityConfig={VIEWABILITY}
