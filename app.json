@@ -180,7 +180,8 @@
         "android.permission.ACCESS_BACKGROUND_LOCATION",
         "android.permission.READ_CONTACTS",
         "android.permission.WRITE_CONTACTS",
-        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.REORDER_TASKS"
       ],
       "intentFilters": [
         {
@@ -306,7 +307,7 @@
         {
           "android": {
             "compileSdkVersion": 37,
-            "targetSdkVersion": 37,
+            "targetSdkVersion": 36,
             "buildToolsVersion": "37.0.0",
             "usesCleartextTraffic": true,
             "packagingOptions": {

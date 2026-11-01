@@ -60,7 +60,7 @@ into `app.json` ([Config plugins](#config-plugins)). The last column maps each i
 | K11: `userInterfaceStyle: automatic`           | `expo-system-ui`                      | 6.0.9 (`~6.0.9`)                          | expo install                                                                                                                                                                                                                            | `expo-system-ui`                                                                                                                   | none                                                                                                                                                                     |
 | K11: the `development` profile (§4.2)          | `expo-dev-client`                     | 6.0.21 (`~6.0.21`)                        | expo install                                                                                                                                                                                                                            | `expo-dev-client` (applied by prebuild without an entry)                                                                           | none                                                                                                                                                                     |
 | K11: the handoff's icon set                    | `lucide-react-native`                 | 1.60.0 (exact)                            | K8: newest; peers `react "^16.5.1 \|\| ^17.0.0 \|\| ^18.0.0 \|\| ^19.0.0"`, `react-native "*"`, `react-native-svg "^12.0.0 \|\| ^13.0.0 \|\| ^14.0.0 \|\| ^15.0.0"` (the app has 15.12.1). JavaScript only, on `react-native-svg`       | none                                                                                                                               | none (JavaScript)                                                                                                                                                        |
-| Not in §4.2: native build settings             | `expo-build-properties`               | 1.0.10 (`~1.0.10`)                        | US-001                                                                                                                                                                                                                                  | `expo-build-properties` (wired in US-001: iOS 17.0, extraPods); see [Minimum OS versions](#minimum-os-versions)                    | none (config only, no native code)                                                                                                                                       |
+| Not in §4.2: native build settings             | `expo-build-properties`               | 1.0.10 (`~1.0.10`)                        | US-001                                                                                                                                                                                                                                  | `expo-build-properties` (wired in US-001: iOS 17.0, extraPods; Android SDK levels from the Android spike); see [Minimum OS versions](#minimum-os-versions)                    | none (config only, no native code)                                                                                                                                       |
 | Not in §4.2: an optional peer of `@clerk/expo` | `expo-web-browser`                    | 15.0.11 (`~15.0.11`)                      | US-001                                                                                                                                                                                                                                  | `expo-web-browser` (Android `experimentalLauncherActivity` only); not wired                                                        | none                                                                                                                                                                     |
 | Not in §4.2: an optional peer of `@clerk/expo` | `expo-crypto`                         | 15.0.9 (`~15.0.9`)                        | US-001                                                                                                                                                                                                                                  | none                                                                                                                               | none                                                                                                                                                                     |
 
@@ -192,9 +192,10 @@ US-002b wires every plugin the first build needs, so no later wave touches `app.
 | `@sentry/react-native`                   | `url: 'https://de.sentry.io/'`                                                  | Sentry EU (D44); see [Sentry source maps](#sentry-source-maps)                                                                                                                                                                                                                       |
 | `expo-localization`                      | none                                                                            | digest timezone                                                                                                                                                                                                                                                                      |
 | `expo-system-ui`                         | none                                                                            | carries `userInterfaceStyle: automatic` to Android (K11)                                                                                                                                                                                                                             |
-| `expo-build-properties`                  | iOS `deploymentTarget: '17.0'`, `extraPods`; Android `packagingOptions.exclude` | US-001 (CLAUDE.md traps); see [Minimum OS versions](#minimum-os-versions)                                                                                                                                                                                                            |
+| `expo-build-properties`                  | iOS `deploymentTarget: '17.0'`, `extraPods`; Android `compileSdkVersion: 37`, `targetSdkVersion: 36`, `buildToolsVersion: '37.0.0'`, `packagingOptions.exclude` | US-001 (CLAUDE.md traps); see [Minimum OS versions](#minimum-os-versions)                                                                                                                                                                                                            |
 | `./plugins/with-pinned-background-modes` | none                                                                            | see [Background modes](#background-modes)                                                                                                                                                                                                                                            |
 | `./plugins/with-sentry-upload-guard`     | none                                                                            | see [Sentry source maps](#sentry-source-maps)                                                                                                                                                                                                                                        |
+| `./plugins/with-gradle-memory`           | none                                                                            | see [Gradle memory](#gradle-memory) |
 
 Prebuild applies some plugins without an entry (`@expo/prebuild-config`'s
 `withLegacyExpoPlugins` and the SDK's own; `expo config --type introspect` lists them in
@@ -371,10 +372,18 @@ the Expo template's manifest, and each wired plugin's `withPermissions` call (20
 | `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`, `READ_MEDIA_AUDIO`                    | no module                                              | Android 13's successors of `READ_EXTERNAL_STORAGE`, blocked so no library adds them (Google Play's photo and video permissions policy)                                                                                           |
 | `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`, `ACCESS_BACKGROUND_LOCATION` | no module                                              | blocked because Gradle dependencies (LiveKit's audioswitch and WebRTC, Firebase messaging, ML Kit barcode scanning, clerk-android, sentry-android) bring manifests this repository cannot inspect before the first Android build |
 | `READ_CONTACTS`, `WRITE_CONTACTS`                                              | no module                                              | as location                                                                                                                                                                                                                      |
+| `REORDER_TASKS` | `androidx.test:core` 1.7.0, a test library that reaches the release merge | nothing in the app moves tasks; found in the Android spike's merged manifest |
 
 `expo config --type introspect` shows the declared list kept and each blocked permission with
 `tools:node="remove"` (asserted in `app-config.test.ts`). The manifest merged with the Gradle
-dependencies is proven only by the first Android build.
+dependencies was first seen in the Android spike's local build (1 Nov 2026,
+[android-spike.md](android-spike.md)). It keeps the allowed list plus what Gradle dependencies
+bring, which no test here can see: `READ_APP_BADGE` and launcher badge permissions (Samsung, HTC,
+Sony, Huawei, Oppo and others) from `me.leolin:ShortcutBadger` through `expo-notifications`, kept
+because the app sets the badge count; Google Play's install-referrer service from
+`com.android.installreferrer` through `expo-application`, which the app never calls; and
+`REORDER_TASKS`, now blocked. None of the blocked permissions is in it. The first EAS build's
+merged manifest stays the record (OT-R5).
 
 `android.allowBackup` is `false` (US-002f): Android's auto backup takes none of the app's data.
 `expo config --type introspect` shows `android:allowBackup="false"` on the application, with
@@ -393,6 +402,14 @@ pod asks for more:
 | `livekit-react-native-webrtc` (`@livekit/react-native-webrtc`) | 12.0                                                                  |
 | `livekit-react-native` (`@livekit/react-native`)               | 10.0                                                                  |
 | React Native 0.81.5 (`min_ios_version_supported`)              | 15.1                                                                  |
+
+Android `compileSdkVersion` is 37 and `buildToolsVersion` 37.0.0 (Android 17), from the
+Android spike; React Native 0.81.5 itself pins 36 and 36.0.0, so 37 is past what it was tested
+with, though the build and the app run. `targetSdkVersion` is 36, Google Play's requirement:
+targeting 37 turns on Android 17's behaviour changes, among them `ACCESS_LOCAL_NETWORK` as a
+runtime permission, which "Connect to your own server" on a home network would need, and no
+opt-out from orientation and resizing on large screens. Raising it is its own change, with that
+permission asked for first.
 
 Android `minSdkVersion` is not set, so it is React Native 0.81.5's default, 24
 (`gradle/libs.versions.toml`). The most any module asks is 24: `@livekit/react-native`,
@@ -467,6 +484,20 @@ declares. `expo config --type introspect`, 20 Oct: `["remote-notification","fetc
   still turns the upload off with a token present.
 - Proven here by unit tests on the plugin's mods (`plugins/__tests__/`); the native build that
   runs it is the first EAS build (OT-3), since nothing runs prebuild on this machine.
+
+## Gradle memory
+
+- The Expo template writes `org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m`. The Android
+  spike's first release build ran out of Metaspace there, in `expo-updates:kspReleaseKotlin` and
+  the `lintVitalAnalyzeRelease` tasks of `expo-dev-menu` and `expo-modules-core`, with no compile
+  error ([android-spike.md](android-spike.md)).
+- `plugins/with-gradle-memory.js` sets `-Xmx4096m -XX:MaxMetaspaceSize=1536m
+  -XX:+HeapDumpOnOutOfMemoryError` on that line and keeps any other flag. It is for local builds.
+- EAS ignores it: an EAS Android worker passes its own `org.gradle.jvmargs`
+  (`-XX:MaxMetaspaceSize=1g`, `-Xmx` 4g on a medium worker or 8g on a large one), which overrides
+  `gradle.properties` (Expo's build infrastructure reference). If an EAS Android build runs out of
+  Metaspace, set `GRADLE_OPTS` in the build profile's `env` in `eas.json` or an EAS environment
+  variable, which take precedence over the worker's defaults.
 
 ## expo-doctor
 

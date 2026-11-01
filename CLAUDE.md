@@ -109,7 +109,7 @@ src/app-state/       the shell: the signed-in gate (gate.ts decides), the sessio
 src/navigation/      every app route (routes.ts) and web link → app route (web-links.ts); kits link only through them
 scripts/             release-env guard, sync-core, check-routes
 .eas/workflows/      EAS Workflows: testflight.yml (push to main), pr-check.yml (PRs)
-plugins/             local config plugins: pinned background modes, Sentry upload guard (docs/native-modules.md)
+plugins/             local config plugins: pinned background modes, Sentry upload guard, Gradle memory (docs/native-modules.md)
 ```
 
 Code rules (PRD-001 §4.11): HTTP only through `src/api/`; zod at every

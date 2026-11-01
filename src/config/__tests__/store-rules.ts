@@ -61,4 +61,6 @@ export const ANDROID_BLOCKED = [
   'WRITE_CONTACTS',
   // expo-audio's library manifest declares it (its lock-screen controls service); no background audio (D33)
   'FOREGROUND_SERVICE_MEDIA_PLAYBACK',
+  // androidx.test:core reaches the release merge with it; nothing moves tasks (docs/android-spike.md)
+  'REORDER_TASKS',
 ].map((name) => `android.permission.${name}`);
