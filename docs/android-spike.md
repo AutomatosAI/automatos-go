@@ -168,9 +168,24 @@ Google Play asks for target 36, so 37 gains nothing yet. Raising it is its own c
 - `armeabi-v7a`, `x86` and `x86_64` builds (this spike built `arm64-v8a` only), an AAB for Play, and an EAS
   Android build.
 
+## The screens (Arcade, Android 17)
+
+Opened by deep link: home, the Command Centre's Board, Calendar, Questions and Deliverables, Chats,
+Notifications, Settings, Settings → Notifications and Voice, and the voice screen. Each drew the
+paired workspace's data; no JavaScript error was logged.
+
+- **Fixed:** Settings → Notifications and the approval hints said "Face ID". Android's prompt takes a
+  fingerprint, a face or the screen lock, so the copy now names those there (`check-copy.android.ts`;
+  the iPhone's copy is unchanged).
+- **As designed:** Settings → Voice names Google's on-device voices from their codes ("Voice IOB
+  (en-US)", `voiceName`): Android gives them no friendly names.
+- **Not Android's:** in Arcade, Chats' and Notifications' titles are cut short ("Conversation…",
+  "Notificat…") beside their header buttons. The pixel face is wide; a 390 pt iPhone is narrower
+  still.
+
 ## Next
 
-1. Walk the paired app's screens on Android 17, and check Skia's drawing on a real Android phone.
+1. Check Skia's drawing on a real Android phone.
 2. Decide on the install-referrer service: block it, or keep it and say why in the Data Safety work.
 3. With the Play Console and Firebase set up: push, App Links, and the first EAS Android build. If it runs
    out of Metaspace, set `GRADLE_OPTS` in `eas.json` (docs/native-modules.md, "Gradle memory").
