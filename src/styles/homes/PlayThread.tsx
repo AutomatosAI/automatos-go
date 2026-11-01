@@ -16,7 +16,6 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { FlatList, Pressable, View, type ListRenderItem } from 'react-native';
-import { useReducedMotion } from 'react-native-reanimated';
 
 import { PlayBriefCard } from '../../brief/BriefCard';
 import { ThreadCards } from '../../chat/cards/ThreadCards';
@@ -32,7 +31,7 @@ import {
   type ReportAccessibility,
   type ThreadReport,
 } from '../../chat/report/report';
-import { shouldScrollToEnd, type AutoRow, type ChatRow } from '../../chat/view-model';
+import type { AutoRow, ChatRow } from '../../chat/view-model';
 import type { DeliverableRef } from '../../core/web/lib/chat/deliverables';
 import type { WebLinkTarget } from '../../navigation/web-links';
 import { routes } from '../../navigation/routes';
@@ -178,22 +177,6 @@ function PlayRow({ row, caretKey, refs, ...shared }: RowProps): ReactNode {
   }
 }
 
-/** Marks a scroll when a row is added; the next content size change carries it out. */
-function useScrollOnAdd(list: { readonly current: FlatList<ChatRow> | null }, count: number) {
-  const animated = !useReducedMotion();
-  const previous = useRef(count);
-  const pending = useRef(false);
-  useLayoutEffect(() => {
-    if (shouldScrollToEnd(previous.current, count)) pending.current = true;
-    previous.current = count;
-  }, [count]);
-  return useCallback(() => {
-    if (!pending.current) return;
-    pending.current = false;
-    list.current?.scrollToEnd({ animated });
-  }, [list, animated]);
-}
-
 const keyOf = (row: ChatRow) => row.key;
 /** Auto's row under the thread says he is thinking: A2's thinking pill is not drawn here. */
 const isDrawn = (row: ChatRow) => row.type !== 'working';
@@ -203,15 +186,9 @@ export function PlayThread(props: PlayThreadProps) {
   const { spacing } = useTokens();
   const list = useRef<FlatList<ChatRow>>(null);
   const drawn = useMemo(() => rows.filter(isDrawn), [rows]);
-  const scrollOnAdd = useScrollOnAdd(list, drawn.length);
   const focus = useFocusScroll(list, drawn, focusMessageId, onFocused);
-  const { run: focusRun } = focus;
   // the focus runs after the jump to the end, so a thread opened at a message stays there
-  const onContentSizeChange = useCallback(() => {
-    scrollOnAdd();
-    focusRun();
-  }, [scrollOnAdd, focusRun]);
-  const endInView = useEndInView(list, onContentSizeChange);
+  const endInView = useEndInView(list, drawn.length, focus.run);
   const loose = reports.get(LOOSE_REPORTS) ?? NO_REPORTS;
   const { onLink, onRetry, onCard, report } = shared;
   const renderItem = useCallback<ListRenderItem<ChatRow>>(

@@ -20,18 +20,9 @@
 // (use-focus-scroll.ts). A suggestion Auto posted draws its card while it is open, else its message
 // (ThreadSuggestion).
 
-import {
-  memo,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  type ReactNode,
-  type RefObject,
-} from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { FlatList, StyleSheet, View, type ListRenderItem, type ViewToken } from 'react-native';
-import Animated, { FadeIn, FadeInDown, useReducedMotion } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
 import { briefOnScreen } from '../../brief/model';
 import { useReportBriefOnScreen } from '../../brief/on-screen';
@@ -42,7 +33,7 @@ import { useTokens } from '../../styles/theme';
 import type { SettleCard } from '../cards/model';
 import { ThreadCards } from '../cards/ThreadCards';
 import { reportTarget, type ThreadReport } from '../report/report';
-import { shouldScrollToEnd, type ChatRow } from '../view-model';
+import type { ChatRow } from '../view-model';
 import { AutoColumn } from './AutoColumn';
 import { AutoMessage } from './AutoMessage';
 import { sameThreadRow } from './row-same';
@@ -176,23 +167,6 @@ function RowFrame({ row, place, children }: RowFrameProps) {
   );
 }
 
-/** Marks a scroll when a row is added; the next content size change carries it out. */
-function useScrollOnAdd(list: RefObject<FlatList<ChatRow> | null>, count: number) {
-  const animated = !useReducedMotion();
-  const previous = useRef(count);
-  const pending = useRef(false);
-  // a layout effect: it runs before the new content reports its size
-  useLayoutEffect(() => {
-    if (shouldScrollToEnd(previous.current, count)) pending.current = true;
-    previous.current = count;
-  }, [count]);
-  return useCallback(() => {
-    if (!pending.current) return;
-    pending.current = false;
-    list.current?.scrollToEnd({ animated });
-  }, [list, animated]);
-}
-
 /**
  * Try again as one function for the list's life, calling the screen's latest (which changes with
  * every delta): a row's memo then holds while the reply streams. None while the screen gives none.
@@ -245,18 +219,12 @@ export function MessageList(props: MessageListProps) {
   const { spacing } = useTokens();
   const list = useRef<FlatList<ChatRow>>(null);
   const retry = useStableRetry(onRetry);
-  // counted before the fold: a notice landing in the reply's box still scrolls to it
-  const scrollOnAdd = useScrollOnAdd(list, rows.length);
   const onViewableItemsChanged = useBriefSighting();
   const shown = useMemo(() => foldNotices(rows), [rows]);
   const focus = useFocusScroll(list, shown, focusMessageId, onFocused);
-  const { run: focusRun } = focus;
+  // counted before the fold: a notice landing in the reply's box still scrolls to it
   // the focus runs after the jump to the end, so a thread opened at a message stays there
-  const onContentSizeChange = useCallback(() => {
-    scrollOnAdd();
-    focusRun();
-  }, [scrollOnAdd, focusRun]);
-  const endInView = useEndInView(list, onContentSizeChange);
+  const endInView = useEndInView(list, rows.length, focus.run);
   const places = useMemo(() => threadPlaces(shown), [shown]);
   const renderItem = useCallback<ListRenderItem<ChatRow>>(
     ({ item, index }) => (

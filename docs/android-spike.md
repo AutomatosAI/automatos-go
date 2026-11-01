@@ -110,6 +110,13 @@ the end only when a row is added). `use-end-in-view.ts` now follows a shrink whi
 end (someone scrolled back up stays put), to the content's foot: FlatList's `scrollToEnd` stops at
 the last row, short of the thread's bottom padding. HUD's transcript already followed its end.
 
+A new row (a sent message, Auto's writing chip) now scrolls to the content's foot too: the three
+lists' own scroll-on-add helpers, each on `scrollToEnd`, are folded into `use-end-in-view.ts`. When
+the message box grows a line, the layout event can arrive before the native list has its new height,
+and Android clamps the scroll to the old end; the hook scrolls again a frame later. A reply that grows
+taller than the writing chip still ends flush with the box: the threads never scroll while a reply
+grows (the handoff's 'Interactions'), which is Gerard's call.
+
 The emulator's own keyboard: the AVDs were made with `hw.keyboard=no`, so the Mac's keyboard typed
 nothing. With `hw.keyboard=yes` in the AVD's `config.ini` and
 `adb shell settings put secure show_ime_with_hard_keyboard 1`, the Mac's keyboard types and the

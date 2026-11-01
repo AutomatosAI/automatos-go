@@ -76,24 +76,39 @@ describe('the thread lists', () => {
   it('takes the view’s height from layout only, so a scroll before the layout cannot hide a shrink', () => {
     expect(hook).toMatch(/const view = event\.nativeEvent\.layout\.height;/);
     expect(hook).not.toMatch(/layoutMeasurement/);
-    expect(hook).toMatch(/metrics\.current = endMetrics\(before\.content, view\);/);
+    expect(hook).toMatch(/if \(!keep\) return;\n\s+toFoot\(false\);/);
+    // a frame on as well: Android clamps a scroll sent before the native list has its new height
+    expect(hook).toMatch(/requestAnimationFrame\(\(\) => toFoot\(false\)\);/);
   });
 
   it('scrolls to the content’s foot, past the bottom padding FlatList’s scrollToEnd stops short of', () => {
+    expect(hook).toMatch(/metrics\.current = endMetrics\(content, view\);/);
     expect(hook).toMatch(
-      /list\.current\?\.scrollToOffset\(\{ offset: metrics\.current\.offset, animated: false \}\);/,
+      /list\.current\?\.scrollToOffset\(\{ offset: metrics\.current\.offset, animated: animate \}\);/,
     );
-    expect(hook).not.toMatch(/scrollToEnd\(/);
+    // scrollToEnd only before the first layout, when the view's height is not known yet
+    expect(hook.match(/scrollToEnd\(/g)).toHaveLength(1);
+    expect(hook).toMatch(/if \(view === 0\) \{\n\s+list\.current\?\.scrollToEnd\(/);
+  });
+
+  it('scrolls to the foot when a row is added, animated unless Reduce Motion, then runs the focus', () => {
+    expect(hook).toMatch(
+      /if \(shouldScrollToEnd\(previous\.current, count\)\) pending\.current = true;/,
+    );
+    expect(hook).toMatch(/const animated = !useReducedMotion\(\);/);
+    expect(hook).toMatch(
+      /if \(pending\.current\) \{\n\s+pending\.current = false;\n\s+toFoot\(animated\);\n\s+\}\n\s+afterContent\(\);/,
+    );
   });
 
   it.each([
-    'src/chat/components/MessageList.tsx',
-    'src/styles/homes/PlayThread.tsx',
-    'src/styles/candy/home/ChatView.tsx',
-  ])('%s keeps its end in view, its content size handler going through the hook', (file) => {
+    ['src/chat/components/MessageList.tsx', 'rows'],
+    ['src/styles/homes/PlayThread.tsx', 'drawn'],
+    ['src/styles/candy/home/ChatView.tsx', 'entries'],
+  ])('%s scrolls through the hook, the focus after the jump to the end', (file, rows) => {
     const source = read(file);
-    expect(source).toMatch(/const endInView = useEndInView\(list, onContentSizeChange\);/);
+    expect(source).toContain(`const endInView = useEndInView(list, ${rows}.length, focus.run);`);
     expect(source).toMatch(/\{\.\.\.endInView\}/);
-    expect(source).not.toMatch(/onContentSizeChange=\{onContentSizeChange\}/);
+    expect(source).not.toMatch(/scrollToEnd\(|useScrollOnAdd|onContentSizeChange=/);
   });
 });

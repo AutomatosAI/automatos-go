@@ -9,13 +9,11 @@
 // Given a focus message (PRD-268 US-G03), it scrolls there once instead (use-focus-scroll.ts, as
 // Play's thread does).
 
-import { useCallback, useLayoutEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { FlatList, StyleSheet, View, type ListRenderItem } from 'react-native';
-import { useReducedMotion } from 'react-native-reanimated';
 
 import { useEndInView } from '../../../chat/components/use-end-in-view';
 import { useFocusScroll } from '../../../chat/components/use-focus-scroll';
-import { shouldScrollToEnd } from '../../../chat/view-model';
 import { AiLabel } from '../../ai-label';
 import { WritingChip } from '../parts/WritingChip';
 import { CANDY_CHAT_COPY } from '../strings';
@@ -33,22 +31,6 @@ export type ChatViewProps = Omit<ChatEntryProps, 'entry'> & {
   readonly onFocused?: (messageId: string) => void;
 };
 
-/** Marks a scroll when an entry is added; the next content size change carries it out. */
-function useScrollOnAdd(list: { readonly current: FlatList<ChatEntry> | null }, count: number) {
-  const animated = !useReducedMotion();
-  const previous = useRef(count);
-  const pending = useRef(false);
-  useLayoutEffect(() => {
-    if (shouldScrollToEnd(previous.current, count)) pending.current = true;
-    previous.current = count;
-  }, [count]);
-  return useCallback(() => {
-    if (!pending.current) return;
-    pending.current = false;
-    list.current?.scrollToEnd({ animated });
-  }, [list, animated]);
-}
-
 /** The thread's first row: the AI label (D73). */
 function ChatCaption() {
   return (
@@ -63,15 +45,9 @@ const keyOf = (entry: ChatEntry) => entry.key;
 export function ChatView(props: ChatViewProps) {
   const { entries, onRetry, onCard, onLink, report, focusMessageId = null, onFocused } = props;
   const list = useRef<FlatList<ChatEntry>>(null);
-  const scrollOnAdd = useScrollOnAdd(list, entries.length);
   const focus = useFocusScroll(list, entries, focusMessageId, onFocused);
-  const { run: focusRun } = focus;
   // the focus runs after the jump to the end, so a thread opened at a message stays there
-  const onContentSizeChange = useCallback(() => {
-    scrollOnAdd();
-    focusRun();
-  }, [scrollOnAdd, focusRun]);
-  const endInView = useEndInView(list, onContentSizeChange);
+  const endInView = useEndInView(list, entries.length, focus.run);
   const renderItem = useCallback<ListRenderItem<ChatEntry>>(
     ({ item }) => (
       <View style={styles.item}>
