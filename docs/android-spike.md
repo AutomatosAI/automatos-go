@@ -98,8 +98,11 @@ keyboard, typing into each style's message box:
 | Candy  | Chat (`CandyHome`)                | box above the keyboard                      |
 
 `FirstOpen`'s whole screen isn't mounted anywhere yet (Play shows its hello inside `PlayHome`), so it
-was changed to match but not seen. Candy leaves a gap about the height of the home indicator's inset
-between its box and the keyboard; a cosmetic follow-up.
+was changed to match but not seen. Candy's box first sat about 52 dp above the keyboard:
+`CandyComposer` padded by the home indicator's inset plus its own 28 inside the lift, and the keyboard
+already covers the inset. It now pads through `useKeyboardSafeBottom` (the Sheet's rule: the inset
+only while the keyboard is down) and sits its own 28 above the keyboard. The guard test fails on any
+file with a `TextInput` that reads the raw bottom inset; CLAUDE.md's Traps carry the rule.
 
 The emulator's own keyboard: the AVDs were made with `hw.keyboard=no`, so the Mac's keyboard typed
 nothing. With `hw.keyboard=yes` in the AVD's `config.ini` and

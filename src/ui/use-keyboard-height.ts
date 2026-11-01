@@ -6,6 +6,9 @@
 
 import { useEffect, useState } from 'react';
 import { Keyboard, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { sheetBottomPadding } from './overlay';
 
 /**
  * How every KeyboardAvoidingView in the app moves for the keyboard, on both platforms: Android's
@@ -33,4 +36,14 @@ export function useKeyboardHeight(): number {
     };
   }, []);
   return height;
+}
+
+/**
+ * A message box's bottom padding: its own space over the home indicator's inset while the keyboard
+ * is down, its own space alone while it is up (the keyboard covers the inset), as the Sheet's.
+ * Every message box lifted by a KeyboardAvoidingView takes its bottom padding from here.
+ */
+export function useKeyboardSafeBottom(own: number): number {
+  const insets = useSafeAreaInsets();
+  return sheetBottomPadding(own, insets.bottom, useKeyboardHeight());
 }

@@ -192,6 +192,12 @@ functions < 50 lines, components < 150; pure logic outside React with tests in
   expo-speech-recognition has just activated when a press barges in, and stops the capture. The
   server speaker releases the session itself (mixing mode, then `setIsAudioActiveAsync(false)`)
   when a run ends, except at a barge-in (`handOver`), where the recognizer takes it at once.
+- **The keyboard on Android.** React Native 0.81 draws edge to edge, so Android never resizes the
+  window for the keyboard: every `KeyboardAvoidingView` takes `KEYBOARD_AVOIDING_BEHAVIOUR`
+  ('padding', both platforms), and a message box inside one never pads by the raw home-indicator
+  inset (the keyboard covers it, leaving a gap): it pads through `useKeyboardSafeBottom`, or keeps the
+  inset outside the lift as `ChatFrame` does. Both are proved by `src/ui/__tests__/sheet-keyboard.test.ts`;
+  a new style's composer follows them.
 - **No `.env.example`.** The workspace's secrets hook blocks Claude Code from writing
   `*.env.*` files, so the repo has none (lead decision, 20 Oct): every `EXPO_PUBLIC_*` name is
   listed under Environment above and in README.md. A new name goes in all three places

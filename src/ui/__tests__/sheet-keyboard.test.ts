@@ -88,4 +88,18 @@ describe('KeyboardAvoidingView on Android', () => {
       .map(({ file }) => file);
     expect(others).toEqual([]);
   });
+
+  it('gives a message box no home-indicator inset over the keyboard: it pads through useKeyboardSafeBottom', () => {
+    expect(hook).toMatch(
+      /return sheetBottomPadding\(own, insets\.bottom, useKeyboardHeight\(\)\);/,
+    );
+    const boxes = sources.filter(({ text }) => /<TextInput\b/.test(text));
+    expect(boxes.length).toBeGreaterThan(0);
+    const rawInset = boxes
+      .filter(({ text }) => /insets\.bottom|useSafeAreaInsets\(/.test(text))
+      .map(({ file }) => file);
+    expect(rawInset).toEqual([]);
+    const candy = sources.find(({ file }) => file.endsWith('CandyComposer.tsx'));
+    expect(candy?.text).toMatch(/useKeyboardSafeBottom\(COMPOSER\.bottom\)/);
+  });
 });
