@@ -45,6 +45,24 @@ export function openSuggestions(list: readonly Suggestion[], now: number): reado
     .map(({ each }) => each);
 }
 
+const NONE: readonly Suggestion[] = Object.freeze([]);
+
+/**
+ * What every surface shows: none where discovery does not list `suggestions`, until the person's
+ * pause is read (undefined), while they have paused them (§6.9: a paused person gets no
+ * suggestions; core still lists the ones made before the pause) or before the list is read; else
+ * the open ones, newest first.
+ */
+export function shownSuggestions(input: {
+  readonly offered: boolean;
+  readonly paused: boolean | undefined;
+  readonly list: readonly Suggestion[] | undefined;
+  readonly now: number;
+}): readonly Suggestion[] {
+  if (!input.offered || input.paused !== false || !input.list) return NONE;
+  return openSuggestions(input.list, input.now);
+}
+
 export function suggestionView(suggestion: Suggestion): SuggestionView {
   const kind = suggestion.proposed_action?.kind ?? null;
   const detail = suggestion.detail.trim();

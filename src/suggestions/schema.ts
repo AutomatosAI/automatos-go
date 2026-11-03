@@ -74,6 +74,17 @@ export type StartResult = Readonly<z.output<typeof StartResultSchema>>;
 /** POST …/hide: the suggestion as it now is. */
 export const HideResultSchema = z.object({ suggestion: SuggestionSchema.nullable().catch(null) });
 
+/**
+ * GET and PUT /api/proactive/me: the person's own settings in this workspace. Only the pause is
+ * read (the quiet hours and the time zone are dropped with any unknown field); an answer without a
+ * true-or-false pause does not parse, so the switch never guesses.
+ */
+export const MyProactiveSchema = z
+  .object({ paused: z.boolean() })
+  .transform((mine) => Object.freeze(mine));
+
+export type MyProactive = z.output<typeof MyProactiveSchema>;
+
 /** The origin a suggestion's post in the Auto thread carries (services/proactive/delivery.py). */
 export const SUGGESTION_ORIGIN = 'suggestion';
 
