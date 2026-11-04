@@ -37,6 +37,15 @@ export function sheetBottomPadding(own: number, safeBottom: number, keyboard: nu
   return keyboard > 0 ? own : own + safeBottom;
 }
 
+/**
+ * How much of a view the keyboard covers, in points: its bottom on screen past the keyboard's top
+ * (KeyboardLift's padding on Android, where the window does not resize for the keyboard). Nothing
+ * when the keyboard sits below the view.
+ */
+export function keyboardOverlap(viewBottom: number, keyboardTop: number): number {
+  return Math.max(0, viewBottom - keyboardTop);
+}
+
 export type SheetMotion = {
   /** Slides up from below the window; false under Reduce Motion (a cross-fade instead). */
   readonly slide: boolean;

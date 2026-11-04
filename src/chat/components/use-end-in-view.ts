@@ -1,13 +1,14 @@
 // A thread list's end, for any FlatList of a thread: Studio's MessageList, Play's PlayThread and
-// Candy's ChatView (../end-in-view.ts has the rules). The list scrolls to its end when a row is
-// added (shouldScrollToEnd), never as a reply grows; the scroll waits for the new content's size,
-// and it is not animated under Reduce Motion. When the list's view shrinks under someone at its end
-// (the keyboard coming up), it scrolls back to the end, not animated (the keyboard is already
-// moving), and again over the next few frames, until the native list has its new height. Either way it scrolls to the content's foot by offset: FlatList's scrollToEnd stops at
-// the last row, short of the thread's bottom padding. It reads where the list is from its scrolls,
-// content size and layout. Spread the result on the FlatList; `afterContent` runs on each content
-// size change after the jump to the end (the focus scroll, so a thread opened at a message stays
-// there).
+// Candy's ChatView (../end-in-view.ts has the rules). The list opens at its newest row, and scrolls
+// to its end when a row is added (shouldScrollToEnd), never as a reply grows; the scroll waits for
+// the new content's size, and a new row's is not animated under Reduce Motion. When the list's view
+// shrinks under someone at its end (the keyboard coming up), it scrolls back to the end, not
+// animated (the keyboard is already moving), and again over the next few frames, until the native
+// list has its new height. Either way it scrolls to the content's foot by offset: FlatList's
+// scrollToEnd stops at the last row, short of the thread's bottom padding. It reads where the list
+// is from its scrolls, content size and layout. Spread the result on the FlatList; `afterContent`
+// runs on each content size change after the jump to the end (the focus scroll, so a thread opened
+// at a message stays there).
 
 import { useCallback, useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 import type {
@@ -18,8 +19,14 @@ import type {
 } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
-import { NO_METRICS, endMetrics, keepsEndInView, type ListMetrics } from '../end-in-view';
-import { shouldScrollToEnd } from '../view-model';
+import {
+  NO_METRICS,
+  endMetrics,
+  keepsEndInView,
+  pendingScrollOf,
+  type ListMetrics,
+  type PendingScroll,
+} from '../end-in-view';
 
 /** A scroll event a frame, so the offset is current when the keyboard comes up. */
 const SCROLL_THROTTLE_MS = 16;
@@ -28,19 +35,28 @@ export type EndInViewProps = {
   readonly onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   readonly onLayout: (event: LayoutChangeEvent) => void;
   readonly onContentSizeChange: (width: number, height: number) => void;
+  readonly onScrollBeginDrag: () => void;
   readonly scrollEventThrottle: number;
 };
 
-/** Marks a scroll when a row is added; the next content size change carries it out. */
-function usePendingOnAdd(count: number) {
-  const previous = useRef(count);
-  const pending = useRef(false);
+/**
+ * Marks the scroll the rows call for (pendingScrollOf); the next content size change carries it
+ * out. `opening` stays on while a thread's opening rows are still being drawn: FlatList draws them
+ * in batches, ten at first, so the foot moves on with each batch until the reader drags or a row is
+ * added.
+ */
+function usePendingScroll(count: number, focusing: boolean) {
+  const previous = useRef(0);
+  const pending = useRef<PendingScroll>('none');
+  const opening = useRef(false);
   // a layout effect: it runs before the new content reports its size
   useLayoutEffect(() => {
-    if (shouldScrollToEnd(previous.current, count)) pending.current = true;
+    const next = pendingScrollOf(previous.current, count, focusing);
+    if (next !== 'none') pending.current = next;
+    if (next === 'add' || count === 0) opening.current = false;
     previous.current = count;
-  }, [count]);
-  return pending;
+  }, [count, focusing]);
+  return { pending, opening };
 }
 
 /**
@@ -99,10 +115,11 @@ export function useEndInView<Row>(
   list: RefObject<FlatList<Row> | null>,
   rowCount: number,
   afterContent: () => void,
+  focusing = false,
 ): EndInViewProps {
   const animated = !useReducedMotion();
   const metrics = useRef<ListMetrics>(NO_METRICS);
-  const pending = usePendingOnAdd(rowCount);
+  const { pending, opening } = usePendingScroll(rowCount, focusing);
   const { scrollToFoot, holdFoot } = useFoot(list, metrics);
   const followFrames = useFollowFrames(holdFoot);
   // the view's height only from layout: a scroll landing between the shrink and its layout event
@@ -127,13 +144,23 @@ export function useEndInView<Row>(
   const onContentSizeChange = useCallback(
     (_width: number, height: number) => {
       metrics.current = { ...metrics.current, content: height };
-      if (pending.current) {
-        pending.current = false;
-        scrollToFoot(animated);
-      }
+      if (pending.current === 'open') opening.current = true;
+      if (pending.current === 'add') scrollToFoot(animated);
+      else if (opening.current) scrollToFoot(false);
+      pending.current = 'none';
       afterContent();
     },
-    [pending, scrollToFoot, animated, afterContent],
+    [pending, opening, scrollToFoot, animated, afterContent],
   );
-  return { onScroll, onLayout, onContentSizeChange, scrollEventThrottle: SCROLL_THROTTLE_MS };
+  // the reader takes the thread over: its opening rows no longer pull it to the foot
+  const onScrollBeginDrag = useCallback(() => {
+    opening.current = false;
+  }, [opening]);
+  return {
+    onScroll,
+    onLayout,
+    onContentSizeChange,
+    onScrollBeginDrag,
+    scrollEventThrottle: SCROLL_THROTTLE_MS,
+  };
 }

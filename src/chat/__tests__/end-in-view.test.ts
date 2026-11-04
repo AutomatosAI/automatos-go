@@ -7,7 +7,14 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { END_SLACK, NO_METRICS, atListEnd, endMetrics, keepsEndInView } from '../end-in-view';
+import {
+  END_SLACK,
+  NO_METRICS,
+  atListEnd,
+  endMetrics,
+  keepsEndInView,
+  pendingScrollOf,
+} from '../end-in-view';
 
 const read = (file: string) =>
   readFileSync(path.resolve(__dirname, '..', '..', '..', file), 'utf8');
@@ -70,6 +77,28 @@ describe('endMetrics', () => {
   });
 });
 
+describe('pendingScrollOf', () => {
+  it('opens a thread at its newest with the rows it opens with, loaded or not (#51)', () => {
+    expect(pendingScrollOf(0, 12, false)).toBe('open');
+    expect(pendingScrollOf(0, 1, false)).toBe('open');
+  });
+
+  it('leaves a thread opened at a focus message to its own scroll', () => {
+    expect(pendingScrollOf(0, 12, true)).toBe('none');
+  });
+
+  it('scrolls to a row added after that, focus or not', () => {
+    expect(pendingScrollOf(12, 13, false)).toBe('add');
+    expect(pendingScrollOf(12, 14, true)).toBe('add');
+  });
+
+  it('scrolls for nothing else: no rows, the same rows, fewer rows', () => {
+    expect(pendingScrollOf(0, 0, false)).toBe('none');
+    expect(pendingScrollOf(12, 12, false)).toBe('none');
+    expect(pendingScrollOf(12, 11, false)).toBe('none');
+  });
+});
+
 describe('the thread lists', () => {
   const hook = read('src/chat/components/use-end-in-view.ts');
 
@@ -101,13 +130,23 @@ describe('the thread lists', () => {
   });
 
   it('scrolls to the foot when a row is added, animated unless Reduce Motion, then runs the focus', () => {
-    expect(hook).toMatch(
-      /if \(shouldScrollToEnd\(previous\.current, count\)\) pending\.current = true;/,
-    );
+    expect(hook).toMatch(/const next = pendingScrollOf\(previous\.current, count, focusing\);/);
     expect(hook).toMatch(/const animated = !useReducedMotion\(\);/);
+    expect(hook).toMatch(/if \(pending\.current === 'add'\) scrollToFoot\(animated\);/);
+    expect(hook).toMatch(/pending\.current = 'none';\n\s+afterContent\(\);/);
+  });
+
+  it('opens at its newest, following the foot while its opening rows are drawn, until a drag (#51)', () => {
+    // counted from none, not from the rows at mount, so a cached thread opens at its newest too
+    expect(hook).toMatch(/const previous = useRef\(0\);/);
+    // FlatList draws the rows in batches: each one moves the foot on, not animated
+    expect(hook).toMatch(/if \(pending\.current === 'open'\) opening\.current = true;/);
+    expect(hook).toMatch(/else if \(opening\.current\) scrollToFoot\(false\);/);
+    // the reader's drag or a new row ends it, so a reply never pulls the thread as it grows
     expect(hook).toMatch(
-      /if \(pending\.current\) \{\n\s+pending\.current = false;\n\s+scrollToFoot\(animated\);\n\s+\}\n\s+afterContent\(\);/,
+      /const onScrollBeginDrag = useCallback\(\(\) => \{\n\s+opening\.current = false;/,
     );
+    expect(hook).toMatch(/if \(next === 'add' \|\| count === 0\) opening\.current = false;/);
   });
 
   it.each([
@@ -116,10 +155,12 @@ describe('the thread lists', () => {
     ['src/styles/candy/home/ChatView.tsx', 'entries'],
   ])('%s scrolls through the hook, the focus after the jump to the end', (file, rows) => {
     const source = read(file);
-    expect(source).toContain(`const endInView = useEndInView(list, ${rows}.length, focus.run);`);
+    expect(source).toContain(
+      `const endInView = useEndInView(list, ${rows}.length, focus.run, focusMessageId !== null);`,
+    );
     expect(source).toMatch(/\{\.\.\.endInView\}/);
     expect(source).not.toMatch(/scrollToEnd\(|useScrollOnAdd|onContentSizeChange=/);
     // nothing on the list can quietly replace the hook's own handlers
-    expect(source).not.toMatch(/\b(onScroll|onLayout|scrollEventThrottle)=/);
+    expect(source).not.toMatch(/\b(onScroll|onLayout|onScrollBeginDrag|scrollEventThrottle)=/);
   });
 });

@@ -173,7 +173,9 @@ describe('how the home wires them', () => {
   });
 
   it('gates the Chat view’s rows on `brief`, and draws a brief in Auto’s bubble with its entrance', () => {
-    expect(codeOf(CHAT)).toMatch(/const \{ discovery \} = useAppSession\(\);\s*const briefs = canBrief\(discovery\);/);
+    expect(codeOf(CHAT)).toMatch(
+      /const \{ discovery \} = useAppSession\(\);\s*const briefs = canBrief\(discovery\);/,
+    );
     expect(codeOf(CHAT)).toMatch(/threadRows\(state, \{ briefs, suggestions \}\)/);
     expect(codeOf(ENTRY)).toMatch(
       /row\.brief \? \(<BriefEntrance brief=\{row\.brief\}>\s*<AutoBubble>\s*<BriefBody brief=\{row\.brief\} onLink=\{onLink\}\s*\/>/,
@@ -192,12 +194,16 @@ describe('how the home wires them', () => {
     expect(codeOf(CHAT)).toMatch(/settle\(messageId\);\s*scrolled\(messageId\);/);
     expect(codeOf(VIEW_FILE)).toMatch(/useFocusScroll\(list, entries, focusMessageId, onFocused\)/);
     // the focus after the jump to the end: use-end-in-view.ts runs it last (end-in-view.test.ts)
-    expect(codeOf(VIEW_FILE)).toMatch(/useEndInView\(list, entries\.length, focus\.run\)/);
+    expect(codeOf(VIEW_FILE)).toMatch(
+      /useEndInView\(list, entries\.length, focus\.run, focusMessageId !== null\)/,
+    );
     expect(codeOf(VIEW_FILE)).toMatch(/onScrollToIndexFailed=\{focus\.onScrollToIndexFailed\}/);
     expect(codeOf(HOME)).toMatch(/const routeFocus = useRouteFocus\(focusMessageId\);/);
     expect(codeOf(HOME)).toMatch(/useCandyChat\(home, routeFocus\)/);
     expect(codeOf(HOME)).toMatch(/focusMessageId=\{chat\.focus\}\s*onFocused=\{chat\.onFocused\}/);
-    expect(codeOf(STYLE_HOME)).toMatch(/<CandyHome[^>]*view="chat"\s*focusMessageId=\{focusMessageId\}/);
+    expect(codeOf(STYLE_HOME)).toMatch(
+      /<CandyHome[^>]*view="chat"\s*focusMessageId=\{focusMessageId\}/,
+    );
   });
 
   it('puts the approval line under the stage’s state pill, and Ideas beside Today’s pause', () => {

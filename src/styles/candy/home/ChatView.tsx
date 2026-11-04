@@ -47,7 +47,7 @@ export function ChatView(props: ChatViewProps) {
   const list = useRef<FlatList<ChatEntry>>(null);
   const focus = useFocusScroll(list, entries, focusMessageId, onFocused);
   // the focus runs after the jump to the end, so a thread opened at a message stays there
-  const endInView = useEndInView(list, entries.length, focus.run);
+  const endInView = useEndInView(list, entries.length, focus.run, focusMessageId !== null);
   const renderItem = useCallback<ListRenderItem<ChatEntry>>(
     ({ item }) => (
       <View style={styles.item}>

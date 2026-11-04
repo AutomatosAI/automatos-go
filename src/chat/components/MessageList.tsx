@@ -224,7 +224,7 @@ export function MessageList(props: MessageListProps) {
   const focus = useFocusScroll(list, shown, focusMessageId, onFocused);
   // counted before the fold: a notice landing in the reply's box still scrolls to it
   // the focus runs after the jump to the end, so a thread opened at a message stays there
-  const endInView = useEndInView(list, rows.length, focus.run);
+  const endInView = useEndInView(list, rows.length, focus.run, focusMessageId !== null);
   const places = useMemo(() => threadPlaces(shown), [shown]);
   const renderItem = useCallback<ListRenderItem<ChatRow>>(
     ({ item, index }) => (

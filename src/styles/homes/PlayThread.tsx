@@ -188,7 +188,7 @@ export function PlayThread(props: PlayThreadProps) {
   const drawn = useMemo(() => rows.filter(isDrawn), [rows]);
   const focus = useFocusScroll(list, drawn, focusMessageId, onFocused);
   // the focus runs after the jump to the end, so a thread opened at a message stays there
-  const endInView = useEndInView(list, drawn.length, focus.run);
+  const endInView = useEndInView(list, drawn.length, focus.run, focusMessageId !== null);
   const loose = reports.get(LOOSE_REPORTS) ?? NO_REPORTS;
   const { onLink, onRetry, onCard, report } = shared;
   const renderItem = useCallback<ListRenderItem<ChatRow>>(

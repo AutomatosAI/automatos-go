@@ -102,4 +102,54 @@ describe('KeyboardAvoidingView on Android', () => {
     const candy = sources.find(({ file }) => file.endsWith('CandyComposer.tsx'));
     expect(candy?.text).toMatch(/useKeyboardSafeBottom\(COMPOSER\.bottom\)/);
   });
+
+  it('lifts every scroll view that leans on iOS’s keyboard inset over the keyboard on Android (#50)', () => {
+    // every use of the prop, as JSX shorthand or ={true}, comments and the false form aside
+    const uses = (text: string) =>
+      text
+        .split('\n')
+        .filter((line) => !/^\s*(\/\/|\*)/.test(line))
+        .join('\n')
+        .match(/\bautomaticallyAdjustKeyboardInsets\b(?!=\{false\})/g)?.length ?? 0;
+    const insetOnly = sources.filter(({ text }) => uses(text) > 0);
+    expect(insetOnly.map(({ file }) => file).sort()).toEqual([
+      'src/auth/screens/SignInScreen.tsx',
+      'src/cc/questions/QuestionsTab.tsx',
+      'src/connect/screens/ConnectScreen.tsx',
+    ]);
+    // a lift for each such scroll view in the file, not one for the file
+    const unlifted = insetOnly
+      .filter(({ text }) => (text.match(/<KeyboardLift>/g)?.length ?? 0) < uses(text))
+      .map(({ file }) => file);
+    expect(unlifted).toEqual([]);
+  });
+});
+
+describe('KeyboardLift', () => {
+  const lift = read('KeyboardLift.tsx');
+
+  it('pads only on Android, by what the keyboard covers of it on screen', () => {
+    expect(lift).toMatch(/const ANDROID = Platform\.OS === 'android';/);
+    expect(lift).toMatch(/if \(!ANDROID\) return undefined;/);
+    expect(lift).toMatch(/Keyboard\.addListener\('keyboardDidHide', \(\) => setLift\(0\)\)/);
+  });
+
+  it('measures from the screen’s top, as the keyboard’s screenY does: measure()’s pageY', () => {
+    // measureInWindow's y counts from under the status bar on Android (found on the emulator)
+    expect(lift).not.toMatch(/measureInWindow\(|StatusBar/);
+    expect(lift).toMatch(/setLift\(keyboardOverlap\(pageY \+ height, keyboardTop\)\)/);
+  });
+
+  it('reads a keyboard already up at mount, and again on each layout while it is up', () => {
+    expect(lift).toMatch(
+      /Keyboard\.isVisible\(\) \? \(Keyboard\.metrics\(\)\?\.screenY \?\? null\) : null/,
+    );
+    expect(lift).toMatch(/if \(!ANDROID\) return undefined;\n\s+measure\(keyboardTopNow\(\)\);/);
+    expect(lift).toMatch(/if \(ANDROID\) measure\(keyboardTopNow\(\)\);/);
+    expect(lift).toMatch(/<View ref=\{view\} onLayout=\{onLayout\}/);
+  });
+
+  it('lets go of both listeners', () => {
+    expect(lift).toMatch(/shown\.remove\(\);\s+hidden\.remove\(\);/);
+  });
 });
