@@ -7,7 +7,7 @@ automatos-ai PRD-266.
 
 ## The rule
 
-CI is the gate. Nothing runs on this machine except pure-Node checks: npm ci --ignore-scripts, npm run typecheck, npm run lint, npx vitest run, npm run check:bundle, npx expo-doctor, npx expo config --type introspect, npm run check:core, npm run check:routes. Never expo start, expo run:*, expo prebuild, eas *, a simulator, an emulator, Metro's dev server or any server; device checks are Gerard's.
+CI is the gate. Nothing runs on this machine except pure-Node checks: npm ci --ignore-scripts, npm run typecheck, npm run lint, npx vitest run, npm run check:bundle, npm run check:bundle:android, npx expo-doctor, npx expo config --type introspect, npm run check:core, npm run check:routes. Never expo start, expo run:*, expo prebuild, eas *, a simulator, an emulator, Metro's dev server or any server; device checks are Gerard's.
 
 ## Stack
 
@@ -25,6 +25,7 @@ Scaffold lifted from the academy app's TestFlight tree.
 | `npm run lint`                             | `eslint .` — the §4.11 guards in `eslint.config.js` (proved by `scripts/__tests__/eslint-rules.test.ts`) |
 | `npx vitest run` / `npm run test:coverage` | tests; coverage gate 80/80/80, branches 70 on `src/core/*.ts`, `src/api/**`, `src/auth/**`               |
 | `npm run check:bundle`                     | `expo export --platform ios` into `.expo/bundle-check` — compiles the JS bundle, no native build         |
+| `npm run check:bundle:android`             | the same for Android, into `.expo/bundle-check-android` (each `*.android.ts` twin compiles there only)    |
 | `npx expo-doctor`                          | Expo's project checks (CI job `expo-doctor · iOS bundle`)                                                |
 | `npx expo config --type introspect`        | evaluates every config plugin without writing ios/ or android/                                           |
 | `npm run check:core`                       | `src/core/web`, `src/core/frozen` and `src/core/route-manifest.json` match `core.lock.json` / the manifest (no hand edits, no drift) |

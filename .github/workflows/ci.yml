@@ -62,3 +62,9 @@ jobs:
       # Compiles the JS bundle only (expo export) — no native build, no EAS.
       - name: iOS bundle
         run: npm run check:bundle
+
+      # The same for Android: Metro takes a file's .android.ts twin there (check-copy, the
+      # mascot's assets), which the iOS bundle never compiles. The job keeps its name: branch
+      # protection reads it.
+      - name: Android bundle
+        run: npm run check:bundle:android
