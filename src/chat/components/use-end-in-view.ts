@@ -1,13 +1,14 @@
 // A thread list's end, for any FlatList of a thread: Studio's MessageList, Play's PlayThread and
-// Candy's ChatView (../end-in-view.ts has the rules). The list scrolls to its end when a row is
-// added (shouldScrollToEnd), never as a reply grows; the scroll waits for the new content's size,
-// and it is not animated under Reduce Motion. When the list's view shrinks under someone at its end
-// (the keyboard coming up), it scrolls back to the end, not animated (the keyboard is already
-// moving), and again over the next few frames, until the native list has its new height. Either way it scrolls to the content's foot by offset: FlatList's scrollToEnd stops at
-// the last row, short of the thread's bottom padding. It reads where the list is from its scrolls,
-// content size and layout. Spread the result on the FlatList; `afterContent` runs on each content
-// size change after the jump to the end (the focus scroll, so a thread opened at a message stays
-// there).
+// Candy's ChatView (../end-in-view.ts has the rules). The list opens at its newest row, and scrolls
+// to its end when a row is added (shouldScrollToEnd), never as a reply grows; the scroll waits for
+// the new content's size, and a new row's is not animated under Reduce Motion. When the list's view
+// shrinks under someone at its end (the keyboard coming up), it scrolls back to the end, not
+// animated (the keyboard is already moving), and again over the next few frames, until the native
+// list has its new height. Either way it scrolls to the content's foot by offset: FlatList's
+// scrollToEnd stops at the last row, short of the thread's bottom padding. It reads where the list
+// is from its scrolls, content size and layout. Spread the result on the FlatList; `afterContent`
+// runs on each content size change after the jump to the end (the focus scroll, so a thread opened
+// at a message stays there).
 
 import { useCallback, useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 import type {
@@ -31,13 +32,22 @@ export type EndInViewProps = {
   readonly scrollEventThrottle: number;
 };
 
-/** Marks a scroll when a row is added; the next content size change carries it out. */
+/** The scroll a content size change carries out: none, the thread's first rows, or a new row. */
+type PendingScroll = 'none' | 'open' | 'add';
+
+/**
+ * Marks a scroll when rows are added; the next content size change carries it out. Counted from
+ * none, so the rows a thread opens with (already loaded) scroll it to its newest too (#51): that
+ * first scroll is 'open', not animated, where the thread opens.
+ */
 function usePendingOnAdd(count: number) {
-  const previous = useRef(count);
-  const pending = useRef(false);
+  const previous = useRef(0);
+  const pending = useRef<PendingScroll>('none');
   // a layout effect: it runs before the new content reports its size
   useLayoutEffect(() => {
-    if (shouldScrollToEnd(previous.current, count)) pending.current = true;
+    if (shouldScrollToEnd(previous.current, count)) {
+      pending.current = previous.current === 0 ? 'open' : 'add';
+    }
     previous.current = count;
   }, [count]);
   return pending;
@@ -127,9 +137,9 @@ export function useEndInView<Row>(
   const onContentSizeChange = useCallback(
     (_width: number, height: number) => {
       metrics.current = { ...metrics.current, content: height };
-      if (pending.current) {
-        pending.current = false;
-        scrollToFoot(animated);
+      if (pending.current !== 'none') {
+        scrollToFoot(pending.current === 'add' && animated);
+        pending.current = 'none';
       }
       afterContent();
     },

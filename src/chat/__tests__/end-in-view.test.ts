@@ -101,13 +101,18 @@ describe('the thread lists', () => {
   });
 
   it('scrolls to the foot when a row is added, animated unless Reduce Motion, then runs the focus', () => {
-    expect(hook).toMatch(
-      /if \(shouldScrollToEnd\(previous\.current, count\)\) pending\.current = true;/,
-    );
+    expect(hook).toMatch(/if \(shouldScrollToEnd\(previous\.current, count\)\) \{/);
     expect(hook).toMatch(/const animated = !useReducedMotion\(\);/);
     expect(hook).toMatch(
-      /if \(pending\.current\) \{\n\s+pending\.current = false;\n\s+scrollToFoot\(animated\);\n\s+\}\n\s+afterContent\(\);/,
+      /if \(pending\.current !== 'none'\) \{\n\s+scrollToFoot\(pending\.current === 'add' && animated\);\n\s+pending\.current = 'none';\n\s+\}\n\s+afterContent\(\);/,
     );
+  });
+
+  it('opens a thread at its newest row, its already-loaded rows counted as added, not animated (#51)', () => {
+    // counted from none, not from the rows at mount, so a cached thread scrolls too
+    expect(hook).toMatch(/const previous = useRef\(0\);/);
+    expect(hook).toMatch(/pending\.current = previous\.current === 0 \? 'open' : 'add';/);
+    // the focus scroll still runs after it (afterContent), so a thread opened at a message stays there
   });
 
   it.each([
