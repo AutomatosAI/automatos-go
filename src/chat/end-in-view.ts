@@ -31,3 +31,18 @@ export function keepsEndInView(before: ListMetrics, nextView: number): boolean {
 export function endMetrics(content: number, view: number): ListMetrics {
   return { offset: Math.max(0, content - view), view, content };
 }
+
+/** The scroll a content size change carries out: none, a thread's opening rows, or a new row. */
+export type PendingScroll = 'none' | 'open' | 'add';
+
+/**
+ * The scroll the rows going from `previous` to `count` call for. Counted from none, so the rows a
+ * thread opens with, already loaded, open it at its newest (#51), not animated: unless it opens at
+ * a focus message, which its own scroll finds. A row added after that scrolls to it; nothing else
+ * scrolls (never a reply as it grows).
+ */
+export function pendingScrollOf(previous: number, count: number, focusing: boolean): PendingScroll {
+  if (count <= previous) return 'none'; // shouldScrollToEnd's rule: only a row added
+  if (previous === 0) return focusing ? 'none' : 'open';
+  return 'add';
+}

@@ -19,8 +19,14 @@ import type {
 } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
-import { NO_METRICS, endMetrics, keepsEndInView, type ListMetrics } from '../end-in-view';
-import { shouldScrollToEnd } from '../view-model';
+import {
+  NO_METRICS,
+  endMetrics,
+  keepsEndInView,
+  pendingScrollOf,
+  type ListMetrics,
+  type PendingScroll,
+} from '../end-in-view';
 
 /** A scroll event a frame, so the offset is current when the keyboard comes up. */
 const SCROLL_THROTTLE_MS = 16;
@@ -29,28 +35,28 @@ export type EndInViewProps = {
   readonly onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   readonly onLayout: (event: LayoutChangeEvent) => void;
   readonly onContentSizeChange: (width: number, height: number) => void;
+  readonly onScrollBeginDrag: () => void;
   readonly scrollEventThrottle: number;
 };
 
-/** The scroll a content size change carries out: none, the thread's first rows, or a new row. */
-type PendingScroll = 'none' | 'open' | 'add';
-
 /**
- * Marks a scroll when rows are added; the next content size change carries it out. Counted from
- * none, so the rows a thread opens with (already loaded) scroll it to its newest too (#51): that
- * first scroll is 'open', not animated, where the thread opens.
+ * Marks the scroll the rows call for (pendingScrollOf); the next content size change carries it
+ * out. `opening` stays on while a thread's opening rows are still being drawn: FlatList draws them
+ * in batches, ten at first, so the foot moves on with each batch until the reader drags or a row is
+ * added.
  */
-function usePendingOnAdd(count: number) {
+function usePendingScroll(count: number, focusing: boolean) {
   const previous = useRef(0);
   const pending = useRef<PendingScroll>('none');
+  const opening = useRef(false);
   // a layout effect: it runs before the new content reports its size
   useLayoutEffect(() => {
-    if (shouldScrollToEnd(previous.current, count)) {
-      pending.current = previous.current === 0 ? 'open' : 'add';
-    }
+    const next = pendingScrollOf(previous.current, count, focusing);
+    if (next !== 'none') pending.current = next;
+    if (next === 'add' || count === 0) opening.current = false;
     previous.current = count;
-  }, [count]);
-  return pending;
+  }, [count, focusing]);
+  return { pending, opening };
 }
 
 /**
@@ -109,10 +115,11 @@ export function useEndInView<Row>(
   list: RefObject<FlatList<Row> | null>,
   rowCount: number,
   afterContent: () => void,
+  focusing = false,
 ): EndInViewProps {
   const animated = !useReducedMotion();
   const metrics = useRef<ListMetrics>(NO_METRICS);
-  const pending = usePendingOnAdd(rowCount);
+  const { pending, opening } = usePendingScroll(rowCount, focusing);
   const { scrollToFoot, holdFoot } = useFoot(list, metrics);
   const followFrames = useFollowFrames(holdFoot);
   // the view's height only from layout: a scroll landing between the shrink and its layout event
@@ -137,13 +144,23 @@ export function useEndInView<Row>(
   const onContentSizeChange = useCallback(
     (_width: number, height: number) => {
       metrics.current = { ...metrics.current, content: height };
-      if (pending.current !== 'none') {
-        scrollToFoot(pending.current === 'add' && animated);
-        pending.current = 'none';
-      }
+      if (pending.current === 'open') opening.current = true;
+      if (pending.current === 'add') scrollToFoot(animated);
+      else if (opening.current) scrollToFoot(false);
+      pending.current = 'none';
       afterContent();
     },
-    [pending, scrollToFoot, animated, afterContent],
+    [pending, opening, scrollToFoot, animated, afterContent],
   );
-  return { onScroll, onLayout, onContentSizeChange, scrollEventThrottle: SCROLL_THROTTLE_MS };
+  // the reader takes the thread over: its opening rows no longer pull it to the foot
+  const onScrollBeginDrag = useCallback(() => {
+    opening.current = false;
+  }, [opening]);
+  return {
+    onScroll,
+    onLayout,
+    onContentSizeChange,
+    onScrollBeginDrag,
+    scrollEventThrottle: SCROLL_THROTTLE_MS,
+  };
 }
