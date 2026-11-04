@@ -8,7 +8,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { useTokens } from '../../styles/theme';
-import { LoadingState, Screen, Text } from '../../ui';
+import { KeyboardLift, LoadingState, Screen, Text } from '../../ui';
 import {
   createSignInMachine,
   type SignInEvent,
@@ -92,14 +92,16 @@ export function SignInScreen() {
   const { snapshot, send } = useSignInMachine();
   return (
     <Screen>
-      <ScrollView
-        contentContainerStyle={[styles.content, { padding: spacing.space9, gap: spacing.space9 }]}
-        keyboardShouldPersistTaps="handled"
-        automaticallyAdjustKeyboardInsets
-      >
-        <Header />
-        <Step snapshot={snapshot} send={send} />
-      </ScrollView>
+      <KeyboardLift>
+        <ScrollView
+          contentContainerStyle={[styles.content, { padding: spacing.space9, gap: spacing.space9 }]}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+        >
+          <Header />
+          <Step snapshot={snapshot} send={send} />
+        </ScrollView>
+      </KeyboardLift>
     </Screen>
   );
 }

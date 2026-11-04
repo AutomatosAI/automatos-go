@@ -13,6 +13,7 @@ import {
   TOAST_DURATION_MS,
   TOAST_LOOKS,
   backdropColour,
+  keyboardOverlap,
   sheetBottomPadding,
   sheetMaxHeight,
   sheetMotion,
@@ -53,6 +54,12 @@ describe('the sheet', () => {
     expect(sheetBottomPadding(16, 34, 0)).toBe(50);
     expect(sheetBottomPadding(16, 34, 291)).toBe(16);
     expect(sheetBottomPadding(16, 0, 0)).toBe(16);
+  });
+
+  it('measures how much of a view the keyboard covers, nothing when it sits below (#50)', () => {
+    expect(keyboardOverlap(900, 600)).toBe(300);
+    expect(keyboardOverlap(600, 600)).toBe(0);
+    expect(keyboardOverlap(500, 600)).toBe(0);
   });
 
   it('does not slide under Reduce Motion', () => {

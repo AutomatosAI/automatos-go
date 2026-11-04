@@ -11,6 +11,7 @@ export { Divider, type DividerProps } from './Divider';
 export { EmptyState, type EmptyStateProps } from './EmptyState';
 export { ErrorState, type ErrorStateProps } from './ErrorState';
 export { IconButton, type IconButtonProps } from './IconButton';
+export { KeyboardLift, type KeyboardLiftProps } from './KeyboardLift';
 export { ListRow, type ListRowProps } from './ListRow';
 export { LoadingState, type LoadingStateProps } from './LoadingState';
 export { Pill, type PillProps } from './Pill';

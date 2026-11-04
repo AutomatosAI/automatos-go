@@ -25,7 +25,7 @@ import { routes, type ConnectPrefill } from '../../navigation/routes';
 import { useGoBack } from '../../navigation/use-go-back';
 import { hostedSignInConfigured } from '../../session/auth-branch';
 import { useTokens } from '../../styles/theme';
-import { IconButton, LoadingState, Screen, Text } from '../../ui';
+import { IconButton, KeyboardLift, LoadingState, Screen, Text } from '../../ui';
 import { SwitchQuestion } from '../components/SwitchQuestion';
 import { hostedServer, ownServer } from '../current-server';
 import { connectionEndedNote } from '../edges';
@@ -74,34 +74,36 @@ function ConnectFlow({ prefill, endedNote }: FlowProps) {
   const ended = view.screen === 'form' && view.failure === null ? endedNote : null;
   return (
     <Screen>
-      <ScrollView
-        contentContainerStyle={[styles.content, { padding: spacing.space9, gap: spacing.space9 }]}
-        keyboardShouldPersistTaps="handled"
-        automaticallyAdjustKeyboardInsets
-      >
-        <View style={styles.back}>
-          <IconButton
-            icon={ChevronLeft}
-            accessibilityLabel={CONNECT_SCREEN_COPY.back}
-            onPress={leave}
-            disabled={pairing}
-          />
-        </View>
-        <Header view={view} />
-        {ended ? <StepNote note={{ tone: 'error', text: ended }} /> : null}
-        {view.screen === 'confirm' ? (
-          <ConfirmCard view={view} onConfirm={flow.confirm} onBack={flow.back} />
-        ) : (
-          <ConnectForm
-            view={view}
-            onEdit={flow.edit}
-            onContinue={() => flow.submit(typedFields(flow.state))}
-            onCancel={flow.back}
-            onScan={() => router.push(routes.connectScan)}
-            onSignIn={() => router.push(routes.signIn)}
-          />
-        )}
-      </ScrollView>
+      <KeyboardLift>
+        <ScrollView
+          contentContainerStyle={[styles.content, { padding: spacing.space9, gap: spacing.space9 }]}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+        >
+          <View style={styles.back}>
+            <IconButton
+              icon={ChevronLeft}
+              accessibilityLabel={CONNECT_SCREEN_COPY.back}
+              onPress={leave}
+              disabled={pairing}
+            />
+          </View>
+          <Header view={view} />
+          {ended ? <StepNote note={{ tone: 'error', text: ended }} /> : null}
+          {view.screen === 'confirm' ? (
+            <ConfirmCard view={view} onConfirm={flow.confirm} onBack={flow.back} />
+          ) : (
+            <ConnectForm
+              view={view}
+              onEdit={flow.edit}
+              onContinue={() => flow.submit(typedFields(flow.state))}
+              onCancel={flow.back}
+              onScan={() => router.push(routes.connectScan)}
+              onSignIn={() => router.push(routes.signIn)}
+            />
+          )}
+        </ScrollView>
+      </KeyboardLift>
     </Screen>
   );
 }

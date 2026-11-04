@@ -102,4 +102,38 @@ describe('KeyboardAvoidingView on Android', () => {
     const candy = sources.find(({ file }) => file.endsWith('CandyComposer.tsx'));
     expect(candy?.text).toMatch(/useKeyboardSafeBottom\(COMPOSER\.bottom\)/);
   });
+
+  it('lifts every scroll view that leans on iOS’s keyboard inset over the keyboard on Android (#50)', () => {
+    const insetOnly = sources.filter(({ text }) =>
+      /^\s+automaticallyAdjustKeyboardInsets$/m.test(text),
+    );
+    expect(insetOnly.map(({ file }) => file).sort()).toEqual([
+      'src/auth/screens/SignInScreen.tsx',
+      'src/cc/questions/QuestionsTab.tsx',
+      'src/connect/screens/ConnectScreen.tsx',
+    ]);
+    const unlifted = insetOnly
+      .filter(({ text }) => !/<KeyboardLift>/.test(text))
+      .map(({ file }) => file);
+    expect(unlifted).toEqual([]);
+  });
+});
+
+describe('KeyboardLift', () => {
+  const lift = read('KeyboardLift.tsx');
+
+  it('pads only on Android, by what the keyboard covers of it on screen', () => {
+    expect(lift).toMatch(/if \(Platform\.OS !== 'android'\) return undefined;/);
+    expect(lift).toMatch(/view\.current\?\.measureInWindow\(/);
+    // measureInWindow counts from under the status bar on Android, screenY from the screen's top
+    expect(lift).toMatch(/const top = StatusBar\.currentHeight \?\? 0;/);
+    expect(lift).toMatch(
+      /setLift\(keyboardOverlap\(top \+ y \+ height, event\.endCoordinates\.screenY\)\)/,
+    );
+    expect(lift).toMatch(/Keyboard\.addListener\('keyboardDidHide', \(\) => setLift\(0\)\)/);
+  });
+
+  it('lets go of both listeners', () => {
+    expect(lift).toMatch(/shown\.remove\(\);\s+hidden\.remove\(\);/);
+  });
 });
