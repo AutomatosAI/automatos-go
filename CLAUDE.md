@@ -118,7 +118,8 @@ boundary, unknown fields ignored; files 200–400 lines (never over 800),
 functions < 50 lines, components < 150; pure logic outside React with tests in
 `__tests__/` beside the module; immutable updates; no hardcoded URLs/keys
 (EAS env or discovery); tokens only, never colour literals; copy in one
-`strings.ts` per feature.
+`strings.ts` per feature (words that differ by platform in a `*-copy.ts` / `*-copy.android.ts`
+pair beside it, as `src/step-up/check-copy.ts`; the store-copy audit reads both).
 
 ## Traps
 

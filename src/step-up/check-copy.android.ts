@@ -7,7 +7,7 @@ import type { CheckCopy } from './check-copy';
 export const CHECK_COPY: CheckCopy = Object.freeze({
   name: 'Screen lock',
   asksFor: 'your fingerprint, face or screen lock',
-  first: 'your screen lock',
+  first: 'your fingerprint, face or screen lock',
   none: 'no screen lock',
   lockedOut:
     'Fingerprint and face unlock are locked after too many tries. Unlock your phone with its PIN, pattern or password, then try again.',

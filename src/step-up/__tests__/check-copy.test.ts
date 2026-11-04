@@ -99,7 +99,9 @@ describe('Android’s check copy', () => {
     for (const [outcome, line] of Object.entries(copies.outcome)) {
       if (outcome !== 'passed') expect(line).toContain('Nothing was sent');
     }
-    expect(copies.startHint).toBe('Asks for your screen lock first, then starts it.');
+    expect(copies.startHint).toBe(
+      'Asks for your fingerprint, face or screen lock first, then starts it.',
+    );
   });
 
   it('is picked by Metro by platform, with no React Native import in the copy', () => {

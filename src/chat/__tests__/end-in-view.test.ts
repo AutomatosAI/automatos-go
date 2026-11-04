@@ -76,15 +76,24 @@ describe('the thread lists', () => {
   it('takes the view’s height from layout only, so a scroll before the layout cannot hide a shrink', () => {
     expect(hook).toMatch(/const view = event\.nativeEvent\.layout\.height;/);
     expect(hook).not.toMatch(/layoutMeasurement/);
-    expect(hook).toMatch(/if \(!keep\) return;\n\s+toFoot\(false\);/);
-    // a frame on as well: Android clamps a scroll sent before the native list has its new height
-    expect(hook).toMatch(/requestAnimationFrame\(\(\) => toFoot\(false\)\);/);
+    expect(hook).toMatch(/if \(!keep\) return;\n\s+holdFoot\(\);\n\s+followFrames\(\);/);
+  });
+
+  it('scrolls to the end again over the next frames, cancelled when it unmounts', () => {
+    // the native list can take its new height a frame or more after the layout event, and a
+    // scroll sent before that is clamped to the old end (the message box growing a line)
+    expect(hook).toMatch(/const FOLLOW_FRAMES = 3;/);
+    expect(hook).toMatch(/frame\.current = left > 0 \? requestAnimationFrame\(next\) : null;/);
+    expect(hook).toMatch(/if \(frame\.current !== null\) cancelAnimationFrame\(frame\.current\);/);
   });
 
   it('scrolls to the content’s foot, past the bottom padding FlatList’s scrollToEnd stops short of', () => {
-    expect(hook).toMatch(/metrics\.current = endMetrics\(content, view\);/);
     expect(hook).toMatch(
-      /list\.current\?\.scrollToOffset\(\{ offset: metrics\.current\.offset, animated: animate \}\);/,
+      /list\.current\?\.scrollToOffset\(\{ offset: endMetrics\(content, view\)\.offset, animated: animate \}\);/,
+    );
+    // only a shrink notes the end before the scroll is reported
+    expect(hook).toMatch(
+      /metrics\.current = endMetrics\(metrics\.current\.content, metrics\.current\.view\);\n\s+scrollToFoot\(false\);/,
     );
     // scrollToEnd only before the first layout, when the view's height is not known yet
     expect(hook.match(/scrollToEnd\(/g)).toHaveLength(1);
@@ -97,7 +106,7 @@ describe('the thread lists', () => {
     );
     expect(hook).toMatch(/const animated = !useReducedMotion\(\);/);
     expect(hook).toMatch(
-      /if \(pending\.current\) \{\n\s+pending\.current = false;\n\s+toFoot\(animated\);\n\s+\}\n\s+afterContent\(\);/,
+      /if \(pending\.current\) \{\n\s+pending\.current = false;\n\s+scrollToFoot\(animated\);\n\s+\}\n\s+afterContent\(\);/,
     );
   });
 
@@ -110,5 +119,7 @@ describe('the thread lists', () => {
     expect(source).toContain(`const endInView = useEndInView(list, ${rows}.length, focus.run);`);
     expect(source).toMatch(/\{\.\.\.endInView\}/);
     expect(source).not.toMatch(/scrollToEnd\(|useScrollOnAdd|onContentSizeChange=/);
+    // nothing on the list can quietly replace the hook's own handlers
+    expect(source).not.toMatch(/\b(onScroll|onLayout|scrollEventThrottle)=/);
   });
 });

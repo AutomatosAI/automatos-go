@@ -32,7 +32,10 @@ export type TextProps = Omit<NativeTextProps, 'style' | 'allowFontScaling'> & {
   readonly weight?: FontWeight;
   readonly italic?: boolean;
   readonly style?: StyleProp<TextStyle>;
-  /** One line that shrinks to fit (fitScale: never below 11 pt) before it is cut short. */
+  /**
+   * One line that shrinks to fit (fitScale: never below 11 pt) before it is cut short. It sets
+   * numberOfLines, adjustsFontSizeToFit and minimumFontScale, over any the caller passes.
+   */
   readonly fit?: boolean;
 };
 

@@ -40,6 +40,14 @@ describe('the copy the audit reads', () => {
     modules.forEach((module) => expect(copyFiles()).toContain(module));
   });
 
+  it('reads each platform copy module, the Android twin too (Metro picks it there)', () => {
+    const files = copyFiles();
+    expect(files).toContain('src/step-up/check-copy.ts');
+    expect(files).toContain('src/step-up/check-copy.android.ts');
+    const android = appCopy().filter((copy) => copy.file === 'src/step-up/check-copy.android.ts');
+    expect(android.map((copy) => copy.text)).toContain('your fingerprint, face or screen lock');
+  });
+
   it('reads every product .tsx under src/ and app/', () => {
     const files = copyFiles();
     expect(files.filter((file) => file.endsWith('.tsx')).length).toBeGreaterThan(150);
