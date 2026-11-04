@@ -5,32 +5,24 @@
 // Auto's run. 'Auto is thinking' takes Auto's slot until the answer replaces it there, and a turn's
 // notice lands inside the box of the reply it ends (foldNotices). Only the live rows move in (the
 // message just sent rises, the thinking pill fades); history never replays, and Reduce Motion
-// stills both.
-// The list scrolls to the end only when a row is added (a message, the thinking pill, a notice),
-// never while a reply grows (README 'Interactions'); the scroll waits for the new content's size,
-// and it is not animated under Reduce Motion. What sits above the thread on home (the needs strip)
-// stays outside the list, as the handoff draws it. Cards whose reply was never saved are drawn
-// after the saved messages (their own row). Report this goes only to the Auto messages report.ts
-// names. Every row is built anew on each streamed delta, so each row is memoised on row-same.ts's
-// sameThreadRow (equal in value, the same handlers) and Try again is one stable function that
-// calls the screen's latest: only the row that changed draws again.
-// The list says whether the day's brief card is on screen (PRD-268 US-G06: home's needs strip then
-// shrinks to its count, src/brief/on-screen.tsx); outside home nobody listens. Given a focus message
-// (US-G03: the Auto thread opened at the day's brief), it scrolls there once (use-focus-scroll.ts).
-// A suggestion Auto posted draws its card while it is open, else its message (ThreadSuggestion).
+// stills both. The list scrolls to the end only when a row is added (a message, the thinking pill,
+// a notice), never while a reply grows (README 'Interactions'); the scroll waits for the new
+// content's size, and it is not animated under Reduce Motion; when the keyboard shrinks the list
+// under someone at its end, it keeps the end in view (use-end-in-view.ts). What sits above the
+// thread on home (the needs strip) stays outside the list, as the handoff draws it. Cards whose
+// reply was never saved are drawn after the saved messages (their own row). Report this goes only
+// to the Auto messages report.ts names. Every row is built anew on each streamed delta, so each row
+// is memoised on row-same.ts's sameThreadRow (equal in value, the same handlers) and Try again is
+// one stable function that calls the screen's latest: only the row that changed draws again. The
+// list says whether the day's brief card is on screen (PRD-268 US-G06: home's needs strip then
+// shrinks to its count, src/brief/on-screen.tsx); outside home nobody listens. Given a focus
+// message (US-G03: the Auto thread opened at the day's brief), it scrolls there once
+// (use-focus-scroll.ts). A suggestion Auto posted draws its card while it is open, else its message
+// (ThreadSuggestion).
 
-import {
-  memo,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  type ReactNode,
-  type RefObject,
-} from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { FlatList, StyleSheet, View, type ListRenderItem, type ViewToken } from 'react-native';
-import Animated, { FadeIn, FadeInDown, useReducedMotion } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
 import { briefOnScreen } from '../../brief/model';
 import { useReportBriefOnScreen } from '../../brief/on-screen';
@@ -41,7 +33,7 @@ import { useTokens } from '../../styles/theme';
 import type { SettleCard } from '../cards/model';
 import { ThreadCards } from '../cards/ThreadCards';
 import { reportTarget, type ThreadReport } from '../report/report';
-import { shouldScrollToEnd, type ChatRow } from '../view-model';
+import type { ChatRow } from '../view-model';
 import { AutoColumn } from './AutoColumn';
 import { AutoMessage } from './AutoMessage';
 import { sameThreadRow } from './row-same';
@@ -55,6 +47,7 @@ import {
   type RowPlace,
 } from './thread-look';
 import { TurnNotice } from './TurnNotice';
+import { useEndInView } from './use-end-in-view';
 import { useFocusScroll } from './use-focus-scroll';
 import { UserBubble } from './UserBubble';
 import { WorkingIndicator } from './WorkingIndicator';
@@ -174,23 +167,6 @@ function RowFrame({ row, place, children }: RowFrameProps) {
   );
 }
 
-/** Marks a scroll when a row is added; the next content size change carries it out. */
-function useScrollOnAdd(list: RefObject<FlatList<ChatRow> | null>, count: number) {
-  const animated = !useReducedMotion();
-  const previous = useRef(count);
-  const pending = useRef(false);
-  // a layout effect: it runs before the new content reports its size
-  useLayoutEffect(() => {
-    if (shouldScrollToEnd(previous.current, count)) pending.current = true;
-    previous.current = count;
-  }, [count]);
-  return useCallback(() => {
-    if (!pending.current) return;
-    pending.current = false;
-    list.current?.scrollToEnd({ animated });
-  }, [list, animated]);
-}
-
 /**
  * Try again as one function for the list's life, calling the screen's latest (which changes with
  * every delta): a row's memo then holds while the reply streams. None while the screen gives none.
@@ -243,17 +219,12 @@ export function MessageList(props: MessageListProps) {
   const { spacing } = useTokens();
   const list = useRef<FlatList<ChatRow>>(null);
   const retry = useStableRetry(onRetry);
-  // counted before the fold: a notice landing in the reply's box still scrolls to it
-  const scrollOnAdd = useScrollOnAdd(list, rows.length);
   const onViewableItemsChanged = useBriefSighting();
   const shown = useMemo(() => foldNotices(rows), [rows]);
   const focus = useFocusScroll(list, shown, focusMessageId, onFocused);
-  const { run: focusRun } = focus;
+  // counted before the fold: a notice landing in the reply's box still scrolls to it
   // the focus runs after the jump to the end, so a thread opened at a message stays there
-  const onContentSizeChange = useCallback(() => {
-    scrollOnAdd();
-    focusRun();
-  }, [scrollOnAdd, focusRun]);
+  const endInView = useEndInView(list, rows.length, focus.run);
   const places = useMemo(() => threadPlaces(shown), [shown]);
   const renderItem = useCallback<ListRenderItem<ChatRow>>(
     ({ item, index }) => (
@@ -277,7 +248,7 @@ export function MessageList(props: MessageListProps) {
       keyExtractor={keyOf}
       renderItem={renderItem}
       ListHeaderComponent={ThreadCaption}
-      onContentSizeChange={onContentSizeChange}
+      {...endInView}
       onScrollToIndexFailed={focus.onScrollToIndexFailed}
       onViewableItemsChanged={onViewableItemsChanged}
       viewabilityConfig={VIEWABILITY}

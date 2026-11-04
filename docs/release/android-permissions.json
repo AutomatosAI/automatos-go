@@ -133,6 +133,10 @@
     {
       "name": "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
       "why": "No background audio (D33): Auto's server voice (expo-audio) plays only with the app open and on the screen. expo-audio's library manifest declares it for its lock-screen controls service (AudioControlsService), which the app never starts; expo-video's config plugin adds it only with supportsBackgroundPlayback, which app.json sets false. Blocked in app.json."
+    },
+    {
+      "name": "android.permission.REORDER_TASKS",
+      "why": "Merged from androidx.test:core 1.7.0, a test library that reaches the release manifest; nothing in the app moves tasks. Found in the first Android build's merged manifest (docs/android-spike.md). Blocked in app.json."
     }
   ]
 }

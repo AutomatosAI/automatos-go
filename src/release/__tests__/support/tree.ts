@@ -71,6 +71,21 @@ export function stringsModules(): string[] {
   return productFiles().filter((file) => file.startsWith('src/') && file.endsWith('/strings.ts'));
 }
 
+/** A copy module Metro picks by platform: its iPhone default and its .android.ts / .ios.ts twin. */
+const PLATFORM_COPY = /\/[a-z0-9-]+-copy(\.android|\.ios)?\.ts$/;
+
+/**
+ * Every module of copy: each strings.ts, then each platform copy module (step-up's check-copy.ts and
+ * check-copy.android.ts), whose words a strings.ts builds its sentences from, so the audit reads them
+ * where they are written.
+ */
+export function copyModules(): string[] {
+  const platform = productFiles().filter(
+    (file) => file.startsWith('src/') && PLATFORM_COPY.test(file),
+  );
+  return [...stringsModules(), ...platform];
+}
+
 /** One file's text, by repo-relative path. */
 export function readRepoFile(relPath: string): string {
   return readFileSync(path.join(repoRoot(), relPath), 'utf8');

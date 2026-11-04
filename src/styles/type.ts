@@ -22,6 +22,19 @@ export const MIN_TEXT_SIZE = 11;
 /** Text props every Text primitive passes: Dynamic Type on, uncapped. */
 export const TEXT_SCALING = Object.freeze({ allowFontScaling: true });
 
+/** The most a fitted title shrinks: to 70 % of its size, then it is cut short as before. */
+export const FIT_FLOOR = 0.7;
+
+/**
+ * How far a one-line title may shrink to fit beside its header's buttons (Text's `fit`), as a
+ * fraction of its size: to FIT_FLOOR, but never below MIN_TEXT_SIZE (D38). A face at or under the
+ * minimum does not shrink. A wide face (Arcade's pixels) then shows the whole word, not a cut one.
+ */
+export function fitScale(fontSize: number | undefined): number {
+  if (fontSize === undefined || fontSize <= MIN_TEXT_SIZE) return 1;
+  return Math.max(FIT_FLOOR, MIN_TEXT_SIZE / fontSize);
+}
+
 /**
  * typography.css --leading-*: display, heading, body (body 2-6 and the thread's 16/24) and lede
  * (14/1.55).

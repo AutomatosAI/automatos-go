@@ -14,7 +14,7 @@ import {
 
 import type { FontWeight } from '../styles/fonts';
 import { useStyle } from '../styles/theme';
-import { TEXT_SCALING } from '../styles/type';
+import { TEXT_SCALING, fitScale } from '../styles/type';
 import { dressedTextFace } from './dressed';
 import {
   TEXT_TONES,
@@ -32,9 +32,15 @@ export type TextProps = Omit<NativeTextProps, 'style' | 'allowFontScaling'> & {
   readonly weight?: FontWeight;
   readonly italic?: boolean;
   readonly style?: StyleProp<TextStyle>;
+  /**
+   * One line that shrinks to fit (fitScale: never below 11 pt) before it is cut short. It sets
+   * numberOfLines, adjustsFontSizeToFit and minimumFontScale, over any the caller passes.
+   */
+  readonly fit?: boolean;
 };
 
-export function Text({ variant = 'body', level, tone, weight, italic, style, ...rest }: TextProps) {
+export function Text(props: TextProps) {
+  const { variant = 'body', level, tone, weight, italic, style, fit = false, ...rest } = props;
   const painted = useStyle();
   const role = textRole(variant, level);
   const face = useMemo(
@@ -42,5 +48,8 @@ export function Text({ variant = 'body', level, tone, weight, italic, style, ...
     [painted, role, weight, italic],
   );
   const color = painted.tokens.colours[TEXT_TONES[tone ?? defaultTone(variant)]];
-  return <NativeText {...rest} {...TEXT_SCALING} style={[face, { color }, style]} />;
+  const fitted = fit
+    ? { numberOfLines: 1, adjustsFontSizeToFit: true, minimumFontScale: fitScale(face.fontSize) }
+    : null;
+  return <NativeText {...rest} {...fitted} {...TEXT_SCALING} style={[face, { color }, style]} />;
 }

@@ -15,6 +15,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "check:bundle": "expo export --platform ios --output-dir .expo/bundle-check",
+    "check:bundle:android": "expo export --platform android --output-dir .expo/bundle-check-android",
     "check:doctor": "npx --yes expo-doctor",
     "check:core": "tsx scripts/sync-core.ts --check",
     "check:routes": "tsx scripts/check-routes.ts",

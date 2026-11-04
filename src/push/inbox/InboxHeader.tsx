@@ -28,13 +28,7 @@ export function InboxHeader({ onBack, onMarkAll, marking }: InboxHeaderProps) {
         variant="ghost"
         size="md"
       />
-      <Text
-        variant="title"
-        level={TITLE_LEVEL}
-        accessibilityRole="header"
-        numberOfLines={1}
-        style={styles.title}
-      >
+      <Text variant="title" level={TITLE_LEVEL} accessibilityRole="header" fit style={styles.title}>
         {PUSH_INBOX_COPY.title}
       </Text>
       {onMarkAll ? (

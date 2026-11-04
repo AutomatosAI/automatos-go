@@ -3,6 +3,7 @@
 // app's English. Nothing here names a cost or a credit (D8). Start's refusals say the app's own
 // words for each code, never the server's: its spend_ceiling sentence names the spend (D8).
 
+import { CHECK_COPY } from '../step-up/check-copy';
 import type { ProposedKind } from './schema';
 
 export const SUGGESTION_COPY = Object.freeze({
@@ -17,8 +18,8 @@ export const SUGGESTION_COPY = Object.freeze({
   hideLabel: (title: string) => `Hide: ${title}`,
   cardLabel: (title: string, detail: string) =>
     detail ? `Auto suggests: ${title}. ${detail}` : `Auto suggests: ${title}`,
-  /** VoiceOver's hint on Start: the Face ID step is announced (§6.12.5). */
-  startHint: 'Asks for Face ID first, then starts it.',
+  /** VoiceOver's hint on Start: the phone's check is announced (§6.12.5). */
+  startHint: `Asks for ${CHECK_COPY.first} first, then starts it.`,
   /** What Start makes, by proposed_action.kind (§6.12.3 "Start does: …"). */
   does: Object.freeze({
     board_task: 'Start does: files a ticket on the Board for it.',

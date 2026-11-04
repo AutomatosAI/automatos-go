@@ -11,7 +11,6 @@ import { useEffect, useState, type ReactNode } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -42,10 +41,9 @@ import {
   sheetOpacity,
 } from './overlay';
 import { UI_COPY } from './strings';
-import { useKeyboardHeight } from './use-keyboard-height';
+import { KEYBOARD_AVOIDING_BEHAVIOUR, useKeyboardHeight } from './use-keyboard-height';
 
 const EASING = Easing.bezier(...SHEET_EASING);
-const KEYBOARD_BEHAVIOUR = Platform.OS === 'ios' ? 'padding' : undefined;
 
 export type SheetProps = {
   readonly visible: boolean;
@@ -110,7 +108,7 @@ export function Sheet({ visible, onClose, children }: SheetProps) {
         />
       </Animated.View>
       <KeyboardAvoidingView
-        behavior={KEYBOARD_BEHAVIOUR}
+        behavior={KEYBOARD_AVOIDING_BEHAVIOUR}
         style={styles.dock}
         pointerEvents="box-none"
       >

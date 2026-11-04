@@ -7,21 +7,22 @@
 // primitives. 'Auto is thinking' is not a row here: Auto's row under the thread says it (its text
 // twin). Report this long-presses Auto's message and is each block's accessible action, as on A2's
 // thread (AutoMessage.tsx is the reference). The list scrolls to the end only when a row is added
-// (A2's shouldScrollToEnd). A message carrying the day's brief (row.brief, PRD-268 US-G06) draws
-// Play's brief card in place of its words: the card holds the same words (Auto's Read). Given a
+// (A2's shouldScrollToEnd), and keeps its end in view as the keyboard shrinks it
+// (use-end-in-view.ts). A message carrying the day's brief (row.brief, PRD-268 US-G06) draws Play's
+// brief card in place of its words: the card holds the same words (Auto's Read). Given a
 // focus message (US-G03), the list scrolls there once (use-focus-scroll.ts), as A2's thread does.
 // A suggestion Auto posted draws its card while it is open, else its message (ThreadSuggestion).
 
 import { useRouter } from 'expo-router';
 import { useCallback, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { FlatList, Pressable, View, type ListRenderItem } from 'react-native';
-import { useReducedMotion } from 'react-native-reanimated';
 
 import { PlayBriefCard } from '../../brief/BriefCard';
 import { ThreadCards } from '../../chat/cards/ThreadCards';
 import type { SettleCard } from '../../chat/cards/model';
 import { TicketCards } from '../../chat/cards/TaskCard';
 import { TurnNotice } from '../../chat/components/TurnNotice';
+import { useEndInView } from '../../chat/components/use-end-in-view';
 import { useFocusScroll } from '../../chat/components/use-focus-scroll';
 import { Markdown } from '../../chat/markdown/Markdown';
 import {
@@ -30,7 +31,7 @@ import {
   type ReportAccessibility,
   type ThreadReport,
 } from '../../chat/report/report';
-import { shouldScrollToEnd, type AutoRow, type ChatRow } from '../../chat/view-model';
+import type { AutoRow, ChatRow } from '../../chat/view-model';
 import type { DeliverableRef } from '../../core/web/lib/chat/deliverables';
 import type { WebLinkTarget } from '../../navigation/web-links';
 import { routes } from '../../navigation/routes';
@@ -176,22 +177,6 @@ function PlayRow({ row, caretKey, refs, ...shared }: RowProps): ReactNode {
   }
 }
 
-/** Marks a scroll when a row is added; the next content size change carries it out. */
-function useScrollOnAdd(list: { readonly current: FlatList<ChatRow> | null }, count: number) {
-  const animated = !useReducedMotion();
-  const previous = useRef(count);
-  const pending = useRef(false);
-  useLayoutEffect(() => {
-    if (shouldScrollToEnd(previous.current, count)) pending.current = true;
-    previous.current = count;
-  }, [count]);
-  return useCallback(() => {
-    if (!pending.current) return;
-    pending.current = false;
-    list.current?.scrollToEnd({ animated });
-  }, [list, animated]);
-}
-
 const keyOf = (row: ChatRow) => row.key;
 /** Auto's row under the thread says he is thinking: A2's thinking pill is not drawn here. */
 const isDrawn = (row: ChatRow) => row.type !== 'working';
@@ -201,14 +186,9 @@ export function PlayThread(props: PlayThreadProps) {
   const { spacing } = useTokens();
   const list = useRef<FlatList<ChatRow>>(null);
   const drawn = useMemo(() => rows.filter(isDrawn), [rows]);
-  const scrollOnAdd = useScrollOnAdd(list, drawn.length);
   const focus = useFocusScroll(list, drawn, focusMessageId, onFocused);
-  const { run: focusRun } = focus;
   // the focus runs after the jump to the end, so a thread opened at a message stays there
-  const onContentSizeChange = useCallback(() => {
-    scrollOnAdd();
-    focusRun();
-  }, [scrollOnAdd, focusRun]);
+  const endInView = useEndInView(list, drawn.length, focus.run);
   const loose = reports.get(LOOSE_REPORTS) ?? NO_REPORTS;
   const { onLink, onRetry, onCard, report } = shared;
   const renderItem = useCallback<ListRenderItem<ChatRow>>(
@@ -235,7 +215,7 @@ export function PlayThread(props: PlayThreadProps) {
       renderItem={renderItem}
       ListHeaderComponent={PlayThreadCaption}
       ListFooterComponent={loose.length > 0 ? <Reports refs={loose} /> : null}
-      onContentSizeChange={onContentSizeChange}
+      {...endInView}
       onScrollToIndexFailed={focus.onScrollToIndexFailed}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"

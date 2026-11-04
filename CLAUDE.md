@@ -7,7 +7,7 @@ automatos-ai PRD-266.
 
 ## The rule
 
-CI is the gate. Nothing runs on this machine except pure-Node checks: npm ci --ignore-scripts, npm run typecheck, npm run lint, npx vitest run, npm run check:bundle, npx expo-doctor, npx expo config --type introspect, npm run check:core, npm run check:routes. Never expo start, expo run:*, expo prebuild, eas *, a simulator, an emulator, Metro's dev server or any server; device checks are Gerard's.
+CI is the gate. Nothing runs on this machine except pure-Node checks: npm ci --ignore-scripts, npm run typecheck, npm run lint, npx vitest run, npm run check:bundle, npm run check:bundle:android, npx expo-doctor, npx expo config --type introspect, npm run check:core, npm run check:routes. Never expo start, expo run:*, expo prebuild, eas *, a simulator, an emulator, Metro's dev server or any server; device checks are Gerard's.
 
 ## Stack
 
@@ -25,6 +25,7 @@ Scaffold lifted from the academy app's TestFlight tree.
 | `npm run lint`                             | `eslint .` — the §4.11 guards in `eslint.config.js` (proved by `scripts/__tests__/eslint-rules.test.ts`) |
 | `npx vitest run` / `npm run test:coverage` | tests; coverage gate 80/80/80, branches 70 on `src/core/*.ts`, `src/api/**`, `src/auth/**`               |
 | `npm run check:bundle`                     | `expo export --platform ios` into `.expo/bundle-check` — compiles the JS bundle, no native build         |
+| `npm run check:bundle:android`             | the same for Android, into `.expo/bundle-check-android` (each `*.android.ts` twin compiles there only)    |
 | `npx expo-doctor`                          | Expo's project checks (CI job `expo-doctor · iOS bundle`)                                                |
 | `npx expo config --type introspect`        | evaluates every config plugin without writing ios/ or android/                                           |
 | `npm run check:core`                       | `src/core/web`, `src/core/frozen` and `src/core/route-manifest.json` match `core.lock.json` / the manifest (no hand edits, no drift) |
@@ -109,7 +110,7 @@ src/app-state/       the shell: the signed-in gate (gate.ts decides), the sessio
 src/navigation/      every app route (routes.ts) and web link → app route (web-links.ts); kits link only through them
 scripts/             release-env guard, sync-core, check-routes
 .eas/workflows/      EAS Workflows: testflight.yml (push to main), pr-check.yml (PRs)
-plugins/             local config plugins: pinned background modes, Sentry upload guard (docs/native-modules.md)
+plugins/             local config plugins: pinned background modes, Sentry upload guard, Gradle memory (docs/native-modules.md)
 ```
 
 Code rules (PRD-001 §4.11): HTTP only through `src/api/`; zod at every
@@ -117,7 +118,8 @@ boundary, unknown fields ignored; files 200–400 lines (never over 800),
 functions < 50 lines, components < 150; pure logic outside React with tests in
 `__tests__/` beside the module; immutable updates; no hardcoded URLs/keys
 (EAS env or discovery); tokens only, never colour literals; copy in one
-`strings.ts` per feature.
+`strings.ts` per feature (words that differ by platform in a `*-copy.ts` / `*-copy.android.ts`
+pair beside it, as `src/step-up/check-copy.ts`; the store-copy audit reads both).
 
 ## Traps
 
@@ -192,6 +194,12 @@ functions < 50 lines, components < 150; pure logic outside React with tests in
   expo-speech-recognition has just activated when a press barges in, and stops the capture. The
   server speaker releases the session itself (mixing mode, then `setIsAudioActiveAsync(false)`)
   when a run ends, except at a barge-in (`handOver`), where the recognizer takes it at once.
+- **The keyboard on Android.** React Native 0.81 draws edge to edge, so Android never resizes the
+  window for the keyboard: every `KeyboardAvoidingView` takes `KEYBOARD_AVOIDING_BEHAVIOUR`
+  ('padding', both platforms), and a message box inside one never pads by the raw home-indicator
+  inset (the keyboard covers it, leaving a gap): it pads through `useKeyboardSafeBottom`, or keeps the
+  inset outside the lift as `ChatFrame` does. Both are proved by `src/ui/__tests__/sheet-keyboard.test.ts`;
+  a new style's composer follows them.
 - **No `.env.example`.** The workspace's secrets hook blocks Claude Code from writing
   `*.env.*` files, so the repo has none (lead decision, 20 Oct): every `EXPO_PUBLIC_*` name is
   listed under Environment above and in README.md. A new name goes in all three places

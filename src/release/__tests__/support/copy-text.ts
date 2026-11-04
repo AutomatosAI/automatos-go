@@ -7,7 +7,7 @@
 
 import ts from 'typescript';
 
-import { productFiles, readRepoFile, stringsModules } from './tree';
+import { copyModules, productFiles, readRepoFile } from './tree';
 
 export type CopyText = Readonly<{ file: string; text: string }>;
 
@@ -51,10 +51,10 @@ export function copyTextsOf(fileName: string, source: string): string[] {
   return found;
 }
 
-/** The files the audit reads: every strings module, then every product .tsx. */
+/** The files the audit reads: every copy module, then every product .tsx. */
 export function copyFiles(): string[] {
   const tsx = productFiles().filter((file) => file.endsWith('.tsx'));
-  return [...stringsModules(), ...tsx];
+  return [...copyModules(), ...tsx];
 }
 
 /** Every piece of copy in the product tree, with the file it is in. */

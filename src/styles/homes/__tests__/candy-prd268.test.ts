@@ -191,7 +191,8 @@ describe('how the home wires them', () => {
     expect(codeOf(CHAT)).toMatch(/useThreadFocus\(state\.chatId, route\.focus\)/);
     expect(codeOf(CHAT)).toMatch(/settle\(messageId\);\s*scrolled\(messageId\);/);
     expect(codeOf(VIEW_FILE)).toMatch(/useFocusScroll\(list, entries, focusMessageId, onFocused\)/);
-    expect(codeOf(VIEW_FILE)).toMatch(/scrollOnAdd\(\);\s*focusRun\(\);/);
+    // the focus after the jump to the end: use-end-in-view.ts runs it last (end-in-view.test.ts)
+    expect(codeOf(VIEW_FILE)).toMatch(/useEndInView\(list, entries\.length, focus\.run\)/);
     expect(codeOf(VIEW_FILE)).toMatch(/onScrollToIndexFailed=\{focus\.onScrollToIndexFailed\}/);
     expect(codeOf(HOME)).toMatch(/const routeFocus = useRouteFocus\(focusMessageId\);/);
     expect(codeOf(HOME)).toMatch(/useCandyChat\(home, routeFocus\)/);

@@ -1,18 +1,18 @@
 // A chat screen's frame: the header (it runs up under the status bar itself), what sits above the
-// thread (home's needs strip), then the thread and the composer, lifted over the keyboard on iOS as
+// thread (home's needs strip), then the thread and the composer, lifted over the keyboard as
 // the foundation's Sheet is. The home indicator's inset sits below the keyboard's reach in the
 // composer's own ground, so the keyboard covers it rather than pushing it up. The lift is offset by
 // the signed-in stack's distance from the window's top, so a bar drawn above the stack (the
 // unencrypted-network note) never leaves the composer behind the keyboard.
 
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, StyleSheet, View } from 'react-native';
 import { useSafeAreaFrame, useSafeAreaInsets, type Edge } from 'react-native-safe-area-context';
 
 import { useTokens } from '../../styles/theme';
 import { Screen } from '../../ui';
+import { KEYBOARD_AVOIDING_BEHAVIOUR } from '../../ui/use-keyboard-height';
 
-const KEYBOARD_BEHAVIOUR = Platform.OS === 'ios' ? 'padding' : undefined;
 const SIDE_EDGES: readonly Edge[] = ['left', 'right'];
 
 export type ChatFrameProps = {
@@ -36,7 +36,7 @@ export function ChatFrame({ header, above, children, composer }: ChatFrameProps)
       {header}
       {above}
       <KeyboardAvoidingView
-        behavior={KEYBOARD_BEHAVIOUR}
+        behavior={KEYBOARD_AVOIDING_BEHAVIOUR}
         keyboardVerticalOffset={stackTop}
         style={styles.fill}
       >

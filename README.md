@@ -53,6 +53,7 @@ npm run lint              # eslint .
 npm test                  # vitest run
 npm run test:coverage     # vitest with the coverage gate (src/core, src/api, src/auth)
 npm run check:bundle      # expo export --platform ios: compiles the JS bundle, no native build
+npm run check:bundle:android  # the same for Android (each *.android.ts twin compiles there only)
 npm run check:doctor      # expo-doctor
 npm run format:check      # prettier --check .
 ```

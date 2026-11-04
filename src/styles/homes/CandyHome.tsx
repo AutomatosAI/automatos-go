@@ -29,7 +29,7 @@
 // sits under the stage's state pill.
 
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, StyleSheet, View } from 'react-native';
 import { useSafeAreaFrame } from 'react-native-safe-area-context';
 
 import { useHudApproval } from '../../approvals/use-hud-approval';
@@ -42,6 +42,7 @@ import { useMessageReport } from '../../chat/report/use-message-report';
 import { PinnedSuggestion } from '../../suggestions/PinnedSuggestion';
 import { useIdeas } from '../../suggestions/use-ideas';
 import { ReportSheet, Screen } from '../../ui';
+import { KEYBOARD_AVOIDING_BEHAVIOUR } from '../../ui/use-keyboard-height';
 import { useCandyHomeVoice, type CandyHomeVoice } from '../../voice/home/use-candy-home-voice';
 import { portraitState } from '../arcade/sprite/turn-state';
 import { stageOf, type Stage } from '../candy/auto/stage';
@@ -74,7 +75,6 @@ import type { HomeThread } from './use-home-thread';
 
 /** The home draws its own safe area: the band runs under the status bar, the tab bar over the foot. */
 const SIDES = Object.freeze(['left', 'right'] as const);
-const KEYBOARD_BEHAVIOUR = Platform.OS === 'ios' ? 'padding' : undefined;
 /** The pinned suggestion lines up with the message box: its 14 in from the sides (composer.ts). */
 const COMPOSER_INSET: SpaceName = 'space6';
 
@@ -166,7 +166,7 @@ function ChatPane(props: ChatPaneProps) {
       <ChatStage stage={stage} title={title} onBack={onBack} menu={menu} approval={approval} />
       <DiscussionBar state={home.discussion} messages={state.messages} />
       <KeyboardAvoidingView
-        behavior={KEYBOARD_BEHAVIOUR}
+        behavior={KEYBOARD_AVOIDING_BEHAVIOUR}
         keyboardVerticalOffset={stackTop}
         style={styles.fill}
       >

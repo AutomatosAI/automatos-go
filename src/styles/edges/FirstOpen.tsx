@@ -1,6 +1,6 @@
 // First open (PRD-001 §4.7 Edges, Ember 06, US-017f): the home before the first message, Auto at
 // hello. FirstOpenHello is the words; FirstOpen the whole screen with the home's composer under them,
-// lifted over the keyboard on iOS as A2's ChatFrame lifts its own. US-016k mounts it. Like every
+// lifted over the keyboard as A2's ChatFrame lifts its own. US-016k mounts it. Like every
 // thread, it opens with the AI label's one muted caption (D73): PlayThreadCaption above the hello,
 // HUD's in its core's transcript.
 //
@@ -19,11 +19,12 @@
 //           the kit's empty-thread line (15/1.5, the quiet text); no chips (US-023l)
 
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaFrame } from 'react-native-safe-area-context';
 
 import { BrandMark } from '../../connect/components/BrandMark';
 import { Screen, Text } from '../../ui';
+import { KEYBOARD_AVOIDING_BEHAVIOUR } from '../../ui/use-keyboard-height';
 import { useDress } from '../dress/use-dress';
 import { HudCore, type HudCoreProps } from '../hud/core/HudCore';
 import { EMPTY_TURN } from '../hud/core/model';
@@ -40,7 +41,6 @@ import { STARTERS } from './edges';
 import { EDGE_METRICS } from './metrics';
 import { EdgeBrand, useEdgePaint } from './parts';
 
-const KEYBOARD_BEHAVIOUR = Platform.OS === 'ios' ? 'padding' : undefined;
 const PRESSED_OPACITY = 0.7;
 const { starter } = EDGE_METRICS;
 const copy = EDGE_COPY.firstOpen;
@@ -199,7 +199,7 @@ export function FirstOpen({ onStarter, composer, hud }: FirstOpenProps) {
     <Screen ground="first-open" autoState="hello">
       <EdgeBrand />
       <KeyboardAvoidingView
-        behavior={KEYBOARD_BEHAVIOUR}
+        behavior={KEYBOARD_AVOIDING_BEHAVIOUR}
         keyboardVerticalOffset={stackTop}
         style={styles.fill}
       >
