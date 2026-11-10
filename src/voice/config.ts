@@ -113,3 +113,6 @@ export const FIRST_UNIT_WHOLE_MAX_CHARS = 80;
 
 /** After a lead, at least this much of the sentence is left (voice-tts's MIN_SENTENCE_CHARS). */
 export const FIRST_UNIT_MIN_REST_CHARS = 16;
+
+/** Voice latency A-5: how many voice turns' timings are kept, in memory, for Settings → Voice. */
+export const TIMING_KEEP = 20;

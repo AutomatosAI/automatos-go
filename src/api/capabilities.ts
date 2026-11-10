@@ -89,3 +89,8 @@ export function canSpokenUnitEnds(discovery: GateInput): boolean {
 export function canFirstClause(discovery: GateInput): boolean {
   return has(discovery, 'tts_first_clause');
 }
+
+/** A voice turn's chat and speech requests carry its reference (turnRef) for the server's timing. */
+export function canTurnTiming(discovery: GateInput): boolean {
+  return has(discovery, 'turn_timing');
+}

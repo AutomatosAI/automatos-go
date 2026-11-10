@@ -26,6 +26,8 @@
 //   voice out (voice-out.ts) speaks each sentence through the server, the phone's voice taking over
 //   the rest of a turn the server fails. Without tts the speech carries none: as before.
 //   Nothing asks a permission at mount: only press() does (KV5).
+//   Each turn's moments are marked on the app's voice timing (timing/timing.ts, voice latency A-5):
+//   in memory, for Settings → Voice's Timing block on development and TestFlight builds.
 //   Leaving the screen goes through the interruption policy (use-interruptions.ts, US-019h), and the
 //   screen stays on while the mic is open or a reply is under way (keep-awake.ts, KV12).
 
@@ -47,6 +49,7 @@ import { useServerVoices } from '../server/use-server-voices';
 import { spokenLanguage, type SpokenLanguage } from '../language/language-voice';
 import { usePhoneLocale } from '../language/use-speak-language';
 import { voiceOut } from '../speech/voice-out';
+import { voiceTiming } from '../timing/timing';
 import {
   createQuickAsk,
   type QuickAsk,
@@ -146,6 +149,7 @@ function useEngine(context: { readonly current: QuickAskContext }, scope: QuickA
         context: () => context.current,
         now: Date.now,
         later,
+        timing: voiceTiming,
       }),
     [context],
   );

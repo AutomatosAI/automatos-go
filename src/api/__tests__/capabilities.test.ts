@@ -14,6 +14,7 @@ import {
   canSpokenMode,
   canSpokenUnitEnds,
   canSuggestions,
+  canTurnTiming,
   canVoiceLive,
   type GateInput,
 } from '../capabilities';
@@ -39,6 +40,7 @@ const GATES: readonly [Capability, (discovery: GateInput) => boolean][] = [
   ['approval_view', canApprovalView],
   ['spoken_unit_ends', canSpokenUnitEnds],
   ['tts_first_clause', canFirstClause],
+  ['turn_timing', canTurnTiming],
 ];
 
 describe('capability gates', () => {

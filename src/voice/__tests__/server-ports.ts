@@ -8,6 +8,7 @@ import type {
   PlayHandlers,
   ServerSpeakerPorts,
   ServerSpeech,
+  ServerSpeechMark,
 } from '../server/server-speaker-ports';
 
 export type HeldRequest = {
@@ -34,6 +35,12 @@ export const SERVER_SPEECH: ServerSpeech = Object.freeze({
   client: { binary: vi.fn() },
 });
 
+/** A sentence of a quick-ask reply: its speech carries the turn (voice latency A-5). */
+export const SERVER_SPEECH_TURN: ServerSpeech = Object.freeze({
+  ...SERVER_SPEECH,
+  turn: Object.freeze({ ref: 'vt-test01-1', send: true }),
+});
+
 const MP3 = new Uint8Array([0x49, 0x44, 0x33]);
 
 export function fakeServerPorts() {
@@ -51,7 +58,12 @@ export function fakeServerPorts() {
     session.push('release');
   });
   const writeFails = { next: false };
+  /** Every mark, as '<ref> <mark>', in order. */
+  const marks: string[] = [];
   const ports: ServerSpeakerPorts = {
+    mark: (ref: string, mark: ServerSpeechMark) => {
+      marks.push(`${ref} ${mark}`);
+    },
     fetchSpeech: (server, text, signal) =>
       new Promise<Uint8Array>((resolve, reject) => {
         const request: HeldRequest = {
@@ -130,6 +142,7 @@ export function fakeServerPorts() {
     release,
     session,
     writeFails,
+    marks,
     fire,
     inFlight,
     playerOf,

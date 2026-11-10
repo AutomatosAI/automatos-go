@@ -34,6 +34,10 @@ test reads the update job's `environment` field instead.
   never get certificates or EAS access.
 - **Export compliance is answered in the build.** `ITSAppUsesNonExemptEncryption` is `false` in
   `app.json`, so App Store Connect does not hold each build waiting for the encryption question.
+- **TestFlight builds show the Timing block; store builds do not.** Settings → Voice ends with a
+  Timing block (how long the last voice reply took, measured on the phone, with Share timings) in
+  a development build and on the `testflight` update channel only
+  (`src/voice/timing/use-timing.ts`). A `production`-profile build never mounts it.
 - **Android testers get no over-the-air updates.** Both EAS workflows publish and build iOS only
   (`platform: ios`). The `preview` profile's channel `preview` has no publisher. An Android tester
   sees a change only in a new APK: `eas build --platform android --profile preview`, started by a

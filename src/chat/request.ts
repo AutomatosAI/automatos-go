@@ -9,6 +9,10 @@
 // locale (28 Oct 2026, automatos-ai feat/chat-locale): the BCP 47 tag of the language the person
 // speaks, so Auto answers in that variant (pt-BR, not Portugal's). Optional and ignored by a server
 // that does not know it yet; a tag that is not BCP 47's shape is left out, never sent or thrown on.
+// turnRef (voice latency A-5): a voice turn's reference for the server's timing lines (a send time
+// and a count of voice turns; voice/timing/voice-timing.ts). Optional, ignored by a server that
+// does not know it; one that does not fit the server's pattern is left out and the request is still
+// built: a timing aid never fails a send.
 
 import { z } from 'zod';
 
@@ -28,6 +32,9 @@ const LOCALE_MAX_CHARS = 35;
 const LOCALE_SHAPE = /^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$/;
 
 export const LocaleSchema = z.string().max(LOCALE_MAX_CHARS).regex(LOCALE_SHAPE);
+
+/** The server's own pattern for a turn reference (core/monitoring/turn_ref.py REF_PATTERN). */
+const TurnRefSchema = z.string().regex(/^[A-Za-z0-9_-]{6,40}$/);
 
 const TextPartSchema = z.object({ type: z.literal('text'), text: z.string().min(1) }).strict();
 
@@ -61,6 +68,7 @@ export const ChatRequestSchema = z
       .strict(),
     spokenMode: z.literal(true).optional(),
     locale: LocaleSchema.optional(),
+    turnRef: TurnRefSchema.optional(),
   })
   .strict();
 
@@ -87,6 +95,8 @@ export type ChatRequestInput = {
   readonly spokenMode?: boolean;
   /** The language the person speaks (BCP 47, 'pt-BR'); left out when absent or not a tag. */
   readonly locale?: string;
+  /** A voice turn's reference for the server's timing; left out when absent or not one. */
+  readonly turnRef?: string | null;
 };
 
 function issueSummary(error: z.ZodError): string {
@@ -107,6 +117,19 @@ export function localeTag(raw: string | null | undefined): string | null {
   return LocaleSchema.safeParse(tag).success ? tag : null;
 }
 
+/** The turn reference as sent; null when it is absent or does not fit the server's pattern. */
+export function turnRefOf(raw: string | null | undefined): string | null {
+  const parsed = TurnRefSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
+}
+
+/** The optional values that are left out, never thrown on, when they do not fit. */
+function optionalTags(input: Pick<ChatRequestInput, 'locale' | 'turnRef'>) {
+  const locale = localeTag(input.locale);
+  const turnRef = turnRefOf(input.turnRef);
+  return { ...(locale === null ? {} : { locale }), ...(turnRef === null ? {} : { turnRef }) };
+}
+
 /**
  * The ChatRequest body: the text trimmed and left out when blank (a message of files only), the
  * route the web's /chat unless the caller names another. Input the composer should never produce
@@ -115,7 +138,6 @@ export function localeTag(raw: string | null | undefined): string | null {
  */
 export function buildChatRequest(input: ChatRequestInput): ChatRequestBody {
   const selected = input.context?.selected;
-  const locale = localeTag(input.locale);
   const result = ChatRequestSchema.safeParse({
     ...(input.chatId ? { id: input.chatId } : {}),
     message: messageOf(input.text, input.files ?? []),
@@ -126,7 +148,7 @@ export function buildChatRequest(input: ChatRequestInput): ChatRequestBody {
       ...(selected ? { selected: { type: selected.type, id: selected.id } } : {}),
     },
     ...(input.spokenMode === true ? { spokenMode: true } : {}),
-    ...(locale === null ? {} : { locale }),
+    ...optionalTags(input),
   });
   if (!result.success) {
     throw new TypeError(`Not a chat request the server takes (${issueSummary(result.error)})`);

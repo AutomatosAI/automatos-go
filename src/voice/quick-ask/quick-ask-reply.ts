@@ -12,25 +12,32 @@
 //   while the speaker is idle ends Auto's turn at once (no speak_done would come). Each send is a new
 //   turn for the voice out (newTurn): a turn whose server voice failed was spoken on the phone, and
 //   this one tries the server again.
+//   Timing (voice latency A-5), only with a timing port: each send begins a turn there and keeps
+//   its reference until the turn is over (the run's end, STOP, the next send); the reply's first
+//   text, its first sentence and the run's first sound are marked by that reference. The reply's
+//   own sentences carry it to the server voice (withTurn); the AI notice never does.
 
 import { canSend, type ThreadState } from '../../chat/controller/thread';
 import { claim, release } from '../audio/audio-owner';
 import { noticeFor, queueWithNotice } from '../notice/ai-notice';
 import type { SpeakerEvent } from '../speech/speaker-core';
-import { dispatch, get, set, show, type Engine } from './quick-ask-store';
+import { canTurnTiming } from '../../api/capabilities';
+import { closeTurn, dispatch, get, set, show, type Engine } from './quick-ask-store';
 import { createReplyFeed, type FeedStep } from './reply-feed';
 import { awaitingTurn, quickAskReply, trackTurn, type QuickAskReply } from './reply-text';
-import { quickAskMessage, replyFeedOptionsFor } from './spoken-mode';
+import { quickAskMessage, replyFeedOptionsFor, withTurn } from './spoken-mode';
 
 export function send(engine: Engine, text: string): void {
   const { thread, discovery, speech } = engine.deps.context();
   if (!canSend(thread.state)) return set(engine, { pending: text });
+  closeTurn(engine);
+  const turnRef = engine.deps.timing?.begin() ?? null;
   const feed = createReplyFeed(replyFeedOptionsFor(discovery, speech));
-  set(engine, { tracking: awaitingTurn(thread.state), feed, pending: null });
+  set(engine, { tracking: awaitingTurn(thread.state), feed, pending: null, turnRef });
   // The last turn's reply no longer describes the screen ('See it in the chat', its agent).
   show(engine, { reply: null });
   engine.deps.speaker.newTurn();
-  thread.send(quickAskMessage(text, discovery, speech.language));
+  thread.send(quickAskMessage(text, discovery, speech.language, turnRef));
   dispatch(engine, { type: 'sent', notice: noticeFor(get(engine).session) });
 }
 
@@ -43,8 +50,16 @@ function speak(engine: Engine, sentences: readonly string[], reply: QuickAskRepl
   const agent = reply.agentName === undefined ? null : { name: reply.agentName };
   const queued = queueWithNotice(get(engine).session, sentences, agent);
   set(engine, { owner: claimed.owner, session: queued.session });
-  const { speech } = engine.deps.context();
-  queued.speak.forEach((sentence) => engine.deps.speaker.speak(sentence, speech));
+  const { speech, discovery } = engine.deps.context();
+  const { turnRef } = get(engine);
+  engine.deps.timing?.mark(turnRef, 'sentence');
+  // The notice, when it leads: it is not the reply's, so it carries no turn.
+  const lead = queued.speak.length - sentences.length;
+  if (lead > 0) engine.deps.timing?.note(turnRef, { notice: true });
+  const own = withTurn(speech, turnRef, canTurnTiming(discovery));
+  queued.speak.forEach((sentence, index) =>
+    engine.deps.speaker.speak(sentence, index < lead ? speech : own),
+  );
 }
 
 function applyStep(engine: Engine, step: FeedStep, reply: QuickAskReply): void {
@@ -55,6 +70,8 @@ function applyStep(engine: Engine, step: FeedStep, reply: QuickAskReply): void {
   set(engine, { tracking: null, feed: null });
   // Finished with nothing left to say and the speaker idle: Auto is done (no speak_done will come).
   if (!step.silence && get(engine).owner !== 'speaker') dispatch(engine, { type: 'speak_done' });
+  // Nothing is being spoken: the turn is over. Otherwise the speaker's last event closes it.
+  if (get(engine).owner !== 'speaker') closeTurn(engine);
 }
 
 export function onThread(engine: Engine, state: ThreadState): void {
@@ -66,11 +83,17 @@ export function onThread(engine: Engine, state: ThreadState): void {
   const reply = quickAskReply(state, next);
   if (reply === null) return;
   show(engine, { reply });
+  if (reply.text !== '') engine.deps.timing?.mark(get(engine).turnRef, 'reply_text');
   applyStep(engine, feed.next(reply), reply);
 }
 
 export function onSpeaker(engine: Engine, event: SpeakerEvent): void {
-  if (event.type === 'speak_start') return dispatch(engine, { type: 'speak_start' });
+  if (event.type === 'speak_start') {
+    engine.deps.timing?.mark(get(engine).turnRef, 'audio');
+    return dispatch(engine, { type: 'speak_start' });
+  }
   set(engine, { owner: release(get(engine).owner, 'speaker') });
   if (event.type === 'speak_done') dispatch(engine, { type: 'speak_done' });
+  // The run is over and the reply ended before it: the turn is over.
+  if (get(engine).tracking === null) closeTurn(engine);
 }

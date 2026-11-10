@@ -53,6 +53,12 @@ export const CAPABILITIES = [
    * its own POST /api/voice/speech request.
    */
   'tts_first_clause',
+  /**
+   * Voice latency A-5: the server times its turns, so quick-ask's chat request and the speech
+   * requests for that reply's own sentences carry turnRef (a send time and a count of voice turns,
+   * no person or device) for the server to line its own timing lines up by.
+   */
+  'turn_timing',
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];

@@ -36,6 +36,11 @@ export type SpeechAsk = {
   readonly text: string;
   readonly voice: string | null;
   readonly speed: number | null;
+  /**
+   * The quick-ask turn's timing reference (voice latency A-5): only on the reply's own sentences,
+   * only to a server that lists turn_timing. Left out otherwise: the key is never sent undefined.
+   */
+  readonly turnRef?: string;
 };
 
 export type SpeechFailureKind =

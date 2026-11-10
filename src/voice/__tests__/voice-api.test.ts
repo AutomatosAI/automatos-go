@@ -126,6 +126,29 @@ describe('fetchSpeech', () => {
     expect(sent?.headers.Authorization).toBe(`Bearer ${TOKEN}`);
   });
 
+  it('carries turnRef when given, and has no turnRef key at all when not (A-5)', async () => {
+    const audio = () => bytesReply(200, MP3, { 'Content-Type': 'audio/mpeg' });
+    const timed = clientFor(audio);
+    await fetchSpeech(
+      timed.client,
+      { ...ASK, turnRef: 'vt-mhq2k1ab-3' },
+      new AbortController().signal,
+    );
+    expect(JSON.parse(String(timed.transport.calls[0]?.body))).toEqual({
+      text: ASK.text,
+      voice: 'af_heart',
+      speed: 1.1,
+      turnRef: 'vt-mhq2k1ab-3',
+    });
+    const plain = clientFor(audio);
+    await fetchSpeech(plain.client, ASK, new AbortController().signal);
+    expect(Object.keys(JSON.parse(String(plain.transport.calls[0]?.body)))).toEqual([
+      'text',
+      'voice',
+      'speed',
+    ]);
+  });
+
   it.each([
     [503, 'tts_off'],
     [503, 'tts_unavailable'],

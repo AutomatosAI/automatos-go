@@ -10,7 +10,12 @@ import type { GateInput } from '../../api/capabilities';
 import { CAPABILITIES, type Capability } from '../../api/discovery';
 import type { ThreadSendInput } from '../../chat/controller/use-thread';
 import { ChatRequestSchema, buildChatRequest } from '../../chat/request';
-import { quickAskMessage, replyFeedOptionsFor, spokenModeFor } from '../quick-ask/spoken-mode';
+import {
+  quickAskMessage,
+  replyFeedOptionsFor,
+  spokenModeFor,
+  withTurn,
+} from '../quick-ask/spoken-mode';
 import type { ServerSpeech } from '../server/server-speaker-ports';
 import { ask, harness } from './quick-ask-harness';
 import { frames, wire } from './thread-states';
@@ -25,6 +30,9 @@ function withCapabilities(capabilities: readonly Capability[]): GateInput {
 
 const SPOKEN = withCapabilities(['spoken_mode']);
 const PLAIN = withCapabilities(CAPABILITIES.filter((capability) => capability !== 'spoken_mode'));
+const PLAIN_UNTIMED = withCapabilities(
+  CAPABILITIES.filter((capability) => capability !== 'turn_timing'),
+);
 
 /** As the hook's send builds the body: the message spread, the thread's chat id added. */
 function sent(message: ThreadSendInput, chatId: string | null = CHAT_ID) {
@@ -245,5 +253,50 @@ describe('quick-ask cuts the reply the way the server lists', () => {
         expect(spoken(h)).toEqual([rest]);
       }
     });
+  });
+});
+
+describe('the turn reference (voice latency A-5)', () => {
+  const REF = 'vt-mhq2k1ab-3';
+  const TIMED = withCapabilities(['spoken_mode', 'turn_timing']);
+  const SERVER: ServerSpeech = {
+    voice: 'af_heart',
+    speed: 1,
+    client: { binary: async () => ({}) as never },
+  };
+
+  it('goes with the message only when the server lists turn_timing', () => {
+    expect(quickAskMessage(HEARD, TIMED, BRAZIL, REF)).toEqual({
+      text: HEARD,
+      spokenMode: true,
+      locale: BRAZIL,
+      turnRef: REF,
+    });
+    expect(sent(quickAskMessage(HEARD, TIMED, BRAZIL, REF))).toHaveProperty('turnRef', REF);
+    for (const discovery of [SPOKEN, PLAIN_UNTIMED, null, undefined]) {
+      expect(quickAskMessage(HEARD, discovery, BRAZIL, REF)).not.toHaveProperty('turnRef');
+    }
+  });
+
+  it('is left out when there is none, whatever the server lists', () => {
+    expect(quickAskMessage(HEARD, TIMED, BRAZIL)).not.toHaveProperty('turnRef');
+    expect(quickAskMessage(HEARD, TIMED, BRAZIL, null)).not.toHaveProperty('turnRef');
+  });
+
+  it('withTurn hands back the same speech for no turn or no server voice', () => {
+    const phone = { language: 'en-GB' };
+    const server = { language: 'en-GB', server: SERVER };
+    expect(withTurn(phone, REF, true)).toBe(phone);
+    expect(withTurn(server, null, true)).toBe(server);
+  });
+
+  it('withTurn puts the turn on a new speech, and says whether it is sent', () => {
+    const speech = Object.freeze({ language: 'en-GB', rate: 1.1, server: Object.freeze(SERVER) });
+    const timed = withTurn(speech, REF, true);
+    expect(timed).not.toBe(speech);
+    expect(timed).toEqual({ ...speech, server: { ...SERVER, turn: { ref: REF, send: true } } });
+    expect(withTurn(speech, REF, false).server?.turn).toEqual({ ref: REF, send: false });
+    expect(speech.server).not.toHaveProperty('turn');
+    expect(Object.isFrozen(timed)).toBe(true);
   });
 });

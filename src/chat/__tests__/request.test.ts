@@ -6,6 +6,7 @@ import {
   ChatRequestSchema,
   buildChatRequest,
   localeTag,
+  turnRefOf,
   type ChatFile,
 } from '../request';
 
@@ -152,5 +153,37 @@ describe('the locale (BCP 47)', () => {
     const body = buildChatRequest({ text: 'hi' });
     expect(ChatRequestSchema.safeParse({ ...body, locale: 'en-GB' }).success).toBe(true);
     expect(ChatRequestSchema.safeParse({ ...body, locale: 'not a tag' }).success).toBe(false);
+  });
+});
+
+describe('the turn reference (voice latency A-5)', () => {
+  const REF = 'vt-mhq2k1ab-3';
+
+  it('goes out as given when it fits', () => {
+    expect(buildChatRequest({ text: 'hi', turnRef: REF })).toHaveProperty('turnRef', REF);
+    expect(turnRefOf(REF)).toBe(REF);
+  });
+
+  it('absent or null leaves the key out', () => {
+    expect(buildChatRequest({ text: 'hi' })).not.toHaveProperty('turnRef');
+    expect(buildChatRequest({ text: 'hi', turnRef: null })).not.toHaveProperty('turnRef');
+    expect(JSON.stringify(buildChatRequest({ text: 'hi', turnRef: null }))).toBe(
+      JSON.stringify(buildChatRequest({ text: 'hi' })),
+    );
+  });
+
+  it('a bad one is left out and the request is still built: a timing aid never fails a send', () => {
+    for (const turnRef of ['vt-1a.b-3', 'x'.repeat(41), 'short', '', 'vt 1a-3']) {
+      expect(turnRefOf(turnRef)).toBeNull();
+      const body = buildChatRequest({ text: 'hi', spokenMode: true, turnRef });
+      expect(body).not.toHaveProperty('turnRef');
+      expect(body).toHaveProperty('spokenMode', true);
+    }
+  });
+
+  it('is a field the strict schema knows, and only in the pattern', () => {
+    const body = buildChatRequest({ text: 'hi' });
+    expect(ChatRequestSchema.safeParse({ ...body, turnRef: REF }).success).toBe(true);
+    expect(ChatRequestSchema.safeParse({ ...body, turnRef: 'vt-1a.b-3' }).success).toBe(false);
   });
 });

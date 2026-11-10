@@ -15,6 +15,7 @@ import { createQuickAsk, type ThreadPort } from '../quick-ask/quick-ask-engine';
 import { onDeviceOptions, type RecognitionPolicy } from '../quick-ask/recognition-policy';
 import { createRecognizer, type Recognizer, type StartOutcome } from '../quick-ask/recognizer-core';
 import type { RecognizerVoiceEvent } from '../quick-ask/recognizer-events';
+import type { QuickAskDeps } from '../quick-ask/quick-ask-store';
 import type { QuickAskMessage } from '../quick-ask/spoken-mode';
 import type { ReplyVoice } from '../speech/reply-voice';
 import { createSpeaker, type SpeakOptions, type Speaker } from '../speech/speaker-core';
@@ -51,7 +52,28 @@ export type HarnessOptions = {
   readonly speech?: SpeakOptions;
   /** What the server lists; spoken_mode alone when omitted. */
   readonly discovery?: GateInput;
+  /** The timing port (voice latency A-5); none when omitted, as before it existed. */
+  readonly timing?: QuickAskDeps['timing'];
 };
+
+/** A timing port that logs every call in order; each begin() gives the next 'vt-test01-<n>'. */
+export function spyTiming() {
+  const calls: string[] = [];
+  const count = { begun: 0 };
+  const timing: NonNullable<QuickAskDeps['timing']> = {
+    heard: (moment) => void calls.push(`heard ${moment}`),
+    begin: () => {
+      count.begun += 1;
+      const ref = `vt-test01-${count.begun}`;
+      calls.push(`begin ${ref}`);
+      return ref;
+    },
+    mark: (ref, mark) => void calls.push(`mark ${ref} ${mark}`),
+    note: (ref, facts) => void calls.push(`note ${ref} ${JSON.stringify(facts)}`),
+    close: (ref) => void calls.push(`close ${ref}`),
+  };
+  return { calls, timing };
+}
 
 const STARTED: StartOutcome = Object.freeze({ kind: 'started' });
 
@@ -139,6 +161,7 @@ export function harness(options: HarnessOptions = {}) {
         timer.cancelled = true;
       };
     },
+    ...(options.timing === undefined ? {} : { timing: options.timing }),
   });
   quickAsk.mount();
 

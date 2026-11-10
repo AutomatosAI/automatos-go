@@ -112,7 +112,7 @@ describe('DiscoverySchema', () => {
     ).toBe(false);
   });
 
-  it('knows exactly the six capabilities of PRD-266 §4.1, then tts, digest_now, PRD-268 W2, readiness, approval_view and the two voice-latency names', () => {
+  it('knows exactly the six capabilities of PRD-266 §4.1, then tts, digest_now, PRD-268 W2, readiness, approval_view and the three voice-latency names', () => {
     expect([...CAPABILITIES]).toEqual([
       ...SAAS_DOCUMENT.capabilities,
       'tts',
@@ -123,10 +123,11 @@ describe('DiscoverySchema', () => {
       'approval_view',
       'spoken_unit_ends',
       'tts_first_clause',
+      'turn_timing',
     ]);
   });
 
-  it.each(['spoken_unit_ends', 'tts_first_clause'] as const)(
+  it.each(['spoken_unit_ends', 'tts_first_clause', 'turn_timing'] as const)(
     'keeps %s when a server lists it, nothing without it, and still drops a name it does not know',
     (capability) => {
       const listed = DiscoverySchema.parse({

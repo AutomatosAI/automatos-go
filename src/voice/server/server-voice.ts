@@ -6,11 +6,16 @@
 //   bytes (expo/fetch's arrayBuffer, in src/api/transport.ts); fetchSpeech checks it is audio;
 //   speech-files writes it to <cache>/server-voice/<name>.mp3; expo-audio plays that file:// URI.
 //   The bearer goes only as the request's header, never into the file's name, a URL or a log.
+//   Timing (voice latency A-5): a sentence that carries a quick-ask turn sends the turn's reference
+//   as turnRef when the server lists turn_timing (turn.send), and its moments go to the app's voice
+//   timing by that reference. Every other speaker of the one voice out (a brief, a sample, the AI
+//   notice) carries no turn: its body is {text, voice, speed} and it marks nothing.
 
 import { audioPlayer } from './audio-player';
 import { createServerSpeaker } from './server-speaker';
 import type { ServerSpeaker, ServerSpeakerEvent, ServerSpeakerPorts } from './server-speaker-ports';
 import { speechFiles } from './speech-files';
+import { voiceTiming } from '../timing/timing';
 import { fetchSpeech } from './voice-api';
 
 function later(run: () => void, ms: number): () => void {
@@ -20,7 +25,18 @@ function later(run: () => void, ms: number): () => void {
 
 const PORTS: ServerSpeakerPorts = Object.freeze({
   fetchSpeech: (server, text, signal) =>
-    fetchSpeech(server.client, { text, voice: server.voice, speed: server.speed }, signal),
+    fetchSpeech(
+      server.client,
+      {
+        text,
+        voice: server.voice,
+        speed: server.speed,
+        ...(server.turn?.send === true ? { turnRef: server.turn.ref } : {}),
+      },
+      signal,
+    ),
+  mark: (ref, name) =>
+    name === 'tts_failed' ? voiceTiming.note(ref, { fellBack: true }) : voiceTiming.mark(ref, name),
   files: speechFiles,
   audio: audioPlayer,
   later,
