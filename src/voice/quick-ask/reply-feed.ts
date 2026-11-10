@@ -4,6 +4,11 @@
 //   The words: toSpeakable over the whole text so far (markdown stripped even when spokenMode is
 //   on), which the transcript shows as turn_text and the chunker cuts into sentences as they
 //   complete, so Auto starts speaking before the turn ends; finished flushes the rest.
+//   options.unitEnds (voice latency E-11; spoken-mode.ts replyFeedOptionsFor): a sentence that ends
+//   the text so far is handed over at once, without waiting for the next one to begin. Off unless
+//   given, so a feed made with no options cuts as it always did. On, a one-sentence line the server
+//   then takes out of the answer (narration, a retracted claim) has already been spoken and stays
+//   spoken; off, it was the held last sentence and is never heard.
 //   The tool caption follows the running call while the turn streams; none once it has stopped.
 //   A failed turn says turn_failed, and a turn A2's Stop ended (from anywhere) says stop: nothing
 //   more is spoken and whatever is queued is silenced. After the first ending the feed says nothing.
@@ -18,6 +23,7 @@ import type { VoiceEvent } from '../machine/voice-reducer';
 import { sentenceChunker, type SentenceChunker } from '../speech/sentences';
 import { toSpeakable } from '../speech/speakable';
 import type { QuickAskReply } from './reply-text';
+import type { ReplyFeedOptions } from './spoken-mode';
 
 export type FeedStep = {
   readonly events: readonly VoiceEvent[];
@@ -110,8 +116,8 @@ function follow(said: Said, chunker: SentenceChunker, reply: QuickAskReply): Fed
   return { said: next, step: step(finished, [...fresh, ...chunker.flush()], true) };
 }
 
-export function createReplyFeed(): ReplyFeed {
-  const chunker = sentenceChunker();
+export function createReplyFeed(options: Partial<ReplyFeedOptions> = {}): ReplyFeed {
+  const chunker = sentenceChunker({ endsAtTextEnd: options.unitEnds === true });
   let said: Said = { text: '', caption: null, ended: false, broken: false };
 
   function next(reply: QuickAskReply): FeedStep {

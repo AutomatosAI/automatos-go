@@ -40,6 +40,19 @@ export const CAPABILITIES = [
    * its grant; the app opens its approval sheet from a push only where a server lists it.
    */
   'approval_view',
+  /**
+   * Voice latency E-11: on a turn sent with spokenMode every text frame holds whole speech units,
+   * so a sentence that ends the text so far has ended and is spoken without waiting for the next.
+   * Before a server turns it on: a one-sentence line it later takes out of the answer (narration
+   * before a tool call, or a claim it retracts) is spoken too, where the phone used to hold it and
+   * drop it unheard (spoken-mode.test.ts pins both). A retracted claim must be acceptable aloud.
+   */
+  'spoken_unit_ends',
+  /**
+   * Voice latency E-5: with Auto's server voice, the first clause of a long first sentence may be
+   * its own POST /api/voice/speech request.
+   */
+  'tts_first_clause',
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];

@@ -127,3 +127,57 @@ describe('createReplyFeed', () => {
     });
   });
 });
+
+// Voice latency E-11: the feed of a spokenMode turn from a server that lists 'spoken_unit_ends'.
+describe('createReplyFeed with unitEnds', () => {
+  it('hands over a sentence that ends the text so far, and no second copy when the turn finishes', () => {
+    const feed = createReplyFeed({ unitEnds: true });
+    expect(feed.next(reply({ text: 'Sure thing.' }))).toEqual({
+      events: [{ type: 'turn_text', text: 'Sure thing.' }],
+      speak: ['Sure thing.'],
+      ended: false,
+      silence: false,
+    });
+    expect(feed.next(reply({ text: 'Sure thing.', streaming: false, finished: true }))).toEqual({
+      events: [{ type: 'turn_finished' }],
+      speak: [],
+      ended: true,
+      silence: false,
+    });
+  });
+
+  it('speaks each unit as its frame lands, one unit sooner than without it', () => {
+    const feed = createReplyFeed({ unitEnds: true });
+    expect(feed.next(reply({ text: 'You have **two** meetings.' })).speak).toEqual([
+      'You have two meetings.',
+    ]);
+    expect(feed.next(reply({ text: 'You have **two** meetings. One at ten.' })).speak).toEqual([
+      'One at ten.',
+    ]);
+    const done = reply({
+      text: 'You have **two** meetings. One at ten.',
+      streaming: false,
+      finished: true,
+    });
+    expect(feed.next(done).speak).toEqual([]);
+  });
+
+  it('still holds a unit with no terminator for the end of the turn', () => {
+    const feed = createReplyFeed({ unitEnds: true });
+    expect(feed.next(reply({ text: 'Talk to Dr.' })).speak).toEqual([]);
+    expect(feed.next(reply({ text: "It's five o'clock" })).speak).toEqual([]);
+    const done = reply({ text: "It's five o'clock", streaming: false, finished: true });
+    expect(feed.next(done).speak).toEqual(["It's five o'clock"]);
+  });
+
+  it.each([undefined, {}, { unitEnds: false }, { firstClause: true }])(
+    'waits for the next sentence to begin without it (options: %j)',
+    (options) => {
+      const feed = createReplyFeed(options);
+      expect(feed.next(reply({ text: 'Sure thing.' })).speak).toEqual([]);
+      expect(
+        feed.next(reply({ text: 'Sure thing.', streaming: false, finished: true })).speak,
+      ).toEqual(['Sure thing.']);
+    },
+  );
+});

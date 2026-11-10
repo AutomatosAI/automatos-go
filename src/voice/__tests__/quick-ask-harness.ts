@@ -49,6 +49,8 @@ export type HarnessOptions = {
     Partial<Pick<ReplyVoice, 'newTurn' | 'handOver'>>;
   /** What the hook hands the engine to speak with; the phone's language alone when omitted. */
   readonly speech?: SpeakOptions;
+  /** What the server lists; spoken_mode alone when omitted. */
+  readonly discovery?: GateInput;
 };
 
 const STARTED: StartOutcome = Object.freeze({ kind: 'started' });
@@ -126,7 +128,7 @@ export function harness(options: HarnessOptions = {}) {
     context: () => ({
       thread: threadPort(),
       roleCanChat: options.roleCanChat ?? true,
-      discovery: SPOKEN,
+      discovery: options.discovery ?? SPOKEN,
       speech: options.speech ?? { language: 'en-GB' },
     }),
     now: () => clock.now,

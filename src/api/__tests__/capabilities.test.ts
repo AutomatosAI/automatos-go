@@ -5,12 +5,14 @@ import {
   canBrief,
   canDigest,
   canDigestNow,
+  canFirstClause,
   canMobileTheme,
   canPush,
   canReadiness,
   canReportContent,
   canServerVoice,
   canSpokenMode,
+  canSpokenUnitEnds,
   canSuggestions,
   canVoiceLive,
   type GateInput,
@@ -35,6 +37,8 @@ const GATES: readonly [Capability, (discovery: GateInput) => boolean][] = [
   ['suggestions', canSuggestions],
   ['readiness', canReadiness],
   ['approval_view', canApprovalView],
+  ['spoken_unit_ends', canSpokenUnitEnds],
+  ['tts_first_clause', canFirstClause],
 ];
 
 describe('capability gates', () => {

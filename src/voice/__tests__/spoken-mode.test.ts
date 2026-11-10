@@ -10,8 +10,10 @@ import type { GateInput } from '../../api/capabilities';
 import { CAPABILITIES, type Capability } from '../../api/discovery';
 import type { ThreadSendInput } from '../../chat/controller/use-thread';
 import { ChatRequestSchema, buildChatRequest } from '../../chat/request';
-import { quickAskMessage, spokenModeFor } from '../quick-ask/spoken-mode';
+import { quickAskMessage, replyFeedOptionsFor, spokenModeFor } from '../quick-ask/spoken-mode';
+import type { ServerSpeech } from '../server/server-speaker-ports';
 import { ask, harness } from './quick-ask-harness';
+import { frames, wire } from './thread-states';
 
 const CHAT_ID = '0c5a9e1e-0000-4000-8000-00000000c019';
 const HEARD = 'What needs me today?';
@@ -131,5 +133,117 @@ describe('quick-ask sends the locale it listens in', () => {
     const h = harness({ speech: { language: 'en-GB' } });
     await ask(h, HEARD);
     expect(h.sends[0]).toHaveProperty('locale', 'en-GB');
+  });
+});
+
+describe('replyFeedOptionsFor', () => {
+  const SERVER_VOICE = {} as ServerSpeech;
+  const PHONE = {};
+  const WITH_SERVER = { server: SERVER_VOICE };
+
+  it('is all off with no capabilities, on the hosted defaults and before discovery has loaded', () => {
+    const off = { unitEnds: false, firstClause: false };
+    expect(replyFeedOptionsFor(withCapabilities([]), WITH_SERVER)).toEqual(off);
+    expect(replyFeedOptionsFor(SPOKEN, WITH_SERVER)).toEqual(off);
+    expect(replyFeedOptionsFor(null, WITH_SERVER)).toEqual(off);
+    expect(replyFeedOptionsFor(undefined, PHONE)).toEqual(off);
+    expect(Object.isFrozen(replyFeedOptionsFor(SPOKEN, PHONE))).toBe(true);
+  });
+
+  it('unitEnds needs both spoken_mode and spoken_unit_ends', () => {
+    const both = withCapabilities(['spoken_mode', 'spoken_unit_ends']);
+    expect(replyFeedOptionsFor(both, PHONE).unitEnds).toBe(true);
+    expect(replyFeedOptionsFor(both, WITH_SERVER).unitEnds).toBe(true);
+    // Listed without spoken_mode: the turn went out plain, so its frames are not whole units.
+    expect(replyFeedOptionsFor(withCapabilities(['spoken_unit_ends']), PHONE).unitEnds).toBe(false);
+    expect(replyFeedOptionsFor(SPOKEN, PHONE).unitEnds).toBe(false);
+    expect(replyFeedOptionsFor(both, PHONE).firstClause).toBe(false);
+  });
+
+  it('firstClause needs tts_first_clause and a server voice', () => {
+    const listed = withCapabilities(['tts_first_clause']);
+    expect(replyFeedOptionsFor(listed, WITH_SERVER).firstClause).toBe(true);
+    expect(replyFeedOptionsFor(listed, PHONE).firstClause).toBe(false);
+    expect(replyFeedOptionsFor(listed, { server: undefined }).firstClause).toBe(false);
+    expect(replyFeedOptionsFor(SPOKEN, WITH_SERVER).firstClause).toBe(false);
+    expect(replyFeedOptionsFor(listed, WITH_SERVER).unitEnds).toBe(false);
+  });
+});
+
+describe('quick-ask cuts the reply the way the server lists', () => {
+  const spoken = (h: ReturnType<typeof harness>) =>
+    h.speaker.speak.mock.calls.map(([sentence]) => sentence).slice(1);
+
+  it('speaks the first unit as its frame lands when the server lists spoken_unit_ends', async () => {
+    const h = harness({ discovery: withCapabilities(['spoken_mode', 'spoken_unit_ends']) });
+    await ask(h, HEARD);
+    h.feed(...frames(wire.text('You have two meetings.')));
+    expect(spoken(h)).toEqual(['You have two meetings.']);
+    h.feed(...frames(wire.text(' One at ten.'), wire.finish), { type: 'finished' });
+    expect(spoken(h)).toEqual(['You have two meetings.', 'One at ten.']);
+  });
+
+  it('waits for the next unit, as before, when the server does not list it', async () => {
+    const h = harness();
+    await ask(h, HEARD);
+    h.feed(...frames(wire.text('You have two meetings.')));
+    expect(spoken(h)).toEqual([]);
+    h.feed(...frames(wire.text(' One at ten.')));
+    expect(spoken(h)).toEqual(['You have two meetings.']);
+    h.feed(...frames(wire.finish), { type: 'finished' });
+    expect(spoken(h)).toEqual(['You have two meetings.', 'One at ten.']);
+  });
+
+  // The cost of spoken_unit_ends, pinned: a one-sentence line said before a tool call, which the
+  // server then takes out of the answer (a narration frame), has already been spoken. Without the
+  // capability the last sentence of the text so far is held, so that line is never heard.
+  describe('a one-sentence line the server then takes out of the answer', () => {
+    const UNIT_ENDS = withCapabilities(['spoken_mode', 'spoken_unit_ends']);
+    const NARRATION = 'Let me check that.';
+    const CLAIM = 'I have approved the invoice.';
+    const ANSWER = 'You have two meetings.';
+    const CORRECTED = 'The invoice still needs your approval.';
+    const stops = (h: ReturnType<typeof harness>) =>
+      h.speaker.stop.mock.calls.length + h.speaker.handOver.mock.calls.length;
+
+    it('narration is spoken once, then the answer, when the server lists spoken_unit_ends', async () => {
+      const h = harness({ discovery: UNIT_ENDS });
+      await ask(h, HEARD);
+      h.feed(...frames(wire.text(NARRATION)));
+      expect(spoken(h)).toEqual([NARRATION]);
+      h.feed(...frames(wire.narration(NARRATION), wire.toolStart('call_1', 'calendar')));
+      h.feed(...frames(wire.toolEnd('call_1', 'calendar')));
+      expect(spoken(h)).toEqual([NARRATION]);
+      h.feed(...frames(wire.text(ANSWER), wire.finish), { type: 'finished' });
+      expect(spoken(h)).toEqual([NARRATION, ANSWER]);
+      expect(stops(h)).toBe(0);
+    });
+
+    it('a retracted claim stays spoken and is not cut off; the corrected reply follows', async () => {
+      const h = harness({ discovery: UNIT_ENDS });
+      await ask(h, HEARD);
+      h.feed(...frames(wire.text(CLAIM)));
+      expect(spoken(h)).toEqual([CLAIM]);
+      h.feed(...frames(wire.narration(CLAIM, true)));
+      expect(spoken(h)).toEqual([CLAIM]);
+      h.feed(...frames(wire.text(CORRECTED), wire.finish), { type: 'finished' });
+      expect(spoken(h)).toEqual([CLAIM, CORRECTED]);
+      expect(stops(h)).toBe(0);
+    });
+
+    it('neither is ever spoken when the server does not list it, as before', async () => {
+      for (const [line, retracted, rest] of [
+        [NARRATION, false, ANSWER],
+        [CLAIM, true, CORRECTED],
+      ] as const) {
+        const h = harness();
+        await ask(h, HEARD);
+        h.feed(...frames(wire.text(line)));
+        h.feed(...frames(wire.narration(line, retracted)));
+        expect(spoken(h)).toEqual([]);
+        h.feed(...frames(wire.text(rest), wire.finish), { type: 'finished' });
+        expect(spoken(h)).toEqual([rest]);
+      }
+    });
   });
 });

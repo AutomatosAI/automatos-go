@@ -4,6 +4,9 @@
 //   A sentence ends at . ! ? or … (a run of them, then any closing quote or bracket) followed by
 //   whitespace. push() never ends one at the end of the text so far: the next token may make 3. into
 //   3.5 or e. into e.g.; flush() (the turn finished) hands over the rest.
+//   With endsAtTextEnd (voice latency E-11) a terminator at the end of the text so far ends one too.
+//   Only for text that arrives in whole units (a spokenMode turn from a server that lists
+//   'spoken_unit_ends'), where the server has already committed to that end. Off by default.
 //   A single '.' after an abbreviation (Mr., Dr., e.g., i.e., a.m.) or an initial (J. R. R.) is not an
 //   end; decimals (3.5), versions (2.0.8) and ticket numbers (#0419) carry no '.' before whitespace.
 //   Nothing is emitted twice. When the text shrinks or changes before what was already handed over
@@ -17,7 +20,15 @@ export type SentenceChunker = {
   readonly flush: () => readonly string[];
 };
 
+/** How a chunker cuts. Every default is today's behaviour: sentences that whitespace has confirmed. */
+export type ChunkerOptions = {
+  /** A terminator at the end of the text so far ends a sentence. Default false. */
+  readonly endsAtTextEnd?: boolean;
+};
+
 const TERMINATOR = /[.!?…]+["'”’)\]]*(?=\s)/g;
+/** The same, or the terminator is the last thing in the text so far. */
+const TERMINATOR_OR_END = /[.!?…]+["'”’)\]]*(?=\s|$)/g;
 const RUN = /^[.!?…]+/;
 const WORD_BEFORE = /[^\s(“"'‘[]+$/;
 /** A dotted abbreviation: e.g, i.e, a.m, U.S (the last '.' is the terminator's). */
@@ -52,10 +63,11 @@ function endsSentence(text: string, index: number, terminator: string): boolean 
 
 /**
  * Where each sentence of the text ends: right after its terminator, not the whitespace after it,
- * which the next update may take back (a stray '-' that becomes a list item).
+ * which the next update may take back (a stray '-' that becomes a list item). atTextEnd: a terminator
+ * that ends the text counts too; an abbreviation or an initial there is still not an end.
  */
-function sentenceEnds(text: string): readonly number[] {
-  return [...text.matchAll(TERMINATOR)]
+function sentenceEnds(text: string, atTextEnd = false): readonly number[] {
+  return [...text.matchAll(atTextEnd ? TERMINATOR_OR_END : TERMINATOR)]
     .filter((match) => endsSentence(text, match.index, match[0]))
     .map((match) => match.index + match[0].length);
 }
@@ -71,7 +83,8 @@ function sayable(sentence: string): boolean {
   return SAYABLE.test(sentence);
 }
 
-export function sentenceChunker(): SentenceChunker {
+export function sentenceChunker(options: ChunkerOptions = {}): SentenceChunker {
+  const atTextEnd = options.endsAtTextEnd === true;
   let seen = '';
   /** Where each sentence already handed over ends in `seen`. */
   let ends: readonly number[] = [];
@@ -86,7 +99,7 @@ export function sentenceChunker(): SentenceChunker {
     }
     seen = textSoFar;
     const start = consumed();
-    const found = sentenceEnds(textSoFar.slice(start)).map((end) => start + end);
+    const found = sentenceEnds(textSoFar.slice(start), atTextEnd).map((end) => start + end);
     const sentences = found
       .map((end, index) => textSoFar.slice(found[index - 1] ?? start, end).trim())
       .filter(sayable);
