@@ -181,3 +181,40 @@ describe('createReplyFeed with unitEnds', () => {
     },
   );
 });
+
+// Voice latency E-5: Auto's server voice on a server that lists 'tts_first_clause'.
+describe('createReplyFeed with firstClause', () => {
+  const LEAD = 'Your morning is clear until eleven,';
+  const REST = 'then the planning review with the whole team runs through lunch and on until two.';
+  const LONG = `${LEAD} ${REST}`;
+  const done = reply({ text: LONG, streaming: false, finished: true });
+
+  it('hands over a long first sentence as a short lead, then its rest', () => {
+    expect(LEAD).toHaveLength(35);
+    expect(LONG.length).toBeGreaterThan(80);
+    const feed = createReplyFeed({ firstClause: true });
+    expect(feed.next(reply({ text: LONG })).speak).toEqual([LEAD]);
+    expect(feed.next(done).speak).toEqual([REST]);
+  });
+
+  it('hands over lead and rest from one frame when the server also ends units', () => {
+    const feed = createReplyFeed({ unitEnds: true, firstClause: true });
+    expect(feed.next(reply({ text: LONG })).speak).toEqual([LEAD, REST]);
+    expect(feed.next(done).speak).toEqual([]);
+  });
+
+  it('leaves a first sentence of 80 or fewer whole', () => {
+    const short = 'Your morning is clear until eleven, then the review runs until two.';
+    const feed = createReplyFeed({ unitEnds: true, firstClause: true });
+    expect(feed.next(reply({ text: short })).speak).toEqual([short]);
+  });
+
+  it.each([undefined, {}, { firstClause: false }, { unitEnds: true }])(
+    'is one unit without it: the phone’s own voice, or a server that does not list it (options: %j)',
+    (options) => {
+      const feed = createReplyFeed(options);
+      const streamed = feed.next(reply({ text: LONG })).speak;
+      expect([...streamed, ...feed.next(done).speak]).toEqual([LONG]);
+    },
+  );
+});

@@ -9,6 +9,10 @@
 //   given, so a feed made with no options cuts as it always did. On, a one-sentence line the server
 //   then takes out of the answer (narration, a retracted claim) has already been spoken and stays
 //   spoken; off, it was the held last sentence and is never heard.
+//   options.firstClause (voice latency E-5): Auto's server voice will speak, on a server that lists
+//   'tts_first_clause'. A first sentence over FIRST_UNIT_WHOLE_MAX_CHARS is handed over as a short
+//   lead (cut at a clause mark) and then its rest, so the first speech request is short. Off unless
+//   given: the phone's own voice never gets a lead (no round trip to shorten, only a seam to add).
 //   The tool caption follows the running call while the turn streams; none once it has stopped.
 //   A failed turn says turn_failed, and a turn A2's Stop ended (from anywhere) says stop: nothing
 //   more is spoken and whatever is queued is silenced. After the first ending the feed says nothing.
@@ -19,8 +23,13 @@
 //   spoken, so a long turn whose read broke is heard to its end instead of staying an error.
 
 import { readBroke } from '../../chat/controller/thread';
+import {
+  FIRST_UNIT_MIN_CHARS,
+  FIRST_UNIT_MIN_REST_CHARS,
+  FIRST_UNIT_WHOLE_MAX_CHARS,
+} from '../config';
 import type { VoiceEvent } from '../machine/voice-reducer';
-import { sentenceChunker, type SentenceChunker } from '../speech/sentences';
+import { sentenceChunker, type ChunkerOptions, type SentenceChunker } from '../speech/sentences';
 import { toSpeakable } from '../speech/speakable';
 import type { QuickAskReply } from './reply-text';
 import type { ReplyFeedOptions } from './spoken-mode';
@@ -116,8 +125,16 @@ function follow(said: Said, chunker: SentenceChunker, reply: QuickAskReply): Fed
   return { said: next, step: step(finished, [...fresh, ...chunker.flush()], true) };
 }
 
+/** The first unit's limits when the server voice may take a lead (E-5). */
+const FIRST_UNIT: ChunkerOptions = Object.freeze({
+  firstUnitMinChars: FIRST_UNIT_MIN_CHARS,
+  firstUnitWholeMaxChars: FIRST_UNIT_WHOLE_MAX_CHARS,
+  firstUnitMinRestChars: FIRST_UNIT_MIN_REST_CHARS,
+});
+
 export function createReplyFeed(options: Partial<ReplyFeedOptions> = {}): ReplyFeed {
-  const chunker = sentenceChunker({ endsAtTextEnd: options.unitEnds === true });
+  const firstUnit = options.firstClause === true ? FIRST_UNIT : {};
+  const chunker = sentenceChunker({ endsAtTextEnd: options.unitEnds === true, ...firstUnit });
   let said: Said = { text: '', caption: null, ended: false, broken: false };
 
   function next(reply: QuickAskReply): FeedStep {

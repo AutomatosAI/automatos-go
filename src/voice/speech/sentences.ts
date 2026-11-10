@@ -7,6 +7,11 @@
 //   With endsAtTextEnd (voice latency E-11) a terminator at the end of the text so far ends one too.
 //   Only for text that arrives in whole units (a spokenMode turn from a server that lists
 //   'spoken_unit_ends'), where the server has already committed to that end. Off by default.
+//   With firstUnitMinChars (voice latency E-5) the reply's first unit may be a lead: the start of a
+//   first sentence known to be longer than firstUnitWholeMaxChars, cut at its first clause mark
+//   (, ; : followed by whitespace) from firstUnitMinChars in, leaving more than
+//   firstUnitMinRestChars. Only the first unit, never at a bare space, and only for Auto's server
+//   voice (reply-feed.ts), where a short first request is heard sooner. Off by default.
 //   A single '.' after an abbreviation (Mr., Dr., e.g., i.e., a.m.) or an initial (J. R. R.) is not an
 //   end; decimals (3.5), versions (2.0.8) and ticket numbers (#0419) carry no '.' before whitespace.
 //   Nothing is emitted twice. When the text shrinks or changes before what was already handed over
@@ -24,11 +29,19 @@ export type SentenceChunker = {
 export type ChunkerOptions = {
   /** A terminator at the end of the text so far ends a sentence. Default false. */
   readonly endsAtTextEnd?: boolean;
+  /** E-5. The first unit may end at a clause mark at least this many characters in. Default 0: sentences only. */
+  readonly firstUnitMinChars?: number;
+  /** E-5. A first sentence up to this long is never cut. */
+  readonly firstUnitWholeMaxChars?: number;
+  /** E-5. What is left of the sentence after a lead is at least this long. */
+  readonly firstUnitMinRestChars?: number;
 };
 
 const TERMINATOR = /[.!?…]+["'”’)\]]*(?=\s)/g;
 /** The same, or the terminator is the last thing in the text so far. */
 const TERMINATOR_OR_END = /[.!?…]+["'”’)\]]*(?=\s|$)/g;
+/** A clause mark with whitespace after it, so `3,` can still become `3,500`. Never a bare space. */
+const CLAUSE = /[,;:]["'”’)\]]*(?=\s)/g;
 const RUN = /^[.!?…]+/;
 const WORD_BEFORE = /[^\s(“"'‘[]+$/;
 /** A dotted abbreviation: e.g, i.e, a.m, U.S (the last '.' is the terminator's). */
@@ -72,6 +85,39 @@ function sentenceEnds(text: string, atTextEnd = false): readonly number[] {
     .map((match) => match.index + match[0].length);
 }
 
+/** The first unit's limits (voice latency E-5); min 0: the first unit is a sentence, as ever. */
+type FirstUnit = { readonly min: number; readonly wholeMax: number; readonly minRest: number };
+
+function firstUnitOf(options: ChunkerOptions): FirstUnit {
+  return {
+    min: options.firstUnitMinChars ?? 0,
+    wholeMax: options.firstUnitWholeMaxChars ?? 0,
+    minRest: options.firstUnitMinRestChars ?? 0,
+  };
+}
+
+/**
+ * Where the first unit may end at a clause mark, as an offset in `body` (the text since the last
+ * recorded end); null: no lead (yet). Lengths are counted from body's first non-whitespace
+ * character. A cut is made only in a sentence known to be longer than wholeMax (its end is past
+ * wholeMax, or no end has come and the text already is), and never past wholeMax - minRest, so the
+ * rest is always longer than minRest whether the sentence arrived whole or word by word. The
+ * sentence's end is a candidate: a terminator at the end of the text counts here whatever
+ * endsAtTextEnd is, and one that turns out not to be an end (3. into 3.5) only delays the cut by a
+ * push.
+ */
+function leadEnd(body: string, { min, wholeMax, minRest }: FirstUnit): number | null {
+  if (min <= 0) return null;
+  const lead = body.length - body.trimStart().length;
+  const firstEnd = sentenceEnds(body, true)[0];
+  const known = firstEnd === undefined ? body.trimEnd().length : firstEnd;
+  if (known - lead <= wholeMax) return null;
+  const cut = [...body.matchAll(CLAUSE)]
+    .map((match) => match.index + match[0].length)
+    .find((end) => end - lead >= min && end - lead <= wholeMax - minRest);
+  return cut ?? null;
+}
+
 function commonPrefixLength(a: string, b: string): number {
   const limit = Math.min(a.length, b.length);
   let index = 0;
@@ -85,11 +131,19 @@ function sayable(sentence: string): boolean {
 
 export function sentenceChunker(options: ChunkerOptions = {}): SentenceChunker {
   const atTextEnd = options.endsAtTextEnd === true;
+  const firstUnit = firstUnitOf(options);
   let seen = '';
   /** Where each sentence already handed over ends in `seen`. */
   let ends: readonly number[] = [];
 
   const consumed = (): number => ends[ends.length - 1] ?? 0;
+
+  /** The ends new in `body`: its sentence ends, led by a lead's end while nothing is handed over. */
+  function newEnds(body: string): readonly number[] {
+    const found = sentenceEnds(body, atTextEnd);
+    const lead = ends.length === 0 ? leadEnd(body, firstUnit) : null;
+    return lead === null ? found : [lead, ...found.filter((end) => end > lead)];
+  }
 
   function push(textSoFar: string): readonly string[] {
     const handedOver = consumed();
@@ -99,7 +153,7 @@ export function sentenceChunker(options: ChunkerOptions = {}): SentenceChunker {
     }
     seen = textSoFar;
     const start = consumed();
-    const found = sentenceEnds(textSoFar.slice(start), atTextEnd).map((end) => start + end);
+    const found = newEnds(textSoFar.slice(start)).map((end) => start + end);
     const sentences = found
       .map((end, index) => textSoFar.slice(found[index - 1] ?? start, end).trim())
       .filter(sayable);

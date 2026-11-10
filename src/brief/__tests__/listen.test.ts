@@ -90,6 +90,16 @@ describe('what Listen reads', () => {
     expect(pieces).toEqual([long, `${long} Short one.`]);
     expect(pieces.every((piece) => piece.length <= BRIEF_PIECE_CHARS)).toBe(true);
   });
+
+  it('never cuts a long first sentence at a clause mark: the brief takes no first-unit lead', () => {
+    // Voice latency E-5 cuts a quick-ask reply's long first sentence for the server voice; the
+    // brief's chunker takes no options, so its sentences stay whole.
+    const first = `${'word '.repeat(8).trim()}, ${'word '.repeat(40).trim()}.`;
+    expect(first.indexOf(',') + 1).toBe(40);
+    expect(first.length).toBeGreaterThan(BRIEF_PIECE_CHARS);
+    expect(briefSentences(`${first} Short one.`)).toEqual([first, 'Short one.']);
+    expect(briefSentences(first)).toEqual([first]);
+  });
 });
 
 describe('the reader', () => {
