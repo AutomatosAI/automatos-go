@@ -873,7 +873,7 @@ kept), `voice-api.test.ts` (the bearer and the text in no URL, error or log),
 `server-speaker.test.ts` (every file deleted after playing or on stop) and
 `server-voice-wiring.test.ts` (without `tts` the phone speaks exactly as before). The turn
 reference: `voice-timing.test.ts` (what it is made of), `spoken-mode.test.ts` and
-`quick-ask-engine.test.ts` (sent only with `turn_timing`; never with the AI notice),
+`quick-ask-timing.test.ts` (sent only with `turn_timing`; never with the AI notice),
 `voice-api.test.ts` and `server-voice-binding.test.ts` (no `turnRef` key when not sent), and
 `voice-settings-wiring.test.ts` (the Timing block behind `timingShown()`).
 
