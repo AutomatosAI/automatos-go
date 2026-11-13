@@ -235,11 +235,20 @@ function heardMark(marks: Marks): 'reply_audio' | 'audio' {
   return marks.reply_audio === undefined ? 'audio' : 'reply_audio';
 }
 
+/**
+ * From a moment to when the reply was heard; null when that is not known. A run the AI notice led
+ * has the notice as its first sound, so with no audio of the reply's own (the phone's voice spoke
+ * it) the reply's start was never marked, and the notice's is not passed off as it.
+ */
+function toHeard(turn: TurnTiming, from: TimingMark): number | null {
+  const end = heardMark(turn.marks);
+  return end === 'audio' && turn.notice ? null : between(turn.marks, from, end);
+}
+
 /** The turn's readings for the Timing block, in the order a turn runs; the two headlines last. */
 export function timingRows(turn: TurnTiming): readonly TimingRow[] {
   const { marks } = turn;
   const rows = VOICE_TIMING_COPY.rows;
-  const end = heardMark(marks);
   return Object.freeze(
     [
       { label: rows.heardToRecognised, ms: between(marks, 'words', 'final') },
@@ -248,8 +257,8 @@ export function timingRows(turn: TurnTiming): readonly TimingRow[] {
       { label: rows.firstWordsToSentence, ms: between(marks, 'reply_text', 'sentence') },
       { label: rows.voiceRequestedToReceived, ms: between(marks, 'tts_sent', 'tts_received') },
       { label: rows.receivedToHeard, ms: between(marks, 'tts_received', 'reply_audio') },
-      { label: rows.stoppedTalkingToHeard, ms: between(marks, 'words', end) },
-      { label: rows.sentToHeard, ms: between(marks, 'sent', end) },
+      { label: rows.stoppedTalkingToHeard, ms: toHeard(turn, 'words') },
+      { label: rows.sentToHeard, ms: toHeard(turn, 'sent') },
     ].map((row) => Object.freeze(row)),
   );
 }
@@ -268,12 +277,16 @@ function part(marks: Marks, from: TimingMark, to: TimingMark): string {
   return `${from}>${to}=${between(marks, from, to) ?? MISSING}`;
 }
 
+/** A headline reading, named by the sound it ends at; '-' when the reply's start is not known. */
+function heardPart(turn: TurnTiming, from: TimingMark): string {
+  return `${from}>${heardMark(turn.marks)}=${toHeard(turn, from) ?? MISSING}`;
+}
+
 /** One line for the log and for Share: the ref, numbers and two flags; never any words. */
 export function timingLine(turn: TurnTiming): string {
   const { marks } = turn;
-  const end = heardMark(marks);
   const stages = STAGES.map(([from, to]) => part(marks, from, to)).join(' ');
-  const headline = `${part(marks, 'words', end)} ${part(marks, 'sent', end)}`;
+  const headline = `${heardPart(turn, 'words')} ${heardPart(turn, 'sent')}`;
   const flags = `notice=${turn.notice} fell_back=${turn.fellBack}`;
   return `[voice] timing ref=${turn.ref} ${stages} | ${headline} ${flags}`;
 }

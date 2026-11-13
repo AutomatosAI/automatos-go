@@ -293,16 +293,32 @@ describe('a turn read back', () => {
     const phone: TurnTiming = {
       ...TURN,
       marks: { words: 1_000, sent: 1_314, audio: 3_500 },
-      notice: true,
       fellBack: true,
     };
     const rows = timingRows(phone);
     expect(rows.at(-2)).toEqual({ label: ROWS.stoppedTalkingToHeard, ms: 2_500 });
     expect(rows.at(-1)).toEqual({ label: ROWS.sentToHeard, ms: 2_186 });
     expect(timingLine(phone)).toContain(
-      '| words>audio=2500 sent>audio=2186 notice=true fell_back=true',
+      '| words>audio=2500 sent>audio=2186 notice=false fell_back=true',
     );
     const both: TurnTiming = { ...TURN, marks: { ...TURN.marks, audio: 2_000 } };
     expect(timingRows(both).at(-1)?.ms).toBe(3_120);
+  });
+
+  it("the AI notice's start is never read as the reply's", () => {
+    // The notice led and the phone's voice spoke the reply: 'audio' is the notice, nothing marks the reply.
+    const led: TurnTiming = {
+      ...TURN,
+      marks: { words: 1_000, sent: 1_314, audio: 3_500 },
+      notice: true,
+      fellBack: true,
+    };
+    expect(timingRows(led).at(-2)).toEqual({ label: ROWS.stoppedTalkingToHeard, ms: null });
+    expect(timingRows(led).at(-1)).toEqual({ label: ROWS.sentToHeard, ms: null });
+    expect(timingLine(led)).toContain('| words>audio=- sent>audio=- notice=true fell_back=true');
+    // The notice led and the server voice spoke the reply: the reply's own audio is the reading.
+    const own: TurnTiming = { ...TURN, marks: { ...TURN.marks, audio: 2_000 }, notice: true };
+    expect(timingRows(own).at(-2)?.ms).toBe(3_434);
+    expect(timingLine(own)).toContain('| words>reply_audio=3434 sent>reply_audio=3120 notice=true');
   });
 });
