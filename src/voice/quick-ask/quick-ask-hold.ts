@@ -14,6 +14,8 @@
 //   MIC LIVE is the recognizer's audiostart/audioend, never this.
 //   A call, Siri or a lost microphone mid-hold goes to the interruption policy (US-019h,
 //   quick-ask-interrupt.ts): abort, the words kept on screen un-sent, the reason's message.
+//   The listen's moments (the recognizer started, the last partial, the release, the final) are
+//   told to the timing port when there is one (voice latency A-5): moments only, never words.
 
 import { logger } from '../../lib/logger';
 import { claim, release } from '../audio/audio-owner';
@@ -72,6 +74,7 @@ function listen(engine: Engine, plan: PressStart, hold: Hold): void {
     releaseRecognizer(engine);
     return dispatch(engine, { type: 'error', kind: 'recognizer' });
   }
+  engine.deps.timing?.heard('opened');
   const cancelTimer = engine.deps.later(() => releaseHold(engine), HOLD_MAX_MS);
   set(engine, { hold: { ...current, listening: true, cancelTimer } });
 }
@@ -145,6 +148,7 @@ function settle(engine: Engine, id: number): void {
 
 /** The release's stop: the final ends the hold, or RELEASE_SETTLE_MS does (endHold cancels it). */
 function stopListening(engine: Engine, released: Hold): void {
+  engine.deps.timing?.heard('released');
   engine.deps.recognizer.stop();
   if (get(engine).hold?.id !== released.id) return;
   const cancelTimer = engine.deps.later(() => settle(engine, released.id), RELEASE_SETTLE_MS);
@@ -181,6 +185,7 @@ function heard(engine: Engine, text: string): void {
     return dispatch(engine, { type: 'stop_phrase' });
   }
   if (outcome === 'nothing') return dispatch(engine, { type: 'nothing_heard' });
+  engine.deps.timing?.heard('final');
   dispatch(engine, { type: 'final', text: outcome.send });
   send(engine, outcome.send);
 }
@@ -189,6 +194,8 @@ function onVoice(engine: Engine, event: RecognizerVoiceEvent): void {
   const interruption = interruptionOf(event, get(engine).snapshot.voice);
   if (interruption !== null) return interrupt(engine, interruption);
   if (event.type === 'final') return heard(engine, event.text);
+  // The last moment words were heard: the moment only, never the words.
+  if (event.type === 'partial') engine.deps.timing?.heard('words');
   dispatch(engine, event);
   if (ENDS_HOLD.has(event.type)) endHold(engine);
 }

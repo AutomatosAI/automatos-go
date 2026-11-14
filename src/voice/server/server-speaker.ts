@@ -22,6 +22,9 @@
 //   phone's voice, or stop(). handOver() is the one end that leaves it alone: a barge-in, where the
 //   recognizer takes the session at once and releasing it would stop the capture. Every session
 //   change runs in order on one chain, so a release never lands after the next run's set-up.
+//   Timing (voice latency A-5): a sentence whose speech carries a turn tells the mark port when its
+//   request goes out, when its MP3 is in, when the player is asked and when it plays, and a failure
+//   tells it for the first such sentence of what is left. A sentence with no turn marks nothing.
 
 import { logger } from '../../lib/logger';
 import {
@@ -39,6 +42,7 @@ import type {
   ServerSpeakerEvent,
   ServerSpeakerPorts,
   ServerSpeech,
+  ServerSpeechMark,
 } from './server-speaker-ports';
 import { SpeechFailure } from './voice-api';
 
@@ -111,6 +115,12 @@ function endLimit(durationSeconds: number): number {
   return durationSeconds * 1000 + SERVER_PLAY_END_SLACK_MS;
 }
 
+/** The moment, for a sentence that carries a turn; nothing for any other, or with no mark port. */
+function mark(ctx: Ctx, item: Item | undefined, name: ServerSpeechMark): void {
+  const turn = item?.server.turn;
+  if (turn !== undefined) ctx.ports.mark?.(turn.ref, name);
+}
+
 function release(ctx: Ctx, playing: Playing): void {
   playing.stopWatch();
   playing.stop();
@@ -144,7 +154,14 @@ function teardown(ctx: Ctx): void {
 
 function fail(ctx: Ctx, kind: ServerFailureKind): void {
   const { queue, current } = get(ctx);
-  const rest = [...(current ? [current.item.text] : []), ...queue.map((item) => item.text)];
+  const left = [...(current ? [current.item] : []), ...queue];
+  const rest = left.map((item) => item.text);
+  // The first sentence of a turn among what the phone's voice now speaks: that turn fell back.
+  mark(
+    ctx,
+    left.find((item) => item.server.turn !== undefined),
+    'tts_failed',
+  );
   teardown(ctx);
   releaseSession(ctx);
   logger.warn(`[voice] the server voice failed (${kind}); the phone's voice speaks the rest`);
@@ -176,6 +193,7 @@ function written(ctx: Ctx, bytes: Uint8Array): string | null {
 
 function fetched(ctx: Ctx, gen: number, id: number, bytes: Uint8Array): void {
   if (!live(ctx, gen) || !find(ctx, id)) return;
+  mark(ctx, find(ctx, id), 'tts_received');
   const uri = written(ctx, bytes);
   settle(ctx, id, uri === null ? { status: 'failed', failure: 'file' } : { status: 'ready', uri });
 }
@@ -184,6 +202,7 @@ function fetchItem(ctx: Ctx, item: Item): void {
   const controller = new AbortController();
   const gen = get(ctx).generation;
   update(ctx, item.id, { status: 'fetching', abort: () => controller.abort() });
+  mark(ctx, item, 'tts_sent');
   ctx.ports.fetchSpeech(item.server, item.text, controller.signal).then(
     (bytes) => fetched(ctx, gen, item.id, bytes),
     (error: unknown) => {
@@ -217,6 +236,7 @@ function playing(ctx: Ctx, gen: number, id: number, durationSeconds: number): vo
   current.stopWatch();
   const stopWatch = watchdog(ctx, gen, id, endLimit(durationSeconds), 'play_stalled');
   set(ctx, { current: { ...current, stopWatch, started: true }, started: true });
+  mark(ctx, current.item, 'reply_audio');
   if (!started) ctx.emit(Object.freeze({ type: 'speak_start' }));
 }
 
@@ -244,6 +264,7 @@ function startAudio(ctx: Ctx, gen: number, item: Item): void {
   get(ctx).current?.stopWatch();
   const stopWatch = watchdog(ctx, gen, item.id, SERVER_PLAY_START_MS, 'play_error');
   set(ctx, { current: { item, stop: NOOP, stopWatch, started: false } });
+  mark(ctx, item, 'play_called');
   try {
     const handle = ctx.ports.audio.play(item.uri ?? '', handlersFor(ctx, gen, item.id));
     const { current } = get(ctx);

@@ -18,6 +18,7 @@ import type { Recognizer } from './recognizer-core';
 import type { ReplyFeed } from './reply-feed';
 import type { QuickAskReply, TurnTracking } from './reply-text';
 import type { QuickAskMessage } from './spoken-mode';
+import type { VoiceTiming } from '../timing/voice-timing';
 
 export type RecognizerPort = Pick<Recognizer, 'start' | 'stop' | 'abort' | 'downloadModel'> & {
   /** The recognition policy for the language quick-ask listens in (the speech's language). */
@@ -52,6 +53,8 @@ export type QuickAskDeps = {
   readonly now: () => number;
   /** Runs `run` after `ms`; returns the cancel. */
   readonly later: (run: () => void, ms: number) => () => void;
+  /** Where a turn's moments are marked (voice latency A-5); without it nothing is timed. */
+  readonly timing?: Pick<VoiceTiming, 'heard' | 'begin' | 'mark' | 'note' | 'close'>;
 };
 
 export type QuickAskSnapshot = {
@@ -88,6 +91,8 @@ export type Inner = {
   readonly pending: string | null;
   readonly session: NoticeSession;
   readonly mounted: boolean;
+  /** The timing reference of the turn quick-ask sent, until that turn is over; else null. */
+  readonly turnRef: string | null;
 };
 
 export type Engine = {
@@ -115,6 +120,7 @@ export function createEngine(deps: QuickAskDeps): Engine {
     pending: null,
     session: newSession(),
     mounted: false,
+    turnRef: null,
   };
   return { deps, cell: { current }, listeners: new Set() };
 }
@@ -159,8 +165,17 @@ export function abortListening(engine: Engine): void {
   endHold(engine);
 }
 
+/** The turn's timing is over (STOP, the run's end, the next send): it takes no more marks. */
+export function closeTurn(engine: Engine): void {
+  const { turnRef } = get(engine);
+  if (turnRef === null) return;
+  engine.deps.timing?.close(turnRef);
+  set(engine, { turnRef: null });
+}
+
 /** Quick-ask's turn is no longer followed: nothing more of it is spoken, nothing waits to send. */
 export function letGo(engine: Engine): void {
+  closeTurn(engine);
   set(engine, { tracking: null, feed: null, pending: null });
 }
 

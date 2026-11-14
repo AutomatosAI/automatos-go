@@ -272,3 +272,30 @@ export const LANGUAGE_COPY = Object.freeze({
 export const SAMPLE_LINES = Object.freeze({
   'pt-BR': 'Oi, eu sou o Auto. É assim que vou soar quando eu te responder.',
 });
+
+/**
+ * Settings → Voice's Timing block (voice latency A-5), shown in development and TestFlight builds
+ * only: how long the last voice reply took, as this phone measured it. The numbers stay in memory
+ * until the person shares them; the copy says where they were measured and nothing about where they
+ * go (D70).
+ */
+export const VOICE_TIMING_COPY = Object.freeze({
+  title: 'Timing',
+  hint: 'How long the last voice reply took, measured on this phone.',
+  empty: 'No voice reply has been timed yet.',
+  share: 'Share timings',
+  reference: 'Reference',
+  /** A reading in milliseconds, and one whose two moments did not both happen. */
+  milliseconds: (ms: number) => `${ms} ms`,
+  missing: 'Not measured',
+  rows: Object.freeze({
+    heardToRecognised: 'Heard you to recognised',
+    recognisedToSent: 'Recognised to sent',
+    sentToFirstWords: 'Sent to first words back',
+    firstWordsToSentence: 'First words to first sentence',
+    voiceRequestedToReceived: 'Voice requested to received',
+    receivedToHeard: 'Received to heard',
+    stoppedTalkingToHeard: 'You stopped talking to Auto heard',
+    sentToHeard: 'Sent to Auto heard',
+  }),
+});

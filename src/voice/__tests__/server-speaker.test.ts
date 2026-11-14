@@ -257,6 +257,23 @@ describe('failures hand the sentence and the rest over', () => {
     expect(h.events.at(-1)).toEqual({ type: 'failed', kind: 'tts_busy', rest: ['Two.', 'Three.'] });
   });
 
+  it('E-5: a lead played and its rest refused fails once with the rest, never the lead', async () => {
+    const h = speakerOver();
+    const lead = 'Your morning is clear until eleven,';
+    const rest = 'then the planning review with the whole team runs through lunch.';
+    [lead, rest, 'Two.'].forEach((text) => h.speaker.speak(text, SERVER_SPEECH));
+    await answer(h, 0);
+    h.playerOf(0).handlers.onPlaying(2);
+    expect(h.requests.map((request) => request.text)).toEqual([lead, rest]);
+    h.requests[1]?.refuse(new SpeechFailure('tts_busy'));
+    await settle();
+    expect(h.types()).toEqual(['speak_start']);
+    h.playerOf(0).handlers.onEnded();
+    await settle();
+    const failed = { type: 'failed', kind: 'tts_busy', rest: [rest, 'Two.'] };
+    expect(h.events.filter((event) => event.type === 'failed')).toEqual([failed]);
+  });
+
   it('an unknown error is a network failure', async () => {
     const h = speakerOver();
     h.speaker.speak('One.', SERVER_SPEECH);

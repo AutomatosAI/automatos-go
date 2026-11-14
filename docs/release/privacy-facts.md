@@ -791,6 +791,12 @@ text-to-speech engine does not use a network voice]".
   reply is sent as text to that same server, which answers with the audio. Nothing the person said
   is sent for it: only Auto's own reply, which came from that server. Otherwise, or when the server
   cannot answer, the phone's voice reads the reply as above.
+- **The turn reference and timing (voice latency A-5):** Quick-ask's chat and speech requests carry
+  a per-turn reference made from the time the turn was sent and a count of voice turns since the
+  app was opened (for example vt-mhq2k1ab-3), only to a server that lists turn_timing. It names no
+  person or device; the server uses it to line up its own timing lines for that turn. Timings
+  measured on the phone stay in memory and are not sent; a development or TestFlight build shows
+  them under Settings → Voice, where the person may share them as text.
 
 **What the code does:**
 
@@ -844,6 +850,19 @@ text-to-speech engine does not use a network voice]".
   emptied at every app start (`sweepSpeechFiles` in `app/_layout.tsx`), whether or not the voice
   is used, so nothing a crash left stays. A failure is logged by its kind only, never the
   text, and the phone's voice speaks the rest of that turn.
+- **The turn reference** (`src/voice/timing/voice-timing.ts`): `vt-<send time in ms, base 36>-<count
+  of voice turns since the app was opened, base 36>`. It is not random. It goes out as `turnRef` in
+  the body of quick-ask's `POST /api/chat` (`quickAskMessage` in `spoken-mode.ts`) and of the
+  `POST /api/voice/speech` requests for that reply's own sentences (`withTurn`; the AI notice, the
+  brief and Settings → Voice's sample carry none), and only when discovery lists `turn_timing`. A
+  typed turn never carries one. A reference that does not fit the server's pattern is left out
+  (`turnRefOf` in `src/chat/request.ts`).
+- **The timings** (`src/voice/timing/`): the moments of the last 20 voice turns (whole
+  milliseconds and two flags, never what was said or answered), held in memory only: not stored,
+  not sent, gone when the app closes. The Timing block (`TimingBlock.tsx`) is mounted only in a
+  development build or on the `testflight` update channel (`timingShown` in `use-timing.ts`), never
+  in a `production` build. Its Share timings button hands the numbers and references to the phone's
+  share sheet; the person chooses where they go.
 
 **Evidence:** `src/voice/__tests__/recognition-policy.test.ts` (iOS and Android policies, every
 start option on the phone, no service package), `recognizer-core.test.ts` (start runs only for a
@@ -852,7 +871,11 @@ Android "local" names only, never "network"; none → the engine's default) and
 `speaker-core.test.ts`. The server voice: `server-voices.test.ts` (only with `tts` and Auto's voice
 kept), `voice-api.test.ts` (the bearer and the text in no URL, error or log),
 `server-speaker.test.ts` (every file deleted after playing or on stop) and
-`server-voice-wiring.test.ts` (without `tts` the phone speaks exactly as before).
+`server-voice-wiring.test.ts` (without `tts` the phone speaks exactly as before). The turn
+reference: `voice-timing.test.ts` (what it is made of), `spoken-mode.test.ts` and
+`quick-ask-timing.test.ts` (sent only with `turn_timing`; never with the AI notice),
+`voice-api.test.ts` and `server-voice-binding.test.ts` (no `turnRef` key when not sent), and
+`voice-settings-wiring.test.ts` (the Timing block behind `timingShown()`).
 
 **Policy wording:**
 

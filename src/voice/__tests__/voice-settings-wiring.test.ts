@@ -154,3 +154,41 @@ describe('Settings → Voice (source)', () => {
     }
   });
 });
+
+describe('the Timing block (source, voice latency A-5)', () => {
+  it('the screen mounts it last in the column, behind timingShown()', () => {
+    const screen = code(read('src/voice/settings/VoiceSettingsScreen.tsx'));
+    expect(screen).toMatch(/\{timingShown\(\) \? <TimingBlock \/> : null\}\s*<\/View>/);
+    expect(screen.indexOf('<TimingBlock />')).toBeGreaterThan(screen.indexOf('<SoundSection'));
+  });
+
+  it('shows in a development build and on the testflight channel only', () => {
+    const hook = code(read('src/voice/timing/use-timing.ts'));
+    expect(hook).toMatch(/const TESTFLIGHT_CHANNEL = 'testflight';/);
+    expect(hook).toMatch(/return __DEV__ \|\| Updates\.channel === TESTFLIGHT_CHANNEL;/);
+  });
+
+  it('reads the voice timing only, and nothing from src/api', () => {
+    const hook = code(read('src/voice/timing/use-timing.ts'));
+    expect(hook).toMatch(/useSyncExternalStore\(voiceTiming\.subscribe, voiceTiming\.recent\)/);
+    for (const file of [
+      'src/voice/timing/TimingBlock.tsx',
+      'src/voice/timing/use-timing.ts',
+      'src/voice/timing/timing.ts',
+      'src/voice/timing/voice-timing.ts',
+    ]) {
+      expect(read(file), file).not.toMatch(/from '[^']*\/api(\/[^']*)?'/);
+    }
+  });
+
+  it('shares the lines of the kept turns through the share sheet, with a worded button', () => {
+    const block = code(read('src/voice/timing/TimingBlock.tsx'));
+    expect(block).toMatch(/Share\.share\(\{ message: turns\.map\(timingLine\)\.join\('\\n'\) \}\)/);
+    expect(block).toMatch(/<Button label=\{COPY\.share\}/);
+  });
+
+  it('the quick-ask hook hands the engine the one voice timing', () => {
+    const hook = code(read('src/voice/quick-ask/use-quick-ask.ts'));
+    expect(hook).toMatch(/timing: voiceTiming,/);
+  });
+});

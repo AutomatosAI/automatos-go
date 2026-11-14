@@ -101,3 +101,18 @@ export const SERVER_PLAY_END_SLACK_MS = 3_000;
 
 /** The end watchdog when the player reports no duration. */
 export const SERVER_PLAY_MAX_MS = 60_000;
+
+/**
+ * Voice latency E-5, for Auto's server voice on a server that lists 'tts_first_clause': the
+ * reply's first unit may end at a clause mark (, ; :) at least this many characters in.
+ */
+export const FIRST_UNIT_MIN_CHARS = 32;
+
+/** A first sentence up to this long is spoken whole, never cut at a clause. */
+export const FIRST_UNIT_WHOLE_MAX_CHARS = 80;
+
+/** After a lead, at least this much of the sentence is left (voice-tts's MIN_SENTENCE_CHARS). */
+export const FIRST_UNIT_MIN_REST_CHARS = 16;
+
+/** Voice latency A-5: how many voice turns' timings are kept, in memory, for Settings → Voice. */
+export const TIMING_KEEP = 20;

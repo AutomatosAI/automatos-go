@@ -13,7 +13,17 @@ export type ServerSpeech = {
   readonly speed: number;
   /** The session's one API client (the bearer stays in its headers). */
   readonly client: Pick<ApiClient, 'binary'>;
+  /**
+   * The quick-ask turn this sentence is the reply of (voice latency A-5): its timing reference, and
+   * whether the request carries it (the server lists turn_timing). Only the reply's own sentences
+   * have one: the AI notice, a brief and a sample never do.
+   */
+  readonly turn?: { readonly ref: string; readonly send: boolean };
 };
+
+/** A moment of a turn's sentence in the server voice (timing/voice-timing.ts); tts_failed: it fell back. */
+export type ServerSpeechMark =
+  'tts_sent' | 'tts_received' | 'play_called' | 'reply_audio' | 'tts_failed';
 
 export type PlayHandlers = {
   /** The file started playing; its length in seconds when the player knows it (else 0). */
@@ -48,6 +58,8 @@ export type ServerSpeakerPorts = {
   readonly audio: AudioPort;
   /** Runs `run` after `ms`; returns the cancel. */
   readonly later: (run: () => void, ms: number) => () => void;
+  /** A moment of a sentence that carries a turn, by the turn's reference; without it nothing is marked. */
+  readonly mark?: (ref: string, mark: ServerSpeechMark) => void;
 };
 
 export type ServerFailureKind =

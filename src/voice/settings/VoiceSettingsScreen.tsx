@@ -3,7 +3,8 @@
 // phone's voice instead"; the phone's voices (Automatic first) without them or once chosen; then
 // Speed (and Pitch for the phone's voice) and Reset to default (VoiceSections.tsx). Every value is
 // the phone's own (use-voice-setting.ts) and quick-ask speaks its next reply with it. Back returns
-// to Settings, or opens it when this screen was opened first.
+// to Settings, or opens it when this screen was opened first. Last, in development and TestFlight
+// builds only, the Timing block (timing/TimingBlock.tsx, voice latency A-5).
 
 import { StyleSheet, View } from 'react-native';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
@@ -13,6 +14,8 @@ import { useGoBack } from '../../navigation/use-go-back';
 import { useTokens } from '../../styles/theme';
 import { IconButton, Screen, Text } from '../../ui';
 import { VOICE_SETTINGS_COPY } from '../strings';
+import { TimingBlock } from '../timing/TimingBlock';
+import { timingShown } from '../timing/use-timing';
 import { useVoiceSettings } from './use-voice-settings';
 import { LanguageList, ServerVoiceList, SoundSection, VoiceList } from './VoiceSections';
 
@@ -67,6 +70,7 @@ export function VoiceSettingsScreen() {
           onRelease={view.release}
           onReset={view.reset}
         />
+        {timingShown() ? <TimingBlock /> : null}
       </View>
     </Screen>
   );

@@ -79,3 +79,18 @@ export function canReadiness(discovery: GateInput): boolean {
 export function canApprovalView(discovery: GateInput): boolean {
   return has(discovery, 'approval_view');
 }
+
+/** Every spoken text frame is a whole unit: a sentence that ends the text so far has ended. */
+export function canSpokenUnitEnds(discovery: GateInput): boolean {
+  return has(discovery, 'spoken_unit_ends');
+}
+
+/** The first clause of a long first sentence may be its own speech request. */
+export function canFirstClause(discovery: GateInput): boolean {
+  return has(discovery, 'tts_first_clause');
+}
+
+/** A voice turn's chat and speech requests carry its reference (turnRef) for the server's timing. */
+export function canTurnTiming(discovery: GateInput): boolean {
+  return has(discovery, 'turn_timing');
+}

@@ -81,6 +81,7 @@ vi.mock('react-native', () => ({ Platform: { OS: 'ios' } }));
 const { audioPlayer } = await import('../server/audio-player');
 const { speechFiles, SERVER_VOICE_FOLDER } = await import('../server/speech-files');
 const { voiceOut } = await import('../speech/voice-out');
+const { voiceTiming } = await import('../timing/timing');
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -215,5 +216,73 @@ describe('the one voice out', () => {
       expect.objectContaining({ language: 'en-US', useApplicationAudioSession: false }),
     );
     voiceOut.stop();
+  });
+});
+
+describe('the turn reference on the speech request (voice latency A-5)', () => {
+  const audio = () =>
+    vi.fn(async () => ({
+      bytes: new Uint8Array([0x49, 0x44, 0x33]),
+      header: (name: string) => (name.toLowerCase() === 'content-type' ? 'audio/mpeg' : null),
+    }));
+  const flush = async () => {
+    for (let i = 0; i < 10; i += 1) await Promise.resolve();
+  };
+  const bodyOf = (binary: ReturnType<typeof audio>) =>
+    (binary.mock.calls[0] as unknown[] | undefined)?.[1] as { body: Record<string, unknown> };
+
+  it('sends turnRef for a sentence whose turn is sent, and marks that turn', async () => {
+    const ref = voiceTiming.begin();
+    const binary = audio();
+    voiceOut.speak('Hello.', {
+      language: 'en-US',
+      server: { voice: 'af_heart', speed: 1, client: { binary }, turn: { ref, send: true } },
+    });
+    await flush();
+    expect(bodyOf(binary).body).toEqual({
+      text: 'Hello.',
+      voice: 'af_heart',
+      speed: 1,
+      turnRef: ref,
+    });
+    const marks = voiceTiming.recent()[0]?.marks ?? {};
+    expect(Object.keys(marks)).toEqual(
+      expect.arrayContaining(['sent', 'tts_sent', 'tts_received', 'play_called']),
+    );
+    voiceOut.stop();
+    voiceTiming.close(ref);
+    await flush();
+  });
+
+  it('sends none when the server does not list turn_timing, and still marks on the phone', async () => {
+    const ref = voiceTiming.begin();
+    const binary = audio();
+    voiceOut.speak('Hello.', {
+      language: 'en-US',
+      server: { voice: 'af_heart', speed: 1, client: { binary }, turn: { ref, send: false } },
+    });
+    await flush();
+    expect(Object.keys(bodyOf(binary).body)).toEqual(['text', 'voice', 'speed']);
+    expect(voiceTiming.recent()[0]?.marks).toHaveProperty('tts_sent');
+    voiceOut.stop();
+    voiceTiming.close(ref);
+    await flush();
+  });
+
+  it('speech with no turn (a brief, a sample) after a quick-ask turn changes no stored turn', async () => {
+    const ref = voiceTiming.begin();
+    const before = voiceTiming.recent();
+    const binary = audio();
+    voiceOut.speak('Hello.', {
+      language: 'en-US',
+      server: { voice: 'af_heart', speed: 1, client: { binary } },
+    });
+    await flush();
+    expect(Object.keys(bodyOf(binary).body)).toEqual(['text', 'voice', 'speed']);
+    expect(voiceTiming.recent()).toBe(before);
+    expect(voiceTiming.recent()).toEqual(before);
+    voiceOut.stop();
+    voiceTiming.close(ref);
+    await flush();
   });
 });
