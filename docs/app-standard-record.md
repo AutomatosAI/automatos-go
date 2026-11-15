@@ -119,7 +119,7 @@ cell says where the app is today, not where its open branches would put it.
 | 9 Meeting an AI | Follows | Partly | Follows | 9.1 only in its first release |
 | 10 Accessibility | Partly: 10.4 | Partly | Follows | Follows |
 | 11 Words | Follows | Partly | Follows | Follows |
-| 12 Motion, haptics, sound | Follows | Follows | Follows | Not built |
+| 12 Motion, haptics, sound | Follows | Partly | Follows | Not built |
 | 13 Code | Partly: 13.2, 13.5 | Differs | Follows | Partly |
 | 14 Release | Partly: 14.2 | Differs | Partly | Not built |
 | 15 Android | Follows | Partly | Not built | Not built |
