@@ -60,6 +60,12 @@ config plugin, the usage strings Apple requires, the privacy manifest, App Trans
 Android permissions, associated domains and background modes. Read it before adding a native
 dependency: a native change costs a build.
 
+**[product-apps.md](product-apps.md).** Building a product app from this template: an app a
+product ships to its own customers, with its own server between it and Automatos. The shapes a
+product can take, the rules, consent, a turn, memory, erase and limits, what every product shares
+and what each decides, what to keep and remove when copying this repository, and what automatos-ai
+provides. Proposed on 15 Nov 2026; no product is built on it yet.
+
 **[prd/PRD-001-AUTOMATOS-GO-V1.md](prd/PRD-001-AUTOMATOS-GO-V1.md).** The plan for v1: scope,
 decisions, waves and stories. Where it and the code differ, the code is right. Known differences:
 
