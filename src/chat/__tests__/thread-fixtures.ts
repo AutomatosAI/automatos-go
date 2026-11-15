@@ -98,7 +98,7 @@ export function gatedReply(): GatedReply {
   }
   return {
     status: 200,
-    text: async () => '',
+    bytes: async () => new Uint8Array(0),
     chunks,
     push: (chunk) => {
       queue.push(chunk);

@@ -3,7 +3,7 @@
 // with the client the speech carries), the cache (speech-files.ts) and expo-audio
 // (audio-player.ts). Only wiring.
 //   How an MP3 gets from the server to the speaker: client.binary() reads the 200's body whole as
-//   bytes (expo/fetch's arrayBuffer, in src/api/transport.ts); fetchSpeech checks it is audio;
+//   bytes under a cap (src/api/transport.ts, body.ts readBytes); fetchSpeech checks it is audio;
 //   speech-files writes it to <cache>/server-voice/<name>.mp3; expo-audio plays that file:// URI.
 //   The bearer goes only as the request's header, never into the file's name, a URL or a log.
 //   Timing (voice latency A-5): a sentence that carries a quick-ask turn sends the turn's reference

@@ -9,6 +9,10 @@
 // device-pass build can still be made against test keys. A Sentry DSN that is set but not in
 // Sentry's EU region (D44) is one of them: the app refuses it (src/observability/options.ts
 // isEuDsn, the same grammar as below), so a store build would ship with crash reports silently off.
+//
+// One thing fails every checked profile: a hosted address that is set but is not a bare https
+// address. The app refuses it the moment it starts (src/lib/env.ts isServerAddress, the same rule
+// as below), so such a build could only ever crash at launch.
 
 const SENTRY_DSN = 'EXPO_PUBLIC_SENTRY_DSN';
 /** Sentry's EU ingest hosts are o<org>.ingest.de.sentry.io (src/observability/options.ts). */
@@ -27,6 +31,11 @@ const REQUIRED = [
   { name: 'EXPO_PUBLIC_API_URL', why: 'the hosted Automatos API (the built-in server)' },
   { name: 'EXPO_PUBLIC_WEB_URL', why: 'links into hosted Studio' },
 ];
+
+/** The two addresses a build is given (src/lib/env.ts holds them to the same form at launch). */
+const SERVER_ADDRESSES = ['EXPO_PUBLIC_API_URL', 'EXPO_PUBLIC_WEB_URL'];
+/** What never belongs in a server's address: a user name, a query, a fragment, a backslash. */
+const NEVER_IN_AN_ADDRESS = ['@', '?', '#', '\\'];
 
 const RECOMMENDED = [{ name: SENTRY_DSN, why: 'error reporting (Sentry EU) stays off without it' }];
 
@@ -54,6 +63,32 @@ function isEuDsn(dsn) {
   return protocol === 'https' && host.toLowerCase().endsWith(EU_INGEST_HOST_SUFFIX);
 }
 
+/** https, a host and an optional port, and nothing more: src/lib/env.ts for a release build. */
+function isServerAddress(value) {
+  if (NEVER_IN_AN_ADDRESS.some((mark) => value.includes(mark))) return false;
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== 'https:' || url.hostname === '' || url.pathname !== '/') return false;
+  // written as the parser reads it: the text itself is what every request is built on
+  return url.origin === (value.endsWith('/') ? value.slice(0, -1) : value);
+}
+
+/** A hosted address that is set and is not one the app accepts: the variable's name, never its value. */
+function addressProblems(env) {
+  return SERVER_ADDRESSES.flatMap((name) => {
+    const value = (env[name] ?? '').trim();
+    if (!value || isServerAddress(value)) return [];
+    return [
+      `${name} must be the https address of the server and nothing more (no user name or ` +
+        'password, no path, no query, no fragment): the app refuses it at launch.',
+    ];
+  });
+}
+
 function sentryRegionProblems(env) {
   const dsn = (env[SENTRY_DSN] ?? '').trim();
   if (!dsn || isEuDsn(dsn)) return [];
@@ -64,8 +99,9 @@ function sentryRegionProblems(env) {
 }
 
 /**
- * Pure check over an env map — returns `{ errors, warnings }` as message lists.
- * `errors` is only ever non-empty for a strict (store-bound) profile.
+ * Pure check over an env map — returns `{ errors, warnings }` as message lists. For a profile
+ * that is not strict (store-bound), `errors` holds only what the app itself would refuse at
+ * launch: a hosted address that is not a bare https address.
  */
 function checkReleaseEnv(env, profile) {
   if (!CHECKED_PROFILES.has(profile)) return { errors: [], warnings: [] };
@@ -77,9 +113,10 @@ function checkReleaseEnv(env, profile) {
   const unset = RECOMMENDED.filter((item) => !isSet(env, item.name)).map(
     (item) => `${item.name} is not set — ${item.why}.`,
   );
+  const refused = addressProblems(env);
   return strict
-    ? { errors: problems, warnings: unset }
-    : { errors: [], warnings: [...problems, ...unset] };
+    ? { errors: [...problems, ...refused], warnings: unset }
+    : { errors: refused, warnings: [...problems, ...unset] };
 }
 
 // CLI output goes to stdout/stderr directly: eslint's no-console holds everywhere
@@ -105,6 +142,6 @@ function main() {
   process.exit(1);
 }
 
-module.exports = { checkReleaseEnv, isEuDsn };
+module.exports = { checkReleaseEnv, isEuDsn, isServerAddress };
 
 if (require.main === module) main();

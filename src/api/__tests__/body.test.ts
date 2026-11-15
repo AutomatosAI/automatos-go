@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { BodyTooLargeError, decodeChunks, readBytes } from '../body';
+import {
+  BodyStalledError,
+  BodyTooLargeError,
+  MAX_EMPTY_READS,
+  decodeChunks,
+  readBytes,
+} from '../body';
 
 function bytes(parts: readonly Uint8Array[], onCancel?: () => void): ReadableStream<Uint8Array> {
   let index = 0;
@@ -103,5 +109,75 @@ describe('readBytes', () => {
 
   it('ignores a Content-Length that is not a number', async () => {
     expect([...(await readBytes(bytes([new Uint8Array([7])]), 1, 'chunked'))]).toEqual([7]);
+  });
+});
+
+describe('readBytes against a body sent badly', () => {
+  /** A body that arrives as these parts, one per read. */
+  function partsOf(parts: readonly Uint8Array[]): ReadableStream<Uint8Array> {
+    let next = 0;
+    return new ReadableStream<Uint8Array>({
+      pull(controller) {
+        const part = parts[next];
+        next += 1;
+        if (part === undefined) controller.close();
+        else controller.enqueue(part);
+      },
+    });
+  }
+  const ONE = new Uint8Array([120]);
+  const NONE = new Uint8Array(0);
+
+  it('reads a body sent a byte at a time whole, in order', async () => {
+    const SIZE = 20_000;
+    const sent = Array.from({ length: SIZE }, (_, at) => new Uint8Array([at % 251]));
+    const bytes = await readBytes(partsOf(sent), SIZE);
+    expect(bytes.byteLength).toBe(SIZE);
+    expect(bytes[0]).toBe(0);
+    expect(bytes[SIZE - 1]).toBe((SIZE - 1) % 251);
+  });
+
+  it('still refuses a byte-at-a-time body at the read that crosses the cap', async () => {
+    const sent = Array.from({ length: 50 }, () => ONE);
+    await expect(readBytes(partsOf(sent), 10)).rejects.toBeInstanceOf(BodyTooLargeError);
+  });
+
+  it('gives up on a body that only ever sends empty reads', async () => {
+    const endless = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.enqueue(NONE);
+      },
+    });
+    await expect(readBytes(endless, 1024)).rejects.toBeInstanceOf(BodyStalledError);
+  });
+
+  it('cancels a body it refuses by its Content-Length, so nothing more of it is taken in', async () => {
+    let cancelled = false;
+    let pulled = 0;
+    const body = new ReadableStream<Uint8Array>(
+      {
+        pull(controller) {
+          pulled += 1;
+          controller.enqueue(ONE);
+        },
+        cancel() {
+          cancelled = true;
+        },
+      },
+      { highWaterMark: 0 },
+    );
+    await expect(readBytes(body, 10, '11')).rejects.toBeInstanceOf(BodyTooLargeError);
+    expect(cancelled).toBe(true);
+    expect(pulled).toBe(0);
+  });
+
+  it('a refused Content-Length with no body at all is still refused', async () => {
+    await expect(readBytes(null, 10, '11')).rejects.toBeInstanceOf(BodyTooLargeError);
+  });
+
+  it('counts empty reads in a row only: a real byte between them starts the count again', async () => {
+    const run = Array.from({ length: MAX_EMPTY_READS - 1 }, () => NONE);
+    const bytes = await readBytes(partsOf([...run, ONE, ...run, ONE]), 1024);
+    expect(Array.from(bytes)).toEqual([120, 120]);
   });
 });

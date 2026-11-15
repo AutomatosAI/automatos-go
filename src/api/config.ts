@@ -20,5 +20,17 @@ export const CHAT_TURN_CONNECT_TIMEOUT_MS = 120_000;
 /** A binary body (binary()) larger than this is refused unless the caller sets its own cap. */
 export const BINARY_MAX_BYTES = 10 * 1024 * 1024;
 
+/**
+ * A JSON body (request()) larger than this is refused, read no further: an invalid_response. The
+ * largest the app asks for is a long conversation's messages; this is far above any seen.
+ */
+export const JSON_MAX_BYTES = 10 * 1024 * 1024;
+
+/**
+ * An error body ({"detail": ...}, a validation error's list) is read no further than this. One
+ * over it carries no detail: the status alone still says which kind of error it is.
+ */
+export const ERROR_BODY_MAX_BYTES = 64 * 1024;
+
 /** A server message (a 409's detail.message) longer than this is cut before anyone sees it. */
 export const SERVER_MESSAGE_MAX_CHARS = 500;

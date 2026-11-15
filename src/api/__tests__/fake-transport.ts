@@ -16,24 +16,25 @@ export const SERVER: Server = Object.freeze({
   source: 'hosted',
 });
 
-/** An answer for any of the three calls; bytes and headers only matter to binary(). */
-export type FakeResponse = StreamingResponse & Partial<Pick<BinaryResponse, 'bytes' | 'header'>>;
+/** An answer for any of the three calls; headers only matter to binary(). */
+export type FakeResponse = StreamingResponse & Partial<Pick<BinaryResponse, 'header'>>;
 
 type Responder = (request: TransportRequest) => FakeResponse | Promise<FakeResponse>;
 
 export type FakeTransport = Transport & { readonly calls: TransportRequest[] };
 
-/** binary()'s view of an answer: its bytes (the text's, when it has none) and no headers. */
+/** binary()'s view of an answer: its bytes, and no headers when it has none. */
 function asBinary(response: FakeResponse): BinaryResponse {
   return {
     status: response.status,
-    text: response.text,
-    bytes:
-      response.bytes ??
-      (async (maxBytes) =>
-        readBytes(streamOf(new TextEncoder().encode(await response.text())), maxBytes)),
+    bytes: response.bytes,
     header: response.header ?? (() => null),
   };
+}
+
+/** A string as a body read under the caller's cap, as the real transport reads one. */
+function bytesOf(body: string): (maxBytes: number) => Promise<Uint8Array> {
+  return (maxBytes) => readBytes(streamOf(new TextEncoder().encode(body)), maxBytes);
 }
 
 export function fakeTransport(responder: Responder): FakeTransport {
@@ -71,7 +72,6 @@ export function bytesReply(
   );
   return {
     status,
-    text: async () => new TextDecoder().decode(bytes),
     chunks: async function* () {
       yield new TextDecoder().decode(bytes);
     },
@@ -84,7 +84,7 @@ export function bytesReply(
 export function reply(status: number, body = ''): StreamingResponse {
   return {
     status,
-    text: async () => body,
+    bytes: bytesOf(body),
     chunks: async function* () {
       if (body) yield body;
     },
@@ -124,7 +124,7 @@ export function chunked(chunks: readonly Chunk[], status = 200): ChunkedReply {
   }
   return {
     status,
-    text: async () => chunks.filter((chunk) => typeof chunk === 'string').join(''),
+    bytes: bytesOf(chunks.filter((chunk) => typeof chunk === 'string').join('')),
     chunks: body,
     finished: () => finished,
     closed: () => closed,

@@ -18,6 +18,8 @@ const POST_ATTACHMENT: Route = { method: 'POST', path: '/api/attachments' };
 const WORKSPACE: Route = { method: 'GET', path: '/api/workspaces/current' };
 const WorkspaceSchema = z.object({ id: z.string(), role: z.string() });
 const WORKSPACE_ID = '7f1c2a54-0000-4000-8000-000000000001';
+/** Room for the stream test's short body, read whole. */
+const WHOLE_BODY_CAP = 1024;
 
 function clientWith(transport: FakeTransport, overrides: Partial<ApiClientOptions> = {}) {
   return createApiClient({
@@ -217,7 +219,7 @@ describe('status → kind', () => {
   it('still maps the status when the error body cannot be read', async () => {
     const transport = fakeTransport(() => ({
       status: 503,
-      text: () => Promise.reject(new Error('socket closed')),
+      bytes: () => Promise.reject(new Error('socket closed')),
       chunks: async function* () {},
     }));
     expect((await failureOf(clientWith(transport).request(WORKSPACE))).kind).toBe('server');
@@ -311,7 +313,7 @@ describe('stream', () => {
     const transport = fakeTransport(() => reply(200, 'whole body'));
     const response = await clientWith(transport).stream({ method: 'GET', path: '/api/x' });
     expect(response.status).toBe(200);
-    expect(await response.text()).toBe('whole body');
+    expect(new TextDecoder().decode(await response.bytes(WHOLE_BODY_CAP))).toBe('whole body');
   });
 });
 
