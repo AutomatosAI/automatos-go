@@ -16,6 +16,7 @@ import {
   type TypeScale,
   type TypeStyle,
 } from '../styles/type';
+import { accentInk } from './accent';
 import { DISABLED_OPACITY, MIN_TOUCH, joinLabel, paint, tint, type ColourKey } from './paint';
 import { UI_COPY } from './strings';
 
@@ -354,7 +355,7 @@ export type FieldPaint = ControlPaint & {
 /** at-input: card ground, border; ring on focus; orange border when invalid; half opacity off. */
 export function fieldPaint(colours: Colours, state: FieldState = {}): FieldPaint {
   const focused = Boolean(state.focused) && !state.disabled;
-  const borderColor = state.invalid ? colours.accent : focused ? colours.ring : colours.border;
+  const borderColor = state.invalid ? accentInk(colours) : focused ? colours.ring : colours.border;
   const ring = { offsetX: 0, offsetY: 0, spreadDistance: FOCUS_RING.width } as const;
   return {
     backgroundColor: colours.card,

@@ -147,7 +147,7 @@ The template is held to the standard too. Each line is a rule's "Owed".
 | T14 | A ninth error kind for a limit reached, carrying when it lifts | 6.2 | The template reads that answer as `server` today |
 | T15 | One transfer module in `src/api/` for files sent and fetched, and the guard on the file system's own download and upload calls outside it | 13.2 | Two features of the template download files on their own today, so the guard follows the module |
 | T16 | Five pairs of text and ground in Studio Light read under AA: the quietest text most of all, at 3.25 to 1 on the page | 10.4 | Found by T6 and listed in the test. The values are automatos-ai's own tokens, copied here and never retuned, so the fix is there |
-| T17 | Shared code paints the accent colour itself in eight places: a link in an answer, a field's invalid border, the failed state's icon, the text cursor, an unread dot, a calendar dot, a tab's rule. In the one style whose accent is a quiet ground they do not read | 10.4 | Found by the review of T6. The Text primitive is fixed. The rest go through the same lookup next |
+| T17 | **Done, 15 Nov.** Shared code painted the accent colour itself in eight places: a link in an answer, a field's invalid border, the failed state's icon, the text cursor, an unread dot, a calendar dot, a tab's rule. In the one style whose accent is a quiet ground they did not read | 10.4 | Found by the review of T6. All of them, and the Text primitive, now read the accent from one lookup that picks a colour that reads in the palette |
 
 ## Open for the owner
 

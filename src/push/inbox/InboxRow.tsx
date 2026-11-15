@@ -11,6 +11,7 @@ import { MIN_TOUCH } from '../../ui/paint';
 import { cardPaint } from '../../ui/variants';
 import { PUSH_INBOX_COPY } from '../strings';
 import type { InboxRowView } from './model';
+import { accentInk } from '../../ui/accent';
 
 const TITLE_LEVEL = 6;
 const MESSAGE_LEVEL = 6;
@@ -27,7 +28,7 @@ function UnreadDot({ shown }: { readonly shown: boolean }) {
   const { colours } = useTokens();
   return (
     <View
-      style={[styles.dot, { backgroundColor: shown ? colours.accent : 'transparent' }]}
+      style={[styles.dot, { backgroundColor: shown ? accentInk(colours) : 'transparent' }]}
       importantForAccessibility="no"
       accessibilityElementsHidden
     />

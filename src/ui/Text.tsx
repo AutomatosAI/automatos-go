@@ -41,8 +41,8 @@ export function Text(props: TextProps) {
     () => dressedTextFace(painted, role, { weight, italic }),
     [painted, role, weight, italic],
   );
-  const { colours, style: styleId } = painted.tokens;
-  const color = colours[toneColour(styleId, tone ?? defaultTone(variant))];
+  const { colours } = painted.tokens;
+  const color = colours[toneColour(colours, tone ?? defaultTone(variant))];
   const fitted = fit
     ? { numberOfLines: 1, adjustsFontSizeToFit: true, minimumFontScale: fitScale(face.fontSize) }
     : null;

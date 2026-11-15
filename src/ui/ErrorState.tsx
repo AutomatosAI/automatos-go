@@ -6,6 +6,7 @@ import { StyleSheet, View } from 'react-native';
 import TriangleAlert from 'lucide-react-native/icons/triangle-alert';
 
 import { useTokens } from '../styles/theme';
+import { accentInk } from './accent';
 import { Button } from './Button';
 import { UI_COPY } from './strings';
 import { Text } from './Text';
@@ -37,11 +38,11 @@ export function ErrorState({ error, onRetry, title }: ErrorStateProps) {
       <View
         style={[
           styles.tile,
-          { borderRadius: radii.panel, backgroundColor: tint(colours.accent, TILE_FILL_ALPHA) },
+          { borderRadius: radii.panel, backgroundColor: tint(accentInk(colours), TILE_FILL_ALPHA) },
         ]}
         importantForAccessibility="no-hide-descendants"
       >
-        <TriangleAlert size={ICON_SIZE} color={colours.accent} strokeWidth={ICON_STROKE} />
+        <TriangleAlert size={ICON_SIZE} color={accentInk(colours)} strokeWidth={ICON_STROKE} />
       </View>
       <Text variant="title" level={TITLE_LEVEL} accessibilityRole="header" style={styles.centre}>
         {title ?? copy.title}

@@ -9,6 +9,7 @@ import type { ColourName, Colours, RadiusName, SpaceName } from '../../styles/to
 import { MIN_TOUCH } from '../../ui/paint';
 import type { TextLevel, TextTone } from '../../ui/variants';
 import type { KindWord } from './day-model';
+import { accentInk } from '../../ui/accent';
 
 /** The tab: 14 pt over the strip, 18 in, 28 under the last row, 14 between the blocks. */
 export const CALENDAR_LAYOUT = Object.freeze({
@@ -74,7 +75,7 @@ export function stripCellPaint(
 ): StripCellPaint {
   const ground = cell.selected ? colours.foreground : cell.today ? colours.card : 'transparent';
   const border = cell.selected ? colours.foreground : cell.today ? colours.border : 'transparent';
-  const dotOn = cell.selected ? colours.card : colours.accent;
+  const dotOn = cell.selected ? colours.card : accentInk(colours);
   return {
     backgroundColor: ground,
     borderColor: border,
