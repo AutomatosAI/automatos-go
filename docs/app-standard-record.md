@@ -145,7 +145,7 @@ The template is held to the standard too. Each line is a rule's "Owed".
 | T12 | The TabBar and Header contract's phone checks: VoiceOver's reading of a tab's position, and the swipe back with a drawn header | 10.7 | Cannot be proved in CI. Added to the phone pass |
 | T13 | A list of licences in About | 8.3 | New. The template has none |
 | T14 | A ninth error kind for a limit reached, carrying when it lifts | 6.2 | The template reads that answer as `server` today |
-| T15 | One transfer module in `src/api/` for files sent and fetched | 13.2 | Two features of the template download files on their own today |
+| T15 | One transfer module in `src/api/` for files sent and fetched, and the guard on the file system's own download and upload calls outside it | 13.2 | Two features of the template download files on their own today, so the guard follows the module |
 
 ## Open for the owner
 

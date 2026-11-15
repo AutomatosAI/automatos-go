@@ -38,9 +38,10 @@ reason ([The app's record](#the-apps-record)). A difference nobody wrote down is
 ## 1. Tokens
 
 **1.1 Tokens only. (Must)** A screen reads colour, spacing, radius, shadow and type through the
-tokens and writes none of them itself. Template: `useTokens()` in `src/styles/theme.tsx`. Held by:
-the lint rule against colour literals outside `src/styles/tokens/**` (`eslint.config.js`, proved
-by `scripts/__tests__/eslint-rules.test.ts`).
+tokens and writes none of them itself. Template: `useTokens()` in `src/styles/theme.tsx`. Held
+by, for colour: the lint rule against colour literals outside `src/styles/tokens/**`
+(`eslint.config.js`, proved by `scripts/__tests__/eslint-rules.test.ts`). Spacing, radius and
+shadow written in a screen are held by review.
 
 **1.2 One token shape. (Must)** Every palette fills the shape in `src/styles/tokens/types.ts`:
 the colour names, nine radii (`tag` to `full`), ten spacing steps (`space1` to `space10`) and five
@@ -121,9 +122,9 @@ owns a list. Template: `src/ui/Screen.tsx`.
 
 **4.2 One header. (Must)** A screen's header is one component built from the tokens: back, a
 title and at most two actions. Back goes through one hook that falls back to home when there is
-nothing behind. Template: `src/navigation/use-go-back.ts`. Owed: the Header primitive; today each
-screen in the template draws its own. _Open for the owner: whether an app may use the system's
-header and tab bar in place of drawn ones (see the record, O-2)._
+nothing behind. An app does not use the system's header or tab bar in their place (the record,
+decision D3). Template: `src/navigation/use-go-back.ts`. Owed: the Header primitive; today each
+screen in the template draws its own.
 
 **4.3 The keyboard. (Must)** Every keyboard-avoiding view takes the one behaviour
 (`KEYBOARD_AVOIDING_BEHAVIOUR`), on both platforms. A message box pads through
@@ -340,10 +341,11 @@ pure model, its hooks, its components, its `strings.ts` and its tests in `__test
 **13.2 One way out. (Must)** Every request goes through `src/api/`: data through the one client,
 and a file sent or fetched through one transfer module beside it, so media never passes through
 memory. Every answer is parsed with zod and unknown fields are ignored. The template's parsing is
-written to zod 3: an app on a newer major records it. Held by: the lint rules on
-`fetch` and `XMLHttpRequest`. Owed: the same guard on `WebSocket`, `EventSource`, `sendBeacon`,
-other HTTP clients and the file system's own download and upload calls; and the transfer module
-itself, since two features of the template download files on their own today.
+written to zod 3: an app on a newer major records it. Held by, for where a request is made: the
+lint rules on `fetch` and `XMLHttpRequest`. That every answer is parsed is held by review. Owed:
+the same guard on `WebSocket`, `EventSource`, `sendBeacon`, other HTTP clients and the file
+system's own download and upload calls; and the transfer module itself, since two features of the
+template download files on their own today.
 
 **13.3 Pure logic outside React, with tests. (Must)** Updates never mutate. Held by: the coverage
 gate in `vitest.config.ts`.
