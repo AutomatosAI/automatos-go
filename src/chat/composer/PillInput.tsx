@@ -15,6 +15,7 @@ import { keyboardAppearanceFor } from '../../styles/ground/ground';
 import { useStyle } from '../../styles/theme';
 import { fieldPaint, textFace } from '../../ui/variants';
 import { pillMetrics } from './composer-state';
+import { selectionProps } from '../../ui/selection';
 
 export type PillInputProps = {
   readonly value: string;
@@ -48,7 +49,7 @@ export function PillInput({ value, onChangeText, placeholder, label, editable }:
       accessibilityLabel={label}
       accessibilityState={{ disabled: !editable }}
       placeholderTextColor={tone.placeholder}
-      selectionColor={tokens.colours.accent}
+      {...selectionProps(tokens.colours)}
       style={[
         styles.pill,
         {

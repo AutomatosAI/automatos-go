@@ -30,6 +30,7 @@ import {
   textFace,
   type FieldPaint,
 } from './variants';
+import { selectionProps } from './selection';
 
 const NOTE_LEVEL = 5;
 
@@ -115,7 +116,7 @@ export function TextField({
         accessibilityHint={note?.text}
         accessibilityState={{ disabled }}
         placeholderTextColor={tone.placeholder}
-        selectionColor={tokens.colours.accent}
+        {...selectionProps(tokens.colours)}
         style={[
           styles.input,
           inputStyle(tokens, tone, multiline, dress.radii.input),

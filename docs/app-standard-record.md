@@ -146,8 +146,10 @@ The template is held to the standard too. Each line is a rule's "Owed".
 | T13 | A list of licences in About | 8.3 | New. The template has none |
 | T14 | A ninth error kind for a limit reached, carrying when it lifts | 6.2 | The template reads that answer as `server` today |
 | T15 | One transfer module in `src/api/` for files sent and fetched, and the guard on the file system's own download and upload calls outside it | 13.2 | Two features of the template download files on their own today, so the guard follows the module |
-| T16 | Five pairs of text and ground in Studio Light read under AA: the quietest text most of all, at 3.25 to 1 on the page | 10.4 | Found by T6 and listed in the test. The values are automatos-ai's own tokens, copied here and never retuned, so the fix is there |
-| T17 | Shared code paints the accent colour itself in eight places: a link in an answer, a field's invalid border, the failed state's icon, the text cursor, an unread dot, a calendar dot, a tab's rule. In the one style whose accent is a quiet ground they do not read | 10.4 | Found by the review of T6. The Text primitive is fixed. The rest go through the same lookup next |
+| T16 | Five pairs of text and ground in Studio Light read under AA: the quietest text most of all, at 3.25 to 1 on the page | 10.4 | Found by T6 and listed in the test. The values are automatos-ai's own tokens, copied here and never retuned, so the fix is there. Until it is, text in the accent is held to the 3 to 1 a mark needs and not the 4.5 to 1 text needs: Studio Light's own accent is 4.23 on the page, and a stricter line would turn its links to ink |
+| T17 | **Done, 15 Nov.** Shared code painted the accent colour itself in ten places: a link in an answer, a field's invalid border, the failed state's icon, the text cursor, an unread dot, a calendar dot, a tab's rule, the reason chip and a blocked status's dot. In the one style whose accent is a quiet ground they did not read | 10.4 | Found by the reviews of T6 and of its fix. All of them, and the Text primitive, now read the accent from one lookup that picks a colour that reads on the palette's page and cards |
+| T18 | Tones on the Text primitive for a state and for the two quieter inks, and a scan that refuses a colour given to Text outside `src/ui/` | 2.1, 1.4 | App C. Without them a feature that paints a status word passes Text a colour, which rule 2.1 forbids |
+| T19 | The guards miss remote pictures loaded by address (`SvgUri` and its siblings), the `'use dom'` directive and 4-digit hex colours. The guard test has no case that the client file may not import `expo/fetch` | 13.2, 1.1 | App C |
 
 ## Open for the owner
 
@@ -167,12 +169,16 @@ The template is held to the standard too. Each line is a rule's "Owed".
   for now: only one app needs it.
 - A check that reads a message before it is sent, where the subject is sensitive (App B). The
   product's own.
+- Two more slots on ListRow, for a coloured summary and for a mono value such as a version (App
+  C keeps two rows of its own for them). It comes into the template when a second app needs it.
+- Whether an in-app browser counts as a web view under rule 13.8 (App C refuses it). The template
+  itself uses one, so this is a question, not yet a rule.
 
 ## Actions
 
 | Who | What |
 |---|---|
-| Template | T1 to T17. Record each in the standard's Changes as it lands |
+| Template | T1 to T19. Record each in the standard's Changes as it lands |
 | App A | `TEMPLATE.md` is written, with a row per rule and the three stages sized. Ship what is waiting first. Nothing from the standard goes into that work |
 | App B | `TEMPLATE.md` is written. Give T4 and T6 back. Bring back and its one short control into line (4.2, 3.2). Rebuild its scene frame on Screen when it is next touched |
 | App C | Build its screens on the Tabs shell with drawn chrome. Build the Header and TabBar to the contract and hand them over. Move its lineage into `TEMPLATE.md` |

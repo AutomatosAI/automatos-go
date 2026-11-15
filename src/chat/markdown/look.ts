@@ -29,6 +29,7 @@ import { textFace, type TextLevel, type TextVariant } from '../../ui/variants';
 import { MARKDOWN_COPY } from '../strings';
 import type { HeadingLevel, ListBlock, TableBlock } from './blocks';
 import { spansText, type InlineMark } from './inline';
+import { accentInk } from '../../ui/accent';
 
 export const STRONG_WEIGHT: FontWeight = 600;
 const CODE_WEIGHT: FontWeight = 400;
@@ -147,7 +148,7 @@ export function spanStyle(
   return {
     ...face,
     ...decoration(marks, link),
-    ...(link ? { color: colours.accent } : {}),
+    ...(link ? { color: accentInk(colours) } : {}),
   };
 }
 

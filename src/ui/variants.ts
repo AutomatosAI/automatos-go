@@ -16,6 +16,7 @@ import {
   type TypeScale,
   type TypeStyle,
 } from '../styles/type';
+import { accentInk, markColour } from './accent';
 import { DISABLED_OPACITY, MIN_TOUCH, joinLabel, paint, tint, type ColourKey } from './paint';
 import { UI_COPY } from './strings';
 
@@ -69,8 +70,7 @@ export function defaultTone(variant: TextVariant): TextTone {
 
 /**
  * The role's face from the scale, or at another weight or italic when that face is bundled. The
- * override is built from the scale's own specs (specsOf), so a role keeps its size in a second
- * scale as it does in Studio's.
+ * override is built from the scale's own specs (specsOf): a role keeps its own scale's size.
  */
 export function textFace(
   type: TypeScale,
@@ -232,7 +232,7 @@ export const SEGMENT_MIN_HEIGHT = MIN_TOUCH - 2 * SEGMENT_TRACK_INSET;
 
 export type Tone = 'accent' | 'success' | 'warning' | 'info' | 'muted';
 
-/** The reason chip (accent at 10 %) and cc-status-pill's ok / warn / info at 15 %. */
+/** The reason chip (the accent that reads, accent.ts, at 10 %) and cc-status-pill's at 15 %. */
 export const TONES: Readonly<
   Record<Tone, { readonly ink: ColourName; readonly fill: ColourName; readonly alpha: number }>
 > = Object.freeze({
@@ -248,7 +248,8 @@ export function tonePaint(
   tone: Tone,
 ): Pick<ControlPaint, 'backgroundColor' | 'color'> {
   const spec = TONES[tone];
-  return { backgroundColor: tint(colours[spec.fill], spec.alpha), color: colours[spec.ink] };
+  const fill = markColour(colours, spec.fill);
+  return { backgroundColor: tint(fill, spec.alpha), color: markColour(colours, spec.ink) };
 }
 
 export const CHIP_PADDING_Y = 2;
@@ -354,7 +355,7 @@ export type FieldPaint = ControlPaint & {
 /** at-input: card ground, border; ring on focus; orange border when invalid; half opacity off. */
 export function fieldPaint(colours: Colours, state: FieldState = {}): FieldPaint {
   const focused = Boolean(state.focused) && !state.disabled;
-  const borderColor = state.invalid ? colours.accent : focused ? colours.ring : colours.border;
+  const borderColor = state.invalid ? accentInk(colours) : focused ? colours.ring : colours.border;
   const ring = { offsetX: 0, offsetY: 0, spreadDistance: FOCUS_RING.width } as const;
   return {
     backgroundColor: colours.card,

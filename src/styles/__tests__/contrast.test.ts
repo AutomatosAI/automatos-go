@@ -36,7 +36,7 @@ const KNOWN: readonly Known[] = [
 ];
 
 const found = PALETTES.flatMap((tokens) =>
-  contrastFailures(tokens.colours, textOnFor(tokens.style)).map((failure) => ({
+  contrastFailures(tokens.colours, textOnFor(tokens.colours)).map((failure) => ({
     pair: `${nameOf(tokens)}: ${failure.text} on ${failure.ground}`,
     ratio: floor2(failure.ratio),
   })),
@@ -77,21 +77,23 @@ describe('every text colour on every ground, in every palette (rule 10.4)', () =
   });
 });
 
-describe('a tone a style reads from another token', () => {
+describe('a tone a palette reads from another token', () => {
+  const candy = tokensFor('candy', 'light').colours;
+  const studio = tokensFor('studio', 'light').colours;
+
   it("Candy's accent text is its accent's text colour, never its chip", () => {
-    expect(toneColour('candy', 'accent')).toBe('primary');
-    expect(toneColour('studio', 'accent')).toBe('accent');
-    expect(toneColour('candy', 'muted')).toBe(TEXT_TONES.muted);
-    const candy = tokensFor('candy', 'light').colours;
+    expect(toneColour(candy, 'accent')).toBe('primary');
+    expect(toneColour(studio, 'accent')).toBe('accent');
+    expect(toneColour(candy, 'muted')).toBe(TEXT_TONES.muted);
     expect(contrastFailures(candy, [['accent', ['background', 'card']]])).toHaveLength(2);
     expect(contrastFailures(candy, [['primary', ['background', 'card']]])).toEqual([]);
   });
 
-  it('the pairs for a style measure the token it draws', () => {
-    const drawn = textOnFor('candy').map(([text]) => text);
+  it('the pairs for a palette measure the token it draws', () => {
+    const drawn = textOnFor(candy).map(([text]) => text);
     expect(drawn).toContain('primary');
     expect(drawn).not.toContain('accent');
-    expect(textOnFor('studio')).toEqual(TEXT_ON);
+    expect(textOnFor(studio)).toEqual(TEXT_ON);
   });
 });
 

@@ -13,6 +13,7 @@ import { useTokens } from '../styles/theme';
 import { glyphToken } from './state-tokens';
 import { Text } from './Text';
 import { DOT_SIZE, statusPip, type PipStatus, type TextTone } from './variants';
+import { markColour } from './accent';
 
 export type StatusPipProps = {
   /** A PipStatus; a status this version doesn't know shows muted with its own word. */
@@ -42,7 +43,7 @@ export function StatusPip({ status, word, tone = 'muted' }: StatusPipProps) {
         <View
           style={[
             styles.dot,
-            { backgroundColor: colours[spec.tokenKey], borderRadius: radii.full },
+            { backgroundColor: markColour(colours, spec.tokenKey), borderRadius: radii.full },
           ]}
         />
       )}

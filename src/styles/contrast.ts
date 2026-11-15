@@ -3,13 +3,13 @@
 // (tokens/types.ts), so the one test over it (__tests__/contrast.test.ts) covers every palette of
 // every style, and a palette an app adds is covered by naming it there. A text token that carries
 // transparency (#RRGGBBAA) is blended over each ground before it is measured (rule 10.5).
-// What this measures is the Text primitive's tones and the shape's foreground pairs. A screen that
-// paints a colour itself (a link, a mark) is not seen here.
+// What this measures is the Text primitive's tones and the shape's foreground pairs. Shared code
+// that paints the accent itself reads it from src/ui/accent.ts, whose own test holds it.
 
 import { contrastRatio, mixHex } from '../core/web/lib/look-kit/contrast';
 import { toneColour } from '../ui/tone-colour';
 import { TEXT_TONES, type TextTone } from '../ui/variants';
-import type { ColourName, Colours, StyleId } from './tokens/types';
+import type { ColourName, Colours } from './tokens/types';
 
 /** WCAG 2.x AA for text. */
 export const AA_TEXT = 4.5;
@@ -39,14 +39,14 @@ export const TEXT_ON: readonly TextOnGrounds[] = Object.freeze([
 ]);
 
 /**
- * TEXT_ON as a style draws it: where the style reads a tone from another token (toneColour:
- * Candy's accent), that token stands in for the tone's own.
+ * TEXT_ON as a palette draws it: where the Text primitive reads a tone from another token
+ * (toneColour: the accent, in a palette whose `accent` is a ground), that token stands in.
  */
-export function textOnFor(style: StyleId): readonly TextOnGrounds[] {
+export function textOnFor(colours: Colours): readonly TextOnGrounds[] {
   const swaps = new Map<ColourName, ColourName>(
     (Object.keys(TEXT_TONES) as TextTone[])
-      .filter((tone) => toneColour(style, tone) !== TEXT_TONES[tone])
-      .map((tone) => [TEXT_TONES[tone], toneColour(style, tone)]),
+      .filter((tone) => toneColour(colours, tone) !== TEXT_TONES[tone])
+      .map((tone) => [TEXT_TONES[tone], toneColour(colours, tone)]),
   );
   return TEXT_ON.map(([text, grounds]) => [swaps.get(text) ?? text, grounds] as const);
 }

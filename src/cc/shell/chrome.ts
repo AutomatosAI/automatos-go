@@ -9,6 +9,7 @@ import type { ColourName, Colours, SpaceName } from '../../styles/tokens';
 import type { TypeScale, TypeStyle } from '../../styles/type';
 import type { TextLevel, TextTone } from '../../ui/variants';
 import { SHELL_COPY } from '../strings';
+import { accentInk } from '../../ui/accent';
 
 export type LiveWord = {
   readonly word: string;
@@ -90,7 +91,7 @@ export type TabPaint = { readonly color: string; readonly rule: string };
 /** The active tab in ink over the accent rule; the others muted, with no rule. */
 export function tabPaint(colours: Colours, selected: boolean): TabPaint {
   return selected
-    ? { color: colours.foreground, rule: colours.accent }
+    ? { color: colours.foreground, rule: accentInk(colours) }
     : { color: colours.mutedForeground, rule: 'transparent' };
 }
 

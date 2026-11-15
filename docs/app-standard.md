@@ -287,8 +287,10 @@ stops and shows a still. Template: `src/styles/provider/reduce-motion.ts`, `src/
 
 **10.4 Contrast is tested. (Must)** Every text colour on every ground it is drawn on, in every
 palette, at WCAG AA (4.5 to 1), computed from the tokens. A pair that reads under it is listed in
-the test with what it measures and why it stands, and may not get worse. Template:
-`src/styles/contrast.ts`. Held by: `src/styles/__tests__/contrast.test.ts`.
+the test with what it measures and why it stands, and may not get worse. A mark in the accent (a
+rule, a dot, a cursor) reads at 3 to 1 or more, from one lookup. Template:
+`src/styles/contrast.ts`, `src/ui/accent.ts`. Held by: `src/styles/__tests__/contrast.test.ts`
+and `src/ui/__tests__/accent.test.ts`.
 
 **10.5 Text to be read is never dimmed. (Must)** Read, quiet or secondary text takes a muted
 token, never an opacity set on the text or on what holds it, so its contrast can be tested. A
@@ -472,7 +474,7 @@ template, or records why not.
 |---|---|
 | 15 Nov 2026 | First written. |
 | 15 Nov 2026 | Landed in the template: the scale builder (2.3), the one contrast test over every pair (10.4), the wider network guard (13.2) and no inline disabling of a guard (13.5). A copy made before this takes those four files. |
-| 15 Nov 2026 | A text tone may read another token in a style where the tone's own is not a text colour there (`src/ui/tone-colour.ts`). The contrast test found one style drawing its accent text in a ground colour. |
+| 15 Nov 2026 | The accent as a foreground (text, a glyph, a rule, a dot) is read from `src/ui/accent.ts`: the palette's `accent` where that reads on its page, its `primary` where `accent` is a ground. The contrast test found one style drawing its accent text in a ground colour. A copy takes that file and reads the accent through it wherever it paints one. |
 
 ## Related
 
