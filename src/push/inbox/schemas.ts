@@ -58,7 +58,16 @@ const GrantDetails = z
   .nullish()
   .catch(null);
 
-const GrantPlaceShape = z.object({ id: z.number().int(), details: GrantDetails });
+/**
+ * A grant row's subject: a task the board held for approval is subject_type 'board_task' with the
+ * board row's id as subject_id (core services/board_approval.py), and carries no details.
+ */
+const GrantPlaceShape = z.object({
+  id: z.number().int(),
+  details: GrantDetails,
+  subject_type: z.string().nullish().catch(null),
+  subject_id: z.union([z.number().int(), z.string()]).nullish().catch(null),
+});
 
 /** GET /api/v1/approval-grants?status=pending: each open grant and where its card is. */
 export const grantPlacesSchema = z.object({

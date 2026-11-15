@@ -1,8 +1,9 @@
 // The notifications inbox (fix/notification-taps): the rows (newest first, the push's own first,
 // the unread dot said as well as drawn), the route and its focus, the server's shapes (a row this
 // version cannot read is left out), the calls, where a row opens (the same screen its push would; an
-// approval or a Mission plan in the chat its card sits in; Studio for one with no screen; a line for
-// one that names nothing), and what a tap and Mark all read do.
+// approval or a Mission plan in the chat its card sits in, or its ticket; its approval sheet for one
+// with no screen where the sheet is offered, else Studio; a line for one that names nothing), and what a
+// tap and Mark all read do.
 
 import { describe, expect, it, vi } from 'vitest';
 
@@ -223,6 +224,36 @@ describe('where a row opens', () => {
     });
   });
 
+  it("an approval for a task the board held opens that ticket (the grant's subject)", async () => {
+    const held = checks({
+      grantPlaces: async () => [
+        { id: 77, details: null, subject_type: 'board_task', subject_id: '17' },
+      ],
+    });
+    await expect(
+      inboxOpenFor({ link_type: 'approval_grant', link_id: '77' }, held, STUDIO),
+    ).resolves.toEqual({ kind: 'route', route: routes.cc.ticket('17') });
+    const other = checks({
+      grantPlaces: async () => [{ id: 77, details: null, subject_type: 'watch', subject_id: '17' }],
+    });
+    await expect(
+      inboxOpenFor({ link_type: 'approval_grant', link_id: '77' }, other, STUDIO, true),
+    ).resolves.toEqual({ kind: 'sheet', sheet: { id: '77', kind: 'tool' } });
+  });
+
+  it('where the approval sheet is offered, an approval or a Mission plan with no screen opens it, not Studio', async () => {
+    const nowhere = checks({
+      grantPlaces: async () => [{ id: 77, details: null }],
+      missionPlace: async (id) => ({ id, config: null }),
+    });
+    await expect(
+      inboxOpenFor({ link_type: 'approval_grant', link_id: '77' }, nowhere, STUDIO, true),
+    ).resolves.toEqual({ kind: 'sheet', sheet: { id: '77', kind: 'tool' } });
+    await expect(
+      inboxOpenFor({ link_type: 'mission', link_id: POST_ID }, nowhere, STUDIO, true),
+    ).resolves.toEqual({ kind: 'sheet', sheet: { id: POST_ID, kind: 'plan' } });
+  });
+
   it('an approval already decided says so and opens nothing', async () => {
     const decided = checks({ grantPlaces: async () => [] });
     await expect(
@@ -321,6 +352,20 @@ describe('a tap and Mark all read', () => {
     await openInboxRow(row({ link_type: 'approval_grant', link_id: '77' }), studio.value);
     expect(browser).toHaveBeenCalledWith(`${STUDIO}/command-center?tab=governance`);
     expect(studio.seen.toasts).toEqual([PUSH_INBOX_COPY.studioFailed]);
+  });
+
+  it('an approval with no screen opens its sheet over the inbox where offered, and no browser', async () => {
+    const browser = vi.fn(async () => true);
+    const opened: string[] = [];
+    const run = deps({
+      openBrowser: browser,
+      checks: checks({ missionPlace: async (id) => ({ id, config: null }) }),
+      approvals: { offered: () => true, open: (id, kind) => void opened.push(`${kind}:${id}`) },
+    });
+    await openInboxRow(row({ link_type: 'mission', link_id: POST_ID }), run.value);
+    expect(opened).toEqual([`plan:${POST_ID}`]);
+    expect(browser).not.toHaveBeenCalled();
+    expect(run.seen.routes).toEqual([]);
   });
 
   it('Mark all read: one call, its line; a refusal says the server’s words', async () => {

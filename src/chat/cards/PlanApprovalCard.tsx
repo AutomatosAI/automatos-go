@@ -72,14 +72,14 @@ function TaskLine({ task }: { readonly task: PlanTaskRow }) {
   );
 }
 
-type RejectFormProps = {
+export type RejectFormProps = {
   readonly request: CardRequest;
   readonly onCancel: () => void;
   readonly onReject: (reason: string) => void;
 };
 
 /** Reject asks why first: the send stays off while the reason is blank (rejectBody). */
-function RejectForm({ request, onCancel, onReject }: RejectFormProps) {
+export function RejectForm({ request, onCancel, onReject }: RejectFormProps) {
   const { spacing } = useTokens();
   const [reason, setReason] = useState('');
   const ready = rejectBody(reason) !== null;

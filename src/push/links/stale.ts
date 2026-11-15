@@ -7,9 +7,10 @@
 // target with no notice, and its screen shows its own state. A chat's 403 is the one decisive
 // refusal: another person's chat id would silently start a new chat (D-STALE-CHAT). An approval and
 // a Mission plan have no fixed screen: their card sits in the chat they were raised in (D30), so the
-// open grant's details (conversation_id, else its ticket, board_task_id) and the Mission's
-// config.origin_chat_id say where. A target with nowhere to open resolves to route null: the push
-// then opens the notifications inbox with it first, and the inbox opens Studio or says so. The
+// open grant's details (conversation_id, else its ticket, board_task_id, else the board task a held
+// task's grant names as its subject) and the Mission's config.origin_chat_id say where. A target with
+// nowhere to open resolves to route null: the push then opens the notifications inbox with it first
+// and its approval sheet over it (handler.ts sheetOnTap), and the inbox row opens that sheet too. The
 // checks are a port (staleChecksFor binds the push API); nothing here retries or caches, and the
 // log carries kinds only.
 
@@ -18,7 +19,12 @@ import { isApiError } from '../../api/errors';
 import { logger } from '../../lib/logger';
 import { isTaskId, routes } from '../../navigation/routes';
 import { getChat, getSocialPost, getTicket, pendingQuestionIds } from '../api';
-import { SOCIAL_NEEDS_APPROVAL_STATUS, STALE_CHECK_TIMEOUT_MS, UUID_PATTERN } from '../config';
+import {
+  BOARD_TASK_SUBJECT,
+  SOCIAL_NEEDS_APPROVAL_STATUS,
+  STALE_CHECK_TIMEOUT_MS,
+  UUID_PATTERN,
+} from '../config';
 import { getMissionPlace, pendingGrantPlaces } from '../inbox/api';
 import type { GrantPlace, MissionPlace } from '../inbox/schemas';
 import type { SocialPostCheck } from '../schemas/server';
@@ -99,12 +105,19 @@ function failed(probed: Probe<unknown>): Failure | null {
 
 const isUuid = (id: string | null | undefined): id is string => !!id && UUID_PATTERN.test(id);
 
+/** A grant's ticket: its details' board_task_id, else the board task it holds (its subject). */
+function grantTicket(grant: GrantPlace): string {
+  const ticket =
+    grant.details?.board_task_id ??
+    (grant.subject_type === BOARD_TASK_SUBJECT ? grant.subject_id : null);
+  return ticket === null || ticket === undefined ? '' : String(ticket);
+}
+
 /** An open grant's card: its chat, else its ticket's sheet, else nowhere on the phone. */
 function grantPlace(grant: GrantPlace): ResolvedLink {
   const chatId = grant.details?.conversation_id;
   if (isUuid(chatId)) return opened(routes.chat(chatId));
-  const ticket = grant.details?.board_task_id;
-  const ticketId = ticket === null || ticket === undefined ? '' : String(ticket);
+  const ticketId = grantTicket(grant);
   return isTaskId(ticketId) ? opened(routes.cc.ticket(ticketId)) : NOWHERE;
 }
 

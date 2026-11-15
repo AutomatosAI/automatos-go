@@ -21,8 +21,8 @@ import { logger } from '../../lib/logger';
 import { routes } from '../../navigation/routes';
 import { markNotificationRead } from '../api';
 import { QUESTION_LINK_TYPE, REPLY_ACTION_ID } from '../config';
-import { resolveTarget, type StaleChecks } from '../links/stale';
-import { targetFor } from '../links/targets';
+import { resolveTarget, type ResolvedLink, type StaleChecks } from '../links/stale';
+import { sheetFor, targetFor, type LinkTarget, type SheetTarget } from '../links/targets';
 import type { NotificationsPort } from '../platform/expo';
 import type { PushKeyStore } from '../registration/key-store';
 import type { PushRecord } from '../registration/record';
@@ -82,7 +82,8 @@ export type HandlerDeps = Readonly<{
 export type PushApprovalSheet = Readonly<{
   /** Discovery lists approval_view and the role may answer an approval, read when the tap lands. */
   offered: () => boolean;
-  open: (grantId: string) => void;
+  /** `kind` 'plan': a Mission plan's sheet, its id the Mission's; a tool approval's by default. */
+  open: (grantId: string, kind?: SheetTarget['kind']) => void;
 }>;
 
 /** What a signature check reads: this server's push record, the hash and the clock. */
@@ -228,7 +229,8 @@ function refreshAfterReply(deps: HandlerDeps): void {
 }
 
 async function open(intent: Intent<'open'>, deps: HandlerDeps): Promise<Handled> {
-  const resolved = await resolveTarget(targetFor(intent.link), deps.checks);
+  const target = targetFor(intent.link);
+  const resolved = await resolveTarget(target, deps.checks);
   const route = resolved.route ?? unroutedRoute(intent.notificationId);
   const tap: TapReport = {
     kind: 'open',
@@ -237,16 +239,33 @@ async function open(intent: Intent<'open'>, deps: HandlerDeps): Promise<Handled>
     linkType: intent.link.link_type,
   };
   const shown = show(deps, outcome(route, resolved.notice), tap);
-  // a decided approval said so (the notice): there is nothing left to answer
-  if (intent.grantId && !resolved.notice) openApproval(deps, intent.grantId);
+  const sheet = sheetOnTap(intent.grantId, target, resolved);
+  if (sheet) openApproval(deps, sheet);
   await markRead(deps, intent.notificationId);
   return shown;
 }
 
+/**
+ * The sheet over the screen a tap opened: an approval's signed grant wherever it opened (its chat's
+ * card is the record, D30), and a Mission plan's when it has no chat to open in, so it is answered on
+ * the phone rather than in Studio. None once the record moved on (a decided approval, a gone
+ * Mission: the notice says so, nothing is left to answer).
+ */
+export function sheetOnTap(
+  grantId: string | undefined,
+  target: LinkTarget,
+  resolved: ResolvedLink,
+): SheetTarget | null {
+  if (resolved.notice) return null;
+  if (grantId) return Object.freeze({ id: grantId, kind: 'tool' });
+  const sheet = sheetFor(target);
+  return sheet?.kind === 'plan' && resolved.route === null ? sheet : null;
+}
+
 /** Over the screen the tap opened, the approval's sheet, where it is offered; never throws. */
-function openApproval(deps: HandlerDeps, grantId: string): void {
+function openApproval(deps: HandlerDeps, sheet: SheetTarget): void {
   try {
-    if (deps.approvals?.offered()) deps.approvals.open(grantId);
+    if (deps.approvals?.offered()) deps.approvals.open(sheet.id, sheet.kind);
   } catch {
     logger.warn("[push] could not open an approval's sheet");
   }

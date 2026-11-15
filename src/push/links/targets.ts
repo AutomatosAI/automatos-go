@@ -73,3 +73,16 @@ export function routeFor(target: LinkTarget): string | null {
       return null;
   }
 }
+
+/** The approval sheet a target opens in place of a screen: a tool approval's, or a Mission plan's. */
+export type SheetTarget = Readonly<{ id: string; kind: 'tool' | 'plan' }>;
+
+/**
+ * Where a record with no screen on the phone opens instead of Studio: an approval in its grant's
+ * sheet, a Mission in its plan's (core's ApprovalView@1 reads either id); null for any other.
+ */
+export function sheetFor(target: LinkTarget): SheetTarget | null {
+  if (target.kind === 'approval') return Object.freeze({ id: target.id, kind: 'tool' });
+  if (target.kind === 'mission') return Object.freeze({ id: target.id, kind: 'plan' });
+  return null;
+}
