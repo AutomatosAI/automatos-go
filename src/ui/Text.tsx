@@ -16,14 +16,8 @@ import type { FontWeight } from '../styles/fonts';
 import { useStyle } from '../styles/theme';
 import { TEXT_SCALING, fitScale } from '../styles/type';
 import { dressedTextFace } from './dressed';
-import {
-  TEXT_TONES,
-  defaultTone,
-  textRole,
-  type TextLevel,
-  type TextTone,
-  type TextVariant,
-} from './variants';
+import { toneColour } from './tone-colour';
+import { defaultTone, textRole, type TextLevel, type TextTone, type TextVariant } from './variants';
 
 export type TextProps = Omit<NativeTextProps, 'style' | 'allowFontScaling'> & {
   readonly variant?: TextVariant;
@@ -47,7 +41,8 @@ export function Text(props: TextProps) {
     () => dressedTextFace(painted, role, { weight, italic }),
     [painted, role, weight, italic],
   );
-  const color = painted.tokens.colours[TEXT_TONES[tone ?? defaultTone(variant)]];
+  const { colours, style: styleId } = painted.tokens;
+  const color = colours[toneColour(styleId, tone ?? defaultTone(variant))];
   const fitted = fit
     ? { numberOfLines: 1, adjustsFontSizeToFit: true, minimumFontScale: fitScale(face.fontSize) }
     : null;
