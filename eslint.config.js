@@ -31,6 +31,11 @@ const NETWORK_OBJECTS = ['globalThis', 'global', 'window', 'self'];
 // HTTP clients that would be a second way out. The platform's fetch, in src/api/, is the one.
 const OTHER_CLIENTS = ['axios', 'whatwg-fetch', 'ws', 'undici'];
 const NO_OTHER_CLIENTS = OTHER_CLIENTS.map((name) => ({ name, message: ONE_WAY_IN }));
+// Their subpaths too ('ws/wrapper'): a path entry matches the bare name only.
+const NO_OTHER_CLIENT_PATHS = {
+  group: OTHER_CLIENTS.map((name) => `${name}/*`),
+  message: ONE_WAY_IN,
+};
 
 const NO_WEBVIEW = {
   name: 'react-native-webview',
@@ -62,7 +67,10 @@ const PURE_CORE_PATTERN = {
 };
 
 function restrictedImports(paths, patterns) {
-  return ['error', { paths: [...paths, ...NO_OTHER_CLIENTS], patterns }];
+  return [
+    'error',
+    { paths: [...paths, ...NO_OTHER_CLIENTS], patterns: [...patterns, NO_OTHER_CLIENT_PATHS] },
+  ];
 }
 
 // The same modules reached by require() or import(), which no-restricted-imports does not see.

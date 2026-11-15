@@ -147,6 +147,7 @@ The template is held to the standard too. Each line is a rule's "Owed".
 | T14 | A ninth error kind for a limit reached, carrying when it lifts | 6.2 | The template reads that answer as `server` today |
 | T15 | One transfer module in `src/api/` for files sent and fetched, and the guard on the file system's own download and upload calls outside it | 13.2 | Two features of the template download files on their own today, so the guard follows the module |
 | T16 | Five pairs of text and ground in Studio Light read under AA: the quietest text most of all, at 3.25 to 1 on the page | 10.4 | Found by T6 and listed in the test. The values are automatos-ai's own tokens, copied here and never retuned, so the fix is there |
+| T17 | Shared code paints the accent colour itself in eight places: a link in an answer, a field's invalid border, the failed state's icon, the text cursor, an unread dot, a calendar dot, a tab's rule. In the one style whose accent is a quiet ground they do not read | 10.4 | Found by the review of T6. The Text primitive is fixed. The rest go through the same lookup next |
 
 ## Open for the owner
 
@@ -171,7 +172,7 @@ The template is held to the standard too. Each line is a rule's "Owed".
 
 | Who | What |
 |---|---|
-| Template | T1 to T16. Record each in the standard's Changes as it lands |
+| Template | T1 to T17. Record each in the standard's Changes as it lands |
 | App A | `TEMPLATE.md` is written, with a row per rule and the three stages sized. Ship what is waiting first. Nothing from the standard goes into that work |
 | App B | `TEMPLATE.md` is written. Give T4 and T6 back. Bring back and its one short control into line (4.2, 3.2). Rebuild its scene frame on Screen when it is next touched |
 | App C | Build its screens on the Tabs shell with drawn chrome. Build the Header and TabBar to the contract and hand them over. Move its lineage into `TEMPLATE.md` |

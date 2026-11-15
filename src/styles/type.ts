@@ -189,18 +189,20 @@ const SPECS_OF = new WeakMap<TypeScale, TypeSpecs>();
 /**
  * A scale from its specs, each role at its own weight (docs/app-standard.md rule 2.3): an app
  * built from this template adds a second scale as a list of sizes beside Studio's, which stays
- * pinned to its handoff. Throws for a role under MIN_TEXT_SIZE (D38, rule 2.4) or on a face the
- * app does not bundle, so a scale that breaks either never reaches a screen.
+ * pinned to its handoff. Throws for a role under MIN_TEXT_SIZE (D38, rule 2.4), naming it, so such
+ * a scale never reaches a screen; a face the app does not bundle throws from toTypeStyle. The
+ * specs are copied and frozen, so a later change to the caller's object cannot move the scale.
  */
 export function buildTypeScale(specs: TypeSpecs): TypeScale {
   const small = Object.entries(specs).find(([, spec]) => spec.size < MIN_TEXT_SIZE);
   if (small) {
     throw new Error(`${small[0]} is ${small[1].size} pt: nothing is under ${MIN_TEXT_SIZE} pt`);
   }
+  const kept: TypeSpecs = Object.freeze({ ...specs });
   const scale = Object.freeze(
-    Object.fromEntries(Object.entries(specs).map(([role, spec]) => [role, toTypeStyle(spec)])),
+    Object.fromEntries(Object.entries(kept).map(([role, spec]) => [role, toTypeStyle(spec)])),
   ) as TypeScale;
-  SPECS_OF.set(scale, specs);
+  SPECS_OF.set(scale, kept);
   return scale;
 }
 

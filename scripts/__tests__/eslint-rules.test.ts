@@ -113,6 +113,21 @@ describe('no second HTTP client, however it is loaded (rule 13.2)', () => {
     },
   );
 
+  it.each(['axios/lib/axios', 'ws/wrapper', 'undici/types', 'whatwg-fetch/dist/fetch.umd'])(
+    'refuses a subpath of one, %s, as a static import',
+    async (name) => {
+      const code = `import '${name}';\n`;
+      expect(await rules(code, 'src/chat/send.ts')).toContain('no-restricted-imports');
+      expect(await rules(code, 'src/api/client.ts')).toContain('no-restricted-imports');
+      expect(await rules(code, 'src/core/turn-reducer.ts')).toContain('no-restricted-imports');
+    },
+  );
+
+  it('allows a package that only starts with one of their names', async () => {
+    const code = "import 'wsdl-like-name';\nimport 'undici-types';\n";
+    expect(await rules(code, 'src/chat/send.ts')).not.toContain('no-restricted-imports');
+  });
+
   it.each([
     ["require('axios')", "export const a = require('axios');\n"],
     ["require('react-native-webview')", "export const w = require('react-native-webview');\n"],

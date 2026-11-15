@@ -65,8 +65,8 @@ describe('buildTypeScale', () => {
 
 describe('specsOf', () => {
   it('returns the specs a scale was built from', () => {
-    expect(specsOf(STUDIO_TYPE)).toBe(TYPE_SPECS);
-    expect(specsOf(buildTypeScale(LARGER))).toBe(LARGER);
+    expect(specsOf(STUDIO_TYPE)).toEqual(TYPE_SPECS);
+    expect(specsOf(buildTypeScale(LARGER))).toEqual(LARGER);
   });
 
   it("returns Studio's for a scale built some other way", () => {

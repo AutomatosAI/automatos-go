@@ -125,4 +125,20 @@ describe('contrastFailures', () => {
       [],
     );
   });
+
+  it('measures a ground that carries transparency as it sits on the page', () => {
+    const pairs = [['foreground', ['card']]] as const;
+    const inkCard = `${INK}FF`;
+    const noCard = `${INK}00`;
+    expect(contrastFailures(palette({ card: inkCard }), pairs)).toEqual([
+      { text: 'foreground', ground: 'card', ratio: 1 },
+    ]);
+    expect(contrastFailures(palette({ card: noCard }), pairs)).toEqual([]);
+  });
+
+  it('refuses to blend over a ground that is not solid, and a page that is not', () => {
+    const veil = `${WHITE}80`;
+    expect(() => solidOver(`${INK}80`, veil)).toThrow(/carries transparency/);
+    expect(() => contrastFailures(palette({ background: veil }))).toThrow(/page is opaque/);
+  });
 });

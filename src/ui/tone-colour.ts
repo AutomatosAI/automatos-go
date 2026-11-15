@@ -1,5 +1,8 @@
 // The token a tone's text is drawn in under a style, pure (docs/app-standard.md rule 10.4): the
 // tone's own (variants.ts TEXT_TONES), unless that token is not a text colour in the style.
+// Only the Text primitive reads it today. Shared code that paints `colours.accent` itself (a link
+// in an answer, a field's invalid border, an unread dot) still draws Candy's chip: tracked as T17
+// in docs/app-standard-record.md.
 
 import type { ColourName, StyleId } from '../styles/tokens';
 import { TEXT_TONES, type TextTone } from './variants';
