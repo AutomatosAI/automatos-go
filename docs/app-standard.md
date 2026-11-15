@@ -10,9 +10,9 @@ server does, the rules for keys, consent and erase, and what to keep and remove 
 template. How this page was agreed, where each app stands against it and what the template still
 owes is in [app-standard-record.md](app-standard-record.md).
 
-**Status, 15 Nov 2026: draft 3, agreed by the sessions building the apps.** Written from the
+**Status: in force from 15 Nov 2026.** Agreed by the sessions building the apps. Written from the
 template at `51a768b` and from an audit of each app by the session building it, then changed
-where those sessions objected. Not yet signed off by the owner.
+where those sessions objected.
 
 ## How to read a rule
 
@@ -76,13 +76,14 @@ in a second scale built beside the template's. Studio's scale is a desktop's and
 app for consumers uses larger text: 16 points for body. Fonts are bundled files named by their
 PostScript name, with no weight or italic set on top. A variable font with its weight chosen in
 code is a difference to record, and is checked on Android before an Android release. Template:
-`src/styles/fonts.ts`. Owed: a scale builder, so a second scale is a list of sizes and not a
-second copy of the file.
+`src/styles/fonts.ts`, and `buildTypeScale` in `src/styles/type.ts`, so a second scale is a list
+of sizes and not a second copy of the file. Held by: `src/styles/__tests__/type-scale.test.ts`.
 
 **2.4 Nothing under 11 points, and Dynamic Type stays on. (Must)** Text grows to the
 accessibility sizes and layouts wrap. A cap is at least 2 and carries its reason on the line
 above. Template: `MIN_TEXT_SIZE` and `TEXT_SCALING` in `src/styles/type.ts`. Held by:
-`src/release/__tests__/a11y-audit.test.ts`.
+`src/release/__tests__/a11y-audit.test.ts`, and by the scale builder, which refuses a role under
+11 points.
 
 ## 3. Primitives
 
@@ -285,9 +286,9 @@ label, and a button that is only an icon is the IconButton, whose type requires 
 stops and shows a still. Template: `src/styles/provider/reduce-motion.ts`, `src/ui/Sheet.tsx`.
 
 **10.4 Contrast is tested. (Must)** Every text colour on every ground it is drawn on, in every
-palette, at WCAG AA (4.5 to 1), computed from the tokens. Owed: the template tests each style in
-its own file; the one test over every pair, which two of the apps have written, comes back into
-the template so it travels.
+palette, at WCAG AA (4.5 to 1), computed from the tokens. A pair that reads under it is listed in
+the test with what it measures and why it stands, and may not get worse. Template:
+`src/styles/contrast.ts`. Held by: `src/styles/__tests__/contrast.test.ts`.
 
 **10.5 Text to be read is never dimmed. (Must)** Read, quiet or secondary text takes a muted
 token, never an opacity set on the text or on what holds it, so its contrast can be tested. A
@@ -342,10 +343,10 @@ pure model, its hooks, its components, its `strings.ts` and its tests in `__test
 and a file sent or fetched through one transfer module beside it, so media never passes through
 memory. Every answer is parsed with zod and unknown fields are ignored. The template's parsing is
 written to zod 3: an app on a newer major records it. Held by, for where a request is made: the
-lint rules on `fetch` and `XMLHttpRequest`. That every answer is parsed is held by review. Owed:
-the same guard on `WebSocket`, `EventSource`, `sendBeacon`, other HTTP clients and the file
-system's own download and upload calls; and the transfer module itself, since two features of the
-template download files on their own today.
+lint rules on `fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource`, `sendBeacon` and other HTTP
+clients, however they are loaded. That every answer is parsed is held by review. Owed: the same
+guard on the file system's own download and upload calls, and the transfer module itself, since
+two features of the template download files on their own today.
 
 **13.3 Pure logic outside React, with tests. (Must)** Updates never mutate. Held by: the coverage
 gate in `vitest.config.ts`.
@@ -353,8 +354,9 @@ gate in `vitest.config.ts`.
 **13.4 Sizes. (Must)** A file warns over 400 lines and fails over 800. A function is at most 50
 lines, a component 150, nesting 4 and complexity 10. Held by: `eslint.config.js`.
 
-**13.5 A guard cannot be switched off inside a file. (Must)** Owed: the lint setting that refuses
-inline disabling. The template has no inline disable today, so it costs nothing to turn on.
+**13.5 A guard cannot be switched off inside a file. (Must)** Inline lint comments are not read.
+Held by: `linterOptions` in `eslint.config.js`, proved by
+`scripts/__tests__/eslint-rules.test.ts`.
 
 **13.6 Storage. (Must)** What the phone keeps about the person goes in the encrypted store, and
 secrets in the keychain through the one registry. A reinstall starts clean. Public content and
@@ -469,6 +471,8 @@ template, or records why not.
 | Date | Change |
 |---|---|
 | 15 Nov 2026 | First written. |
+| 15 Nov 2026 | Landed in the template: the scale builder (2.3), the one contrast test over every pair (10.4), the wider network guard (13.2) and no inline disabling of a guard (13.5). A copy made before this takes those four files. |
+| 15 Nov 2026 | A text tone may read another token in a style where the tone's own is not a text colour there (`src/ui/tone-colour.ts`). The contrast test found one style drawing its accent text in a ground colour. |
 
 ## Related
 

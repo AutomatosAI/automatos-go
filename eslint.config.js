@@ -1,7 +1,10 @@
 // ESLint flat config — eslint-config-expo (SDK 54 pairing) + prettier compat, then the app's
-// guards (PRD-001 §4.11, US-004c): no console.* outside src/lib/logger.ts; HTTP only through
-// src/api/ (expo/fetch only in src/api/transport.ts); never react-native-webview; the size
-// limits; no colour literals outside the tokens; a pure hand-written core.
+// guards (PRD-001 §4.11, US-004c): no console.* outside src/lib/logger.ts; the network only
+// through src/api/ (fetch, XMLHttpRequest, WebSocket, EventSource and navigator.sendBeacon;
+// expo/fetch only in src/api/transport.ts; no other HTTP client anywhere); never
+// react-native-webview; the size limits; no colour literals outside the tokens; a pure
+// hand-written core. A guard cannot be switched off from inside a file: inline eslint comments
+// are not read (docs/app-standard.md rules 13.2 and 13.5).
 // scripts/__tests__/eslint-rules.test.ts proves each guard fires where it should.
 const { builtinRules } = require('eslint/use-at-your-own-risk');
 const expoConfig = require('eslint-config-expo/flat');
@@ -22,6 +25,17 @@ const TOKEN_FILES = ['src/styles/tokens/**'];
 const HAND_WRITTEN_CORE = ['src/core/*.ts', 'src/core/parity/**'];
 
 const ONE_WAY_IN = 'HTTP goes through src/api/ only (D-ONE-CLIENT): use the API client.';
+// Every way a request can leave by a global: the bare name, and the name on a global object.
+const NETWORK_NAMES = ['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource'];
+const NETWORK_OBJECTS = ['globalThis', 'global', 'window', 'self'];
+// HTTP clients that would be a second way out. The platform's fetch, in src/api/, is the one.
+const OTHER_CLIENTS = ['axios', 'whatwg-fetch', 'ws', 'undici'];
+const NO_OTHER_CLIENTS = OTHER_CLIENTS.map((name) => ({ name, message: ONE_WAY_IN }));
+// Their subpaths too ('ws/wrapper'): a path entry matches the bare name only.
+const NO_OTHER_CLIENT_PATHS = {
+  group: OTHER_CLIENTS.map((name) => `${name}/*`),
+  message: ONE_WAY_IN,
+};
 
 const NO_WEBVIEW = {
   name: 'react-native-webview',
@@ -53,15 +67,34 @@ const PURE_CORE_PATTERN = {
 };
 
 function restrictedImports(paths, patterns) {
-  return ['error', { paths, patterns }];
+  return [
+    'error',
+    { paths: [...paths, ...NO_OTHER_CLIENTS], patterns: [...patterns, NO_OTHER_CLIENT_PATHS] },
+  ];
 }
+
+// The same modules reached by require() or import(), which no-restricted-imports does not see.
+// No slash in the pattern: a selector's own /.../ cannot hold one, so a dot stands for it.
+const REFUSED_MODULES = `^(react-native-webview|expo.fetch|${OTHER_CLIENTS.join('|')})($|[^a-zA-Z0-9_-])`;
+const LOADED_ANOTHER_WAY =
+  'Not by require() or import() either: see the guards at the top of eslint.config.js.';
+const NO_OTHER_LOADERS = [
+  {
+    selector: `CallExpression[callee.name='require'][arguments.0.value=/${REFUSED_MODULES}/]`,
+    message: LOADED_ANOTHER_WAY,
+  },
+  { selector: `ImportExpression[source.value=/${REFUSED_MODULES}/]`, message: LOADED_ANOTHER_WAY },
+];
 
 // #rgb, #rrggbb, #rrggbbaa and the rgb()/rgba()/hsl()/hsla() functions, anywhere in a string.
 const COLOUR =
   '(#([0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3})(?![0-9a-zA-Z_])|\\b(rgba?|hsla?)\\s*\\()';
 const COLOUR_MESSAGE = 'Colour literal (D-TOKENS): read the colour from src/styles/tokens.';
+// One rule holds both lists: a second no-restricted-syntax for the same files would replace the
+// first, not add to it.
 const NO_COLOUR_LITERALS = [
   'error',
+  ...NO_OTHER_LOADERS,
   { selector: `Literal[value=/${COLOUR}/]`, message: COLOUR_MESSAGE },
   { selector: `TemplateElement[value.raw=/${COLOUR}/]`, message: COLOUR_MESSAGE },
 ];
@@ -95,20 +128,21 @@ module.exports = [
   },
   {
     plugins: { shape: shapePlugin },
+    linterOptions: { noInlineConfig: true, reportUnusedDisableDirectives: 'error' },
     rules: {
       'no-console': 'error',
       'no-restricted-globals': [
         'error',
-        { name: 'fetch', message: ONE_WAY_IN },
-        { name: 'XMLHttpRequest', message: ONE_WAY_IN },
+        ...NETWORK_NAMES.map((name) => ({ name, message: ONE_WAY_IN })),
       ],
       'no-restricted-properties': [
         'error',
-        ...['globalThis', 'global', 'window', 'self'].flatMap((object) => [
-          { object, property: 'fetch', message: ONE_WAY_IN },
-          { object, property: 'XMLHttpRequest', message: ONE_WAY_IN },
-        ]),
+        ...NETWORK_OBJECTS.flatMap((object) =>
+          NETWORK_NAMES.map((property) => ({ object, property, message: ONE_WAY_IN })),
+        ),
+        { object: 'navigator', property: 'sendBeacon', message: ONE_WAY_IN },
       ],
+      'no-restricted-syntax': ['error', ...NO_OTHER_LOADERS],
       'no-restricted-imports': restrictedImports([NO_WEBVIEW, NO_EXPO_FETCH], [NO_WEBVIEW_PATTERN]),
       'max-lines': ['error', { max: MAX_FILE_LINES }],
       'shape/target-file-lines': ['warn', { max: TARGET_FILE_LINES }],

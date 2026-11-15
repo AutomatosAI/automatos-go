@@ -60,7 +60,11 @@ describe('one way in: HTTP only through src/api (D-ONE-CLIENT)', () => {
   it.each([
     ['XMLHttpRequest', 'export const xhr = new XMLHttpRequest();\n', 'no-restricted-globals'],
     ['globalThis.fetch', 'export const f = globalThis.fetch;\n', 'no-restricted-properties'],
-    ['window.XMLHttpRequest', 'export const x = window.XMLHttpRequest;\n', 'no-restricted-properties'],
+    [
+      'window.XMLHttpRequest',
+      'export const x = window.XMLHttpRequest;\n',
+      'no-restricted-properties',
+    ],
   ])('refuses %s outside src/api and allows it inside', async (_name, code, rule) => {
     expect(await rules(code, 'src/cc/board.ts')).toContain(rule);
     expect(await rules(code, 'src/api/client.ts')).not.toContain(rule);
@@ -69,6 +73,101 @@ describe('one way in: HTTP only through src/api (D-ONE-CLIENT)', () => {
   it('a local binding named fetch is not the global', async () => {
     const code = 'export const load = (fetch: () => void) => fetch();\n';
     expect(await rules(code, 'src/chat/send.ts')).not.toContain('no-restricted-globals');
+  });
+
+  // docs/app-standard.md rule 13.2: every other way a request can leave is refused the same way.
+  it.each([
+    [
+      'WebSocket',
+      "export const s = new WebSocket('wss://example.org');\n",
+      'no-restricted-globals',
+    ],
+    ['EventSource', "export const e = new EventSource('/events');\n", 'no-restricted-globals'],
+    [
+      'globalThis.WebSocket',
+      'export const s = globalThis.WebSocket;\n',
+      'no-restricted-properties',
+    ],
+    ['self.EventSource', 'export const e = self.EventSource;\n', 'no-restricted-properties'],
+    [
+      'navigator.sendBeacon',
+      "export const b = () => navigator.sendBeacon('/x');\n",
+      'no-restricted-properties',
+    ],
+  ])('refuses %s outside src/api and allows it inside', async (_name, code, rule) => {
+    expect(await rules(code, 'src/push/inbound/handle.ts')).toContain(rule);
+    expect(await rules(code, 'app/(app)/index.tsx')).toContain(rule);
+    expect(await rules(code, 'src/api/live.ts')).not.toContain(rule);
+  });
+});
+
+describe('no second HTTP client, however it is loaded (rule 13.2)', () => {
+  it.each(['axios', 'whatwg-fetch', 'ws', 'undici'])(
+    'refuses an import of %s everywhere, src/api included',
+    async (name) => {
+      const code = `import '${name}';\n`;
+      expect(await rules(code, 'src/chat/send.ts')).toContain('no-restricted-imports');
+      expect(await rules(code, 'src/api/client.ts')).toContain('no-restricted-imports');
+      expect(await rules(code, 'src/api/transport.ts')).toContain('no-restricted-imports');
+      expect(await rules(code, 'src/core/turn-reducer.ts')).toContain('no-restricted-imports');
+    },
+  );
+
+  it.each(['axios/lib/axios', 'ws/wrapper', 'undici/types', 'whatwg-fetch/dist/fetch.umd'])(
+    'refuses a subpath of one, %s, as a static import',
+    async (name) => {
+      const code = `import '${name}';\n`;
+      expect(await rules(code, 'src/chat/send.ts')).toContain('no-restricted-imports');
+      expect(await rules(code, 'src/api/client.ts')).toContain('no-restricted-imports');
+      expect(await rules(code, 'src/core/turn-reducer.ts')).toContain('no-restricted-imports');
+    },
+  );
+
+  it('allows a package that only starts with one of their names', async () => {
+    const code = "import 'wsdl-like-name';\nimport 'undici-types';\n";
+    expect(await rules(code, 'src/chat/send.ts')).not.toContain('no-restricted-imports');
+  });
+
+  it.each([
+    ["require('axios')", "export const a = require('axios');\n"],
+    ["require('react-native-webview')", "export const w = require('react-native-webview');\n"],
+    ["import('undici')", "export const u = () => import('undici');\n"],
+    ["import('expo/fetch')", "export const f = () => import('expo/fetch');\n"],
+    ["import('ws/wrapper')", "export const s = () => import('ws/wrapper');\n"],
+  ])('refuses %s in app code, in the tokens and in src/api', async (_name, code) => {
+    expect(await rules(code, 'src/chat/send.ts')).toContain('no-restricted-syntax');
+    expect(await rules(code, 'src/styles/tokens/studio.ts')).toContain('no-restricted-syntax');
+    expect(await rules(code, 'src/api/transport.ts')).toContain('no-restricted-syntax');
+    expect(await rules(code, 'scripts/x.ts')).toContain('no-restricted-syntax');
+  });
+
+  it("allows a require() of an asset and an import() of the app's own module", async () => {
+    const code = [
+      "export const mark = require('../../assets/brand/splash.png');",
+      "export const later = () => import('../push/PushRoot');",
+      "export const words = () => import('wsdl-like-name');",
+    ].join('\n');
+    expect(await rules(`${code}\n`, 'src/chat/home/HomeHeader.tsx')).not.toContain(
+      'no-restricted-syntax',
+    );
+  });
+});
+
+describe('a guard cannot be switched off inside a file (rule 13.5)', () => {
+  it.each([
+    ['a next-line comment', "// eslint-disable-next-line no-console\nconsole.warn('x');\n"],
+    ['a block comment', "/* eslint-disable no-console */\nconsole.warn('x');\n"],
+    ['a same-line comment', "console.warn('x'); // eslint-disable-line no-console\n"],
+    ['a rule set to off', "/* eslint no-console: 'off' */\nconsole.warn('x');\n"],
+  ])('%s does not silence no-console', async (_name, code) => {
+    expect(await rules(code, 'src/chat/send.ts')).toContain('no-console');
+  });
+
+  it('nor the one way out, nor a colour literal', async () => {
+    const call = "/* eslint-disable */\nexport const go = () => fetch('https://example.org');\n";
+    expect(await rules(call, 'src/chat/send.ts')).toContain('no-restricted-globals');
+    const colour = "// eslint-disable-next-line no-restricted-syntax\nexport const c = '#fff';\n";
+    expect(await rules(colour, 'src/ui/button.tsx')).toContain('no-restricted-syntax');
   });
 });
 
