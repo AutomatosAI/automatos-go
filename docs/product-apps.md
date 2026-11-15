@@ -218,11 +218,15 @@ is not published. What it must do:
   events for servers whose clients read those;
 - record consent, always with the retention;
 - list and forget memories, and erase a person;
-- start background work with an idempotency key, and check a callback's signature and delivery
-  id;
-- for the third shape: find or make a business's workspace, list them, close one and restore it;
 - take its key as an argument, so one server can hold more than one;
 - hold no sign-in or session code.
+
+Its first version covers the People shape and a turn that belongs to nobody. Later, by scope:
+starting background work and checking a callback's signature and delivery id, and the calls for
+a business's workspace. Until then a server that needs them calls those routes itself.
+
+The library keeps no conversation id. A turn refused because its conversation belongs to another
+key (see Replacing a key) is sent again with no id, and only a turn that carried one.
 
 ## An app with no sign-in and no people
 
