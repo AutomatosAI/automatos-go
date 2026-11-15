@@ -31,6 +31,11 @@
 //   HUD's home and the voice screen pass `report` (A2's useMessageReport): the transcript offers
 // Report this on Auto's saved reply (P001R-AF-1). First open and the look previews pass none.
 //   HUD's home may pass `transcriptSlot` (PRD-268 US-G06): the day's brief in the rows' place.
+//   HUD's home passes `fold` (15 Nov 2026): HIDE AUTO beside the state chip (CoreFold.tsx) folds the
+// core away, sliding up as the chip, the voice's line and the transcript glide up into its room, and
+// SHOW AUTO brings it back down; the chip stays. Folded, the core is not drawn, so nothing in it moves.
+// The slide is the fold's alone (never as the screen opens or closes) and follows Reduce Motion. The
+// voice screen and the look previews pass none: their core always shows, with no motion added.
 //   The voice screen in Arcade passes `controls` (P001A-RVW-1): Arcade's pause control, drawn at
 // the end of a row under the top bar, since its sprite, rings and waveform loop for the whole
 // session (WCAG 2.2.2); in Candy, Candy's (US-023l: its Auto, the orb's arc, the rings and the
@@ -38,6 +43,7 @@
 
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import Animated, { LayoutAnimationConfig } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { ThreadReport } from '../../../chat/report/report';
@@ -53,6 +59,7 @@ import { Mascot } from '../../mascot/Mascot';
 import type { MascotController } from '../../mascot/use-mascot';
 import { LooksDrawer } from '../LooksDrawer';
 import { candyCorePlace } from './candy-core';
+import { ChipRow, foldMotionFor, type HudCoreFold } from './CoreFold';
 import { HudButtons } from './HudButtons';
 import { HudTopBar, type HudIdeas } from './HudTopBar';
 import {
@@ -152,7 +159,10 @@ export type HudCoreProps = {
   readonly transcriptSlot?: ReactNode;
   /** Drawn at the end of a row under the top bar (Arcade's pause control); absent, nothing. */
   readonly controls?: ReactNode;
+  /** HIDE AUTO beside the state chip and the core folded away (HUD's home); absent, it always shows. */
+  readonly fold?: HudCoreFold;
 };
+
 
 /** The state Auto should show: the one held, or the controller's target. */
 function stateOf(state: MascotName | MascotController): MascotName {
@@ -311,6 +321,7 @@ export function HudCore(props: HudCoreProps) {
   if (!frame) return null;
   const state = stateOf(mascotState);
   const parts = columnParts(voice, turn, props.quickAsk);
+  const motion = foldMotionFor(props.fold);
   return (
     <View style={[styles.screen, { backgroundColor: frame.background }]}>
       <Overlay plan={frame.plan} layer="ground" />
@@ -328,15 +339,24 @@ export function HudCore(props: HudCoreProps) {
         />
         {props.controls ? <View style={styles.controls}>{props.controls}</View> : null}
         <View style={styles.middle} onLayout={core.onMiddleLayout}>
-          <Core size={core.size} mascotState={mascotState} voice={voice} />
-          <View onLayout={core.onWordsLayout}>
-            <View style={{ marginTop: HUD_CORE.chip.marginTop }}>
-              <StateChip state={state} words={parts.chip} />
+          {/* the slide is the fold's alone: never as the screen opens or closes */}
+          <LayoutAnimationConfig skipEntering skipExiting>
+            {props.fold?.folded ? null : (
+              <Animated.View entering={motion.coreIn} exiting={motion.coreOut}>
+                <Core size={core.size} mascotState={mascotState} voice={voice} />
+              </Animated.View>
+            )}
+          </LayoutAnimationConfig>
+          <Animated.View layout={motion.glide}>
+            <View onLayout={core.onWordsLayout}>
+              <ChipRow chip={<StateChip state={state} words={parts.chip} />} fold={props.fold} />
+              {parts.line}
+              {props.underChip}
             </View>
-            {parts.line}
-            {props.underChip}
-          </View>
-          <Transcript turn={turn} report={props.report} slot={props.transcriptSlot} />
+          </Animated.View>
+          <Animated.View layout={motion.glide} style={styles.rest}>
+            <Transcript turn={turn} report={props.report} slot={props.transcriptSlot} />
+          </Animated.View>
         </View>
         <View style={{ paddingHorizontal: HUD_CORE.wave.padX }}>
           <Waveform colour={paint.accent} levels={levels} gradient={voice?.gradient} />
@@ -363,4 +383,6 @@ const styles = StyleSheet.create({
   middle: { flex: 1, overflow: 'hidden' },
   core: { alignSelf: 'center' },
   mascot: { position: 'absolute' },
+  /** The transcript's room, as before: what the core, the chip and the line leave. */
+  rest: { flex: 1 },
 });

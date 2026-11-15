@@ -692,6 +692,12 @@ export const HUD_CORE_COPY = Object.freeze({
   stop: 'STOP',
   stopLabel: 'Stop',
   stopHint: 'Stops Auto’s reply',
+  /** HUD's home: the core folds away for more room for the words, and comes back (15 Nov 2026). */
+  hideAuto: '▴ HIDE AUTO',
+  hideAutoLabel: 'Hide Auto',
+  showAuto: '▾ SHOW AUTO',
+  showAutoLabel: 'Show Auto',
+  foldHint: 'Folds Auto’s core away for more room, or brings it back',
   /** The user's words as the transcript shows them. */
   quote: (words: string) => `"${words}"`,
   youLabel: (words: string) => `You said: ${words}`,

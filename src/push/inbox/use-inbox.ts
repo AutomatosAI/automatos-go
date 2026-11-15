@@ -2,15 +2,19 @@
 // (read again every INBOX_REFETCH_INTERVAL_MS while something shows it), and the two actions over
 // the one client, the router, the browser and the Toast. A tap marks its row read at once on screen
 // (a new list in the cache, never the old one changed) and reads both again once the server has
-// answered; Mark all read does the same for every row. Only wiring: the decisions are actions.ts's,
+// answered; an approval's or a Mission plan's row opens the one approval sheet (push-sheet.ts) where
+// discovery lists approval_view and the role may answer, as a push's tap does (PushRoot); Mark all read does the same for every row. Only wiring: the decisions are actions.ts's,
 // open.ts's and model.ts's.
 
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 
+import { canApprovalView } from '../../api/capabilities';
 import { userMessage } from '../../api/errors';
-import { useApiClient } from '../../app-state/session';
+import { useApiClient, useAppSession } from '../../app-state/session';
+import { pushApprovals } from '../../approvals/push-sheet';
+import { roleCan } from '../../auth/role';
 import { openInBrowser } from '../../cc/open-studio';
 import { useToast } from '../../ui';
 import { markNotificationRead } from '../api';
@@ -63,6 +67,12 @@ export type InboxActions = Readonly<{
 
 export function useInboxActions(): InboxActions {
   const client = useApiClient();
+  const { discovery, workspace } = useAppSession();
+  const sheetOffered = canApprovalView(discovery) && roleCan(workspace.role, 'approve');
+  const approvals = useMemo(
+    () => Object.freeze({ offered: () => sheetOffered, open: pushApprovals.open }),
+    [sheetOffered],
+  );
   const queryClient = useQueryClient();
   const router = useRouter();
   const { show } = useToast();
@@ -76,9 +86,10 @@ export function useInboxActions(): InboxActions {
         navigate: (route) => router.push(route),
         openBrowser: openInBrowser,
         notify: show,
+        approvals,
       }).finally(() => readAgain(queryClient));
     },
-    [checks, client, queryClient, router, show],
+    [approvals, checks, client, queryClient, router, show],
   );
   const all = useMutation({
     mutationFn: () => markAllRead(() => markAllNotificationsRead(client), show, userMessage),

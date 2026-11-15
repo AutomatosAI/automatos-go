@@ -1,12 +1,14 @@
 // What a tap in the inbox does, pure over its ports (the hook binds the client, the router, the
 // browser and the Toast): an unread row is marked read on the server (POST /read, the push
 // handler's own call) while its target is looked up; then the target opens — a screen through the
-// router, Studio's page in the system browser — or its line is shown. Mark all read is one POST
+// router, an approval's or a Mission plan's sheet over the inbox, Studio's page in the system browser
+// only where that sheet is not offered — or its line is shown. Mark all read is one POST
 // read-all. A failed mark is logged by kind and changes nothing on screen (the lists are read
 // again); nothing throws, and nothing here is retried.
 
 import { isApiError } from '../../api/errors';
 import { logger } from '../../lib/logger';
+import type { PushApprovalSheet } from '../inbound/handler';
 import type { StaleChecks } from '../links/stale';
 import { PUSH_INBOX_COPY } from '../strings';
 import { inboxOpenFor, type InboxOpen } from './open';
@@ -20,6 +22,8 @@ export type InboxActionDeps = Readonly<{
   /** Linking.openURL behind src/cc/open-studio.ts: false when the phone could not. */
   openBrowser: (url: string) => Promise<boolean>;
   notify: (message: string) => void;
+  /** The approval sheet (PushRoot's port); none, or not offered, and such a row opens Studio. */
+  approvals?: PushApprovalSheet;
   /** Studio's base URL (the current server's); the foundation's own when not given. */
   webUrl?: string;
 }>;
@@ -43,6 +47,10 @@ async function show(where: InboxOpen, deps: InboxActionDeps): Promise<void> {
     if (where.notice) deps.notify(where.notice);
     return;
   }
+  if (where.kind === 'sheet') {
+    deps.approvals?.open(where.sheet.id, where.sheet.kind);
+    return;
+  }
   if (where.kind === 'studio') {
     if (!(await deps.openBrowser(where.url))) deps.notify(PUSH_INBOX_COPY.studioFailed);
     return;
@@ -57,7 +65,8 @@ export async function openInboxRow(
 ): Promise<InboxOpen | null> {
   const marked = markOnce(row, deps);
   try {
-    const where = await inboxOpenFor(row, deps.checks, deps.webUrl);
+    const offered = deps.approvals?.offered() ?? false;
+    const where = await inboxOpenFor(row, deps.checks, deps.webUrl, offered);
     await show(where, deps);
     return where;
   } catch (error) {

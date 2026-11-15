@@ -68,6 +68,10 @@ export const CHAT_LINK_TYPE = 'chat';
  */
 export const APPROVAL_LINK_TYPE = 'approval_grant';
 export const MISSION_LINK_TYPE = 'mission';
+/** An approval grant's subject_type for a task the board held (core core/models/approval_grants.py). */
+export const BOARD_TASK_SUBJECT = 'board_task';
+/** A Mission run's state while its plan waits for an answer (core orchestration_enums.py RunState). */
+export const MISSION_AWAITING_APPROVAL = 'awaiting_approval';
 
 /** The one status a social post waits on a person in (modules/socials/service.py NEEDS_APPROVAL). */
 export const SOCIAL_NEEDS_APPROVAL_STATUS = 'needs_approval';
