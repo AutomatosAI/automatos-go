@@ -117,10 +117,10 @@ cell says where the app is today, not where its open branches would put it.
 | 7 First run and asks | Follows | Partly | Partly | Not built |
 | 8 Settings | Partly: 8.3 | Partly | Partly | Not built |
 | 9 Meeting an AI | Follows | Partly | Follows | 9.1 only in its first release |
-| 10 Accessibility | Partly: 10.4 | Partly | Follows | Follows |
+| 10 Accessibility | Partly: five pairs under AA (T16) | Partly | Follows | Follows |
 | 11 Words | Follows | Partly | Follows | Follows |
 | 12 Motion, haptics, sound | Follows | Partly | Follows | Not built |
-| 13 Code | Partly: 13.2, 13.5 | Differs | Follows | Partly |
+| 13 Code | Partly: 13.2, file transfers | Differs | Follows | Partly |
 | 14 Release | Partly: 14.2 | Differs | Partly | Not built |
 | 15 Android | Follows | Partly | Not built | Not built |
 | 16 The design handoff | Partly | Not checked | Not checked | Follows |
@@ -134,11 +134,11 @@ The template is held to the standard too. Each line is a rule's "Owed".
 | T1 | A Header primitive | 4.2 | App C builds it to an agreed contract. Lifted from there |
 | T2 | The Tabs shell: a TabBar primitive | 5.4 | The same |
 | T3 | Switch and settings Section move into `src/ui/` | 3.1 | They live in one feature of the template today |
-| T4 | A scale builder, so a second type scale is a list of sizes | 2.3 | App B has written it |
+| T4 | **Done, 15 Nov.** A scale builder, so a second type scale is a list of sizes | 2.3 | Lifted from App B, with one addition: it refuses a role under 11 points |
 | T5 | Control sizes read from the theme | 3.5 | New |
-| T6 | One contrast test over every text colour and ground, in every palette | 10.4 | Apps B and C have each written it |
-| T7 | The network guard covers `WebSocket`, `EventSource`, `sendBeacon`, other HTTP clients, and the same modules reached by `require()` or `import()` | 13.2 | App C has written it |
-| T8 | Inline disabling of a lint rule is refused | 13.5 | App C has it. The template has no inline disable today |
+| T6 | **Done, 15 Nov.** One contrast test over every text colour and ground, in every palette | 10.4 | Lifted from App B. It found T16, and one style whose accent text could not be read, fixed with it |
+| T7 | **Done, 15 Nov.** The network guard covers `WebSocket`, `EventSource`, `sendBeacon`, other HTTP clients, and the same modules reached by `require()` or `import()` | 13.2 | Lifted from App C |
+| T8 | **Done, 15 Nov.** Inline disabling of a lint rule is refused | 13.5 | Lifted from App C |
 | T9 | One settings file per app that the audits read | 14.2 | New |
 | T10 | A test that `TEMPLATE.md` exists, names a commit and cites only rules that exist | The app's record | New |
 | T11 | A test that walks the words for the named states | 6.4 | Apps A and B each have one for their own fixed words |
@@ -146,6 +146,7 @@ The template is held to the standard too. Each line is a rule's "Owed".
 | T13 | A list of licences in About | 8.3 | New. The template has none |
 | T14 | A ninth error kind for a limit reached, carrying when it lifts | 6.2 | The template reads that answer as `server` today |
 | T15 | One transfer module in `src/api/` for files sent and fetched, and the guard on the file system's own download and upload calls outside it | 13.2 | Two features of the template download files on their own today, so the guard follows the module |
+| T16 | Five pairs of text and ground in Studio Light read under AA: the quietest text most of all, at 3.25 to 1 on the page | 10.4 | Found by T6 and listed in the test. The values are automatos-ai's own tokens, copied here and never retuned, so the fix is there |
 
 ## Open for the owner
 
@@ -170,7 +171,7 @@ The template is held to the standard too. Each line is a rule's "Owed".
 
 | Who | What |
 |---|---|
-| Template | T1 to T15. Record each in the standard's Changes as it lands |
+| Template | T1 to T16. Record each in the standard's Changes as it lands |
 | App A | `TEMPLATE.md` is written, with a row per rule and the three stages sized. Ship what is waiting first. Nothing from the standard goes into that work |
 | App B | `TEMPLATE.md` is written. Give T4 and T6 back. Bring back and its one short control into line (4.2, 3.2). Rebuild its scene frame on Screen when it is next touched |
 | App C | Build its screens on the Tabs shell with drawn chrome. Build the Header and TabBar to the contract and hand them over. Move its lineage into `TEMPLATE.md` |
