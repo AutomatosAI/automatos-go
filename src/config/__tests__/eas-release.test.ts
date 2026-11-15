@@ -14,6 +14,15 @@ import { z } from 'zod';
 
 import easJson from '../../../eas.json';
 import { EAS_OWNER, EAS_PROJECT_ID, EAS_UPDATES_URL, expo, PROJECT_ROOT } from './app-json';
+import {
+  beforeUpdateSteps,
+  ORIGIN,
+  OWN_MAIN,
+  PUBLIC_ADDRESS,
+  PUBLIC_MAIN,
+  runHeadCheck,
+  type HookStep,
+} from './hook-shell';
 
 const WORKFLOWS_DIR = '.eas/workflows';
 // EAS rejects a workflow file over 16 KiB (docs.expo.dev/eas/workflows/syntax, 'Workflow files').
@@ -21,6 +30,11 @@ const MAX_WORKFLOW_BYTES = 16 * 1024;
 const FINGERPRINT_HASH = '${{ needs.fingerprint.outputs.ios_fingerprint_hash }}';
 const FOUND = '${{ needs.get_ios_build.outputs.build_id }}';
 const NOT_FOUND = '${{ !needs.get_ios_build.outputs.build_id }}';
+const HEAD_CHECK = 'Stop if main has moved on (its own run ships this change too)';
+// commit shas for the head check: this run's, an older one and a newer one
+const SHA = 'a'.repeat(40);
+const OLDER = 'b'.repeat(40);
+const NEWER = 'c'.repeat(40);
 
 const jobSchema = z
   .object({
@@ -47,6 +61,12 @@ function workflowPath(file: string): string {
 
 function readWorkflow(file: string): Workflow {
   return workflowSchema.parse(parse(readFileSync(workflowPath(file), 'utf8')));
+}
+
+function stepNamed(steps: readonly HookStep[], name: string): HookStep {
+  const step = steps.find((candidate) => candidate.name === name);
+  if (!step) throw new Error(`publish_update has no "${name}" step`);
+  return step;
 }
 
 const testflightProfile = easJson.build.testflight;
@@ -162,18 +182,60 @@ describe('.eas/workflows/testflight.yml (every push to main)', () => {
 
   // EAS concurrency cancels but never queues, so two pushes run side by side: without this an
   // older run that publishes last becomes the active update and phones run its older bundle.
-  it("found: only main's head publishes (an older run stops before publishing)", () => {
-    const hook = z
-      .object({ before_update: z.array(z.object({ name: z.string(), run: z.string() })).length(1) })
-      .parse(jobs.publish_update.hooks);
-    const { run } = hook.before_update[0];
-    expect(run).toContain('${{ github.sha }}');
-    expect(run).toContain(
-      'git ls-remote https://github.com/AutomatosAI/automatos-go.git refs/heads/main',
-    );
-    expect(run).toMatch(/\[ "\$head" = "\$sha" \] \|\| \{[^}]*exit 1; \}/);
+  // main's head is read through the job's own checkout first, so a private copy of this
+  // repository can read itself; the public address is the fallback. Before 15 Nov a head that
+  // could not be read stopped the update, which in a private copy stopped every update: now it
+  // publishes with a warning. A head that was read and has moved on still stops the run.
+  describe("found: only main's head publishes (an older run stops before publishing)", () => {
+    const steps = beforeUpdateSteps(jobs.publish_update.hooks);
+    const { run } = stepNamed(steps, HEAD_CHECK);
+
+    it('is the one before_update step', () => {
+      expect(steps.map((step) => step.name)).toEqual([HEAD_CHECK]);
+    });
+
+    it('reads the checkout first, then the public address, never waiting on a password prompt', () => {
+      expect(run).toContain('${{ github.sha }}');
+      expect(run).toContain('export GIT_TERMINAL_PROMPT=0');
+      expect(run.indexOf(OWN_MAIN)).toBeGreaterThan(-1);
+      expect(run.indexOf(PUBLIC_MAIN)).toBeGreaterThan(run.indexOf(OWN_MAIN));
+      // git's own error lines can show a remote's address: neither read prints them
+      expect(run.split(`${OWN_MAIN} 2>/dev/null`)).toHaveLength(2);
+      expect(run.split(`${PUBLIC_MAIN} 2>/dev/null`)).toHaveLength(2);
+      // the one stop is main having moved on
+      expect(run.match(/exit 1/g)).toHaveLength(1);
+      expect(run).toMatch(/\[ "\$head" = "\$sha" \] \|\| \{[^}]*exit 1; \}/);
+    });
+
     // eas workflow:run has an empty github context: no sha to compare, the update goes out
-    expect(run).toContain('[ -n "$sha" ] || exit 0');
+    it('publishes a run started by hand (no sha) without asking git', () => {
+      expect(runHeadCheck(run, '', { origin: SHA })).toEqual({ status: 0, asked: [], out: '' });
+    });
+
+    it.each([
+      ['the checkout', { origin: SHA, public: OLDER }, [ORIGIN]],
+      ['the public address', { public: SHA }, [ORIGIN, PUBLIC_ADDRESS]],
+    ])('publishes when %s says this is main', (_, remotes, asked) => {
+      expect(runHeadCheck(run, SHA, remotes)).toMatchObject({ status: 0, asked });
+    });
+
+    it.each([
+      ['the checkout', { origin: NEWER, public: SHA }],
+      ['the public address', { public: NEWER }],
+    ])('stops when %s says main has moved on', (_, remotes) => {
+      const result = runHeadCheck(run, OLDER, remotes);
+      expect(result.status).toBe(1);
+      expect(result.out).toContain(`main is at ${NEWER}, past ${OLDER}`);
+    });
+
+    it("publishes with a loud warning when main's head cannot be read at all", () => {
+      const result = runHeadCheck(run, SHA, {});
+      expect(result).toMatchObject({ status: 0, asked: [ORIGIN, PUBLIC_ADDRESS] });
+      expect(result.out).toContain("WARNING: could not read main's head");
+      expect(result.out).toContain(`publishing ${SHA} without knowing it is main's head`);
+      expect(result.out).toContain('older update can land after the newer run');
+      expect(result.out).not.toContain('fatal');
+    });
   });
 
   it('not found: builds iOS with the testflight profile', () => {

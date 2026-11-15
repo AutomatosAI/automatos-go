@@ -61,8 +61,16 @@ fingerprint, which costs a native build.
 - **Not found** means something native changed: a native dependency, a config plugin or
   `app.json`. EAS builds iOS with the `testflight` profile and uploads it to TestFlight. Internal
   groups with automatic distribution get it.
-- **Only `main`'s head publishes an update.** The `before_update` hook reads `main` from GitHub and
-  stops an older run (red, "main is at …"); the newer run ships both changes.
+- **Only `main`'s head publishes an update.** The `before_update` hook reads `main`'s head through
+  the job's own checkout (`git ls-remote origin`) or, when that gives nothing, from the repository's
+  public address, and stops an older run (red, "main is at …"); the newer run ships both changes.
+  When neither read answers, the update still publishes, with `WARNING` lines in the job's log: an
+  older run's update could then land after a newer one's, and phones would run the older code until
+  the next merge, so check that `main`'s newest run published last. git is never left waiting for a
+  password, and its own error lines are not printed.
+- **A copy of this repository changes the public address in the hook to its own.** A private copy
+  reads itself through the checkout. If that read fails and the old address is still there, the
+  hook compares the copy with this repository's `main` and stops every update.
 - `concurrency.cancel_in_progress` is `false`: a running delivery is never cancelled.
 - Source maps are not uploaded (`upload_sentry_sourcemaps: false`): the repository holds no Sentry
   token.

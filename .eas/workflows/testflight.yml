@@ -60,12 +60,25 @@ jobs:
       before_update:
         # The newest update on the channel is the one phones run, and main's newer commit
         # carries this one's change, so only main's head publishes. eas workflow:run has no sha.
+        # main's head is read through the job's own checkout first (a private copy of this
+        # repository can read itself there), then from the public address. When neither answers,
+        # the update still goes out, with a warning: a stop there would stop every update of a
+        # repository nobody can read without a key. git never prompts for a password here, and
+        # its own error lines (which can show a remote's address) are not printed.
         - name: Stop if main has moved on (its own run ships this change too)
           run: |
             sha="${{ github.sha }}"
             [ -n "$sha" ] || exit 0
-            head=$(git ls-remote https://github.com/AutomatosAI/automatos-go.git refs/heads/main | cut -f1)
-            [ -n "$head" ] || { echo "Could not read main's head from GitHub; re-run."; exit 1; }
+            export GIT_TERMINAL_PROMPT=0
+            head=$(git ls-remote origin refs/heads/main 2>/dev/null | cut -f1 || true)
+            [ -n "$head" ] || head=$(git ls-remote https://github.com/AutomatosAI/automatos-go.git refs/heads/main 2>/dev/null | cut -f1 || true)
+            if [ -z "$head" ]; then
+              echo "WARNING: could not read main's head, through the checkout or from the public address." >&2
+              echo "WARNING: publishing $sha without knowing it is main's head. If main has moved on, this" >&2
+              echo "WARNING: older update can land after the newer run's, and phones then run the older code." >&2
+              echo "WARNING: check that main's newest run published after this one." >&2
+              exit 0
+            fi
             [ "$head" = "$sha" ] || { echo "main is at $head, past $sha: that run publishes both."; exit 1; }
 
   build_ios:

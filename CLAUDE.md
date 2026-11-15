@@ -164,7 +164,8 @@ pair beside it, as `src/step-up/check-copy.ts`; the store-copy audit reads both)
   merge, merge the next PR once that run's "Build iOS" job is running. For updates, only
   `main`'s head publishes, checked just before the export: an older run stops in
   `publish_update`'s `before_update` hook (red, "main is at …") and the newer run ships both
-  changes.
+  changes. The hook reads `main` through the job's checkout, then from the public address; when
+  neither answers it publishes with `WARNING` lines in the log (an older run could then land last).
 - **"Found" means an EAS build, not a TestFlight upload.** If `submit_testflight` fails (no App
   Store Connect API key assigned, Apple down), the build still matches its fingerprint and
   every later JS merge updates a binary nobody has. Re-send that build before merging
