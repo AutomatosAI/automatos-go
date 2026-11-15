@@ -99,6 +99,7 @@ export function gatedReply(): GatedReply {
   return {
     status: 200,
     bytes: async () => new Uint8Array(0),
+    header: () => null,
     chunks,
     push: (chunk) => {
       queue.push(chunk);

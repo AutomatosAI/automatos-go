@@ -17,12 +17,23 @@ import type {
 
 const CONTENT_LENGTH = 'content-length';
 
+/**
+ * What every request is sent with, whatever the client asked for.
+ *   redirect 'manual': a redirect is never followed. The answer that asked for one comes back as
+ * it is (its 3xx status, its Location), so the bearer never goes to an address the app was not
+ * given, and pairing can read where a server says it has moved (src/connect/https-twin.ts).
+ *   credentials 'omit': a request carries no cookie and keeps none. The app signs every request
+ * with its bearer; a cookie would be a second, unseen credential.
+ */
+const REQUEST_POLICY = Object.freeze({ redirect: 'manual', credentials: 'omit' } as const);
+
 function open(request: TransportRequest) {
   return expoFetch(request.url, {
     method: request.method,
     headers: request.headers,
     body: request.body,
     signal: request.signal,
+    ...REQUEST_POLICY,
   });
 }
 
@@ -31,6 +42,7 @@ async function send(request: TransportRequest): Promise<StreamingResponse> {
   return {
     status: response.status,
     bytes: (maxBytes) => readBytes(response.body, maxBytes, response.headers.get(CONTENT_LENGTH)),
+    header: (name) => response.headers.get(name),
     chunks: () => decodeChunks(response.body),
   };
 }

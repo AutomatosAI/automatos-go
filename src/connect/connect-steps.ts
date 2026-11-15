@@ -7,7 +7,8 @@
 // the app's ports; tests pass fakes.
 
 import { fetchDiscovery } from '../api/discovery';
-import { isAbortError } from '../api/errors';
+import { isAbortError, isApiError } from '../api/errors';
+import { routes } from '../api/routes';
 import type { Server } from '../api/server';
 import type { Transport } from '../api/transport-types';
 import { logger } from '../lib/logger';
@@ -16,6 +17,7 @@ import { pairedRecordFrom, withoutToken, type ConfirmDetails } from './confirm';
 import type { DevicePlatform } from './device-info';
 import type { PairedRecord } from './device-store';
 import type { ConnectAction, PairFailure } from './flow';
+import { httpsTwin } from './https-twin';
 import { discoveryFailureFor, discoveryServerFor, nextStepFor } from './next-step';
 
 /** This phone as POST /pair names it (device-info.ts). */
@@ -44,9 +46,17 @@ function pairFailed(kind: PairFailure): ConnectAction {
   return Object.freeze({ type: 'pairFailed', kind });
 }
 
+/** Where the server said it has moved, when that is its own https address (https-twin.ts). */
+function movedTo(origin: string, error: unknown): string | null {
+  if (!isApiError(error)) return null;
+  return httpsTwin(origin, error.redirectTo, routes.discovery.path);
+}
+
 /**
- * Reads the discovery document at `origin`: `discovered` with nextStepFor's word, or
- * `discoveryFailed` with its kind; null when the caller aborted (Back), so nothing is fed back.
+ * Reads the discovery document at `origin`: `discovered` with nextStepFor's word, `moved` when the
+ * server asked at its http address answered "use my https one" (the flow checks that address
+ * next), or `discoveryFailed` with its kind; null when the caller aborted (Back), so nothing is
+ * fed back.
  */
 export async function discover(
   origin: string,
@@ -62,6 +72,8 @@ export async function discover(
     return Object.freeze({ type: 'discovered', origin, discovery, next });
   } catch (error) {
     if (signal?.aborted || isAbortError(error)) return null;
+    const to = movedTo(origin, error);
+    if (to !== null) return Object.freeze({ type: 'moved', origin, to });
     const kind = discoveryFailureFor(error);
     logger.warn('[connect] discovery gave Connect nothing to read', kind, error);
     return Object.freeze({ type: 'discoveryFailed', origin, kind });

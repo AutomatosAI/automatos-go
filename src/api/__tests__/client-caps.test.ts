@@ -76,6 +76,7 @@ describe('every body is read under a cap', () => {
       status: 200,
       bytes: (maxBytes: number) => Promise.reject(new BodyTooLargeError(maxBytes)),
       chunks: async function* () {},
+      header: () => null,
     }));
     const error = await failureOf(
       clientWith(transport).request(WORKSPACE, { schema: WorkspaceSchema }),
@@ -115,6 +116,7 @@ describe('every body is read under a cap', () => {
         status,
         bytes: (maxBytes: number) => Promise.reject(new BodyTooLargeError(maxBytes)),
         chunks: async function* () {},
+        header: () => null,
       }));
       const error = await failureOf(clientWith(transport, { onAuthExpired }).request(WORKSPACE));
       expect(error).toMatchObject({ kind, status });

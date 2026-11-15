@@ -1,7 +1,7 @@
 // The real transport's wiring (transport.ts), over a stand-in for expo/fetch: what the client asks
-// for is what is sent, and the two ways a body is read (whole as bytes under a cap, or as it
-// arrives) each read the response that came back, with the response's own Content-Length handed to
-// the cap. Every other test injects a fake transport, so without this one the wiring could be lost
+// for is what is sent, every request refuses to follow a redirect and carries no cookie, and the
+// two ways a body is read (whole as bytes under a cap, or as it arrives) each read the response
+// that came back, with the response's own Content-Length handed to the cap. Every other test injects a fake transport, so without this one the wiring could be lost
 // and nothing would say so.
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -104,10 +104,29 @@ describe('the real transport', () => {
 
   it('has no way to read a body whole without a cap', async () => {
     const response = await expoTransport.request(request());
-    expect(Object.keys(response).sort()).toEqual(['bytes', 'chunks', 'status']);
+    expect(Object.keys(response).sort()).toEqual(['bytes', 'chunks', 'header', 'status']);
     const binary = await expoTransport.binary(request());
     expect(Object.keys(binary).sort()).toEqual(['bytes', 'header', 'status']);
   });
+
+  it.each(['request', 'stream', 'binary'] as const)(
+    '%s never follows a redirect and carries no cookie',
+    async (call) => {
+      await expoTransport[call](request());
+      expect(native.sent[0]?.init).toMatchObject({ redirect: 'manual', credentials: 'omit' });
+    },
+  );
+
+  it.each(['request', 'stream', 'binary'] as const)(
+    '%s hands a redirect back as it is, with where it pointed, for the client to refuse',
+    async (call) => {
+      answerWith({ Location: 'https://elsewhere.example.test/x' }, 302);
+      const response = await expoTransport[call](request());
+      expect(response.status).toBe(302);
+      expect(response.header('location')).toBe('https://elsewhere.example.test/x');
+      expect(native.sent).toHaveLength(1);
+    },
+  );
 
   it('stream reads the body as it arrives', async () => {
     const response = await expoTransport.stream(request());
