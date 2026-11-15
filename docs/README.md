@@ -66,6 +66,14 @@ product can take, the rules, consent, a turn, memory, erase and limits, what eve
 and what each decides, what to keep and remove when copying this repository, and what automatos-ai
 provides. Proposed on 15 Nov 2026; no product is built on it yet.
 
+**[app-standard.md](app-standard.md).** The app standard: how an Automatos phone app is designed
+and built, as numbered rules taken from this app. Tokens, type, the primitives, the screen, the
+two shells, states, first run, settings, the AI label, accessibility, words, motion, code, release
+and the design handoff, each rule marked Must, Shaped or Own, with the file that does it and the
+test that holds it. Every app built from this template follows it and records where it differs.
+[app-standard-record.md](app-standard-record.md) is the tracking: the decisions, where each app
+stands and what this template still owes.
+
 **[prd/PRD-001-AUTOMATOS-GO-V1.md](prd/PRD-001-AUTOMATOS-GO-V1.md).** The plan for v1: scope,
 decisions, waves and stories. Where it and the code differ, the code is right. Known differences:
 

@@ -156,6 +156,12 @@ already live keeps its routes.
 | `AUTOMATOS_SERVER_KEY` | The server key. In no file, build setting or log |
 | `AUTOMATOS_AGENT_ID` | The lean agent |
 
+A product with more than one agent names each for its job: `AUTOMATOS_AGENT_<JOB>_ID`. A product
+with more than one key keeps `AUTOMATOS_SERVER_KEY` for turns and people, and names every other
+key for what it is for: `AUTOMATOS_<PURPOSE>_KEY`. A key cannot be changed once it is minted, so a
+second purpose is a second key (verified: the agent is named on each turn, and the key routes are
+mint, list and revoke).
+
 **Logs** hold ids, counts, status codes and timings. Never a message, a reply, a memory or app
 context.
 
@@ -293,7 +299,8 @@ changed, and says why in its own comment.
 
 ## The look
 
-A product app has one look of its own.
+A product app has one look of its own. The full rules for how the app is designed and built, of
+which these are the short form, are [the app standard](app-standard.md).
 
 - **Tokens only.** A screen reads colours, radii, spacing and type through the tokens. No colour
   and no font size is written in a screen.
@@ -335,6 +342,9 @@ The full design is automatos-ai's
 - A way to change a key's limits after it is minted.
 - Forgetting one memory that Automatos kept from a conversation. A server key can delete only
   what it stored itself.
+- Documents with a server key. A key can ask for a generated document. It cannot list, upload or
+  delete the workspace's documents, so a product that keeps its own content in Automatos still
+  does that part by hand.
 - A published shared library, and a server starter.
 
 ## Before a product is switched on
