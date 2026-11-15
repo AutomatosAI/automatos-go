@@ -5,8 +5,8 @@ customers, with Automatos behind it. This page is the pattern such an app and it
 so that the second product costs less than the first and they all behave the same way.
 
 **Status, 15 Nov 2026: proposed.** No product is built on it yet, and the shared server library
-it names does not exist. What Automatos provides was read from automatos-ai `main` at `46c1e2f`
-and is marked **verified** below. Everything else is the design to build to.
+it names is being built and is not published. What Automatos provides was read from automatos-ai
+`main` at `46c1e2f` and is marked **verified** below. Everything else is the design to build to.
 
 ## How a product app differs from Automatos Go
 
@@ -88,7 +88,7 @@ The server sends:
   only. It is not stored, not returned in history and not read by memory (verified; at most
   8,000 characters).
 
-The reply comes back as a stream and the server passes it through. Three things to know
+The reply comes back as a stream and the server passes it through. Four things to know
 (verified):
 
 - The stream is the AI SDK data stream, sent as `text/plain`. This repo's parser in `src/core/`
@@ -98,6 +98,9 @@ The reply comes back as a stream and the server passes it through. Three things 
   `src/voice/quick-ask/` does when a server does not offer spoken mode.
 - The server voice is not reachable with a server key yet. A product app uses the phone's own
   voice until it is.
+- Automatos accepts a turn before the model starts, and finishes a turn it has accepted even if
+  the connection drops. Closing the connection stops the reading, not the turn or its cost. A
+  server that times out waiting cannot tell whether the turn was taken.
 
 ## Memory
 
@@ -107,6 +110,11 @@ keeping, and a product whose subject is sensitive writes its own profile.
 
 The app shows the person what is remembered, lets them forget one thing, and lets them erase
 everything.
+
+Forgetting one thing has a limit today (verified): a server key can delete only a memory it
+stored itself. What Automatos kept from the person's conversations is in the list, and a key
+cannot remove those one at a time; they go with a full erase. Until that changes, an app offers
+"forget" only on what the product stored, and tells the person that the rest goes with erase.
 
 ## Erase
 
@@ -134,7 +142,7 @@ Shared: the actions and what they carry.
 | Agree | The consent wording's version | Stores it, then records consent in Automatos with the retention | Done |
 | Send a turn | The person's words, and what the app knows right now | Checks the session and the person's limit, calls Automatos with the person's id and the app context, passes the stream through | The reply stream |
 | What is remembered | Nothing | Reads the person's memories | A list: id, text, when |
-| Forget one | The memory's id | Deletes it | Done |
+| Forget one | The memory's id | Deletes it, where the product stored it (see Memory) | Done |
 | Erase | Nothing | The three steps above | Done |
 
 Each product decides: its route prefix, and how its people sign in. A product whose server is
@@ -152,7 +160,8 @@ already live keeps its routes.
 context.
 
 **The shared library.** The calls to Automatos belong in one library every product server uses,
-`@automatos/server`. It is not built. What it must do:
+`@automatos/server`, in the widget SDK repository under `packages/server`. It is being built and
+is not published. What it must do:
 
 - work from plain JavaScript as well as TypeScript, with no web framework tied in;
 - send a turn and hand back the raw stream, with a helper that re-emits it as the chat widget's
@@ -221,7 +230,9 @@ The full design is automatos-ai's
 - The server voice and spoken mode for a server key.
 - Usage split per person. Usage rolls up to the workspace.
 - A way to change a key's limits after it is minted.
-- The shared library and a server starter.
+- Forgetting one memory that Automatos kept from a conversation. A server key can delete only
+  what it stored itself.
+- A published shared library, and a server starter.
 
 ## Before a product is switched on
 
