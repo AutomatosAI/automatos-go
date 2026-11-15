@@ -11,7 +11,7 @@ import { spanStyle } from '../../chat/markdown/look';
 import { contrastRatio } from '../../core/web/lib/look-kit/contrast';
 import { STYLE_IDS, tokensFor, type Colours, type Tokens } from '../../styles/tokens';
 import { STUDIO_COLOURS } from '../../styles/tokens/studio';
-import { MARK_CONTRAST, accentInk, accentToken, markColour } from '../accent';
+import { MARK_CONTRAST, accentInk, accentToken, markColour, markOn } from '../accent';
 import { toneColour } from '../tone-colour';
 import { fieldPaint, statusPip, tonePaint } from '../variants';
 
@@ -67,6 +67,19 @@ describe('the accent as a foreground', () => {
     expect(accentToken(onPageOnly)).toBe('primary');
   });
 
+  it('falls back to an ink that reads on a card too, the main ink at the last', () => {
+    const light = STUDIO_COLOURS.light;
+    const primaryLostOnCard: Colours = { ...light, accent: light.background, primary: light.card };
+    expect(accentToken(primaryLostOnCard)).toBe('foreground');
+    const nothingReads: Colours = {
+      ...light,
+      accent: light.background,
+      primary: light.background,
+      foreground: light.background,
+    };
+    expect(accentToken(nothingReads)).toBe('foreground');
+  });
+
   it('decides once for a palette object', () => {
     const palette = { ...STUDIO_COLOURS.light };
     expect(accentToken(palette)).toBe('accent');
@@ -116,5 +129,33 @@ describe('each shared place that paints the accent reads it there', () => {
     expect(tabPaint(CANDY.colours, false).rule).toBe('transparent');
     const chosen = stripCellPaint(CANDY.colours, { selected: true, today: false, hasItems: true });
     expect(chosen.dot).toBe(CANDY.colours.card);
+  });
+});
+
+describe("a mark on a control's own fill", () => {
+  const { colours } = CANDY;
+
+  it('keeps a dot in the accent visible on a pill chosen in the accent', () => {
+    const chosenFill = colours.primary;
+    expect(markOn(colours, 'accent', chosenFill)).toBe(colours.accent);
+    expect(contrastRatio(markOn(colours, 'accent', chosenFill), chosenFill)).toBeGreaterThanOrEqual(
+      MARK_CONTRAST,
+    );
+  });
+
+  it('is the accent that reads on a fill it shows on, and where there is no fill', () => {
+    expect(markOn(colours, 'accent', colours.card)).toBe(colours.primary);
+    expect(markOn(colours, 'accent', 'transparent')).toBe(colours.primary);
+    expect(markOn(colours, 'accent', `${colours.card}00`)).toBe(colours.primary);
+  });
+
+  it('never changes a mark in another token, or the accent where it already reads', () => {
+    for (const fill of [colours.primary, colours.card, colours.foreground, 'transparent']) {
+      expect(markOn(colours, 'success', fill), fill).toBe(colours.success);
+      expect(markOn(colours, 'foreground', fill), fill).toBe(colours.foreground);
+    }
+    const studio = STUDIO.colours;
+    expect(markOn(studio, 'accent', studio.foreground)).toBe(studio.accent);
+    expect(markOn(studio, 'accent', studio.card)).toBe(studio.accent);
   });
 });

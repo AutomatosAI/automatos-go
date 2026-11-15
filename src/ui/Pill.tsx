@@ -13,7 +13,7 @@ import { Text } from './Text';
 import { controlLabel, dressedPillPaint } from './dressed';
 import { hitSlopFor, joinLabel } from './paint';
 import { DOT_SIZE, PILL_COUNT_OPACITY } from './variants';
-import { markColour } from './accent';
+import { markOn } from './accent';
 
 const PILL_LABEL_LEVEL = 5;
 
@@ -34,7 +34,8 @@ export function Pill({ label, selected, onPress, count, dot, disabled = false }:
   const { pill } = dress;
   const weight = selected ? pill.selectedWeight : pill.restWeight;
   const labelFace = controlLabel(style, dress, PILL_LABEL_LEVEL, weight);
-  const ink = dressedPillPaint(dress, selected).color;
+  const rest = dressedPillPaint(dress, selected);
+  const ink = rest.color;
   return (
     <Pressable
       onPress={onPress}
@@ -64,7 +65,10 @@ export function Pill({ label, selected, onPress, count, dot, disabled = false }:
         <View
           style={[
             styles.dot,
-            { backgroundColor: markColour(colours, dot), borderRadius: radii.full },
+            {
+              backgroundColor: markOn(colours, dot, rest.backgroundColor),
+              borderRadius: radii.full,
+            },
           ]}
         />
       ) : null}

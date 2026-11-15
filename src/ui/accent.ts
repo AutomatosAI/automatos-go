@@ -20,16 +20,23 @@ const found = new WeakMap<Colours, ColourName>();
 
 /** The grounds a mark in the accent sits on: the page (a link, a rule) and a card (a dot, a chip). */
 const GROUNDS: readonly ColourName[] = ['background', 'card'];
+/** In order: the accent itself, the palette's strong ink, then its main ink, which always reads. */
+const CANDIDATES: readonly ColourName[] = ['accent', 'primary', 'foreground'];
+const LAST_RESORT: ColourName = 'foreground';
 
-/** `accent` where it reads on the palette's page and cards, `primary` where it is a ground there. */
+function readsOnEveryGround(colours: Colours, token: ColourName): boolean {
+  const ink = solid(colours[token]);
+  return GROUNDS.every((ground) => contrastRatio(ink, solid(colours[ground])) >= MARK_CONTRAST);
+}
+
+/**
+ * `accent` where it reads on the palette's page and cards; where it is a ground there, the first
+ * of `primary` and `foreground` that does read on both.
+ */
 export function accentToken(colours: Colours): ColourName {
   const known = found.get(colours);
   if (known !== undefined) return known;
-  const accent = solid(colours.accent);
-  const reads = GROUNDS.every(
-    (ground) => contrastRatio(accent, solid(colours[ground])) >= MARK_CONTRAST,
-  );
-  const token: ColourName = reads ? 'accent' : 'primary';
+  const token = CANDIDATES.find((each) => readsOnEveryGround(colours, each)) ?? LAST_RESORT;
   found.set(colours, token);
   return token;
 }
@@ -42,4 +49,17 @@ export function accentInk(colours: Colours): string {
 /** A token painted as a mark (a status dot): its own colour, the accent through the lookup. */
 export function markColour(colours: Colours, token: ColourName): string {
   return token === 'accent' ? accentInk(colours) : colours[token];
+}
+
+const SOLID_HEX = /^#[0-9a-f]{6}$/i;
+
+/**
+ * A mark that sits on a control's own fill (a status dot inside a pill): the mark's colour, or the
+ * token's own where the mark would be lost in that fill, as a dot in the accent is on a pill chosen
+ * in the accent. A fill that is not one solid colour is no fill: the mark sits on what is behind.
+ */
+export function markOn(colours: Colours, token: ColourName, fill: string): string {
+  const mark = markColour(colours, token);
+  if (!SOLID_HEX.test(fill)) return mark;
+  return contrastRatio(solid(mark), fill) >= MARK_CONTRAST ? mark : colours[token];
 }
