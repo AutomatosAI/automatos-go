@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { isServerAddress as appIsServerAddress } from '../../src/lib/env';
 import { isEuDsn as appIsEuDsn } from '../../src/observability/options';
-import { checkReleaseEnv, isEuDsn } from '../check-release-env';
+import { checkReleaseEnv, isEuDsn, isServerAddress } from '../check-release-env';
 
 const US_DSN = 'https://key@o0.ingest.us.sentry.io/0';
 /** DSNs the build hook and the app must judge alike (src/observability/options.ts isEuDsn). */
@@ -131,5 +132,81 @@ describe('checkReleaseEnv', () => {
     const webUrl = warnings.find((message) => message.includes('EXPO_PUBLIC_WEB_URL'));
     expect(webUrl).toContain('links into hosted Studio');
     expect(warnings.join('\n')).not.toMatch(/create an account|sign up/i);
+  });
+});
+
+/** Addresses the build hook and the app must judge alike (src/lib/env.ts isServerAddress). */
+const ADDRESS_CASES = [
+  'https://api.automatos.app',
+  'https://api.automatos.app/',
+  'https://api.automatos.app:8443',
+  'HTTPS://API.AUTOMATOS.APP',
+  'https:api.automatos.app',
+  'https://api.auto\tmatos.app',
+  'https://%61pi.automatos.app',
+  'https://api.automatos.app:443',
+  'https://api.automatos.app/.',
+  'http://api.automatos.app',
+  'http://192.168.1.20:8000',
+  'https://user:secret@api.automatos.app',
+  'https://user@api.automatos.app',
+  'https://api.automatos.app/api',
+  'https://api.automatos.app/?next=x',
+  'https://api.automatos.app/#x',
+  'https://api.automatos.app\\@elsewhere.test',
+  'javascript:alert(1)',
+  'https://',
+  'not a url',
+];
+
+describe('a hosted address the app would refuse at launch', () => {
+  const RELEASE = false;
+  const BAD = 'https://alice:secret@api.automatos.app/api';
+
+  it.each(ADDRESS_CASES)('the build hook and the app judge %s alike', (value) => {
+    expect(isServerAddress(value)).toBe(appIsServerAddress(value, RELEASE));
+  });
+
+  it('accepts the bare https address and refuses the rest of the cases', () => {
+    const accepted = ADDRESS_CASES.filter((value) => isServerAddress(value));
+    expect(accepted).toEqual([
+      'https://api.automatos.app',
+      'https://api.automatos.app/',
+      'https://api.automatos.app:8443',
+    ]);
+  });
+
+  it.each(['production', 'preview', 'testflight'])(
+    'fails a %s build, naming the variable and never the value',
+    (profile) => {
+      const { errors } = checkReleaseEnv({ ...COMPLETE, EXPO_PUBLIC_API_URL: BAD }, profile);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toContain('EXPO_PUBLIC_API_URL');
+      expect(errors[0]).not.toContain('secret');
+      expect(errors[0]).not.toContain('alice');
+      expect(errors[0]).not.toContain('automatos.app');
+    },
+  );
+
+  it('checks both addresses, and plain http is refused in a release build', () => {
+    const env = {
+      ...COMPLETE,
+      EXPO_PUBLIC_API_URL: 'http://api.automatos.app',
+      EXPO_PUBLIC_WEB_URL: 'https://studio.automatos.app/app',
+    };
+    const { errors } = checkReleaseEnv(env, 'testflight');
+    expect(errors.map((message) => message.split(' ')[0])).toEqual([
+      'EXPO_PUBLIC_API_URL',
+      'EXPO_PUBLIC_WEB_URL',
+    ]);
+  });
+
+  it('says nothing for a good address, an unset one, or a profile it does not check', () => {
+    expect(checkReleaseEnv(COMPLETE, 'testflight').errors).toEqual([]);
+    expect(checkReleaseEnv({ ...COMPLETE, EXPO_PUBLIC_WEB_URL: '' }, 'preview').errors).toEqual([]);
+    expect(checkReleaseEnv({ ...COMPLETE, EXPO_PUBLIC_API_URL: BAD }, 'development')).toEqual({
+      errors: [],
+      warnings: [],
+    });
   });
 });

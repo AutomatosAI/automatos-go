@@ -350,6 +350,19 @@ clients, however they are loaded. That every answer is parsed is held by review.
 guard on the file system's own download and upload calls, and the transfer module itself, since
 two features of the template download files on their own today.
 
+**13.2a Every body is read under a cap. (Must)** The client cannot read an answer whole without a
+size limit: the transport gives a body as bytes up to the caller's cap, or as it arrives, and
+nothing else. An answer over its cap is refused and read no further. An error's body over its cap
+gives no detail, and its status alone says what kind of error it is. Template:
+`src/api/transport-types.ts`, `src/api/body.ts`, the caps in `src/api/config.ts`. Held by:
+`src/api/__tests__/client-caps.test.ts`.
+
+**13.2b The address a build is given is an address and nothing more. (Must)** https, a host and an
+optional port: no user name or password, no path, no query, no fragment. Plain http only in a
+development build. A value that is not one fails the build, and is refused again when the app
+starts. Template: `isServerAddress` in `src/lib/env.ts`, `scripts/check-release-env.js`. Held by:
+`src/lib/__tests__/env.test.ts`, `scripts/__tests__/check-release-env.test.ts`.
+
 **13.3 Pure logic outside React, with tests. (Must)** Updates never mutate. Held by: the coverage
 gate in `vitest.config.ts`.
 
@@ -474,6 +487,7 @@ template, or records why not.
 |---|---|
 | 15 Nov 2026 | First written. |
 | 15 Nov 2026 | Landed in the template: the scale builder (2.3), the one contrast test over every pair (10.4), the wider network guard (13.2) and no inline disabling of a guard (13.5). A copy made before this takes those four files. |
+| 15 Nov 2026 | Every body the client reads is read under a cap (13.2a), and the address a build is given is held to a bare https address (13.2b). A copy takes `src/api/transport-types.ts`, `transport.ts`, `client.ts`, `config.ts`, `src/lib/env.ts` and `scripts/check-release-env.js`. Its own fakes and tests lose `text()` on a transport answer. |
 | 15 Nov 2026 | The accent as a foreground (text, a glyph, a rule, a dot) is read from `src/ui/accent.ts`: the palette's `accent` where that reads on its page, its `primary` where `accent` is a ground. The contrast test found one style drawing its accent text in a ground colour. A copy takes that file and reads the accent through it wherever it paints one. |
 
 ## Related

@@ -44,9 +44,23 @@ function joined(parts: readonly Uint8Array[], size: number): Uint8Array {
   return whole;
 }
 
+/** A body that keeps answering with nothing: more empty reads in a row than any real one sends. */
+export const MAX_EMPTY_READS = 1_000;
+
+/** A body that sent MAX_EMPTY_READS empty reads in a row: cancelled, as a server that stalls. */
+export class BodyStalledError extends Error {
+  constructor() {
+    super(`the body sent ${MAX_EMPTY_READS} empty reads in a row`);
+    this.name = 'BodyStalledError';
+  }
+}
+
 /**
  * A body read whole as bytes, never more than `maxBytes`: a Content-Length over it is refused before
- * any byte is read, and a body that grows past it is cancelled at that read (BodyTooLargeError).
+ * any byte is read, and a body that grows past it is cancelled at that read (BodyTooLargeError). A
+ * run of empty reads is cancelled too (BodyStalledError): they never reach the cap. The parts are
+ * gathered in one local list, appended to in place: a copy at every read would make a body sent a
+ * byte at a time cost the square of its size.
  */
 export async function readBytes(
   body: ReadableStream<Uint8Array> | null,
@@ -56,16 +70,24 @@ export async function readBytes(
   if (Number(contentLength) > maxBytes) throw new BodyTooLargeError(maxBytes);
   if (!body) return new Uint8Array(0);
   const reader = body.getReader();
-  let parts: readonly Uint8Array[] = [];
+  const cancel = () =>
+    reader.cancel().catch((error: unknown) => logger.debug('[api] body cancel failed', error));
+  const parts: Uint8Array[] = [];
   let size = 0;
+  let emptyReads = 0;
   for (;;) {
     const { done, value } = await reader.read();
     if (done) return joined(parts, size);
+    emptyReads = value.byteLength === 0 ? emptyReads + 1 : 0;
+    if (emptyReads >= MAX_EMPTY_READS) {
+      cancel();
+      throw new BodyStalledError();
+    }
     size += value.byteLength;
     if (size > maxBytes) {
-      reader.cancel().catch((error: unknown) => logger.debug('[api] body cancel failed', error));
+      cancel();
       throw new BodyTooLargeError(maxBytes);
     }
-    parts = [...parts, value];
+    if (value.byteLength > 0) parts.push(value);
   }
 }

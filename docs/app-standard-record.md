@@ -150,6 +150,8 @@ The template is held to the standard too. Each line is a rule's "Owed".
 | T17 | **Done, 15 Nov.** Shared code painted the accent colour itself in ten places: a link in an answer, a field's invalid border, the failed state's icon, the text cursor, an unread dot, a calendar dot, a tab's rule, the reason chip and a blocked status's dot. In the one style whose accent is a quiet ground they did not read | 10.4 | Found by the reviews of T6 and of its fix. All of them, and the Text primitive, now read the accent from one lookup that picks a colour that reads on the palette's page and cards |
 | T18 | Tones on the Text primitive for a state and for the two quieter inks, and a scan that refuses a colour given to Text outside `src/ui/` | 2.1, 1.4 | App C. Without them a feature that paints a status word passes Text a colour, which rule 2.1 forbids |
 | T19 | The guards miss remote pictures loaded by address (`SvgUri` and its siblings), the `'use dom'` directive and 4-digit hex colours. The guard test has no case that the client file may not import `expo/fetch` | 13.2, 1.1 | App C |
+| T20 | **Done, 15 Nov.** Every body the client reads is read under a cap. The transport no longer has a way to read one whole without a limit | 13.2a | Lifted from App C, with the template's own caps and with an oversized error body still mapped by its status |
+| T21 | **Done, 15 Nov.** The address a build is given is held to a bare https address, at build time and again at launch. A server a person pairs their own phone with is a separate rule and may still be plain http on a home network | 13.2b | Lifted from App C |
 
 ## Open for the owner
 
@@ -178,7 +180,7 @@ The template is held to the standard too. Each line is a rule's "Owed".
 
 | Who | What |
 |---|---|
-| Template | T1 to T19. Record each in the standard's Changes as it lands |
+| Template | T1 to T21. Record each in the standard's Changes as it lands |
 | App A | `TEMPLATE.md` is written, with a row per rule and the three stages sized. Ship what is waiting first. Nothing from the standard goes into that work |
 | App B | `TEMPLATE.md` is written. Give T4 and T6 back. Bring back and its one short control into line (4.2, 3.2). Rebuild its scene frame on Screen when it is next touched |
 | App C | Build its screens on the Tabs shell with drawn chrome. Build the Header and TabBar to the contract and hand them over. Move its lineage into `TEMPLATE.md` |

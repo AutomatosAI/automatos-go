@@ -1,5 +1,7 @@
 // The transport port the client sends through. The real one is expo/fetch (transport.ts, the only
 // importer of expo/fetch); tests inject a fake, so nothing here touches the network or React Native.
+// Every body is read under a cap: whole as bytes, never more than the caller allows (bytes), or as
+// it arrives (chunks). The port has no way to read a body whole without one.
 
 import type { HttpMethod } from './routes';
 
@@ -12,10 +14,11 @@ export type TransportRequest = {
   readonly signal: AbortSignal;
 };
 
-/** A response whose body is read whole. */
+/** A response whose body is read whole, as bytes under the caller's cap. */
 export type TransportResponse = {
   readonly status: number;
-  text(): Promise<string>;
+  /** The body, refused with body.ts's BodyTooLargeError past `maxBytes` (read no further). */
+  bytes(maxBytes: number): Promise<Uint8Array>;
 };
 
 /** A response whose body is read as it arrives; leaving the loop early cancels the read. */
@@ -23,10 +26,8 @@ export type StreamingResponse = TransportResponse & {
   chunks(): AsyncIterable<string>;
 };
 
-/** A response whose body is read whole as bytes (an MP3), with its headers. */
+/** A response read whole as bytes (an MP3), with its headers. */
 export type BinaryResponse = TransportResponse & {
-  /** The body, refused with body.ts's BodyTooLargeError past `maxBytes` (read no further). */
-  bytes(maxBytes: number): Promise<Uint8Array>;
   /** A response header by name (any case); null when the response has none. */
   header(name: string): string | null;
 };

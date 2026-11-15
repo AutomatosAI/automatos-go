@@ -4,10 +4,12 @@
 // failure to the taxonomy (errors.ts) and parses every JSON response with the caller's zod schema:
 // without a schema the body is discarded, so no unparsed data ever leaves the client. binary() is
 // the one exception, for a body that is not JSON (Auto's server voice: an MP3): it hands back the
-// bytes and the response's headers, for the caller to check. Every call also says the language the
-// person chose ("I speak") as Accept-Language, so the server writes its copy in it
-// (accept-language.ts); Automatic sends none. The transport is injected; the real one (transport.ts,
-// expo/fetch) is wired by the app shell, never by tests.
+// bytes and the response's headers, for the caller to check. Every body is read under a cap
+// (config.ts): a JSON body or a binary one over its cap is an invalid_response, read no further,
+// and an error body over its cap gives no detail, so the status alone names the kind. Every call
+// also says the language the person chose ("I speak") as Accept-Language, so the server writes its
+// copy in it (accept-language.ts); Automatic sends none. The transport is injected; the real one
+// (transport.ts, expo/fetch) is wired by the app shell, never by tests.
 
 import type { z } from 'zod';
 
@@ -21,14 +23,19 @@ import {
   type WorkspaceIdGetter,
 } from './auth-headers';
 import { BodyTooLargeError } from './body';
-import { BINARY_MAX_BYTES, REQUEST_TIMEOUT_MS, STREAM_CONNECT_TIMEOUT_MS } from './config';
+import {
+  BINARY_MAX_BYTES,
+  ERROR_BODY_MAX_BYTES,
+  JSON_MAX_BYTES,
+  REQUEST_TIMEOUT_MS,
+  STREAM_CONNECT_TIMEOUT_MS,
+} from './config';
 import { startDeadline, type Deadline } from './deadline';
 import { abortError, ApiError, errorFromResponse, isAbortError, isApiError } from './errors';
 import { parseJson } from './json';
 import type { Route } from './routes';
 import type { Server } from './server';
 import type {
-  BinaryResponse,
   StreamingResponse,
   Transport,
   TransportRequest,
@@ -158,11 +165,16 @@ async function prepare(ctx: Context, route: Route, call: CallOptions): Promise<P
   return { token, request: { url, method: route.method, headers, ...body } };
 }
 
+function decoded(bytes: Uint8Array): string {
+  return new TextDecoder().decode(bytes);
+}
+
 async function errorBody(response: TransportResponse): Promise<string> {
   try {
-    return await response.text();
+    return decoded(await response.bytes(ERROR_BODY_MAX_BYTES));
   } catch {
-    return ''; // an unreadable error body carries no detail; the status alone still maps
+    // unreadable, or over its cap (read no further): no detail; the status alone still maps
+    return '';
   }
 }
 
@@ -206,7 +218,7 @@ async function send(ctx: Context, route: Route, call: AnyCallOptions): Promise<u
   const deadline = startDeadline(ctx.timeoutMs, call.signal);
   try {
     const sent = await ctx.transport.request({ ...request, signal: deadline.signal });
-    const text = await (await checked(ctx, sent, token)).text();
+    const text = decoded(await capped(await checked(ctx, sent, token), JSON_MAX_BYTES));
     return call.schema ? parsedBody(call.schema, text) : undefined;
   } catch (error) {
     throw failure(error, deadline, call, ctx.timeoutMs);
@@ -216,7 +228,7 @@ async function send(ctx: Context, route: Route, call: AnyCallOptions): Promise<u
 }
 
 /** The body under its cap; past it, an invalid_response (the server sent more than it may). */
-async function capped(response: BinaryResponse, maxBytes: number): Promise<Uint8Array> {
+async function capped(response: TransportResponse, maxBytes: number): Promise<Uint8Array> {
   try {
     return await response.bytes(maxBytes);
   } catch (error) {
@@ -258,9 +270,9 @@ async function* chunksThen(response: StreamingResponse, done: () => void): Async
 function disposing(response: StreamingResponse, dispose: () => void): StreamingResponse {
   return {
     status: response.status,
-    text: async () => {
+    bytes: async (maxBytes) => {
       try {
-        return await response.text();
+        return await response.bytes(maxBytes);
       } finally {
         dispose();
       }
