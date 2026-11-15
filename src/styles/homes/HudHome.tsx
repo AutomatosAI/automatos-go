@@ -25,6 +25,8 @@
 // TYPE's Sheet, never inside it.
 //   The day's brief (PRD-268 US-G06, src/brief/use-hud-brief.tsx): while it is the newest message it
 // fills the transcript slot, and OPEN BRIEF opens its numbered rows in a Sheet beside TYPE's.
+//   HIDE AUTO (15 Nov 2026, useHudCoreFold): beside the state chip, it folds the core away for more
+// room for the transcript, kept on the phone; SHOW AUTO brings it back.
 
 import { useCallback, useMemo, useState } from 'react';
 
@@ -44,6 +46,7 @@ import { useIdeas, type IdeasCount } from '../../suggestions/use-ideas';
 import { ReportSheet, Sheet } from '../../ui';
 import { useHudHomeVoice } from '../../voice/home/use-hud-home-voice';
 import { VoiceLine } from '../../voice/screen/VoiceLine';
+import { useHudCoreFold } from '../hud/core/CoreFold';
 import { HudCore } from '../hud/core/HudCore';
 import { hudTurn } from './hud-turn';
 import { useHomeThread } from './use-home-thread';
@@ -77,6 +80,7 @@ export function HudHome({ chatId, ticketId = null }: HudHomeProps) {
   const voice = useHudHomeVoice(home, turn);
   const { report, sheet } = useMessageReport();
   const brief = useHudBrief(state, report);
+  const fold = useHudCoreFold();
   const { sendMessage } = home;
   const { typed } = voice;
   const close = useCallback(() => setTyping(false), []);
@@ -108,6 +112,7 @@ export function HudHome({ chatId, ticketId = null }: HudHomeProps) {
         }}
         report={report}
         transcriptSlot={brief.slot}
+        fold={fold}
       />
       <Sheet visible={typing} onClose={close}>
         <DiscussionBar state={home.discussion} messages={state.messages} />

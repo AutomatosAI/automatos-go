@@ -50,7 +50,7 @@ style's layout picks the home ([src/styles/homes/layout.ts](../src/styles/homes/
 |---|---|
 | **Studio** | A2's home as built: the brand header with the Command Centre button and avatar, the needs strip, the thread with its cards, the composer |
 | **Play** | The Companion chat (Ember 01-02): the chat's title, "Shelf +N" and the needs line, Auto's row with his state, the thread, Play's message box; Conversations and the Shelf of Deliverables behind it |
-| **HUD** | The voice-first core: the ring core with Auto and the state chip, the YOU / AUTO transcript, the waveform, TYPE · HOLD TO TALK · STOP, COMMAND and LOOK |
+| **HUD** | The voice-first core: the ring core with Auto and the state chip, the YOU / AUTO transcript, the waveform, TYPE · HOLD TO TALK · STOP, COMMAND and LOOK; HIDE AUTO beside the chip folds the core away for more room for the transcript, SHOW AUTO brings it back |
 | **Arcade** | The handheld: the status bar (Auto's mark, the counters, the pause control), the party strip (your agents, each with its state word), and a screen the D-pad switches: ◀ Chat (the story window over the thread, then the dialogue window with Auto's portrait and his reply typing out), ▲ Quests (the overworld map, the Board's tickets as quests) and ▶ Inventory (the item grid with tabs, the Deliverables as items); ▼ Menu opens the header menu; hold to talk in the round surround |
 | **Candy** | Four views switched in place: Today (the greeting, Auto, the orb with the needs-you number, the stat cards, Needs you), Chat (Auto's stage with his state pill and the pause control, the thread with the AI label first, the message box with hold to talk), Shelf (the Deliverables as candy tiles under type chips) and Team (the chat's agents and their states). Today, Shelf and Team sit behind the floating tab bar with hold to talk raised in its centre; Auto is drawn with Skia |
 
@@ -370,7 +370,8 @@ the web through `GET` and `PUT /api/themes/looks/{theme_id}`, with `automatos/pl
   `styles.candy.looks`, with sync marks under `styles.play.looks.sync`, `styles.hud.looks.sync`,
   `styles.arcade.looks.sync` and `styles.candy.looks.sync`. Arcade's pause is the phone's alone,
   under `styles.arcade.motionPaused`, and never synced; so is Candy's, under
-  `styles.candy.motionPaused`. Candy's look has its own Motion knob (`on` or `paused`), which is
+  `styles.candy.motionPaused`; and so is HUD's core fold (HIDE AUTO on HUD's home), under
+  `styles.hud.coreFolded`. Candy's look has its own Motion knob (`on` or `paused`), which is
   synced like every other knob; the pause control is not.
 - If the theme is not installed in the workspace (404), the looks stay on the phone. Play's look
   page says "Kept on this phone only" and "Install Play in Studio to keep your looks in step with

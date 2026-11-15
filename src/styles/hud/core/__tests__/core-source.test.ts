@@ -45,16 +45,16 @@ describe('the transcript', () => {
 describe('the column', () => {
   const hudCore = code('HudCore.tsx');
 
-  it('puts the core, the chip, the line and the transcript in one clipped middle', () => {
+  it('puts the core (unless HUD’s home folded it), the chip, the line and the transcript in one clipped middle', () => {
     expect(hudCore).toMatch(/middle: \{ flex: 1, overflow: 'hidden' \}/);
     expect(hudCore).toMatch(
-      /<View style=\{styles\.middle\} onLayout=\{core\.onMiddleLayout\}>\s*<Core size=\{core\.size\}[\s\S]*?<Transcript turn=\{turn\} report=\{props\.report\} slot=\{props\.transcriptSlot\} \/>\s*<\/View>\s*<View style=\{\{ paddingHorizontal: HUD_CORE\.wave\.padX \}\}>/,
+      /<View style=\{styles\.middle\} onLayout=\{core\.onMiddleLayout\}>\s*\{props\.fold\?\.folded \? null : \(\s*<Animated\.View entering=\{CORE_IN\} exiting=\{CORE_OUT\}>\s*<Core size=\{core\.size\}[\s\S]*?<Transcript turn=\{turn\} report=\{props\.report\} slot=\{props\.transcriptSlot\} \/>\s*<\/Animated\.View>\s*<\/View>\s*<View style=\{\{ paddingHorizontal: HUD_CORE\.wave\.padX \}\}>/,
     );
   });
 
   it('measures the chip with the voice’s line, and sizes the core from the room left', () => {
     expect(hudCore).toMatch(
-      /<View onLayout=\{core\.onWordsLayout\}>[\s\S]*?<StateChip[\s\S]*?\{parts\.line\}\s*\{props\.underChip\}\s*<\/View>/,
+      /<Animated\.View layout=\{GLIDE\} onLayout=\{core\.onWordsLayout\}>[\s\S]*?<StateChip[\s\S]*?\{parts\.line\}\s*\{props\.underChip\}\s*<\/Animated\.View>/,
     );
     expect(hudCore).toMatch(
       /middle && words \? coreSizeIn\(middle\.height - words\.height, height\) : coreSizeFor\(height\)/,

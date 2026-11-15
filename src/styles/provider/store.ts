@@ -5,7 +5,8 @@
 // nothing stored is 'Same as Studio'), HUD's looks in US-018a's (styles.hud.looks), Arcade's in
 // US-022c's (styles.arcade.looks) with Arcade's pause beside them (US-022e,
 // styles.arcade.motionPaused, arcade/motion-pause.ts), Candy's in US-023c's (styles.candy.looks)
-// with Candy's pause beside them (US-023e, styles.candy.motionPaused, candy/motion-pause.ts),
+// with Candy's pause beside them (US-023e, styles.candy.motionPaused, candy/motion-pause.ts), HUD's
+// core fold beside HUD's looks (styles.hud.coreFolded, hud/core-fold.ts),
 // what 'Same as Studio' painted and the theme painting in US-016i's (styles.theme.followed,
 // styles.theme.paint, themes/cache.ts), Play's looks in US-017d's (styles.play.looks,
 // play/look-store.ts) with each theme's look sync marks beside them (styles.*.looks.sync,
@@ -24,6 +25,7 @@ import { createMotionPauseSource } from '../arcade/motion-pause';
 import type { CandyLooks } from '../candy/candy-looks';
 import { createCandyLooksStore, type CandyLooksStore } from '../candy/look-store';
 import { createCandyMotionPauseSource } from '../candy/motion-pause';
+import { createHudCoreFoldSource } from '../hud/core-fold';
 import type { HudLooks } from '../hud/hud-looks';
 import { createHudLooksStore, type HudLooksStore } from '../hud/look-store';
 import { NO_MARKS, statusFromMarks, type LookMarks, type LookSyncStatus } from '../play/look-sync';
@@ -58,6 +60,8 @@ export type StyleSources = {
   readonly arcadeMotionPaused?: StyleSource<boolean>;
   /** Candy's pause (WCAG 2.2.2), the phone's own; this launch only, not paused, when absent. */
   readonly candyMotionPaused?: StyleSource<boolean>;
+  /** HUD's core folded away on HUD's home; this launch only, shown, when absent. */
+  readonly hudCoreFolded?: StyleSource<boolean>;
 };
 
 /** Each theme's look sync standing (sync/look-sync-run.ts keeps it). */
@@ -78,6 +82,8 @@ export type StyleState = {
   readonly arcadeMotionPaused: boolean;
   /** Candy's animation paused by the person: Auto, the orb, the dots and the voice core hold still. */
   readonly candyMotionPaused: boolean;
+  /** HUD's core folded away by the person on HUD's home: the rings and Auto hidden, the chip kept. */
+  readonly hudCoreFolded: boolean;
   readonly themePaint: ThemePaint | null;
   /** The installs the last read offered (the picker's rows under Studio), this launch only. */
   readonly themes: readonly OfferedTheme[];
@@ -110,6 +116,8 @@ export type StyleActions = {
   readonly setArcadeMotionPaused: (paused: boolean) => boolean;
   /** Candy's pause, kept on the phone (never synced); false when the save failed (it still applies). */
   readonly setCandyMotionPaused: (paused: boolean) => boolean;
+  /** HUD's core folded or shown, kept on the phone; false when the save failed (it still applies). */
+  readonly setHudCoreFolded: (folded: boolean) => boolean;
   /** One theme's look sync standing; its marks are kept on the phone (false: not saved). */
   readonly setLookSync: (key: LookThemeKey, status: LookSyncStatus) => boolean;
   readonly setThemePaint: (paint: ThemePaint | null) => boolean;
@@ -150,6 +158,7 @@ export function appStyleSources(storage: () => KeyValueStorage): StyleSources {
     lookMarks: lookMarksParts(storage),
     arcadeMotionPaused: createMotionPauseSource(storage),
     candyMotionPaused: createCandyMotionPauseSource(storage),
+    hudCoreFolded: createHudCoreFoldSource(storage),
   });
 }
 
@@ -180,6 +189,7 @@ export function hydrateStyleState(sources: StyleSources): StyleState {
     candyLooks: sources.candyLooks.get(),
     arcadeMotionPaused: sources.arcadeMotionPaused?.get() ?? false,
     candyMotionPaused: sources.candyMotionPaused?.get() ?? false,
+    hudCoreFolded: sources.hudCoreFolded?.get() ?? false,
     themePaint: sources.themePaint.get(),
     themes: NO_THEMES,
     themeFonts: null,
@@ -193,6 +203,26 @@ function helloOf(options?: FlipOptions): number {
 }
 
 type SetStyle = StoreApi<StyleStore>['setState'];
+
+/** HUD's looks and its core fold, each saved through its source first (the fold: this launch's). */
+function hudActions(
+  sources: StyleSources,
+  set: SetStyle,
+): Pick<StyleActions, 'setHudLooks' | 'setHudCoreFolded'> {
+  const fold = sources.hudCoreFolded ?? memorySource(false);
+  return {
+    setHudLooks: (looks) => {
+      const saved = sources.hudLooks.set(looks);
+      set({ hudLooks: sources.hudLooks.get() });
+      return saved;
+    },
+    setHudCoreFolded: (folded) => {
+      const saved = fold.set(folded);
+      set({ hudCoreFolded: fold.get() });
+      return saved;
+    },
+  };
+}
 
 /** Arcade's looks and its pause, each saved through its source first (the pause: this launch's). */
 function arcadeActions(
@@ -265,11 +295,7 @@ export function createStyleStore(sources: StyleSources): StyleStoreApi {
       set({ playLooks: held, playLook: held.active });
       return saved;
     },
-    setHudLooks: (looks) => {
-      const saved = sources.hudLooks.set(looks);
-      set({ hudLooks: sources.hudLooks.get() });
-      return saved;
-    },
+    ...hudActions(sources, set),
     ...arcadeActions(sources, set),
     ...candyActions(sources, set),
     setThemePaint: (paint) => {
