@@ -35,12 +35,17 @@ app for consumers nearly always has. An app that knows nobody has its own sectio
 
 1. **A product record.** Automatos holds one record per product: its owner workspace, its agents,
    its key's permissions and its retention.
-2. **Keys live on the server.** Never in a phone app, a build setting, a browser or git.
+2. **Keys live on the server.** Never in a phone app, a build setting, a browser or git. The one
+   exception is a public widget key on a customer's own website. It is held to that site only
+   when the key lists the site's domains: a key that lists none answers any site (verified).
 3. **The product has its own server.** It signs people in and is the only thing that calls
    Automatos.
 4. **People are end users.** Consent is recorded before the first memory, a retention period
    applies, and erase is there when asked. Deleting in the product deletes in Automatos.
-5. **Businesses get workspaces** (the third shape only).
+5. **Businesses get workspaces** (the third shape only). Made when the business signs up, closed
+   when it leaves with seven days to undo it, restored if it comes back within them, then purged.
+   A privacy deletion is a close: the purge follows by itself after the seven days, and only an
+   Automatos admin can purge at once (verified).
 6. **Agents are lean.** Only the tools granted, a model from an approved list, a memory profile
    that fits the product.
 7. **Live data is context.** What the app can see right now goes in for one reply. It is never
@@ -81,6 +86,7 @@ removes the consent record too (verified).
 The server sends:
 
 - the agent: a lean agent of the product's workspace;
+- a model, if the server names one. It must be on the key's list and on the agent's (verified);
 - the person's id;
 - **the message: the person's own words.** Text the person saw in the box and chose to send is
   theirs. Anything added that they did not see is not, and does not go in the message;
@@ -127,11 +133,49 @@ One action in the app, in this order:
 Erase is safe to repeat. If a step fails, the same call again finishes it. It is tested end to
 end before launch: afterwards Automatos returns nothing for that person.
 
+## Background work
+
+Work that takes longer than a reply is started, not waited for.
+
+- **Start it** with `POST /api/agents/{id}/execute`, scope `agents:execute`. It answers at once
+  with the run's id (verified).
+- **Send an `Idempotency-Key`.** The same key again answers with the run it already started. The
+  same key on a different request is refused.
+- **Give an https `callback_url`.** The result is sent there signed:
+  `X-Automatos-Signature: t=<seconds>,v1=<hex>`, an HMAC-SHA256 made with the workspace's signing
+  secret. Check the signature before reading the body (verified: the header).
+- **Drop repeats.** A delivery that fails is sent again, three attempts in all, with the same
+  `X-Automatos-Delivery` id. Keep the ids already handled and ignore one seen before (verified:
+  the header).
+- **What a key starts is outside input.** It is never read as the owner's words, and a ticket it
+  files meets the workspace's approval rules.
+
+A turn has no such key. Automatos finishes a turn it has accepted, so a server that sends one
+again after a timeout may get two replies and pay for both.
+
 ## Limits
 
 The key carries its own requests and tokens a minute, set when it is minted (verified: there is
 no route to change them afterwards). The server keeps a second limit per person and answers a
 person who is over it with a plain message the app can show.
+
+These limit how fast a key can spend, not how much. The owner workspace's balance is the only
+limit on spend today, and when it runs out every workspace the owner pays for pauses together.
+
+## Replacing a key
+
+A key's permissions, limits and model list are fixed when it is minted, and no route gives a key
+a new secret. So a change to any of them, and the answer to a leaked key, is a new key. A new
+key is a new caller (read from automatos-ai at `46c1e2f`, not yet tried against a live server):
+
+- **By person, so they carry over:** consent, what is remembered, and a full erase.
+- **By key, so they do not:** a conversation belongs to the key that opened it, and a turn that
+  names it with another key is refused. The server starts a new conversation for each person
+  after a change of key. And "forget one" reaches only what the new key stored: what the old key
+  stored goes with a full erase.
+
+Mint a key with the limits and permissions the product will need, and say in the app that a
+conversation may start afresh.
 
 ## What every product shares, and what each decides
 
@@ -174,6 +218,9 @@ is not published. What it must do:
   events for servers whose clients read those;
 - record consent, always with the retention;
 - list and forget memories, and erase a person;
+- start background work with an idempotency key, and check a callback's signature and delivery
+  id;
+- for the third shape: find or make a business's workspace, list them, close one and restore it;
 - take its key as an argument, so one server can hold more than one;
 - hold no sign-in or session code.
 
@@ -325,12 +372,20 @@ which these are the short form, are [the app standard](app-standard.md).
 | Where a person left off | `GET /api/memory/end-users/{id}/resume` |
 | Erase | `DELETE /api/memory/end-users/{id}` |
 | Retention | A daily job removes what is older than the person's `retention_days` |
+| Background work | `POST /api/agents/{id}/execute`, scope `agents:execute`, with `Idempotency-Key` and `callback_url` |
 | The product record | `/api/admin/products` |
-| The key | A server key (`ak_srv_`), minted in the product's workspace with its scopes, its limits and its model allow-list |
+| A business's workspace | With the product's key: `POST /api/products/{id}/workspaces` (find or make, by the product's own id for the business), `GET` (list), `DELETE …/{workspace_id}` (close), `POST …/{workspace_id}/restore` |
+| The key | A server key (`ak_srv_`), minted in the product's workspace with its scopes, its limits and its model allow-list. The scopes: `agents:chat`, `agents:execute`, `memory:read`, `memory:write`, `playbooks:execute`, `documents:write`, `tasks:read`, `tasks:write` |
 | Memory profiles | `general`, `customer`, `incident`, `case`, and a workspace's own |
 
-Two switches are off by default: `LEAN_TURNS_ENABLED` (a key can only talk to a lean agent) and
-`PRODUCTS_ENABLED` (product records).
+Four switches are off by default. Until each is on, the rule that leans on it does nothing:
+
+| Switch | While it is off |
+|---|---|
+| `LEAN_TURNS_ENABLED` | Every agent takes the full turn whatever its profile says. A key can only talk to a lean agent |
+| `MEMORY_PROFILES_ENABLED` | Every agent keeps facts by the general profile, whichever one was chosen |
+| `MEMORY_AUDIENCE_ENABLED` | A label that limits a fact to some agents limits nothing |
+| `PRODUCTS_ENABLED` | The product routes answer 404 |
 
 The full design is automatos-ai's
 [PRD-274, Automatos for products](https://github.com/AutomatosAI/automatos-ai/blob/main/docs/PRDS/PRD-274-AUTOMATOS-FOR-PRODUCTS.md).
@@ -339,7 +394,11 @@ The full design is automatos-ai's
 
 - The server voice and spoken mode for a server key.
 - Usage split per person. Usage rolls up to the workspace.
-- A way to change a key's limits after it is minted.
+- A way to change a key's limits after it is minted, or to give a key a new secret (see Replacing
+  a key).
+- A limit on what one workspace or one person may spend. A cap for each product workspace is
+  proposed in PRD-274 and not decided.
+- A key that makes a turn safe to send twice.
 - Forgetting one memory that Automatos kept from a conversation. A server key can delete only
   what it stored itself.
 - Documents with a server key. A key can ask for a generated document. It cannot list, upload or
@@ -356,6 +415,10 @@ The full design is automatos-ai's
 - [ ] Retention set and consent wording reviewed
 - [ ] Erase tested end to end
 - [ ] Limits set on every key
+- [ ] The four switches on where the product runs
+- [ ] If the product starts background work: a callback's signature is checked and a repeat is
+      dropped
+- [ ] What happens to people's conversations when a key is replaced is known and said
 - [ ] "Powered by Automatos AI" and the AI notice shown
 - [ ] If the app receives notifications: a push that does not verify shows nothing, and the app
       names the server's record of the phone and the action that removes it
