@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 
 import { matchesFamily, type KeyFamilyName } from '../api/query-keys';
 import { useAppSession } from '../app-state/session';
+import { CARD_COPY } from '../chat/strings';
 import { grantRefusalText, planRefusalText, rejectBody } from '../chat/cards/actions';
 import { rejectMission } from '../chat/cards/api';
 import { approvePlanGated, grantToolGated } from '../chat/cards/gated';
@@ -24,7 +25,7 @@ import { useStepUp } from '../step-up/use-step-up';
 import { useToast } from '../ui';
 import { fetchApprovalView } from './api';
 import { ApprovalSheet } from './ApprovalSheet';
-import { approvalViewKey, pushApprovals, settledLine, viewFailureLine } from './push-sheet';
+import { approvalViewKey, decidedPlan, pushApprovals, settledLine, viewFailureLine } from './push-sheet';
 import type { SheetKind } from './sheet-view';
 
 /** What an answer changes: what counts it, the questions list, and the chats it was asked in. */
@@ -32,8 +33,11 @@ const AFTER_ANSWER: readonly KeyFamilyName[] = ['needsYou', 'questions', 'chat.m
 
 const REJECTED: CardOutcome = Object.freeze({ state: 'rejected' });
 
-/** The view, read afresh each time the sheet opens; one that cannot be read says so and closes. */
-function useSheetView(grantId: string, visible: boolean) {
+/**
+ * The view, read afresh each time the sheet opens; one that cannot be read says so and closes, and so
+ * does a Mission plan already decided (core's plan view names no answers once it stops waiting).
+ */
+function useSheetView(grantId: string, kind: SheetKind, visible: boolean) {
   const { client } = useAppSession();
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -57,7 +61,13 @@ function useSheetView(grantId: string, visible: boolean) {
     toast.show(viewFailureLine(error));
     pushApprovals.close();
   }, [isError, isFetching, error, toast]);
-  return view;
+  const decided = decidedPlan(kind, view.data);
+  useEffect(() => {
+    if (!decided || isFetching) return;
+    toast.show(CARD_COPY.alreadyDecided);
+    pushApprovals.close();
+  }, [decided, isFetching, toast]);
+  return { view, decided };
 }
 
 /**
@@ -101,8 +111,11 @@ type GrantSheetProps = {
 function GrantSheet({ grantId, kind, visible }: GrantSheetProps) {
   const queryClient = useQueryClient();
   const toast = useToast();
-  const view = useSheetView(grantId, visible);
+  const { view, decided } = useSheetView(grantId, kind, visible);
   const [rejecting, setRejecting] = useState(false);
+  useEffect(() => {
+    if (!visible) setRejecting(false);
+  }, [visible]);
   const settled = useCallback(
     (_key: string, outcome: CardOutcome) => {
       pushApprovals.close();
@@ -116,7 +129,7 @@ function GrantSheet({ grantId, kind, visible }: GrantSheetProps) {
   const refusal = kind === 'plan' ? planRefusalText : grantRefusalText;
   const request = useCardRequest(`push-approval:${grantId}`, settled, refusal);
   const answers = useAnswers(grantId, kind, request);
-  if (!view.data) return null;
+  if (!view.data || decided) return null;
   const close = () => {
     setRejecting(false);
     pushApprovals.close();
@@ -145,6 +158,8 @@ export function PushApprovalSheet() {
   const sheet = useSyncExternalStore(pushApprovals.subscribe, pushApprovals.current);
   const access = useCardAccess('approve');
   if (sheet.grantId === null || !access.canAct) return null;
+  // a tool approval's id is its grant's row number; anything else is no grant to answer
+  if (sheet.kind === 'tool' && !Number.isInteger(Number(sheet.grantId))) return null;
   const key = `${sheet.kind}:${sheet.grantId}`;
   return <GrantSheet key={key} grantId={sheet.grantId} kind={sheet.kind} visible={sheet.visible} />;
 }

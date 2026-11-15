@@ -74,15 +74,9 @@ export function routeFor(target: LinkTarget): string | null {
   }
 }
 
-/** The approval sheet a target opens in place of a screen: a tool approval's, or a Mission plan's. */
-export type SheetTarget = Readonly<{ id: string; kind: 'tool' | 'plan' }>;
-
 /**
- * Where a record with no screen on the phone opens instead of Studio: an approval in its grant's
- * sheet, a Mission in its plan's (core's ApprovalView@1 reads either id); null for any other.
+ * The approval sheet a record with no screen on the phone opens in, instead of Studio: an open grant
+ * in its sheet, a Mission plan awaiting approval in its plan's (core's ApprovalView@1 reads either
+ * id). links/stale.ts sets it, only once the record is known to wait.
  */
-export function sheetFor(target: LinkTarget): SheetTarget | null {
-  if (target.kind === 'approval') return Object.freeze({ id: target.id, kind: 'tool' });
-  if (target.kind === 'mission') return Object.freeze({ id: target.id, kind: 'plan' });
-  return null;
-}
+export type SheetTarget = Readonly<{ id: string; kind: 'tool' | 'plan' }>;

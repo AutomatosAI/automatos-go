@@ -94,7 +94,13 @@ describe('HIDE AUTO', () => {
     const read = (file: string) => readFileSync(path.resolve(__dirname, file), 'utf8');
     const core = read('../core/HudCore.tsx');
     expect(core).toMatch(/\{props\.fold\?\.folded \? null : \(/);
-    expect(core).toMatch(/entering=\{CORE_IN\} exiting=\{CORE_OUT\}/);
+    expect(core).toMatch(/entering=\{motion\.coreIn\} exiting=\{motion\.coreOut\}/);
+    // the slide is the fold's alone, follows Reduce Motion, and never runs as the screen opens
+    const fold = read('../core/CoreFold.tsx');
+    expect(core).toMatch(/const motion = foldMotionFor\(props\.fold\);/);
+    expect(fold).toMatch(/return fold \? FOLD_MOTION : NO_MOTION;/);
+    expect(fold.match(/\.reduceMotion\(ReduceMotion\.System\)/g)).toHaveLength(3);
+    expect(core).toMatch(/<LayoutAnimationConfig skipEntering skipExiting>/);
     expect(read('../../homes/HudHome.tsx')).toMatch(/fold=\{fold\}/);
   });
 });

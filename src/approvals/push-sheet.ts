@@ -9,6 +9,7 @@
 // line instead (viewFailureLine): a decided or lapsed approval (404), or anything else.
 
 import { isApiError } from '../api/errors';
+import type { ApprovalView } from '../core/approval-view';
 import { toolLine } from '../chat/cards/grants';
 import type { CardOutcome } from '../chat/cards/model';
 import { CARD_COPY } from '../chat/strings';
@@ -78,4 +79,12 @@ export function viewFailureLine(error: unknown): string {
 export function settledLine(kind: SheetKind, outcome: CardOutcome): string {
   if (kind === 'tool') return toolLine(outcome).text;
   return outcome.state === 'rejected' ? CARD_COPY.rejected : CARD_COPY.approved;
+}
+
+/**
+ * A Mission plan's view that offers no answers: the plan stopped waiting (approved, rejected, running
+ * or done) between the tap and the read, so there is nothing to answer and the sheet says so.
+ */
+export function decidedPlan(kind: SheetKind, view: Pick<ApprovalView, 'answers'> | undefined): boolean {
+  return kind === 'plan' && view !== undefined && view.answers.length === 0;
 }

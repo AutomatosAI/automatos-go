@@ -8,9 +8,12 @@
 // refusal: another person's chat id would silently start a new chat (D-STALE-CHAT). An approval and
 // a Mission plan have no fixed screen: their card sits in the chat they were raised in (D30), so the
 // open grant's details (conversation_id, else its ticket, board_task_id, else the board task a held
-// task's grant names as its subject) and the Mission's config.origin_chat_id say where. A target with
-// nowhere to open resolves to route null: the push then opens the notifications inbox with it first
-// and its approval sheet over it (handler.ts sheetOnTap), and the inbox row opens that sheet too. The
+// task's grant names as its subject) and the Mission's config.origin_chat_id say where. An open grant
+// with no card on the phone, and a Mission whose plan awaits approval with no chat, resolve to route
+// null with their approval sheet (`sheet`): the push then opens the notifications inbox with it first
+// and the sheet over it (handler.ts sheetOnTap), and the inbox row opens that sheet too. A Mission
+// with no chat that has moved on (running, done, failed) opens the Board, where its tasks are. Any
+// other target with nowhere to open resolves to route null alone. The
 // checks are a port (staleChecksFor binds the push API); nothing here retries or caches, and the
 // log carries kinds only.
 
@@ -21,6 +24,7 @@ import { isTaskId, routes } from '../../navigation/routes';
 import { getChat, getSocialPost, getTicket, pendingQuestionIds } from '../api';
 import {
   BOARD_TASK_SUBJECT,
+  MISSION_AWAITING_APPROVAL,
   SOCIAL_NEEDS_APPROVAL_STATUS,
   STALE_CHECK_TIMEOUT_MS,
   UUID_PATTERN,
@@ -29,7 +33,7 @@ import { getMissionPlace, pendingGrantPlaces } from '../inbox/api';
 import type { GrantPlace, MissionPlace } from '../inbox/schemas';
 import type { SocialPostCheck } from '../schemas/server';
 import { PUSH_LINK_COPY } from '../strings';
-import { routeFor, type LinkTarget, type RecordKind } from './targets';
+import { routeFor, type LinkTarget, type RecordKind, type SheetTarget } from './targets';
 
 /** One question per record kind, each given the signal the timeout aborts. */
 export type StaleChecks = Readonly<{
@@ -43,8 +47,12 @@ export type StaleChecks = Readonly<{
   missionPlace: (missionId: string, signal: AbortSignal) => Promise<MissionPlace>;
 }>;
 
-/** Where to go (null: no screen on the phone), and the line to show when the record moved on. */
-export type ResolvedLink = Readonly<{ route: string | null; notice?: string }>;
+/**
+ * Where to go (null: no screen on the phone), the line to show when the record moved on, and the
+ * approval sheet that answers it there: set only for a record known to wait for an answer (an open
+ * grant with no card on the phone, a Mission whose plan awaits approval and has no chat).
+ */
+export type ResolvedLink = Readonly<{ route: string | null; notice?: string; sheet?: SheetTarget }>;
 
 type Failure = 'not_found' | 'forbidden' | 'unknown';
 
@@ -121,6 +129,22 @@ function grantPlace(grant: GrantPlace): ResolvedLink {
   return isTaskId(ticketId) ? opened(routes.cc.ticket(ticketId)) : NOWHERE;
 }
 
+/** Nowhere on the phone but the approval sheet, which answers it. */
+function answeredIn(sheet: SheetTarget): ResolvedLink {
+  return Object.freeze({ route: null, sheet: Object.freeze(sheet) });
+}
+
+/**
+ * A Mission with no chat: its plan's sheet while the plan awaits approval; the Board, where its
+ * tasks are, once it has moved on (running, done, failed); nowhere while its state is unknown.
+ */
+function missionPlace(id: string, place: MissionPlace): ResolvedLink {
+  const chatId = place.config?.origin_chat_id;
+  if (isUuid(chatId)) return opened(routes.chat(chatId));
+  if (place.state === MISSION_AWAITING_APPROVAL) return answeredIn({ id, kind: 'plan' });
+  return place.state ? opened(routes.cc.board) : NOWHERE;
+}
+
 function placeResolvers(
   checks: StaleChecks,
 ): Readonly<Pick<Record<RecordKind, Resolver>, 'approval' | 'mission'>> {
@@ -129,13 +153,14 @@ function placeResolvers(
       const probed = await check((signal) => checks.grantPlaces(signal));
       if (!('found' in probed)) return NOWHERE;
       const grant = probed.found.find((place) => String(place.id) === id);
-      return grant ? grantPlace(grant) : moved(null, PUSH_LINK_COPY.approvalGone);
+      if (!grant) return moved(null, PUSH_LINK_COPY.approvalGone);
+      const place = grantPlace(grant);
+      return place.route === null ? answeredIn({ id, kind: 'tool' }) : place;
     },
     mission: async (id, check) => {
       const probed = await check((signal) => checks.missionPlace(id, signal));
       if (failed(probed) === 'not_found') return moved(null, PUSH_LINK_COPY.missionGone);
-      const chatId = 'found' in probed ? probed.found.config?.origin_chat_id : null;
-      return isUuid(chatId) ? opened(routes.chat(chatId)) : NOWHERE;
+      return 'found' in probed ? missionPlace(id, probed.found) : NOWHERE;
     },
   };
 }

@@ -22,7 +22,7 @@ import { routes } from '../../navigation/routes';
 import { markNotificationRead } from '../api';
 import { QUESTION_LINK_TYPE, REPLY_ACTION_ID } from '../config';
 import { resolveTarget, type ResolvedLink, type StaleChecks } from '../links/stale';
-import { sheetFor, targetFor, type LinkTarget, type SheetTarget } from '../links/targets';
+import { targetFor, type SheetTarget } from '../links/targets';
 import type { NotificationsPort } from '../platform/expo';
 import type { PushKeyStore } from '../registration/key-store';
 import type { PushRecord } from '../registration/record';
@@ -229,8 +229,7 @@ function refreshAfterReply(deps: HandlerDeps): void {
 }
 
 async function open(intent: Intent<'open'>, deps: HandlerDeps): Promise<Handled> {
-  const target = targetFor(intent.link);
-  const resolved = await resolveTarget(target, deps.checks);
+  const resolved = await resolveTarget(targetFor(intent.link), deps.checks);
   const route = resolved.route ?? unroutedRoute(intent.notificationId);
   const tap: TapReport = {
     kind: 'open',
@@ -239,7 +238,7 @@ async function open(intent: Intent<'open'>, deps: HandlerDeps): Promise<Handled>
     linkType: intent.link.link_type,
   };
   const shown = show(deps, outcome(route, resolved.notice), tap);
-  const sheet = sheetOnTap(intent.grantId, target, resolved);
+  const sheet = sheetOnTap(intent.grantId, resolved);
   if (sheet) openApproval(deps, sheet);
   await markRead(deps, intent.notificationId);
   return shown;
@@ -247,19 +246,15 @@ async function open(intent: Intent<'open'>, deps: HandlerDeps): Promise<Handled>
 
 /**
  * The sheet over the screen a tap opened: an approval's signed grant wherever it opened (its chat's
- * card is the record, D30), and a Mission plan's when it has no chat to open in, so it is answered on
- * the phone rather than in Studio. None once the record moved on (a decided approval, a gone
- * Mission: the notice says so, nothing is left to answer).
+ * card is the record, D30), and a Mission plan's while it awaits approval with no chat to open in
+ * (links/stale.ts), so it is answered on the phone rather than in Studio. None once the record moved
+ * on (a decided approval, a gone Mission: the notice says so; a Mission running or done opens the
+ * Board), so a sheet never offers answers to something already decided.
  */
-export function sheetOnTap(
-  grantId: string | undefined,
-  target: LinkTarget,
-  resolved: ResolvedLink,
-): SheetTarget | null {
+export function sheetOnTap(grantId: string | undefined, resolved: ResolvedLink): SheetTarget | null {
   if (resolved.notice) return null;
   if (grantId) return Object.freeze({ id: grantId, kind: 'tool' });
-  const sheet = sheetFor(target);
-  return sheet?.kind === 'plan' && resolved.route === null ? sheet : null;
+  return resolved.sheet ?? null;
 }
 
 /** Over the screen the tap opened, the approval's sheet, where it is offered; never throws. */

@@ -13,7 +13,12 @@ import { canApprovalView } from '../../api/capabilities';
 import { ApiError } from '../../api/errors';
 import { fetchApprovalView } from '../../approvals/api';
 import { VIEW } from '../../approvals/__tests__/fixtures';
-import { createPushApprovals, settledLine, viewFailureLine } from '../../approvals/push-sheet';
+import {
+  createPushApprovals,
+  decidedPlan,
+  settledLine,
+  viewFailureLine,
+} from '../../approvals/push-sheet';
 import { APPROVAL_ROUTES } from '../../approvals/routes';
 import { APPROVAL_SHEET_COPY } from '../../approvals/strings';
 import { CARD_COPY } from '../../chat/strings';
@@ -162,8 +167,9 @@ describe('a verified tap on a held board task, or a Mission plan', () => {
     expect(run.opened).toEqual(['77']);
   });
 
-  it("opens a Mission plan with no chat in its plan's sheet over the inbox, never Studio", async () => {
-    const noChat = world({ checks: { missionPlace: async (id) => ({ id, config: null }) } });
+  it("opens a Mission plan awaiting approval with no chat in its plan's sheet over the inbox, never Studio", async () => {
+    const waiting = async (id: string) => ({ id, state: 'awaiting_approval', config: null });
+    const noChat = world({ checks: { missionPlace: waiting } });
     const run = withSheet(true, noChat);
     const outcome = await handleResponse(tap(signed(MISSION_FIELDS)), run.deps);
     expect(outcome).toEqual({ route: inboxRoute(NOTIFICATION_ID) });
@@ -178,13 +184,29 @@ describe('a verified tap on a held board task, or a Mission plan', () => {
     expect(run.opened).toEqual([]);
   });
 
-  it('opens no plan sheet for a Mission that is gone, or where the sheet is not offered', async () => {
+  it('opens a Mission that has moved on (running, done) on the Board, with no sheet to answer', async () => {
+    for (const state of ['running', 'completed', 'failed']) {
+      const moved = async (id: string) => ({ id, state, config: null });
+      const run = withSheet(true, world({ checks: { missionPlace: moved } }));
+      const outcome = await handleResponse(tap(signed(MISSION_FIELDS)), run.deps);
+      expect(outcome).toEqual({ route: routes.cc.board });
+      expect(run.opened).toEqual([]);
+    }
+  });
+
+  it('opens no plan sheet for a Mission that is gone, one whose state is unknown, or where the sheet is not offered', async () => {
     const missing = () => Promise.reject(new ApiError('not_found', { status: 404 }));
     const gone = withSheet(true, world({ checks: { missionPlace: missing } }));
     await handleResponse(tap(signed(MISSION_FIELDS)), gone.deps);
     expect(gone.opened).toEqual([]);
-    const noChat = world({ checks: { missionPlace: async (id) => ({ id, config: null }) } });
-    const off = withSheet(false, noChat);
+    const unknown = world({ checks: { missionPlace: async (id) => ({ id, config: null }) } });
+    const noState = withSheet(true, unknown);
+    expect(await handleResponse(tap(signed(MISSION_FIELDS)), noState.deps)).toEqual({
+      route: inboxRoute(NOTIFICATION_ID),
+    });
+    expect(noState.opened).toEqual([]);
+    const waiting = async (id: string) => ({ id, state: 'awaiting_approval', config: null });
+    const off = withSheet(false, world({ checks: { missionPlace: waiting } }));
     await handleResponse(tap(signed(MISSION_FIELDS)), off.deps);
     expect(off.opened).toEqual([]);
   });
@@ -241,6 +263,13 @@ describe('the sheet', () => {
     expect(settledLine('plan', { state: 'approved' })).toBe(CARD_COPY.approved);
     expect(settledLine('plan', { state: 'rejected' })).toBe(CARD_COPY.rejected);
     expect(settledLine('tool', { state: 'denied' })).not.toBe(CARD_COPY.rejected);
+  });
+
+  it("closes a Mission plan's sheet that offers no answers: the plan stopped waiting", () => {
+    expect(decidedPlan('plan', { answers: [] })).toBe(true);
+    expect(decidedPlan('plan', { answers: ['allow_once', 'refuse'] })).toBe(false);
+    expect(decidedPlan('plan', undefined)).toBe(false);
+    expect(decidedPlan('tool', { answers: [] })).toBe(false);
   });
 
   it('is offered by PushRoot only with approval_view and a role that may approve', () => {

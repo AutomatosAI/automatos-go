@@ -244,7 +244,7 @@ describe('where a row opens', () => {
   it('where the approval sheet is offered, an approval or a Mission plan with no screen opens it, not Studio', async () => {
     const nowhere = checks({
       grantPlaces: async () => [{ id: 77, details: null }],
-      missionPlace: async (id) => ({ id, config: null }),
+      missionPlace: async (id) => ({ id, state: 'awaiting_approval', config: null }),
     });
     await expect(
       inboxOpenFor({ link_type: 'approval_grant', link_id: '77' }, nowhere, STUDIO, true),
@@ -271,6 +271,11 @@ describe('where a row opens', () => {
     await expect(inboxOpenFor(mission, noChat, STUDIO)).resolves.toEqual({
       kind: 'studio',
       url: `${STUDIO}/missions/${POST_ID}`,
+    });
+    const done = checks({ missionPlace: async (id) => ({ id, state: 'completed', config: null }) });
+    await expect(inboxOpenFor(mission, done, STUDIO, true)).resolves.toEqual({
+      kind: 'route',
+      route: routes.cc.board,
     });
     const gone = checks({
       missionPlace: () => Promise.reject(new ApiError('not_found', { status: 404 })),
@@ -359,7 +364,9 @@ describe('a tap and Mark all read', () => {
     const opened: string[] = [];
     const run = deps({
       openBrowser: browser,
-      checks: checks({ missionPlace: async (id) => ({ id, config: null }) }),
+      checks: checks({
+        missionPlace: async (id) => ({ id, state: 'awaiting_approval', config: null }),
+      }),
       approvals: { offered: () => true, open: (id, kind) => void opened.push(`${kind}:${id}`) },
     });
     await openInboxRow(row({ link_type: 'mission', link_id: POST_ID }), run.value);

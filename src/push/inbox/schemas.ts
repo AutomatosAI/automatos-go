@@ -81,9 +81,11 @@ export const grantPlacesSchema = z.object({
 
 export type GrantPlace = Readonly<z.output<typeof GrantPlaceShape>>;
 
-/** GET /api/missions/{id}: the chat it was launched from, when it was. */
+/** GET /api/missions/{id}: the chat it was launched from, when it was, and its run state. */
 export const missionPlaceSchema = z.object({
   id: z.string(),
+  /** The run's state ('awaiting_approval' while its plan waits; core services/mission_view.py). */
+  state: z.string().nullish().catch(null),
   config: z
     .object({ origin_chat_id: z.string().nullish().catch(null) })
     .nullish()
