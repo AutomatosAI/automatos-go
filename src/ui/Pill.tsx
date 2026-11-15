@@ -13,6 +13,7 @@ import { Text } from './Text';
 import { controlLabel, dressedPillPaint } from './dressed';
 import { hitSlopFor, joinLabel } from './paint';
 import { DOT_SIZE, PILL_COUNT_OPACITY } from './variants';
+import { markColour } from './accent';
 
 const PILL_LABEL_LEVEL = 5;
 
@@ -60,7 +61,12 @@ export function Pill({ label, selected, onPress, count, dot, disabled = false }:
       }}
     >
       {dot ? (
-        <View style={[styles.dot, { backgroundColor: colours[dot], borderRadius: radii.full }]} />
+        <View
+          style={[
+            styles.dot,
+            { backgroundColor: markColour(colours, dot), borderRadius: radii.full },
+          ]}
+        />
       ) : null}
       <Text style={[labelFace, { color: ink }]}>{label}</Text>
       {count === undefined ? null : (

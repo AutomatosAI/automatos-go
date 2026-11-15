@@ -2,7 +2,7 @@
 // `accent` is a colour you can read in most palettes (Studio's orange) and a quiet ground in
 // others: Candy fills it with its chip, as the web's hover fill, and an installed theme may too.
 // So text, a glyph, a rule or a dot "in the accent" is drawn in `accent` where that reads on the
-// palette's page, and in `primary`, the palette's strong ink, where it does not. Every shared
+// palette's page and on its cards, and in `primary`, the palette's strong ink, where it does not. Every shared
 // place that paints the accent as a foreground reads it here. A ground in the accent, with its
 // own accentForeground on it (the count badge), keeps `colours.accent`.
 
@@ -18,11 +18,17 @@ const solid = (colour: string) => colour.slice(0, SOLID_LENGTH);
 
 const found = new WeakMap<Colours, ColourName>();
 
-/** `accent` where it reads on the palette's page, `primary` where it is a ground there. */
+/** The grounds a mark in the accent sits on: the page (a link, a rule) and a card (a dot, a chip). */
+const GROUNDS: readonly ColourName[] = ['background', 'card'];
+
+/** `accent` where it reads on the palette's page and cards, `primary` where it is a ground there. */
 export function accentToken(colours: Colours): ColourName {
   const known = found.get(colours);
   if (known !== undefined) return known;
-  const reads = contrastRatio(solid(colours.accent), solid(colours.background)) >= MARK_CONTRAST;
+  const accent = solid(colours.accent);
+  const reads = GROUNDS.every(
+    (ground) => contrastRatio(accent, solid(colours[ground])) >= MARK_CONTRAST,
+  );
   const token: ColourName = reads ? 'accent' : 'primary';
   found.set(colours, token);
   return token;
@@ -31,4 +37,9 @@ export function accentToken(colours: Colours): ColourName {
 /** The accent as a foreground: text, a glyph, a rule, a dot. */
 export function accentInk(colours: Colours): string {
   return colours[accentToken(colours)];
+}
+
+/** A token painted as a mark (a status dot): its own colour, the accent through the lookup. */
+export function markColour(colours: Colours, token: ColourName): string {
+  return token === 'accent' ? accentInk(colours) : colours[token];
 }

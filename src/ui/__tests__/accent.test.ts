@@ -11,9 +11,9 @@ import { spanStyle } from '../../chat/markdown/look';
 import { contrastRatio } from '../../core/web/lib/look-kit/contrast';
 import { STYLE_IDS, tokensFor, type Colours, type Tokens } from '../../styles/tokens';
 import { STUDIO_COLOURS } from '../../styles/tokens/studio';
-import { MARK_CONTRAST, accentInk, accentToken } from '../accent';
+import { MARK_CONTRAST, accentInk, accentToken, markColour } from '../accent';
 import { toneColour } from '../tone-colour';
-import { fieldPaint } from '../variants';
+import { fieldPaint, statusPip, tonePaint } from '../variants';
 
 const SCHEMES = ['light', 'dark'] as const;
 const PALETTES: readonly Tokens[] = [
@@ -55,8 +55,24 @@ describe('the accent as a foreground', () => {
     expect(accentToken(seeThrough)).toBe('accent');
   });
 
-  it('answers the same for the same palette object', () => {
-    expect(accentToken(CANDY.colours)).toBe(accentToken(CANDY.colours));
+  it.each(PALETTES.map((tokens) => [nameOf(tokens), tokens] as const))(
+    '%s: only a palette whose accent is a ground reads another token',
+    (_name, tokens) => {
+      expect(accentToken(tokens.colours)).toBe(tokens.style === 'candy' ? 'primary' : 'accent');
+    },
+  );
+
+  it('needs the accent to read on a card as well as on the page', () => {
+    const onPageOnly: Colours = { ...STUDIO_COLOURS.light, card: STUDIO_COLOURS.light.accent };
+    expect(accentToken(onPageOnly)).toBe('primary');
+  });
+
+  it('decides once for a palette object', () => {
+    const palette = { ...STUDIO_COLOURS.light };
+    expect(accentToken(palette)).toBe('accent');
+    palette.accent = palette.background; // a palette is never changed in place: this shows the answer is kept
+    expect(accentToken(palette)).toBe('accent');
+    expect(accentToken({ ...palette })).toBe('primary');
   });
 });
 
@@ -66,6 +82,8 @@ describe('each shared place that paints the accent reads it there', () => {
     invalidField: fieldPaint(colours, { invalid: true }).borderColor,
     link: spanStyle(STUDIO.type, colours, 'body1', [], true)?.color,
     selectedTabRule: tabPaint(colours, true).rule,
+    reasonChip: tonePaint(colours, 'accent').color,
+    blockedDot: markColour(colours, statusPip('blocked').tokenKey),
     dayWithItems: stripCellPaint(colours, { selected: false, today: false, hasItems: true }).dot,
   });
 
@@ -81,6 +99,16 @@ describe('each shared place that paints the accent reads it there', () => {
     for (const [place, colour] of Object.entries(places(STUDIO.colours))) {
       expect(colour, place).toBe(STUDIO.colours.accent);
     }
+  });
+
+  it('a mark in any other token is that token, in Candy too', () => {
+    expect(markColour(CANDY.colours, statusPip('done').tokenKey)).toBe(CANDY.colours.success);
+    expect(markColour(CANDY.colours, 'foreground')).toBe(CANDY.colours.foreground);
+    expect(tonePaint(CANDY.colours, 'warning').color).toBe(CANDY.colours.warnInk);
+    expect(tonePaint(STUDIO.colours, 'accent')).toEqual({
+      backgroundColor: tonePaint(STUDIO.colours, 'accent').backgroundColor,
+      color: STUDIO.colours.accent,
+    });
   });
 
   it('a field that is not invalid, an unselected tab and a chosen day are untouched', () => {
