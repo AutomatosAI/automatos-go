@@ -293,7 +293,8 @@ changed, and says why in its own comment.
 
 ## The look
 
-A product app has one look of its own.
+A product app has one look of its own. The full rules for how the app is designed and built, of
+which these are the short form, are [the app standard](app-standard.md).
 
 - **Tokens only.** A screen reads colours, radii, spacing and type through the tokens. No colour
   and no font size is written in a screen.
