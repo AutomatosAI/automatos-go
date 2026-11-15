@@ -55,9 +55,26 @@ export class BodyStalledError extends Error {
   }
 }
 
+const logCancelFailure = (error: unknown) => logger.debug('[api] body cancel failed', error);
+
+/**
+ * A Content-Length over the cap: refused unread. The body is cancelled too, or the bytes still on
+ * their way would pile up behind it.
+ */
+function refuseByLength(
+  body: ReadableStream<Uint8Array> | null,
+  maxBytes: number,
+  contentLength: string | null,
+): void {
+  if (!(Number(contentLength) > maxBytes)) return;
+  body?.cancel().catch(logCancelFailure);
+  throw new BodyTooLargeError(maxBytes);
+}
+
 /**
  * A body read whole as bytes, never more than `maxBytes`: a Content-Length over it is refused before
- * any byte is read, and a body that grows past it is cancelled at that read (BodyTooLargeError). A
+ * any byte is read, and its body cancelled so that nothing more of it is taken in; a body that
+ * grows past the cap is cancelled at that read (BodyTooLargeError). A
  * run of empty reads is cancelled too (BodyStalledError): they never reach the cap. The parts are
  * gathered in one local list, appended to in place: a copy at every read would make a body sent a
  * byte at a time cost the square of its size.
@@ -67,11 +84,10 @@ export async function readBytes(
   maxBytes: number,
   contentLength: string | null = null,
 ): Promise<Uint8Array> {
-  if (Number(contentLength) > maxBytes) throw new BodyTooLargeError(maxBytes);
+  refuseByLength(body, maxBytes, contentLength);
   if (!body) return new Uint8Array(0);
   const reader = body.getReader();
-  const cancel = () =>
-    reader.cancel().catch((error: unknown) => logger.debug('[api] body cancel failed', error));
+  const cancel = () => reader.cancel().catch(logCancelFailure);
   const parts: Uint8Array[] = [];
   let size = 0;
   let emptyReads = 0;

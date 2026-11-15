@@ -151,6 +151,30 @@ describe('readBytes against a body sent badly', () => {
     await expect(readBytes(endless, 1024)).rejects.toBeInstanceOf(BodyStalledError);
   });
 
+  it('cancels a body it refuses by its Content-Length, so nothing more of it is taken in', async () => {
+    let cancelled = false;
+    let pulled = 0;
+    const body = new ReadableStream<Uint8Array>(
+      {
+        pull(controller) {
+          pulled += 1;
+          controller.enqueue(ONE);
+        },
+        cancel() {
+          cancelled = true;
+        },
+      },
+      { highWaterMark: 0 },
+    );
+    await expect(readBytes(body, 10, '11')).rejects.toBeInstanceOf(BodyTooLargeError);
+    expect(cancelled).toBe(true);
+    expect(pulled).toBe(0);
+  });
+
+  it('a refused Content-Length with no body at all is still refused', async () => {
+    await expect(readBytes(null, 10, '11')).rejects.toBeInstanceOf(BodyTooLargeError);
+  });
+
   it('counts empty reads in a row only: a real byte between them starts the count again', async () => {
     const run = Array.from({ length: MAX_EMPTY_READS - 1 }, () => NONE);
     const bytes = await readBytes(partsOf([...run, ONE, ...run, ONE]), 1024);
