@@ -10,8 +10,9 @@ server does, the rules for keys, consent and erase, and what to keep and remove 
 template. How this page was agreed, where each app stands against it and what the template still
 owes is in [app-standard-record.md](app-standard-record.md).
 
-**Status, 15 Nov 2026: draft 2.** Written from the template at `51a768b` and from an audit of
-each app by the session building it. Not yet signed off by the owner.
+**Status, 15 Nov 2026: draft 3, agreed by the sessions building the apps.** Written from the
+template at `51a768b` and from an audit of each app by the session building it, then changed
+where those sessions objected. Not yet signed off by the owner.
 
 ## How to read a rule
 
@@ -44,17 +45,20 @@ by `scripts/__tests__/eslint-rules.test.ts`).
 **1.2 One token shape. (Must)** Every palette fills the shape in `src/styles/tokens/types.ts`:
 the colour names, nine radii (`tag` to `full`), ten spacing steps (`space1` to `space10`) and five
 shadows. An app adds a palette. It does not add a second shape, and no screen changes when the
-palette does.
+palette does. An app may add named roles of its own in files beside the palette, inside the tokens
+folder. It never renames or drops a shared one.
 
 **1.3 The palette. (Shaped)** The colours, radii and shadows are the app's own. A palette says
 whether it is light or dark, so the status bar and the system's controls follow.
 
 **1.4 A status is never colour alone. (Must)** A state is painted from its role token and always
-carries a word or a glyph. Template: `src/ui/state-tokens.ts`, `src/ui/StatusPip.tsx`. Held by:
-`src/ui/__tests__/state-tokens.test.ts`.
+carries a word or a glyph. The states are the app's own. They paint through one table onto the
+shape's role names, not from a second set of colours. Template: `src/ui/state-tokens.ts`,
+`src/ui/StatusPip.tsx`. Held by: `src/ui/__tests__/state-tokens.test.ts`.
 
 **1.5 A picture's colours are their own file. (Shaped)** The colours of an illustration or a
-scene sit in a token file of their own and are never drawn under text.
+scene sit in a token file of their own. Text is drawn over a picture only on one flat colour of
+it, and that pair is in the contrast test (rule 10.4).
 
 ## 2. Type
 
@@ -63,13 +67,16 @@ No screen sets a font size, a weight or a colour on text. Template: `src/ui/Text
 `src/ui/variants.ts`.
 
 **2.2 The roles. (Must)** Title 1 to 6, body 1 to 6, label, figure 1 to 3, eyebrow, and the
-thread's own roles. Template: `src/styles/type.ts`.
+thread's own roles. An app may add content roles of its own beside them, as the thread has.
+Template: `src/styles/type.ts`.
 
 **2.3 The sizes and faces. (Shaped)** An app sets its own sizes and its own fonts for those roles,
 in a second scale built beside the template's. Studio's scale is a desktop's and stays pinned. An
 app for consumers uses larger text: 16 points for body. Fonts are bundled files named by their
-PostScript name, with no weight or italic set on top. Template: `src/styles/fonts.ts`. Owed: a
-scale builder, so a second scale is a list of sizes and not a second copy of the file.
+PostScript name, with no weight or italic set on top. A variable font with its weight chosen in
+code is a difference to record, and is checked on Android before an Android release. Template:
+`src/styles/fonts.ts`. Owed: a scale builder, so a second scale is a list of sizes and not a
+second copy of the file.
 
 **2.4 Nothing under 11 points, and Dynamic Type stays on. (Must)** Text grows to the
 accessibility sizes and layouts wrap. A cap is at least 2 and carries its reason on the line
@@ -108,8 +115,8 @@ today), and a Header (rule 4.2).
 
 ## 4. The screen
 
-**4.1 Every screen is the Screen primitive. (Must)** It gives the safe area, the ground and the
-status bar's tone. `scroll` is on for forms, settings and long states, and off where the screen
+**4.1 Every screen is the Screen primitive, or a frame built on it. (Must)** It gives the safe
+area, the ground and the status bar's tone. `scroll` is on for forms, settings and long states, and off where the screen
 owns a list. Template: `src/ui/Screen.tsx`.
 
 **4.2 One header. (Must)** A screen's header is one component built from the tokens: back, a
@@ -128,8 +135,9 @@ header and tab bar in place of drawn ones (see the record, O-2)._
 and holds nothing else. Template: `app/welcome.tsx`.
 
 **4.5 A picture above a sheet. (Shaped)** Where a screen is a scene with its content on a sheet
-below, it is one shared frame, not drawn per screen. The template has none: the first app to
-build one gives it back.
+below, it is one shared frame built on Screen, not drawn per screen. The template has none. It is
+built once in the app that needs it and comes into the template when a second app does (rule
+3.4).
 
 ## 5. Navigation
 
@@ -152,8 +160,10 @@ it never check for themselves. Template: `src/app-state/gate.ts`, `src/app-state
 | **Tabs** | Three to five places of equal weight | One tab bar, and a stack in each tab |
 
 Never both a tab bar and a second bar or drawer. Never more than five tabs. Every tab shows its
-word, not only an icon. The rules above and in sections 4 and 6 hold in both shells. The template
-is One home. Owed: the Tabs shell.
+word, not only an icon, and the selected one is marked by more than colour. A tab whose feature
+is off is absent (rule 6.5). Pressing the selected tab takes its stack back to its root. Whether
+the bar is docked or floats is the app's. The rules above and in sections 4 and 6 hold in both
+shells. The template is One home. Owed: the Tabs shell.
 
 **5.5 Sheet or screen. (Must)** Something read or decided on top of where the person is opens as
 a sheet. Somewhere the person goes is a screen. Template: `src/ui/Sheet.tsx`.
@@ -162,17 +172,22 @@ a sheet. Somewhere the person goes is a screen. Template: `src/ui/Sheet.tsx`.
 
 **6.1 Every load has four states. (Must)** Loading, empty, failed and loaded, drawn by
 `LoadingState`, `EmptyState` and `ErrorState`. No screen shows a blank while it waits, and none
-writes its own spinner or error block.
+writes its own spinner or error block. When one action inside a screen fails, such as a turn in
+a conversation, the failure is shown where the action is, in the words of its error kind.
 
 **6.2 An error is a kind, and each kind has its words. (Must)** The app has one API client, and
 it turns every failure into one of its kinds: `network`, `auth`, `forbidden`, `not_found`,
 `conflict`, `server`, `stream`, `invalid_response`. The words for a kind come from one table. A
 person never sees a status code, an address or a server's own message. "Try again" is offered
-only where trying again can help. Template: `src/api/errors.ts`, `src/ui/ErrorState.tsx`.
+only where trying again can help. Template: `src/api/errors.ts`, `src/ui/ErrorState.tsx`. Owed: a
+ninth kind for a limit reached, which carries when the limit lifts. The template reads that
+answer as `server` today, and its words are not the words for a server that failed.
 
-**6.3 The edges are whole screens. (Must)** The server does not answer, something went wrong, the
-first open and a route that does not exist each have a screen in the app's own voice. The first
-re-checks quietly by itself. Template: `src/styles/edges/`.
+**6.3 The edges are whole screens. (Must)** Something went wrong, the first open and a route that
+does not exist each have a screen in the app's own voice. So does a server that does not answer,
+where the app has nothing to show without it: that screen re-checks quietly by itself. An app
+that keeps its data on the phone shows what it holds instead, under rule 6.4. Template:
+`src/styles/edges/`.
 
 **6.4 A screen says what it is showing. (Must)** Data that is out of date stays on screen under a
 line that says so. Not set up, offline, waiting to send and not downloaded are named states with
@@ -197,8 +212,9 @@ an AI, the gate shows what goes where and waits for a yes. Template: `src/consen
 
 **7.3 The app asks before the system does. (Must)** A permission is asked for in the app's own
 words first, on a screen that says why, and the system's prompt appears only after the person
-says yes there. "Not now" is respected: it is not asked again for a week, and after the second
-decline only Settings offers it. Template: `src/push/prompt/policy.ts`.
+says yes there. "Not now" is respected: the app does not ask again within a week, and never by
+itself after a second no. An app that asks less than that conforms. Template:
+`src/push/prompt/policy.ts`.
 
 **7.4 When to ask. (Shaped)** At the moment the permission is first useful, never on a cold
 launch. An app whose reminders are the product may ask during first run.
@@ -224,7 +240,7 @@ the app reports crashes, and the version with the code the app runs. Template:
 `src/release/__tests__/privacy-section.test.ts`.
 
 **8.3 About. (Must)** A product app says "Powered by Automatos AI" here, from one constant, and
-lists the licences of what it is built from.
+lists the licences of what it is built from. Owed: the licence list. The template has none.
 
 **8.4 Leaving is plain. (Must)** Whatever the app or its server holds about the person or the
 phone is named in one sentence, next to the one action that removes it.
@@ -241,11 +257,16 @@ half way. A second person who signs in on the same phone finds nothing of the fi
 caption says so, in the muted text tone. Text made by fixed rules is not labelled as an AI's.
 Template: `src/styles/ai-label.tsx`. Held by: `src/release/__tests__/surfaces.test.ts`.
 
-**9.2 Report this. (Must)** An AI's message can be reported from where it is shown. Template:
-`src/ui/ReportSheet.tsx`. Held by the same test.
+**9.2 Report this. (Must)** An AI's reply to the person can be reported from where it is shown,
+where the server takes reports.
+Text an AI wrote that the product checked and published for everyone is corrected at its source:
+the app gives a way to say it is wrong. Template: `src/ui/ReportSheet.tsx`. Held by the same
+test.
 
-**9.3 The thread. (Must)** The stream parser and the turn reducer are the vendored ones in
-`src/core/`, never edited by hand. The thread's words and the message box are 16 points.
+**9.3 The thread. (Must)** One tested parser for the reply stream in each app, never a second
+written by hand. Where the product's server passes Automatos's data stream through, it is the
+vendored parser and turn reducer in `src/core/`, never edited by hand. The thread's words and
+the message box are at least 16 points.
 
 **9.4 Voice. (Must)** The notice that the voice is an AI is given once in each voice session.
 Template: `src/voice/`.
@@ -268,7 +289,9 @@ its own file; the one test over every pair, which two of the apps have written, 
 the template so it travels.
 
 **10.5 Text to be read is never dimmed. (Must)** Read, quiet or secondary text takes a muted
-token, never an opacity, so its contrast can be tested. A disabled control may dim.
+token, never an opacity set on the text or on what holds it, so its contrast can be tested. A
+token that carries transparency is allowed where the contrast test blends it over every ground it
+is drawn on. A disabled control may dim.
 
 **10.6 Decoration carries no meaning. (Must)** A picture, a scene or a character is hidden from
 VoiceOver and is never the only way something is said.
@@ -278,8 +301,10 @@ at the largest text size. Template: `docs/release/accessibility-pass.md`.
 
 ## 11. Words
 
-**11.1 One strings file per feature. (Must)** No user-facing word is written in a component.
-Words that differ by platform sit in a pair beside it. Template: `src/*/strings.ts`,
+**11.1 No word is written in a component. (Must)** Every user-facing word sits in a strings file
+the audits can walk. Where they sit is Shaped: the template keeps one `strings.ts` per feature,
+with words that differ by platform in a pair beside it. An app whose website and app share their
+words may keep those in the one shared source. Template: `src/*/strings.ts`,
 `src/step-up/check-copy.ts`. Held by: `src/release/__tests__/store-copy.test.ts`.
 
 **11.2 A terms table. (Shaped)** Each app keeps a short table of its own nouns and the words it
@@ -296,10 +321,12 @@ sentence that was reviewed has a test that walks every string that carries it.
 seconds. An app's own motion is its own, inside rule 10.3. Template: `src/ui/overlay.ts`.
 
 **12.2 Haptics are rare. (Shaped)** One for an action the person just took, such as a message
-sent or a choice flipped. Never the only signal. A haptic that fails is logged and never thrown.
+sent or a choice flipped. An exercise the product is made of may use one as part of the exercise.
+Never the only signal. A haptic that fails is logged and never thrown.
 Template: `src/chat/composer/Composer.tsx`.
 
-**12.3 A loop can be paused. (Must)** Any motion that repeats has a control that stops it.
+**12.3 A loop can be paused. (Must)** Motion that starts by itself and runs for more than five
+seconds has a control that stops it. A loading indicator is not such a loop: rule 10.3 covers it.
 
 **12.4 No interface sounds. (Must)** A sound belongs to a notification or to audio the person
 started.
@@ -310,10 +337,13 @@ started.
 feature. A feature holds its server routes (`routes.ts`), its schemas, its calls (`api.ts`), its
 pure model, its hooks, its components, its `strings.ts` and its tests in `__tests__/`.
 
-**13.2 One API client. (Must)** Every request goes through `src/api/`. Every answer is parsed
-with zod and unknown fields are ignored. Held by: the lint rules on `fetch` and `XMLHttpRequest`.
-Owed: the same guard on `WebSocket`, `EventSource`, `sendBeacon` and other HTTP clients, which one
-app has already added.
+**13.2 One way out. (Must)** Every request goes through `src/api/`: data through the one client,
+and a file sent or fetched through one transfer module beside it, so media never passes through
+memory. Every answer is parsed with zod and unknown fields are ignored. The template's parsing is
+written to zod 3: an app on a newer major records it. Held by: the lint rules on
+`fetch` and `XMLHttpRequest`. Owed: the same guard on `WebSocket`, `EventSource`, `sendBeacon`,
+other HTTP clients and the file system's own download and upload calls; and the transfer module
+itself, since two features of the template download files on their own today.
 
 **13.3 Pure logic outside React, with tests. (Must)** Updates never mutate. Held by: the coverage
 gate in `vitest.config.ts`.
@@ -324,8 +354,9 @@ lines, a component 150, nesting 4 and complexity 10. Held by: `eslint.config.js`
 **13.5 A guard cannot be switched off inside a file. (Must)** Owed: the lint setting that refuses
 inline disabling. The template has no inline disable today, so it costs nothing to turn on.
 
-**13.6 Storage. (Must)** What the phone keeps goes in the encrypted store, and secrets in the
-keychain through the one registry. A reinstall starts clean. Template: `src/storage/`,
+**13.6 Storage. (Must)** What the phone keeps about the person goes in the encrypted store, and
+secrets in the keychain through the one registry. A reinstall starts clean. Public content and
+downloaded media are files: outside the encrypted store and outside the phone's backup. Template: `src/storage/`,
 `src/session/InstallGate.tsx`. Held by: `src/release/__tests__/secure-store-audit.test.ts` and
 `user-data.test.ts`.
 
@@ -335,8 +366,9 @@ content. Template: `src/lib/logger.ts`.
 **13.8 No web view. (Must)** Not as a dependency and not through another package. Held by: lint
 and `src/release/__tests__/dependency-audit.test.ts`.
 
-**13.9 Crash reports. (Shaped)** By how sensitive the data is. Where what a person says or their
-health data could reach a report, the app has no crash reporter at all. Where it has one, the
+**13.9 Crash reports. (Shaped)** By how sensitive the data is. Where what a person says, their
+health data or anything the app promises never leaves the phone could reach a report, the app has
+no crash reporter at all. Where it has one, the
 options are the template's fixed ones and the person has a switch. Template:
 `src/observability/options.ts`.
 
@@ -349,8 +381,9 @@ every pull request, from a lockfile install with scripts off. Template:
 **14.2 The release audits travel with the copy and stay. (Must)** An audit changes only because
 the product changed, and says why in its own comment. Template: `src/release/__tests__/`,
 `src/config/__tests__/`. Owed: one small settings file per app (its package name, its product
-folders, its palettes, its allowed lists) that the audits read, in place of constants edited by
-hand in each copy.
+folders, its palettes, each audit's allowed list and the contrast test's pairs of text and
+ground) that the audits read, in place of constants edited by hand in each copy. It accepts a product folder outside the app's own, for an app that shares
+source with its product.
 
 **14.3 Updates over the air go only to the build they were made for. (Must)** The runtime version
 is the fingerprint, so an update never reaches a binary with different native code. An app may
@@ -372,11 +405,13 @@ record. Template: `npm run check:bundle:android`.
 
 ## 16. The design handoff
 
-Designs are made outside the code. So that what is built is what was drawn:
+Designs are made outside the code. So that what is built is what was drawn, a handoff made after
+this standard is signed follows these two rules. An older one is a row in the app's record.
 
 **16.1 What a handoff holds. (Must)** A token file. A component sheet that shows every component
-once, in every palette. Every state of each screen as its own frame: loading, empty, failed, out
-of date, and the screen with something in it.
+once, in every palette, the three state primitives among them. A frame for each state of a screen
+that is more than its primitive: nothing to act on, nothing listed yet, out of date. And the
+edges of rule 6.3.
 
 **16.2 The code is checked against it. (Must)** A test compares the app's tokens to the handoff's
 token file. Each component on the sheet exists once in the code, built on the primitives.
@@ -404,14 +439,15 @@ Template commit: <40-character sha>. Standard read at: <sha>.
 
 ## Differences from the app standard
 
-| Rule | What this app does | Why | Stays, or closes by |
+| Rule | What this app does | Why | Stays, or closes with |
 |---|---|---|---|
 | 5.4 | ... | ... | Stays |
-| 14.3 | ... | ... | Closes by <date> |
+| 14.3 | ... | ... | Closes with <the work>, by <date> |
 ```
 
-A difference that will close carries a date. A rule the app has no use for is a row too ("9.4:
-does not apply, the app has no voice"). The file lives in the app's own repository: this
+A difference that will close names the work that closes it, and carries a date once the owner has
+set one. A rule the app has no use for is a row too ("9.4: does not apply, the app has no
+voice"). The file lives in the app's own repository: this
 repository's record names no product. Owed: a test, travelling with the audits, that the file
 exists, names a commit and cites only rules that exist.
 
