@@ -6,7 +6,8 @@
 // the one exception, for a body that is not JSON (Auto's server voice: an MP3): it hands back the
 // bytes and the response's headers, for the caller to check. Every body is read under a cap
 // (config.ts): a JSON body or a binary one over its cap is an invalid_response, read no further,
-// and an error body over its cap gives no detail, so the status alone names the kind. Every call
+// and an error body over its cap gives no detail, so the status alone names the kind. A redirect
+// is never followed: it is an error of its status's kind that keeps where it pointed. Every call
 // also says the language the person chose ("I speak") as Accept-Language, so the server writes its
 // copy in it (accept-language.ts); Automatic sends none. The transport is injected; the real one
 // (transport.ts, expo/fetch) is wired by the app shell, never by tests.
@@ -44,6 +45,7 @@ import type {
 import { buildUrl, type PathParams, type QueryParams } from './url';
 
 const CONTENT_TYPE_HEADER = 'Content-Type';
+const LOCATION_HEADER = 'location';
 const JSON_CONTENT_TYPE = 'application/json';
 const UNAUTHORIZED = 401;
 
@@ -184,7 +186,12 @@ async function checked<R extends TransportResponse>(
   token: string | null,
 ): Promise<R> {
   if (isOk(response.status)) return response;
-  const error = errorFromResponse(response.status, await errorBody(response));
+  // a redirect is an answer like any other refusal: never followed (transport.ts), only reported
+  const error = errorFromResponse(
+    response.status,
+    await errorBody(response),
+    response.header(LOCATION_HEADER),
+  );
   if (response.status === UNAUTHORIZED) ctx.expired(token, error);
   throw error;
 }
@@ -277,6 +284,7 @@ function disposing(response: StreamingResponse, dispose: () => void): StreamingR
         dispose();
       }
     },
+    header: (name) => response.header(name),
     chunks: () => chunksThen(response, dispose),
   };
 }

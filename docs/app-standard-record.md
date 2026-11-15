@@ -152,6 +152,7 @@ The template is held to the standard too. Each line is a rule's "Owed".
 | T19 | The guards miss remote pictures loaded by address (`SvgUri` and its siblings), the `'use dom'` directive and 4-digit hex colours. The guard test has no case that the client file may not import `expo/fetch` | 13.2, 1.1 | App C |
 | T20 | **Done, 15 Nov.** Every body the client reads is read under a cap. The transport no longer has a way to read one whole without a limit | 13.2a | Lifted from App C, with the template's own caps and with an oversized error body still mapped by its status |
 | T21 | **Done, 15 Nov.** The address a build is given is held to a bare https address, at build time and again at launch. A server a person pairs their own phone with is a separate rule and may still be plain http on a home network | 13.2b | Lifted from App C |
+| T22 | **Done, 15 Nov.** A redirect is never followed and no cookie is kept. Pairing reads where one redirect pointed, to offer a server's own https address | 13.2c | App C refuses redirects outright. The template also serves people's own servers, so it reads the one case and follows none |
 
 ## Open for the owner
 
@@ -180,7 +181,7 @@ The template is held to the standard too. Each line is a rule's "Owed".
 
 | Who | What |
 |---|---|
-| Template | T1 to T21. Record each in the standard's Changes as it lands |
+| Template | T1 to T22. Record each in the standard's Changes as it lands |
 | App A | `TEMPLATE.md` is written, with a row per rule and the three stages sized. Ship what is waiting first. Nothing from the standard goes into that work |
 | App B | `TEMPLATE.md` is written. Give T4 and T6 back. Bring back and its one short control into line (4.2, 3.2). Rebuild its scene frame on Screen when it is next touched |
 | App C | Build its screens on the Tabs shell with drawn chrome. Build the Header and TabBar to the contract and hand them over. Move its lineage into `TEMPLATE.md` |

@@ -89,6 +89,7 @@ const EVERY_ACTION: readonly ConnectAction[] = [
   submitted(),
   discovered(),
   { type: 'discoveryFailed', origin: LAN, kind: 'unreachable' },
+  { type: 'moved', origin: LAN, to: 'https://192.168.1.20' },
   { type: 'confirm' },
   { type: 'back' },
   { type: 'paired', record: CONNECTED_RECORD },
@@ -262,7 +263,7 @@ describe('checking', () => {
   });
 
   it('ignores every other action', () => {
-    unchangedBy(CHECKING, ['discovered', 'discoveryFailed', 'back']);
+    unchangedBy(CHECKING, ['discovered', 'discoveryFailed', 'moved', 'back']);
   });
 });
 

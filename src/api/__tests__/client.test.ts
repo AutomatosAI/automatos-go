@@ -221,6 +221,7 @@ describe('status → kind', () => {
       status: 503,
       bytes: () => Promise.reject(new Error('socket closed')),
       chunks: async function* () {},
+      header: () => null,
     }));
     expect((await failureOf(clientWith(transport).request(WORKSPACE))).kind).toBe('server');
   });

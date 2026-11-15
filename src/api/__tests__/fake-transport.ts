@@ -3,12 +3,7 @@
 
 import { readBytes } from '../body';
 import type { Server } from '../server';
-import type {
-  BinaryResponse,
-  StreamingResponse,
-  Transport,
-  TransportRequest,
-} from '../transport-types';
+import type { StreamingResponse, Transport, TransportRequest } from '../transport-types';
 
 export const SERVER: Server = Object.freeze({
   apiUrl: 'https://api.example.test',
@@ -16,21 +11,12 @@ export const SERVER: Server = Object.freeze({
   source: 'hosted',
 });
 
-/** An answer for any of the three calls; headers only matter to binary(). */
-export type FakeResponse = StreamingResponse & Partial<Pick<BinaryResponse, 'header'>>;
+/** An answer for any of the three calls. */
+export type FakeResponse = StreamingResponse;
 
 type Responder = (request: TransportRequest) => FakeResponse | Promise<FakeResponse>;
 
 export type FakeTransport = Transport & { readonly calls: TransportRequest[] };
-
-/** binary()'s view of an answer: its bytes, and no headers when it has none. */
-function asBinary(response: FakeResponse): BinaryResponse {
-  return {
-    status: response.status,
-    bytes: response.bytes,
-    header: response.header ?? (() => null),
-  };
-}
 
 /** A string as a body read under the caller's cap, as the real transport reads one. */
 function bytesOf(body: string): (maxBytes: number) => Promise<Uint8Array> {
@@ -47,7 +33,7 @@ export function fakeTransport(responder: Responder): FakeTransport {
     calls,
     request: handle,
     stream: handle,
-    binary: async (request) => asBinary(await handle(request)),
+    binary: handle,
   };
 }
 
@@ -80,10 +66,23 @@ export function bytesReply(
   };
 }
 
+/** Headers by name, in any case, as a response gives them. */
+function headersOf(headers: Readonly<Record<string, string>>): (name: string) => string | null {
+  const byName = new Map(
+    Object.entries(headers).map(([name, value]) => [name.toLowerCase(), value]),
+  );
+  return (name) => byName.get(name.toLowerCase()) ?? null;
+}
+
 /** A whole-body answer. */
-export function reply(status: number, body = ''): StreamingResponse {
+export function reply(
+  status: number,
+  body = '',
+  headers: Readonly<Record<string, string>> = {},
+): StreamingResponse {
   return {
     status,
+    header: headersOf(headers),
     bytes: bytesOf(body),
     chunks: async function* () {
       if (body) yield body;
@@ -124,6 +123,7 @@ export function chunked(chunks: readonly Chunk[], status = 200): ChunkedReply {
   }
   return {
     status,
+    header: () => null,
     bytes: bytesOf(chunks.filter((chunk) => typeof chunk === 'string').join('')),
     chunks: body,
     finished: () => finished,

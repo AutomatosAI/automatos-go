@@ -32,5 +32,8 @@ export const JSON_MAX_BYTES = 10 * 1024 * 1024;
  */
 export const ERROR_BODY_MAX_BYTES = 64 * 1024;
 
+/** A redirect's Location longer than this is dropped: no real address of a server is. */
+export const REDIRECT_TARGET_MAX_CHARS = 2048;
+
 /** A server message (a 409's detail.message) longer than this is cut before anyone sees it. */
 export const SERVER_MESSAGE_MAX_CHARS = 500;

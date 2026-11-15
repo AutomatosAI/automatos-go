@@ -10,7 +10,7 @@
 
 import { z } from 'zod';
 
-import { SERVER_MESSAGE_MAX_CHARS } from './config';
+import { REDIRECT_TARGET_MAX_CHARS, SERVER_MESSAGE_MAX_CHARS } from './config';
 import { parseJson } from './json';
 import { API_ERROR_COPY, APP_ERROR_COPY } from './strings';
 
@@ -30,6 +30,11 @@ export type ApiErrorDetail = {
   readonly serverMessage?: string;
   /** How long the server asks the caller to wait before trying again (retry_after_seconds). */
   readonly retryAfterSeconds?: number;
+  /**
+   * Where a redirect the app refused to follow pointed (its Location). Never followed and never
+   * shown: only pairing reads it, to offer the same server's https address (src/connect).
+   */
+  readonly redirectTo?: string;
   /** What went wrong underneath, for the logs only. */
   readonly cause?: unknown;
 };
@@ -40,6 +45,7 @@ export class ApiError extends Error {
   readonly code?: string;
   readonly serverMessage?: string;
   readonly retryAfterSeconds?: number;
+  readonly redirectTo?: string;
 
   constructor(kind: ApiErrorKind, detail: ApiErrorDetail = {}) {
     // the message is for logs: the kind, status and code, never a URL, a token or a body
@@ -53,6 +59,7 @@ export class ApiError extends Error {
     this.code = detail.code;
     this.serverMessage = detail.serverMessage;
     this.retryAfterSeconds = detail.retryAfterSeconds;
+    this.redirectTo = detail.redirectTo;
   }
 }
 
@@ -136,9 +143,28 @@ export function detailOf(body: string): BodyDetail {
   };
 }
 
-/** A non-OK response as an ApiError of the kind its status names. */
-export function errorFromResponse(status: number, body: string): ApiError {
-  return new ApiError(kindForStatus(status), { status, ...detailOf(body) });
+const REDIRECT_MIN = 300;
+const REDIRECT_END = 400;
+
+/** A 3xx: an answer that asks to be followed somewhere else, which the app never does. */
+export function isRedirectStatus(status: number): boolean {
+  return status >= REDIRECT_MIN && status < REDIRECT_END;
+}
+
+/**
+ * A non-OK response as an ApiError of the kind its status names. A redirect (never followed) keeps
+ * where it pointed, when it said and the address is no longer than any real one.
+ */
+export function errorFromResponse(
+  status: number,
+  body: string,
+  location?: string | null,
+): ApiError {
+  const redirectTo =
+    isRedirectStatus(status) && location && location.length <= REDIRECT_TARGET_MAX_CHARS
+      ? { redirectTo: location }
+      : {};
+  return new ApiError(kindForStatus(status), { status, ...detailOf(body), ...redirectTo });
 }
 
 /** Codes the app gives errors it raises itself (no response behind them), each with its own words. */

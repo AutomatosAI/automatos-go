@@ -233,6 +233,7 @@ describe('readChunks over a real byte stream', () => {
     const response: StreamingResponse = {
       status: 200,
       bytes: async () => new Uint8Array(0),
+      header: () => null,
       chunks: () => decodeChunks(body),
     };
     const controller = new AbortController();

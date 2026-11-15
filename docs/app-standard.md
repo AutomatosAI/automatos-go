@@ -363,6 +363,15 @@ development build. A value that is not one fails the build, and is refused again
 starts. Template: `isServerAddress` in `src/lib/env.ts`, `scripts/check-release-env.js`. Held by:
 `src/lib/__tests__/env.test.ts`, `scripts/__tests__/check-release-env.test.ts`.
 
+**13.2c A redirect is never followed, and no cookie is kept. (Must)** Every request is sent so
+that an answer asking to be followed elsewhere comes back as it is, and the client treats it as an
+error. What the app holds to prove who is asking goes only to the address it was given. No request
+carries a cookie or stores one. An app that lets a person pair with a server of their own may read
+where one such answer pointed, to offer that same server's https address, and nothing else.
+Template: the request policy in `src/api/transport.ts`, `src/connect/https-twin.ts`. Held by:
+`src/api/__tests__/transport.test.ts`, `client-redirect.test.ts`,
+`src/connect/__tests__/https-twin.test.ts`.
+
 **13.3 Pure logic outside React, with tests. (Must)** Updates never mutate. Held by: the coverage
 gate in `vitest.config.ts`.
 
@@ -487,6 +496,7 @@ template, or records why not.
 |---|---|
 | 15 Nov 2026 | First written. |
 | 15 Nov 2026 | Landed in the template: the scale builder (2.3), the one contrast test over every pair (10.4), the wider network guard (13.2) and no inline disabling of a guard (13.5). A copy made before this takes those four files. |
+| 15 Nov 2026 | A redirect is never followed and no cookie is kept (13.2c). Every answer of the transport now has `header()`, not only a binary one, so a copy's fakes gain it. A copy that talks to one fixed server takes the request policy and has no use for the https lookup. |
 | 15 Nov 2026 | Every body the client reads is read under a cap (13.2a), and the address a build is given is held to a bare https address (13.2b). A copy takes `src/api/transport-types.ts`, `transport.ts`, `client.ts`, `config.ts`, `src/lib/env.ts` and `scripts/check-release-env.js`. Its own fakes and tests lose `text()` on a transport answer. |
 | 15 Nov 2026 | The accent as a foreground (text, a glyph, a rule, a dot) is read from `src/ui/accent.ts`: the palette's `accent` where that reads on its page, its `primary` where `accent` is a ground. The contrast test found one style drawing its accent text in a ground colour. A copy takes that file and reads the accent through it wherever it paints one. |
 

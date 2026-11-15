@@ -112,6 +112,41 @@ describe('discover', () => {
     expect(await discover(LAN, deps)).toEqual({ type: 'discoveryFailed', origin: LAN, kind });
   });
 
+  describe('a server asked at its http address that answers "use my https one"', () => {
+    const PATH = '/.well-known/automatos.json';
+    const redirectTo = (location: string) => () => reply(308, '', { Location: location });
+
+    it('feeds back moved, with the https address, and asks nowhere else itself', async () => {
+      const { ports: all, transport } = ports(redirectTo(`https://192.168.1.20${PATH}`));
+      await expect(discover(LAN, all)).resolves.toEqual({
+        type: 'moved',
+        origin: LAN,
+        to: 'https://192.168.1.20',
+      });
+      expect(transport.calls).toHaveLength(1);
+      expect(transport.calls[0]?.url).toBe(`${LAN}${PATH}`);
+    });
+
+    it.each([
+      ['another host', `https://elsewhere.example.test${PATH}`],
+      ['another path', 'https://192.168.1.20/login'],
+      ['http again', `http://192.168.1.20:8080${PATH}`],
+      ['a relative address', PATH],
+    ])('fails discovery for a redirect to %s', async (_what, location) => {
+      const { ports: all, transport } = ports(redirectTo(location));
+      await expect(discover(LAN, all)).resolves.toMatchObject({
+        type: 'discoveryFailed',
+        origin: LAN,
+      });
+      expect(transport.calls).toHaveLength(1);
+    });
+
+    it('never moves the hosted server, whatever it answers', async () => {
+      const { ports: all } = ports(redirectTo(`https://elsewhere.example.test${PATH}`));
+      await expect(discover(HOSTED_API, all)).resolves.toMatchObject({ type: 'discoveryFailed' });
+    });
+  });
+
   it('feeds nothing back once Back aborted it', async () => {
     const { ports: deps } = ports(hangUntilAborted);
     const controller = new AbortController();

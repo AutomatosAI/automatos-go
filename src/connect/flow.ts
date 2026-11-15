@@ -13,6 +13,7 @@ import type { Discovery } from '../api/discovery';
 import { parseServerAddress, type AddressRefusal } from './address';
 import type { PairRefusal } from './api';
 import { confirmDetailsFrom, type ConfirmDetails, type ConnectedRecord } from './confirm';
+import { httpsAddressOfSameServer } from './https-twin';
 import type { DiscoveryFailure, NextStep } from './next-step';
 import { normalizePairCode, type PairCodeRefusal } from './pair-code';
 
@@ -71,6 +72,11 @@ export type ConnectAction =
       readonly next: NextStep;
     }
   | { readonly type: 'discoveryFailed'; readonly origin: string; readonly kind: DiscoveryFailure }
+  /**
+   * The server asked at `origin` (its http address) answers at `to`, its own https address
+   * (https-twin.ts): checking starts again there. The card shows `to`, and Pair is still pressed.
+   */
+  | { readonly type: 'moved'; readonly origin: string; readonly to: string }
   /** Pair (on the card), or Try again (after a failed pairing). */
   | { readonly type: 'confirm' }
   | { readonly type: 'back' }
@@ -159,6 +165,25 @@ function discoveryFailed(
   return action.origin === state.origin ? failed(action.kind, state.fields, null) : state;
 }
 
+/**
+ * The server being checked has moved to its https address: check that one, as if it had been
+ * typed. Only for the origin still being checked, and only from an http address to the https
+ * address of that same host (https-twin.ts), so it happens once at most and never to another
+ * server, whatever sent the action.
+ */
+function moved(state: StateOf<'checking'>, action: ActionOf<'moved'>): ConnectState {
+  if (action.origin !== state.origin) return state;
+  const origin = httpsAddressOfSameServer(state.origin, action.to);
+  if (origin === null) return state;
+  return Object.freeze({
+    step: 'checking',
+    origin,
+    insecure: false,
+    code: state.code,
+    fields: fieldsOf({ ...state.fields, origin }),
+  });
+}
+
 /** The card a confirm or pairing state carries, without the step and the fields. */
 function detailsOf(state: StateOf<'confirm'> | StateOf<'pairing'>): ConfirmDetails {
   return Object.freeze({
@@ -192,6 +217,7 @@ function fromEnter(state: StateOf<'enter'>, action: ConnectAction): ConnectState
 function fromChecking(state: StateOf<'checking'>, action: ConnectAction): ConnectState {
   if (action.type === 'discovered') return discovered(state, action);
   if (action.type === 'discoveryFailed') return discoveryFailed(state, action);
+  if (action.type === 'moved') return moved(state, action);
   return action.type === 'back' ? entering(state.fields) : state;
 }
 

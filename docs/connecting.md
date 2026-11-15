@@ -193,6 +193,14 @@ name, edition and address, and "Address the server lists" when the document name
 Nothing pairs until the person taps **Pair** ([src/connect/flow.ts](../src/connect/flow.ts): the
 only way into `pairing` is `confirm`).
 
+**A server that has moved to https.** The phone never follows a redirect (see "Security model").
+One case is read, not followed: a server asked for discovery at its http address that answers with
+a redirect to its own https address, for that same document. The phone then checks the https
+address in its place, the card shows it, and nothing pairs until **Pair** is tapped
+([src/connect/https-twin.ts](../src/connect/https-twin.ts)). The redirect must name the same host,
+over https, and the same path. A redirect to any other host, another path, or http again fails
+discovery as any other error does.
+
 An http server adds a warning on the card. Once paired, a one-line "Unencrypted home network ·
 {host}" bar sits above every signed-in screen while the server uses http
 ([app/(app)/_layout.tsx](../app/(app)/_layout.tsx)).
@@ -255,6 +263,12 @@ before the code is read. Over it: `429` with `Retry-After`. There is no instance
 one caller cannot block pairing for everyone. The IP is the first `X-Forwarded-For` hop, so the
 limit is only as honest as the proxy in front: a proxy must replace that header. If Redis is down
 the attempt is let through and an ERROR is logged (`api/mobile_devices.py`).
+
+**No redirects, no cookies.** Every request is sent so that a redirect is not followed and no
+cookie is carried or kept ([src/api/transport.ts](../src/api/transport.ts)). An answer that asks
+to be followed elsewhere is an error, so the token never goes to an address the phone was not
+given. A phone paired with an http address that later starts redirecting to https stops
+connecting: pair it again, with the https address.
 
 **The token.** `amd_` plus `token_urlsafe(32)`. The server stores only its hash. On the phone it
 lives in one keychain item, `automatos.paired-server.v1`, with
