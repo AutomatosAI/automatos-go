@@ -28,8 +28,8 @@ Automatos Go itself does not change. It stays the app for people who work in Aut
 | **People** | One workspace, with a memory for each person | The above, plus consent, a retention period and erase for each person |
 | **A space per business** | Each customer business gets a sealed workspace of its own | A product key that creates and closes workspaces, paid for by the owner workspace |
 
-A product may combine them. The rest of this page is written for **People**, the shape a phone
-app for consumers nearly always has.
+A product may combine them. Most of this page is written for **People**, the shape a phone
+app for consumers nearly always has. An app that knows nobody has its own section below.
 
 ## The rules
 
@@ -171,15 +171,118 @@ is not published. What it must do:
 - take its key as an argument, so one server can hold more than one;
 - hold no sign-in or session code.
 
+## An app with no sign-in and no people
+
+Some product apps know nobody: the **One space** shape on a phone. The app reads what the product
+publishes for everyone and does its work on the phone. For such an app:
+
+- **The app still talks only to the product's server**, with no session. Every request is one any
+  phone could make. None carries anything that says who is asking or what they keep on the phone.
+- **There is no consent, no retention and nothing to erase in Automatos**, because no person is
+  ever sent there. On the launch checklist those lines are answered in writing ("does not apply:
+  no person is known"), never skipped.
+- **What the person keeps lives only on the phone**: their own lists and settings, in the
+  template's encrypted storage (`src/storage/`). The app says that the phone holds the only copy
+  and that removing the app removes it.
+- **If the product's server uses Automatos at all**, it does so by itself, as a lean agent with no
+  end user. The app never knows.
+- **Any record the server holds because of the phone** (a push registration, below) is named in
+  the app in one plain sentence, with the one action that removes it.
+
+From the template: remove sign-in and everything behind it. Keep the API client's shape and error
+kinds, pointed at the product's server through one public address. The audit of the sign-in
+SDK's telemetry (`src/release/__tests__/sdk-telemetry.test.ts`) goes with the SDK, and the
+user-data audit (`user-data.test.ts`) becomes "a reinstall starts clean".
+
+## Push for a product app
+
+A product that sends its own notifications keeps the template's push code (`src/push/`) and
+points it at its own server. Automatos does not send a product's notifications: the product's
+server does.
+
+**What the template's app code does (verified in this repository):**
+
+- **Registration.** The phone registers with an install id made on the phone, its platform, the
+  app's version, its locale and time zone, and its Expo push token (`registration/`). One
+  registrar runs at launch, on resume, after a permission change and when the system hands over
+  a new token. It sends again only when something changed, or after a day.
+- **The ask.** Never at launch. It is offered once something waits for the person, or from the
+  second session on. "Not now" holds it back seven days, and after two declines only Settings
+  offers it. The system's prompt appears only after the person says yes in the app (`prompt/`).
+- **Android channels** exist before the system's prompt is shown (`platform/`).
+- **The check.** Every push carries a signature. A push that does not verify shows nothing and
+  does nothing: no banner, nothing opened, nothing marked read. A push more than seven days old
+  is refused too (`signature/`, `inbound/`).
+- **Leaving.** Turning alerts off tells the server. "Remove this phone" deletes the server's row
+  and clears the phone (`bind/`).
+
+**What changes for a product:** the route table (`routes.ts`) and the answer shapes (`schemas/`)
+become the product server's. The payload and the exact message the signature covers
+(`schemas/payload.ts`, `signature/canonical.ts`) become the product's own fields. What belongs to
+Automatos's own records goes: the inbox, the brief on request, a reply to a question from the
+notification, and the links to tasks and missions.
+
+**What the product's server does** (the design; a product builds it):
+
+- Offers the registration route and keeps one row per phone.
+- Sends through Expo's push service. No other push vendor's SDK goes into the app.
+- Signs every push. The template's way is HMAC-SHA256 with a secret made for each phone when it
+  registers, kept on the phone in the keychain.
+- Turns a phone off when Expo reports its token gone, and removes a row not seen for a set time.
+
+### An app with no accounts
+
+The server has nobody to address, so it does not try. Every registered phone gets every alert.
+Each alert is one line that is true for everyone, and the phone decides what it means for its
+person from what only the phone holds, then says so in its own words. The server's row is then an
+install id, a platform, a version and a token: nothing about what the phone holds or follows, and
+no third party learns it either.
+
+Two costs to state plainly:
+
+- The product does hold a list of phones that asked for alerts, and the app says so.
+- On iOS, rewriting an alert on the phone needs a notification service extension, and iOS shows
+  something for every alert unless Apple grants the entitlement that lets an extension drop one.
+  So an alert that does not concern a phone arrives as a quiet entry that says so. The template
+  has no such extension today.
+
+The registration route is public and takes no sign-in. Limit it per address, accept only a token
+of Expo's shape (`EXPO_PUSH_TOKEN_PATTERN` in `src/push/config.ts`), and answer the same whether
+or not the token was known.
+
+### A push that a leak of the product's database cannot forge
+
+The template signs each push with a secret kept per phone, which the server stores. Anyone who
+reads the server's database then holds the tokens and the secrets, and can send a push that
+verifies. For most products that is an acceptable risk. Where a false alert would itself do harm,
+sign with a public-key signature instead:
+
+- The private key lives in a key service outside the hosting, and the server may only ask it to
+  sign. The public key is built into the app: two of them, so one can be replaced without a gap.
+- What is signed is a short statement: a fixed label for the purpose, then the payload exactly as
+  sent. One label and one key per purpose, so a signature for one thing is never accepted for
+  another. Some key services sign only a few kilobytes: sign the statement, never a large body.
+  For a large file, sign a label and its hash.
+- The server checks every signature against the built-in public key before it sends, so a wrong
+  key fails loudly on the server and never reaches a phone.
+
+It fits the template's seam: the same "verify or show nothing" rule, with the check in
+`src/push/signature/` replaced by the public-key one. The template has no public-key check today,
+and the library that adds one has to pass the dependency audit.
+
 ## Starting the app from this template
 
-Copy the repository at a commit and record that commit. Then:
+Copy the repository at a commit and record that commit in a file in the app. The app may be its
+own repository or a folder inside the product's repository, with its own install and lockfile.
+The audits find the app by the nearest `package.json` and check its name: set `PACKAGE_NAME` in
+`src/release/__tests__/support/tree.ts` to the app's own, and run the audits from the app's
+folder, with a real install there (the dependency and privacy audits read `node_modules`). Then:
 
 | Keep | Remove | Change |
 |---|---|---|
 | The API client's shape and error kinds (`src/api/`) | The workspace header, discovery and the workspace bootstrap | The client points at the product's server: one public value, its address |
 | The stream parser and turn reducer (`src/core/`, vendored: never edited by hand) | Pairing with an own server (`src/connect/`) | The app's name, bundle ids and EAS project |
-| The chat plumbing (`src/chat/`) | Push registration (`src/push/`) unless the product sends its own | Sign-in: the product's own |
+| The chat plumbing (`src/chat/`) | Push (`src/push/`) unless the product sends its own notifications (see Push for a product app) | Sign-in: the product's own |
 | Quick-ask on the phone: recognition and the phone's voice (`src/voice/`) | The Command Centre, approvals, the brief, suggestions, step-up (`src/cc/`, `src/approvals/`, `src/brief/`, `src/suggestions/`, `src/step-up/`) | The privacy manifest and the store answers, to what the product really collects |
 | Encrypted storage and the keychain registry (`src/storage/`) | Crash reporting (`src/observability/`) where the product's data is sensitive | The look (below) |
 | The primitives and tokens (`src/ui/`, `src/styles/`) | The styles other than the one the product uses | |
@@ -244,4 +347,8 @@ The full design is automatos-ai's
 - [ ] Erase tested end to end
 - [ ] Limits set on every key
 - [ ] "Powered by Automatos AI" and the AI notice shown
+- [ ] If the app receives notifications: a push that does not verify shows nothing, and the app
+      names the server's record of the phone and the action that removes it
 - [ ] A data protection review, where the product handles health, children or money
+
+A line that does not apply is answered in writing, with the reason. It is never skipped.
