@@ -9,8 +9,8 @@ import { STATUS_CONFIG, type BoardStatus } from '../core/web/types/board';
 import { TYPE_FAMILIES, fontFace } from '../styles/fonts';
 import type { ColourName, Colours, SpaceName } from '../styles/tokens';
 import {
-  TYPE_SPECS,
-  typeStyle,
+  specsOf,
+  toTypeStyle,
   type TypeOverrides,
   type TypeRole,
   type TypeScale,
@@ -69,7 +69,8 @@ export function defaultTone(variant: TextVariant): TextTone {
 
 /**
  * The role's face from the scale, or at another weight or italic when that face is bundled. The
- * override is built from Studio's specs (TYPE_SPECS), the only scale in this wave.
+ * override is built from the scale's own specs (specsOf), so a role keeps its size in a second
+ * scale as it does in Studio's.
  */
 export function textFace(
   type: TypeScale,
@@ -77,14 +78,14 @@ export function textFace(
   overrides: TypeOverrides = {},
 ): TypeStyle {
   if (overrides.weight === undefined && !overrides.italic) return type[role];
-  const spec = TYPE_SPECS[role];
+  const spec = specsOf(type)[role];
   const weight = overrides.weight ?? spec.weight;
   const bundled = fontFace(
     TYPE_FAMILIES[spec.family],
     weight,
     overrides.italic ? 'italic' : 'normal',
   );
-  return bundled ? typeStyle(role, overrides) : type[role];
+  return bundled ? toTypeStyle(spec, overrides) : type[role];
 }
 
 // ── Buttons ─────────────────────────────────────────────────────────────────────────────────

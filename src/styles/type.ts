@@ -126,8 +126,11 @@ const figure = (size: number): TypeSpec => ({
   tabular: true,
 });
 
+/** A scale's sizes, faces and spacing by role: what a scale is built from (buildTypeScale). */
+export type TypeSpecs = Readonly<Record<TypeRole, TypeSpec>>;
+
 /** The handoff's sizes by role; the comments name where the handoff uses each. */
-export const TYPE_SPECS: Readonly<Record<TypeRole, TypeSpec>> = Object.freeze({
+export const TYPE_SPECS: TypeSpecs = Object.freeze({
   title1: title(28, LEADING.display, TRACKING.display), // Command Centre h1 (cc-h1)
   title2: title(23), // ticket sheet title
   title3: title(21), // digest greeting
@@ -180,9 +183,31 @@ export function typeStyle(role: TypeRole, overrides: TypeOverrides = {}): TypeSt
   return toTypeStyle(TYPE_SPECS[role], overrides);
 }
 
+/** The specs each built scale came from, so a role can be drawn at another weight in its own scale. */
+const SPECS_OF = new WeakMap<TypeScale, TypeSpecs>();
+
+/**
+ * A scale from its specs, each role at its own weight (docs/app-standard.md rule 2.3): an app
+ * built from this template adds a second scale as a list of sizes beside Studio's, which stays
+ * pinned to its handoff. Throws for a role under MIN_TEXT_SIZE (D38, rule 2.4) or on a face the
+ * app does not bundle, so a scale that breaks either never reaches a screen.
+ */
+export function buildTypeScale(specs: TypeSpecs): TypeScale {
+  const small = Object.entries(specs).find(([, spec]) => spec.size < MIN_TEXT_SIZE);
+  if (small) {
+    throw new Error(`${small[0]} is ${small[1].size} pt: nothing is under ${MIN_TEXT_SIZE} pt`);
+  }
+  const scale = Object.freeze(
+    Object.fromEntries(Object.entries(specs).map(([role, spec]) => [role, toTypeStyle(spec)])),
+  ) as TypeScale;
+  SPECS_OF.set(scale, specs);
+  return scale;
+}
+
+/** The specs behind a scale; Studio's for a scale built some other way. */
+export function specsOf(scale: TypeScale): TypeSpecs {
+  return SPECS_OF.get(scale) ?? TYPE_SPECS;
+}
+
 /** Studio's scale at each role's own weight. */
-export const STUDIO_TYPE: TypeScale = Object.freeze(
-  Object.fromEntries(
-    Object.entries(TYPE_SPECS).map(([role, spec]) => [role, toTypeStyle(spec)]),
-  ) as Record<TypeRole, TypeStyle>,
-);
+export const STUDIO_TYPE: TypeScale = buildTypeScale(TYPE_SPECS);

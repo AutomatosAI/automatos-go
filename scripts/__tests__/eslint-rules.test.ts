@@ -60,7 +60,11 @@ describe('one way in: HTTP only through src/api (D-ONE-CLIENT)', () => {
   it.each([
     ['XMLHttpRequest', 'export const xhr = new XMLHttpRequest();\n', 'no-restricted-globals'],
     ['globalThis.fetch', 'export const f = globalThis.fetch;\n', 'no-restricted-properties'],
-    ['window.XMLHttpRequest', 'export const x = window.XMLHttpRequest;\n', 'no-restricted-properties'],
+    [
+      'window.XMLHttpRequest',
+      'export const x = window.XMLHttpRequest;\n',
+      'no-restricted-properties',
+    ],
   ])('refuses %s outside src/api and allows it inside', async (_name, code, rule) => {
     expect(await rules(code, 'src/cc/board.ts')).toContain(rule);
     expect(await rules(code, 'src/api/client.ts')).not.toContain(rule);
@@ -73,9 +77,17 @@ describe('one way in: HTTP only through src/api (D-ONE-CLIENT)', () => {
 
   // docs/app-standard.md rule 13.2: every other way a request can leave is refused the same way.
   it.each([
-    ['WebSocket', "export const s = new WebSocket('wss://example.org');\n", 'no-restricted-globals'],
+    [
+      'WebSocket',
+      "export const s = new WebSocket('wss://example.org');\n",
+      'no-restricted-globals',
+    ],
     ['EventSource', "export const e = new EventSource('/events');\n", 'no-restricted-globals'],
-    ['globalThis.WebSocket', 'export const s = globalThis.WebSocket;\n', 'no-restricted-properties'],
+    [
+      'globalThis.WebSocket',
+      'export const s = globalThis.WebSocket;\n',
+      'no-restricted-properties',
+    ],
     ['self.EventSource', 'export const e = self.EventSource;\n', 'no-restricted-properties'],
     [
       'navigator.sendBeacon',
@@ -114,7 +126,7 @@ describe('no second HTTP client, however it is loaded (rule 13.2)', () => {
     expect(await rules(code, 'scripts/x.ts')).toContain('no-restricted-syntax');
   });
 
-  it('allows a require() of an asset and an import() of the app\'s own module', async () => {
+  it("allows a require() of an asset and an import() of the app's own module", async () => {
     const code = [
       "export const mark = require('../../assets/brand/splash.png');",
       "export const later = () => import('../push/PushRoot');",
