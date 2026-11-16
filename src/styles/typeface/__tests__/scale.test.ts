@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { TYPE_STYLE_KEYS, type TypeStyleKey } from '../../../core/frozen/lib/looks/catalogue';
-import { BUTTON_LABEL_WEIGHT, BUTTON_SIZES, textRole } from '../../../ui/variants';
+import { STUDIO_CONTROLS } from '../../controls';
+import { BUTTON_LABEL_WEIGHT, textRole } from '../../../ui/variants';
 import { FONT_FACES } from '../../fonts';
 import { LAYOUTS } from '../../registry/style-id';
 import { HUD_FONT_KEYS, type HudFontKey } from '../../tokens/hud-catalogue';
@@ -142,7 +143,7 @@ describe('Studio', () => {
   });
 
   it("labels buttons as the foundation's md Button does", () => {
-    const role = textRole('body', BUTTON_SIZES.md.level);
+    const role = textRole('body', STUDIO_CONTROLS.button.md.level);
     expect(studio.button).toEqual(typeStyle(role, { weight: BUTTON_LABEL_WEIGHT }));
   });
 

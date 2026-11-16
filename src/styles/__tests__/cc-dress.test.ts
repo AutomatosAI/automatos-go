@@ -25,13 +25,8 @@ import {
   dressedTextFace,
   labelStyle,
 } from '../../ui/dressed';
-import {
-  BUTTON_SIZES,
-  buttonPaint,
-  cardPaint,
-  textRole,
-  type ButtonVariant,
-} from '../../ui/variants';
+import { STUDIO_CONTROLS } from '../controls';
+import { buttonPaint, cardPaint, textRole, type ButtonVariant } from '../../ui/variants';
 import {
   HUD_SHELL_RUNS,
   dressedStripCell,
@@ -42,7 +37,8 @@ import {
   shellTabPaint,
   shellTitle,
 } from '../dress/cc-dress';
-import { DRESS_MIN_HEIGHT, dressOf } from '../dress/dress';
+import { DRESS_MIN_HEIGHT } from '../tokens/controls';
+import { dressOf } from '../dress/dress';
 import { HUD_SELECTED_BORDER } from '../dress/paints';
 import {
   GLYPHS,
@@ -351,10 +347,14 @@ describe('the primitives the Command Centre, its sheets and settings draw with, 
       );
     });
     [PLAY, HUD].forEach((style) => {
-      expect(buttonHeight(dressOf(style), BUTTON_SIZES.sm.height, false)).toBe(DRESS_MIN_HEIGHT);
+      expect(buttonHeight(dressOf(style), STUDIO_CONTROLS.button.sm.height, false)).toBe(
+        DRESS_MIN_HEIGHT,
+      );
     });
-    expect(buttonHeight(dressOf(HUD), BUTTON_SIZES.md.height, true)).toBe(46);
-    expect(controlLabel(HUD, dressOf(HUD), BUTTON_SIZES.md.level).textTransform).toBe('uppercase');
+    expect(buttonHeight(dressOf(HUD), STUDIO_CONTROLS.button.md.height, true)).toBe(46);
+    expect(controlLabel(HUD, dressOf(HUD), STUDIO_CONTROLS.button.md.level).textTransform).toBe(
+      'uppercase',
+    );
   });
 
   it('Sheet, TextField, Pill and Chip: Studio’s corners, Play’s round, HUD’s square', () => {

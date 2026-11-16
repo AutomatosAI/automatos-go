@@ -1,8 +1,9 @@
 // What the phone paints (PRD-001 §4.6, D54, D58, D59): resolveStyle turns the phone's style choice,
 // Studio's Light / Dark / System, the phone's appearance, Play's, HUD's, Arcade's and Candy's looks
 // and an installed theme's cached painting into one ResolvedStyle — the layout, its tone, the
-// Studio-keyed token set every shared screen reads through useTokens(), the radii, the type, Play's,
-// HUD's, Arcade's and Candy's own variables, the motion rule and where Auto comes from. Pure:
+// Studio-keyed token set every shared screen reads through useTokens(), the radii, the type, the
+// controls' sizes (tokens/controls.ts), Play's, HUD's, Arcade's and Candy's own variables, the
+// motion rule and where Auto comes from. Pure:
 // theme.tsx feeds it the store and the phone, StyleScope a preview's own choice and look.
 //
 //   Studio  the scheme's tokens (System → the phone's appearance)
@@ -27,6 +28,8 @@ import { arcadeTone, arcadeVars, type ArcadeVars } from '../tokens/arcade';
 import { candyRadii, candyTone, candyVars, type CandyVars } from '../tokens/candy';
 import { HUD_TONE, hudVars, type HudVars } from '../tokens/hud';
 import { playTone, playVars, type PlayVars } from '../tokens/play';
+import type { ControlSizes } from '../controls';
+import { STYLE_CONTROLS } from '../tokens/controls';
 import { STYLE_RADII, type StyleRadii } from '../tokens/radii';
 import { studioTokens } from '../tokens/studio';
 import {
@@ -86,6 +89,8 @@ export type ResolvedStyle = {
   readonly tokens: Tokens;
   readonly radii: StyleRadii;
   readonly type: StyleType;
+  /** The controls' sizes (rule 3.5): buttons, icon buttons, fields, pills and segments. */
+  readonly controls: ControlSizes;
   /** Play only: the look, and its --pl-* variables for Play's own components. */
   readonly playLook?: Look;
   readonly play?: PlayVars;
@@ -151,6 +156,7 @@ function studio(scheme: ColourScheme): Painted {
     tokens: studioTokens(scheme),
     radii: STYLE_RADII.studio,
     type: styleType({ layout: 'studio' }),
+    controls: STYLE_CONTROLS.studio,
     mascot: 'none',
   };
 }
@@ -162,6 +168,7 @@ function play(look: Look): Painted {
     tokens: playStyleTokens(look),
     radii: STYLE_RADII.play,
     type: styleType({ layout: 'play', font: look.font }),
+    controls: STYLE_CONTROLS.play,
     playLook: look,
     play: playVarsOf(look),
     mascot: 'bundled',
@@ -175,6 +182,7 @@ function hud(look: HudLook): Painted {
     tokens: hudStyleTokens(look),
     radii: STYLE_RADII.hud,
     type: styleType({ layout: 'hud', font: look.font }),
+    controls: STYLE_CONTROLS.hud,
     hudLook: look,
     hud: hudVarsOf(look),
     mascot: bundledMascot('hud', look),
@@ -188,6 +196,7 @@ function arcade(look: ArcadeLook): Painted {
     tokens: arcadeStyleTokens(look),
     radii: STYLE_RADII.arcade,
     type: styleType({ layout: 'arcade' }),
+    controls: STYLE_CONTROLS.arcade,
     arcadeLook: look,
     arcade: arcadeVarsOf(look),
     mascot: 'none', // the registry's 'never': the bundled clips never show in Arcade (D-ARC-5)
@@ -201,6 +210,7 @@ function candy(look: CandyLook): Painted {
     tokens: candyStyleTokens(look),
     radii: candyRadiiOf(look),
     type: styleType({ layout: 'candy' }),
+    controls: STYLE_CONTROLS.candy,
     candyLook: look,
     candy: candyVarsOf(look),
     mascot: 'none', // the registry's 'never': Candy draws its own Auto with Skia (D-CAN-5)

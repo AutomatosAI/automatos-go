@@ -1,7 +1,7 @@
 // The Switch's logic, pure: its state in a word beside it (§4.6: never only a colour), what
 // VoiceOver hears it as, and its paint on the tokens (React Native's own switch: the muted track
 // off, the primary track on, a card thumb). SwitchRow's sizes: at least the 44 pt touch target
-// tall, its title, detail and note at Body 6 / Title 6, as Settings → Notifications first drew them.
+// tall, its title, detail and note at Title 6 and Body 6, as Settings → Notifications drew them.
 
 import type { Colours } from '../styles/tokens';
 import { MIN_TOUCH } from './paint';

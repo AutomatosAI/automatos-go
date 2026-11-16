@@ -1,7 +1,7 @@
 // Studio's type is the foundation's scale unchanged (type.ts STUDIO_TYPE): titles are its title
 // roles, each display slot the role nearest it by rank (the large slots Title 1, a status and the
 // snag card's title Title 2, a header Title 3, a card Title 4, a small card Title 5, a panel the
-// mono label, a number Figure 1), buttons the md button's label (ui/variants.ts BUTTON_SIZES.md:
+// mono label, a number Figure 1), buttons the md button's label (styles/controls.ts, button.md:
 // Body 1 at Geist 500). The one addition is Lost's decorative '404', drawn behind the screen in
 // every style at Play's 200/0.8 and hidden from accessibility: a mark, not a text level.
 

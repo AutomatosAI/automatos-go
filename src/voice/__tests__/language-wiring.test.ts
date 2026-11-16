@@ -47,7 +47,9 @@ describe('Settings → Voice: "I speak"', () => {
       /<LanguageList\s+rows=\{view\.languages\}\s+note=\{view\.languageNote\}/,
     );
     const list = sections.slice(sections.indexOf('export function LanguageList'));
-    expect(list.indexOf('<SectionNote>{note}</SectionNote>')).toBeGreaterThan(list.indexOf('<Rows'));
+    expect(list.indexOf('<SectionNote>{note}</SectionNote>')).toBeGreaterThan(
+      list.indexOf('<Rows'),
+    );
   });
 });
 

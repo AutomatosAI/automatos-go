@@ -38,7 +38,6 @@ export { canReport } from './report';
 export { TOAST_DURATION_MS, toastPlacement, type ToastPlacement } from './overlay';
 export {
   PIP_TOKENS,
-  COMMAND_CENTRE_BUTTON,
   badgeText,
   commandCentreLabel,
   countPhrase,

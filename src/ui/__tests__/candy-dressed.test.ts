@@ -38,7 +38,8 @@ import {
   labelStyle,
   panelHeaderStyle,
 } from '../dressed';
-import { BUTTON_SIZES, type TextLevel } from '../variants';
+import { STUDIO_CONTROLS } from '../../styles/controls';
+import type { TextLevel } from '../variants';
 
 const LEVELS: readonly TextLevel[] = [1, 2, 3, 4, 5, 6];
 
@@ -76,7 +77,7 @@ describe('Candy', () => {
   });
 
   it('raises buttons to 44 in and out of a panel, and an edge screen’s action to 50', () => {
-    for (const { height } of Object.values(BUTTON_SIZES)) {
+    for (const { height } of Object.values(STUDIO_CONTROLS.button)) {
       for (const inPanel of [false, true]) {
         expect(buttonHeight(dressOf(CANDY), height, inPanel)).toBe(Math.max(height, 44));
       }
