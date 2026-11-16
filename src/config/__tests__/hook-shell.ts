@@ -57,6 +57,7 @@ export function runHeadCheck(run: string, sha: string, remotes: Remotes): HookRu
     const result = spawnSync('sh', ['-c', run.replace(SHA_PLACEHOLDER, sha)], {
       encoding: 'utf8',
       env: {
+        NODE_ENV: 'test',
         PATH: `${dir}${path.delimiter}${process.env.PATH ?? ''}`,
         FAKE_LOG: log,
         FAKE_ORIGIN: remotes.origin ?? '',

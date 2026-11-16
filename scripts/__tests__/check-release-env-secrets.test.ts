@@ -183,8 +183,12 @@ describe('the profile, and the script as the hooks run it', () => {
     expect(profileFrom(['node', SCRIPT], {})).toBe('');
   });
 
+  // only the given values, never this shell's: an EXPO_PUBLIC_ value set here would change the run
   const runScript = (args: string[], env: Record<string, string>) =>
-    spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8', env });
+    spawnSync(process.execPath, [SCRIPT, ...args], {
+      encoding: 'utf8',
+      env: { NODE_ENV: 'test', ...env },
+    });
 
   it('the update job: fails on a secret, says to rotate it, and never prints it', () => {
     const value = madeUp('sk_', 'live_');
