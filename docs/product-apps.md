@@ -331,9 +331,12 @@ and the library that adds one has to pass the dependency audit.
 
 Copy the repository at a commit and record that commit in a file in the app. The app may be its
 own repository or a folder inside the product's repository, with its own install and lockfile.
-The audits find the app by the nearest `package.json` and check its name: set `PACKAGE_NAME` in
-`src/release/__tests__/support/tree.ts` to the app's own, and run the audits from the app's
-folder, with a real install there (the dependency and privacy audits read `node_modules`). Then:
+The audits find the app by the nearest `package.json` and check its name: set `packageName` in
+`src/release/__tests__/settings/identity.ts` to the app's own, and run the audits from the app's
+folder, with a real install there (the dependency and privacy audits read `node_modules`). The
+rest of what the audits read that differs by app is in the same folder, `settings/`: the app's
+name, bundle id, site and EAS ids in `identity.ts`, its product folders in `tree.ts`, and each
+audit's allowed list in the file named after it. Then:
 
 | Keep | Remove | Change |
 |---|---|---|
