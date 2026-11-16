@@ -12,9 +12,9 @@ import { FlatList, RefreshControl, View, type ListRenderItem } from 'react-nativ
 import { canSuggestions } from '../../api/capabilities';
 import { useApiClient, useAppSession } from '../../app-state/session';
 import { useTokens } from '../../styles/theme';
-import { EmptyState, ErrorState, LoadingState } from '../../ui';
+import { EmptyState, ErrorState, LoadingState, OutOfDateNote } from '../../ui';
 import { TabFrame, TabHead } from '../shell/TabHead';
-import { BOARD_COPY } from '../strings';
+import { BOARD_COPY, SHELL_COPY } from '../strings';
 import { usePullRefresh } from '../use-pull-refresh';
 import { boardQuery } from './api';
 import type { BoardFilter } from './board';
@@ -75,6 +75,9 @@ export function BoardTab() {
         <>
           <TabHead />
           <FilterPills pills={view.pills} onChoose={choose} />
+          {query.isRefetchError ? (
+            <OutOfDateNote words={SHELL_COPY.outOfDate} inset={inset} />
+          ) : null}
         </>
       }
       ListHeaderComponentStyle={{ marginBottom: spacing[BOARD_LAYOUT.gap] }}

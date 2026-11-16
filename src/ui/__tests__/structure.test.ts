@@ -74,6 +74,7 @@ describe('src/ui: accessibility', () => {
         'Pill',
         'SegmentedControl',
         'Sheet',
+        'TabBar',
         'TextField',
       ].sort(),
     );

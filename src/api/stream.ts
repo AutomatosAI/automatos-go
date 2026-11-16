@@ -2,13 +2,17 @@
 // (expo/fetch on device). streamTurn reads a chat turn, POST /api/chat answering the AI SDK v1 data
 // stream, line by line with src/core/ai-sdk-stream.ts; sse.ts reads text/event-stream the same way.
 // A non-OK status before the body is the client's ApiError; a read that fails after the status is a
-// 'stream' error; the caller's abort cancels the read and resolves 'aborted' (the turn itself keeps
-// running on the server: Stop is its own call, POST /api/chat/{id}/cancel).
+// 'stream' error, and so is a stream ended by one of its limits (stream-limits.ts: silent too long,
+// too much in all, or one line too long); the caller's abort cancels the read and resolves
+// 'aborted' (the turn itself keeps running on the server: Stop is its own call,
+// POST /api/chat/{id}/cancel).
 
 import { parseLine, pushChunk, type Frame } from '../core/ai-sdk-stream';
 import { logger } from '../lib/logger';
 import type { ApiClient, StreamCallOptions } from './client';
-import { ApiError, isAbortError } from './errors';
+import { CHAT_TURN_IDLE_TIMEOUT_MS } from './config';
+import { ApiError, isAbortError, isApiError } from './errors';
+import { checkLines } from './stream-limits';
 import type { Route } from './routes';
 import type { StreamingResponse } from './transport-types';
 
@@ -64,7 +68,7 @@ export async function readChunks(
         next = await readNext(iterator, signal);
       } catch (error) {
         if (signal?.aborted) return 'aborted';
-        throw new ApiError('stream', { cause: error });
+        throw isApiError(error) ? error : new ApiError('stream', { cause: error });
       }
       if (next === ABORTED || signal?.aborted) return 'aborted';
       if (next.done) return 'complete';
@@ -75,10 +79,23 @@ export async function readChunks(
   }
 }
 
+/** A turn's call: its body and signal, with the connect and idle timeouts when given. */
+function turnCall(
+  body: unknown,
+  signal: AbortSignal | undefined,
+  connectTimeoutMs: number | undefined,
+  idleTimeoutMs: number,
+): StreamCallOptions {
+  const connect = connectTimeoutMs === undefined ? {} : { connectTimeoutMs };
+  return { body, signal, idleTimeoutMs, ...connect };
+}
+
 /**
  * One chat turn: every line of the body as a Frame, in order, including the last line when the body
  * ends without a newline. Unknown lines arrive as {kind: 'unknown'}; parseLine never throws. The
- * status must come within `connectTimeoutMs` (the client's own when not given); the body has no cap.
+ * status must come within `connectTimeoutMs` (the client's own when not given); the body then runs
+ * as long as it keeps coming, ended as 'stream' when silent for `idleTimeoutMs` or when one line,
+ * whole or still held, is over STREAM_LINE_MAX_CHARS.
  */
 export async function streamTurn(
   client: Pick<ApiClient, 'stream'>,
@@ -87,9 +104,9 @@ export async function streamTurn(
   onFrame: (frame: Frame) => void,
   signal?: AbortSignal,
   connectTimeoutMs?: number,
+  idleTimeoutMs = CHAT_TURN_IDLE_TIMEOUT_MS,
 ): Promise<StreamOutcome> {
-  const call =
-    connectTimeoutMs === undefined ? { body, signal } : { body, signal, connectTimeoutMs };
+  const call = turnCall(body, signal, connectTimeoutMs, idleTimeoutMs);
   const response = await openStream(client, route, call);
   if (!response) return 'aborted';
   let buffer = '';
@@ -97,6 +114,7 @@ export async function streamTurn(
     response,
     (chunk) => {
       const { lines, rest } = pushChunk(buffer, chunk);
+      checkLines([...lines, rest]);
       buffer = rest;
       lines.forEach((line) => onFrame(parseLine(line)));
     },

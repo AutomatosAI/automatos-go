@@ -1,14 +1,16 @@
 // An icon-only button: a lucide icon, and an accessibility label it cannot be without (the icon
 // says nothing to VoiceOver). Square (6 pt radius) or round (the composer's send); 30, 36 or 42.
-// A5: the dress gives its radius and paints (HUD: square, round too, as HUD rounds nothing).
+// A5: the dress gives its radius and paints (HUD: square, round too, as HUD rounds nothing). The
+// box and icon sizes are the style's (useStyle().controls, rule 3.5).
 
 import type { LucideIcon } from 'lucide-react-native';
 import { Pressable, StyleSheet } from 'react-native';
 
 import { useDress } from '../styles/dress/use-dress';
+import { useStyle } from '../styles/theme';
 import { dressedButtonPaint } from './dressed';
 import { ICON_STROKE, hitSlopFor } from './paint';
-import { ICON_BUTTON_SIZES, type ButtonVariant, type IconButtonSize } from './variants';
+import type { ButtonVariant, IconButtonSize } from './variants';
 
 export type IconButtonProps = {
   readonly icon: LucideIcon;
@@ -35,7 +37,7 @@ export function IconButton({
   selected,
 }: IconButtonProps) {
   const dress = useDress();
-  const { box, icon } = ICON_BUTTON_SIZES[size];
+  const { box, icon } = useStyle().controls.iconButton[size];
   return (
     <Pressable
       onPress={onPress}

@@ -40,8 +40,11 @@ reason ([The app's record](#the-apps-record)). A difference nobody wrote down is
 **1.1 Tokens only. (Must)** A screen reads colour, spacing, radius, shadow and type through the
 tokens and writes none of them itself. Template: `useTokens()` in `src/styles/theme.tsx`. Held
 by, for colour: the lint rule against colour literals outside `src/styles/tokens/**`
-(`eslint.config.js`, proved by `scripts/__tests__/eslint-rules.test.ts`). Spacing, radius and
-shadow written in a screen are held by review.
+(`eslint.config.js`, proved by `scripts/__tests__/eslint-rules-colours.test.ts`). It refuses
+every hex form, `rgb()`, `hsl()`, `hwb()` and their alpha forms, and, where a colour goes, four
+decimal digits or a colour's name. It misses an all-digit four-digit hex held in a constant, and
+a colour's name outside a colour's place. Spacing, radius and shadow written in a screen are held
+by review.
 
 **1.2 One token shape. (Must)** Every palette fills the shape in `src/styles/tokens/types.ts`:
 the colour names, nine radii (`tag` to `full`), ten spacing steps (`space1` to `space10`) and five
@@ -54,8 +57,10 @@ whether it is light or dark, so the status bar and the system's controls follow.
 
 **1.4 A status is never colour alone. (Must)** A state is painted from its role token and always
 carries a word or a glyph. The states are the app's own. They paint through one table onto the
-shape's role names, not from a second set of colours. Template: `src/ui/state-tokens.ts`,
-`src/ui/StatusPip.tsx`. Held by: `src/ui/__tests__/state-tokens.test.ts`.
+shape's role names, not from a second set of colours. A state's word is a Text tone from that
+table, and its glyph is drawn by `StateGlyph`. Template: `src/ui/state-tokens.ts`,
+`src/ui/StateGlyph.tsx`, `src/ui/StatusPip.tsx`. Held by: `src/ui/__tests__/state-tokens.test.ts`
+and `src/release/__tests__/text-tones.test.ts`.
 
 **1.5 A picture's colours are their own file. (Shaped)** The colours of an illustration or a
 scene sit in a token file of their own. Text is drawn over a picture only on one flat colour of
@@ -64,8 +69,11 @@ it, and that pair is in the contrast test (rule 10.4).
 ## 2. Type
 
 **2.1 Every word is the Text primitive. (Must)** A role from the scale and a tone from the tokens.
-No screen sets a font size, a weight or a colour on text. Template: `src/ui/Text.tsx`,
-`src/ui/variants.ts`.
+No screen sets a font size, a weight or a colour on text. The tones cover a state's words
+(`success`, `info`, `warning`, `danger`) and the two quieter inks (`muted`, `subtle`). Template:
+`src/ui/Text.tsx`, `src/ui/variants.ts`. Held by: `src/release/__tests__/text-tones.test.ts`, which
+refuses a colour handed to Text outside `src/ui/`. Each exception is in its allowed list with its
+reason, such as a style's own chrome painting its own palette.
 
 **2.2 The roles. (Must)** Title 1 to 6, body 1 to 6, label, figure 1 to 3, eyebrow, and the
 thread's own roles. An app may add content roles of its own beside them, as the thread has.
@@ -87,9 +95,10 @@ above. Template: `MIN_TEXT_SIZE` and `TEXT_SCALING` in `src/styles/type.ts`. Hel
 
 ## 3. Primitives
 
-**3.1 One core set. (Must)** Screen, Text, Button, IconButton, TextField, Card, ListRow, Divider,
-Sheet, Toast, KeyboardLift, LoadingState, EmptyState and ErrorState, from `src/ui/`. Chip, Pill,
-SegmentedControl, Slider, StatusPip and CountBadge come with them for an app that needs them. A
+**3.1 One core set. (Must)** Screen, Header, Text, Button, IconButton, TextField, Card, ListRow,
+Divider, Sheet, Toast, KeyboardLift, LoadingState, EmptyState and ErrorState, from `src/ui/`.
+Chip, Pill, SegmentedControl, Slider, Switch, SwitchRow, Section, SectionNote, StatusPip,
+StateGlyph, OutOfDateNote, CountBadge and TabBar come with them for an app that needs them. A
 feature imports these and never writes a second button, row or sheet.
 
 **3.2 Raw controls are the exception. (Must)** A feature may draw a shape no primitive has. It
@@ -105,15 +114,15 @@ is a pure function with tests. The component only wires. Template: `src/ui/varia
 feature needs stays in that feature until a second asks for it. A primitive two apps need goes
 into the template.
 
-**3.5 Control sizes come from the theme. (Shaped)** A consumer app's buttons and fields are
-larger than Studio's. Owed: the sizes are constants in `src/ui/variants.ts` today, so an app keeps
-a second file beside it.
+**3.5 Control sizes come from the style. (Shaped)** A consumer app's buttons and fields are
+larger than Studio's. Each style has one list of control sizes, built by `buildControlSizes`. The
+builder refuses a list that would put a pressable under the 44-point target, with the slop its
+primitive gives it, and a size no control can be. It keeps a frozen copy. The primitives read the
+list from `useStyle().controls`. Template: `src/styles/controls.ts`, `STYLE_CONTROLS` in
+`src/styles/tokens/controls.ts`. Held by: `src/styles/__tests__/controls.test.ts`.
 
 **3.6 Icons. (Must)** One icon set (`lucide-react-native`), imported one icon at a time, drawn at
 the stroke the primitives use (`ICON_STROKE` in `src/ui/paint.ts`).
-
-Owed for this section: a Switch and a settings Section in `src/ui/` (they live in one feature
-today), and a Header (rule 4.2).
 
 ## 4. The screen
 
@@ -122,10 +131,17 @@ area, the ground and the status bar's tone. `scroll` is on for forms, settings a
 owns a list. Template: `src/ui/Screen.tsx`.
 
 **4.2 One header. (Must)** A screen's header is one component built from the tokens: back, a
-title and at most two actions. Back goes through one hook that falls back to home when there is
-nothing behind. An app does not use the system's header or tab bar in their place (the record,
-decision D3). Template: `src/navigation/use-go-back.ts`. Owed: the Header primitive; today each
-screen in the template draws its own.
+title and at most two actions (its type refuses a third). Back goes through one hook that falls
+back to home when there is nothing behind. An app does not use the system's header or tab bar in
+their place (the record, decision D3). Template: `src/ui/Header.tsx`, its logic in
+`src/ui/header-model.ts` and its collapsing title in `src/ui/use-collapsing-title.ts`;
+`src/navigation/use-go-back.ts`, whose rule is the pure `src/navigation/back.ts`. Held by:
+`src/ui/__tests__/header.test.ts`, `src/navigation/__tests__/go-back.test.ts`. A copy keeps the
+pure module's name, `header-model.ts`: a `header.ts` beside `Header.tsx` clashes on a file system
+that ignores case. Owed: none of the template's own screens is on the Header yet. Each would
+change visibly (most settings screens have no bar: back sits at the top of the scrolling
+content), so each move needs a phone check. Three files still write the back rule by hand, and
+`go-back.test.ts` lists them.
 
 **4.3 The keyboard. (Must)** Every keyboard-avoiding view takes the one behaviour
 (`KEYBOARD_AVOIDING_BEHAVIOUR`), on both platforms. A message box pads through
@@ -165,7 +181,12 @@ Never both a tab bar and a second bar or drawer. Never more than five tabs. Ever
 word, not only an icon, and the selected one is marked by more than colour. A tab whose feature
 is off is absent (rule 6.5). Pressing the selected tab takes its stack back to its root. Whether
 the bar is docked or floats is the app's. The rules above and in sections 4 and 6 hold in both
-shells. The template is One home. Owed: the Tabs shell.
+shells. The template is One home and mounts no tabs. Its Tabs shell is for an app that does: the
+app passes its tabs as data, a tab whose feature is off is dropped, and a pure function names
+what is wrong with a list (more than five, fewer than three, a route twice, a tab with no word).
+Template: `src/ui/TabBar.tsx` with `src/ui/tab-bar.ts`, and `src/shell/` (`AppTabs.tsx`,
+`TabStack.tsx`, `tabs.ts`). Held by: `src/ui/__tests__/tab-bar.test.ts`,
+`src/shell/__tests__/tabs.test.ts`. Owed: the phone checks, on the first app that mounts the shell.
 
 **5.5 Sheet or screen. (Must)** Something read or decided on top of where the person is opens as
 a sheet. Somewhere the person goes is a screen. Template: `src/ui/Sheet.tsx`.
@@ -179,11 +200,14 @@ a conversation, the failure is shown where the action is, in the words of its er
 
 **6.2 An error is a kind, and each kind has its words. (Must)** The app has one API client, and
 it turns every failure into one of its kinds: `network`, `auth`, `forbidden`, `not_found`,
-`conflict`, `server`, `stream`, `invalid_response`. The words for a kind come from one table. A
-person never sees a status code, an address or a server's own message. "Try again" is offered
-only where trying again can help. Template: `src/api/errors.ts`, `src/ui/ErrorState.tsx`. Owed: a
-ninth kind for a limit reached, which carries when the limit lifts. The template reads that
-answer as `server` today, and its words are not the words for a server that failed.
+`conflict`, `server`, `stream`, `invalid_response`, `limit`. The words for a kind come from one
+table. A person never sees a status code, an address or a server's own message. "Try again" is
+offered only where trying again can help. Every 429 is `limit`, at a stream's opening too. It
+carries when the limit lifts, from Retry-After (seconds or a date) or the body, worked out against
+a clock given to the client. A wait that is missing, unreadable, negative or more than 24 hours is
+unknown. "Try again" is offered for a limit. No route the template calls answers 402 for a spent
+allowance, so a 402 stays `server`. Template: `src/api/errors.ts`, `src/api/retry-after.ts`,
+`src/ui/ErrorState.tsx`.
 
 **6.3 The edges are whole screens. (Must)** Something went wrong, the first open and a route that
 does not exist each have a screen in the app's own voice. So does a server that does not answer,
@@ -193,8 +217,10 @@ that keeps its data on the phone shows what it holds instead, under rule 6.4. Te
 
 **6.4 A screen says what it is showing. (Must)** Data that is out of date stays on screen under a
 line that says so. Not set up, offline, waiting to send and not downloaded are named states with
-their own words, never a spinner that does not end. Held by: review. Owed: a test that walks
-those words, as two of the apps already have.
+their own words, never a spinner that does not end. The out-of-date line is `OutOfDateNote`, on
+the Command Centre's four tabs and the inbox. Template: `src/ui/OutOfDateNote.tsx`. Held by:
+`src/release/__tests__/named-states.test.ts`, which walks the words of each named state. Owed: the
+line on eight more screens and sheets, which that test lists.
 
 **6.5 Nothing is shown that does not work. (Must)** A row, a tab or a button appears only when
 what it opens exists. No "coming soon". And what has shipped can be reached: two taps from an
@@ -222,7 +248,10 @@ itself after a second no. An app that asks less than that conforms. Template:
 launch. An app whose reminders are the product may ask during first run.
 
 **7.5 Every usage string is honest and names the app. (Must)** Held by:
-`src/release/__tests__/permissions.test.ts` and `privacy-manifest.test.ts`.
+`src/release/__tests__/permissions.test.ts` and `privacy-manifest.test.ts`. Owed: the speech
+recognition string says recognition happens on the iPhone, which is not always true. The
+corrected sentence is in `docs/release/ipa-scan.md`, and goes into `app.json` with the next native
+change.
 
 **7.6 Sign-in. (Own)** How people sign in is the product's. Two things follow from the stores'
 rules: an account made in the app can be deleted in the app, and an app that offers another
@@ -242,10 +271,20 @@ the app reports crashes, and the version with the code the app runs. Template:
 `src/release/__tests__/privacy-section.test.ts`.
 
 **8.3 About. (Must)** A product app says "Powered by Automatos AI" here, from one constant, and
-lists the licences of what it is built from. Owed: the licence list. The template has none.
+lists the licences of what it is built from. Template: Settings → About → Licences, from
+`src/about/`. Its list, `src/about/licences.json`, is written by `scripts/generate-licences.mjs`
+from the lockfile and the installed packages. Held by: `scripts/__tests__/release-licences.test.ts`:
+the file matches a fresh run, every package has a licence, and the kinds of licence are pinned so
+that a new kind is read by a person. The list does not hold the native libraries a native build
+fetches.
 
 **8.4 Leaving is plain. (Must)** Whatever the app or its server holds about the person or the
-phone is named in one sentence, next to the one action that removes it.
+phone is named in one sentence, next to the one action that removes it. In the template every way
+of leaving (sign-out, switching to another server, forgetting a server, a session that ends) runs
+one clearing, which also deletes the person's files in the cache, a downloaded theme's files among
+them. Template: `clearUserData` in `src/connect/switch.ts`, `src/connect/user-files.ts`. Held by:
+`src/connect/__tests__/user-files.test.ts`. Owed: pictures the app has shown may stay in the
+phone's own picture cache until the phone clears it.
 
 **8.5 A person's data is theirs to take and to remove. (Must, where the app has accounts)** Export
 my data, delete my data and delete my account are each one action. Each runs on the server first
@@ -276,7 +315,8 @@ Template: `src/voice/`.
 ## 10. Accessibility
 
 **10.1 Touch targets are 44 points. (Must)** A smaller control reaches 44 through its hit slop.
-Template: `MIN_TOUCH` and `hitSlopFor` in `src/ui/paint.ts`.
+Template: `MIN_TOUCH` and `hitSlopFor` in `src/ui/paint.ts`. Owed: the text field is 40 points
+tall with no slop, the one control under 44.
 
 **10.2 Every control has a name. (Must)** A control that shows no words has an accessibility
 label, and a button that is only an icon is the IconButton, whose type requires one. Held by:
@@ -290,7 +330,8 @@ palette, at WCAG AA (4.5 to 1), computed from the tokens. A pair that reads unde
 the test with what it measures and why it stands, and may not get worse. A mark in the accent (a
 rule, a dot, a cursor) reads at 3 to 1 or more, from one lookup. Template:
 `src/styles/contrast.ts`, `src/ui/accent.ts`. Held by: `src/styles/__tests__/contrast.test.ts`
-and `src/ui/__tests__/accent.test.ts`.
+and `src/ui/__tests__/accent.test.ts`. Owed: one spinner that is not Text still paints the raw
+accent, and some of the calendar's kind squares read under 3 to 1 as marks on dark grounds.
 
 **10.5 Text to be read is never dimmed. (Must)** Read, quiet or secondary text takes a muted
 token, never an opacity set on the text or on what holds it, so its contrast can be tested. A
@@ -319,6 +360,10 @@ sentence that was reviewed has a test that walks every string that carries it.
 
 **11.4 The voice. (Own)** How the app speaks is the product's.
 
+**11.5 The words say no more than the code does. (Must)** A sentence about what the app sends,
+keeps or deletes, or where it does something, is read against the code that does it, and says no
+more than that code does. Held by: review.
+
 ## 12. Motion, haptics and sound
 
 **12.1 Motion is short and has a reason. (Shaped)** A sheet takes 220 ms and a toast stays 2.4
@@ -342,13 +387,23 @@ feature. A feature holds its server routes (`routes.ts`), its schemas, its calls
 pure model, its hooks, its components, its `strings.ts` and its tests in `__tests__/`.
 
 **13.2 One way out. (Must)** Every request goes through `src/api/`: data through the one client,
-and a file sent or fetched through one transfer module beside it, so media never passes through
-memory. Every answer is parsed with zod and unknown fields are ignored. The template's parsing is
-written to zod 3: an app on a newer major records it. Held by, for where a request is made: the
-lint rules on `fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource`, `sendBeacon` and other HTTP
-clients, however they are loaded. That every answer is parsed is held by review. Owed: the same
-guard on the file system's own download and upload calls, and the transfer module itself, since
-two features of the template download files on their own today.
+and a fetched file through one transfer module beside it. The transfer module writes a fetched
+body to a file through the client's own request policy, a part at a time under a cap, to a
+partial file that moves into place only when it is whole, so a download never passes through
+memory. A file sent still does: the fetch implementation reads a request body whole before it
+sends it, and the only upload that streams is the file system's own, which follows a redirect with
+its headers, so none is built. The 50 MB limit on an attachment bounds it. Every answer is parsed
+with zod and unknown fields are ignored. The template's parsing is written to zod 3: an app on a
+newer major records it. Template: `src/api/client.ts`, `src/api/transfer.ts` with
+`src/api/transfer-request.ts`. Held by, for where a request is made: the lint rules on `fetch`,
+`XMLHttpRequest`, `WebSocket`, `EventSource`, `sendBeacon` and other HTTP clients, however they
+are loaded; on `expo/fetch` outside the transport, and on the file behind it everywhere; on a
+remote picture loaded by address through the SVG library; and on the file system's own download
+and upload calls outside `src/api/` (proved by `scripts/__tests__/eslint-rules*.test.ts`). The
+transfer module is held by `src/api/__tests__/transfer.test.ts`. That every answer is parsed is
+held by review. Owed: pictures and video are still loaded by the platform's own loaders with the
+bearer attached (a Deliverable's pictures, a social post's pictures and videos), outside the one
+way out. Also owed: an upload that does not hold the file in memory and follows no redirect.
 
 **13.2a Every body is read under a cap. (Must)** The client cannot read an answer whole without a
 size limit: the transport gives a body as bytes up to the caller's cap, or as it arrives, and
@@ -367,10 +422,23 @@ starts. Template: `isServerAddress` in `src/lib/env.ts`, `scripts/check-release-
 that an answer asking to be followed elsewhere comes back as it is, and the client treats it as an
 error. What the app holds to prove who is asking goes only to the address it was given. No request
 carries a cookie or stores one. An app that lets a person pair with a server of their own may read
-where one such answer pointed, to offer that same server's https address, and nothing else.
-Template: the request policy in `src/api/transport.ts`, `src/connect/https-twin.ts`. Held by:
-`src/api/__tests__/transport.test.ts`, `client-redirect.test.ts`,
-`src/connect/__tests__/https-twin.test.ts`.
+where one such answer pointed, to offer that same server's https address, and nothing else. One
+exception: a download marked as one whose route answers with a redirect to storage follows that
+redirect once, only to an https address, and carries no header at all. A server on a public
+address cannot point that one step into a private network; a server on a home or office network
+may, since it is the same network. What storage answers is never read as the server's: its
+refusals sign no one out, and its address is kept on no error. The platform's own picture and
+video loaders are not under this rule yet. Template: the request policy in
+`src/api/transport.ts`, `src/api/transfer-request.ts`, `src/api/private-host.ts`,
+`src/connect/https-twin.ts`. Held by: `src/api/__tests__/transport.test.ts`,
+`client-redirect.test.ts`, `transfer-redirect.test.ts`, `src/connect/__tests__/https-twin.test.ts`.
+
+**13.2d An opened stream has limits. (Must)** An idle time (90 seconds for the live events, which
+carry a heartbeat every 20 seconds; 15 minutes for a chat turn, which has none), a cap on one line
+or event, and a cap on the whole stream. A stream ended by one is the kind `stream`. A read that
+fails releases its body, and a stream read whole has a deadline. Template:
+`src/api/stream-limits.ts`, the numbers in `src/api/config.ts`. Held by:
+`src/api/__tests__/stream-limits.test.ts`.
 
 **13.3 Pure logic outside React, with tests. (Must)** Updates never mutate. Held by: the coverage
 gate in `vitest.config.ts`.
@@ -383,16 +451,29 @@ Held by: `linterOptions` in `eslint.config.js`, proved by
 `scripts/__tests__/eslint-rules.test.ts`.
 
 **13.6 Storage. (Must)** What the phone keeps about the person goes in the encrypted store, and
-secrets in the keychain through the one registry. A reinstall starts clean. Public content and
-downloaded media are files: outside the encrypted store and outside the phone's backup. Template: `src/storage/`,
-`src/session/InstallGate.tsx`. Held by: `src/release/__tests__/secure-store-audit.test.ts` and
-`user-data.test.ts`.
+secrets in the keychain through the one registry. A reinstall starts clean, except for the install
+id, which is kept in the keychain on purpose and survives a reinstall, and except when a backup is
+restored onto the same phone. Public content and downloaded media are files, outside the
+encrypted store. The template keeps every file it fetches in the cache folder, which is outside
+the phone's backup and which the phone may empty, because each can be fetched again. The
+encrypted store's folder is in the phone's backup. Its key is in the keychain for this device
+only, so a backup restored onto another phone cannot be read and the store starts clean there. A
+backup restored onto the same phone after the app was deleted may bring the data and its key back
+together. That is read from the platform's documents, which do not agree for a computer backup
+that is not encrypted, and has not been tried on a phone: an app's words assume it can happen. On
+Android `allowBackup` is false, so no backup carries either. An app whose downloads
+must stay keeps them under documents. Template: `src/storage/`, `src/session/InstallGate.tsx`,
+`src/connect/install-id.ts`. Held by: `src/release/__tests__/secure-store-audit.test.ts` and
+`user-data.test.ts`. Owed: a native step that keeps a folder out of the phone's backup, for the
+encrypted store's folder or an app's downloads. The template has none.
 
 **13.7 Logs. (Must)** Only the logger writes to the console, and it never writes a person's
 content. Template: `src/lib/logger.ts`.
 
-**13.8 No web view. (Must)** Not as a dependency and not through another package. Held by: lint
-and `src/release/__tests__/dependency-audit.test.ts`.
+**13.8 No web view. (Must)** Not as a dependency and not through another package. Held by: lint,
+which refuses `react-native-webview` and Expo's DOM components (the `'use dom'` directive,
+`expo/dom`, `@expo/dom-webview`), proved by `scripts/__tests__/eslint-rules-web-views.test.ts`; and
+`src/release/__tests__/dependency-audit.test.ts`, which refuses both packages.
 
 **13.9 Crash reports. (Shaped)** By how sensitive the data is. Where what a person says, their
 health data or anything the app promises never leaves the phone could reach a report, the app has
@@ -414,9 +495,14 @@ ground) that the audits read, in place of constants edited by hand in each copy.
 source with its product.
 
 **14.3 Updates over the air go only to the build they were made for. (Must)** The runtime version
-is the fingerprint, so an update never reaches a binary with different native code. An app may
-ship with no updates over the air at all. Template: `app.json`, `.eas/workflows/`,
-[release.md](release.md).
+is the fingerprint, so an update never reaches a binary with different native code. The
+fingerprint reads `app.json`, `eas.json`, the scripts in `package.json`, patches and the config
+plugins' own files, so a change to any of them, even a new script, makes the next merge a native
+build. An app may ship with no updates over the air at all. Template: `app.json`,
+`.eas/workflows/`, [release.md](release.md). Owed: the config plugin that pins the background
+modes is listed near the end of the plugins in `app.json`, and the change a plugin registers last
+runs first, so a plugin that pins a list must be listed first. The resolved list is right today.
+Moving it changes `app.json`, so it goes with the next native change.
 
 **14.4 The release runs with the project's own credentials. (Must)** No token for the build
 service is held as a secret in the code host.
@@ -425,11 +511,20 @@ service is held as a secret in the code host.
 written under `docs/release/`, and a change that alters it updates the record in the same pull
 request.
 
+**14.6 No secret in a public build value, and an update is checked like a build. (Must)** Every
+`EXPO_PUBLIC_` value is written into the bundle every phone downloads. The release check fails
+every profile on an `EXPO_PUBLIC_` name that says secret or a value shaped like a key, and names
+the variable, never the value. The update job runs the same check before it publishes, since an
+update runs no build hook. Template: `scripts/check-release-env.js`,
+`.eas/workflows/testflight.yml`. Held by: `scripts/__tests__/check-release-env-secrets.test.ts`,
+`src/config/__tests__/eas-release.test.ts`.
+
 ## 15. Android
 
 **15.1 iOS first, Android kept compiling. (Shaped)** What differs by platform is a `*.android.ts`
 twin beside its file, and CI bundles both. An app with no Android release yet says so in its
-record. Template: `npm run check:bundle:android`.
+record. Template: `npm run check:bundle:android`. Owed, before any Android release: the sign-in
+library keeps a native copy of its token outside the registry, which sign-out does not remove.
 
 ## 16. The design handoff
 
@@ -499,6 +594,20 @@ template, or records why not.
 | 15 Nov 2026 | A redirect is never followed and no cookie is kept (13.2c). Every answer of the transport now has `header()`, not only a binary one, so a copy's fakes gain it. A copy that talks to one fixed server takes the request policy and has no use for the https lookup. |
 | 15 Nov 2026 | Every body the client reads is read under a cap (13.2a), and the address a build is given is held to a bare https address (13.2b). A copy takes `src/api/transport-types.ts`, `transport.ts`, `client.ts`, `config.ts`, `src/lib/env.ts` and `scripts/check-release-env.js`. Its own fakes and tests lose `text()` on a transport answer. |
 | 15 Nov 2026 | The accent as a foreground (text, a glyph, a rule, a dot) is read from `src/ui/accent.ts`: the palette's `accent` where that reads on its page, its `primary` where `accent` is a ground. The contrast test found one style drawing its accent text in a ground colour. A copy takes that file and reads the accent through it wherever it paints one. |
+| 16 Nov 2026 | The Header (4.2) and the Tabs shell (5.4) are built. The Header is back, a title and at most two actions, and back goes through `useGoBack`, whose rule is the pure `src/navigation/back.ts`; the shell takes an app's tabs as data and drops one whose feature is off. A copy takes `src/ui/Header.tsx`, `header-model.ts`, `use-collapsing-title.ts`, `TabBar.tsx`, `tab-bar.ts`, `src/navigation/back.ts`, `use-go-back.ts` and `src/shell/`, with their tests. |
+| 16 Nov 2026 | Switch, SwitchRow, Section and SectionNote are primitives in `src/ui/` (3.1), and every feature that drew its own now uses them. A copy takes those four files with `switch-model.ts` and `section-model.ts`. |
+| 16 Nov 2026 | Control sizes come from the style (3.5), no longer from constants in `src/ui/variants.ts`. An app whose controls are larger builds its own list with `buildControlSizes` (`src/styles/controls.ts`) and gives it to its style in `STYLE_CONTROLS` (`src/styles/tokens/controls.ts`); the primitives read it from `useStyle().controls`. A copy takes those two files, `src/styles/provider/resolve.ts`, `src/ui/variants.ts` and the primitives that read the list. |
+| 16 Nov 2026 | A state's word is a Text tone and its glyph is `StateGlyph` (1.4, 2.1); Text gains `danger`, and a scan refuses a colour handed to Text outside `src/ui/`. Two colours changed: a running or waiting chat line's mark used the accent raw, which in one style is a ground colour and could not be seen, and the calendar's kind word is the muted ink in every palette, because the kind colours fail AA as text (the square keeps its colour). A copy takes `src/ui/variants.ts`, `tone-colour.ts`, `state-tokens.ts`, `StateGlyph.tsx` and `src/release/__tests__/text-tones.test.ts` with its support files. |
+| 16 Nov 2026 | A test walks the words of the named states (6.4), and the out-of-date line, `OutOfDateNote`, is drawn over a list kept after a failed refresh on the Command Centre's four tabs and the inbox. A copy takes `src/ui/OutOfDateNote.tsx` and `src/release/__tests__/named-states.test.ts`, and lists its own states and screens in the test. |
+| 16 Nov 2026 | Settings → About → Licences lists every package the app is built from, with its licence (8.3). `scripts/generate-licences.mjs` writes `src/about/licences.json` from the lockfile and the installed packages, and its test fails while the file differs from a fresh run. A copy takes the script, `scripts/__tests__/release-licences.test.ts`, `src/about/` and `app/(app)/settings/licences.tsx`, then regenerates from its own lockfile with `node scripts/generate-licences.mjs`. |
+| 16 Nov 2026 | A ninth error kind, `limit` (6.2): every 429, carrying when the limit lifts, read against a clock given to the client. A 402 stays `server`. A copy takes `src/api/errors.ts`, `retry-after.ts`, `client.ts`, `config.ts` and `strings.ts`, and gives `limit` its case wherever it switches on a kind. |
+| 16 Nov 2026 | One transfer module writes a fetched body to a file (13.2), and a route that redirects to storage is followed once, to https only, with no header (13.2c). The lint rules refuse the file system's own download and upload calls outside `src/api/`. A copy takes `src/api/transfer.ts`, `transfer-request.ts`, `client.ts` and `eslint.config.js` with their tests, and moves any download of its own onto `download()`. |
+| 16 Nov 2026 | An opened stream has limits (13.2d): an idle time, a cap on one line or event and a cap on the whole stream. A read that fails releases its body, and a stream read whole has a deadline. A copy takes `src/api/stream-limits.ts`, `stream.ts`, `sse.ts`, `deadline.ts`, `body.ts`, `client.ts` and `config.ts`, and sets the idle times to its own server's heartbeat. |
+| 16 Nov 2026 | The guards are wider (1.1, 13.2, 13.8): a remote picture loaded by address through the SVG library, the `'use dom'` directive and the DOM web view imports, four-digit hex and more colour forms where a colour goes, and `expo/fetch` anywhere but the transport. The dependency audit refuses the DOM web view package too. A copy takes `eslint.config.js`, `scripts/__tests__/eslint-rules*.test.ts` and `src/release/__tests__/dependency-audit.test.ts`. |
+| 16 Nov 2026 | An update is checked like a build (14.6): the release check fails every profile on a secret in an `EXPO_PUBLIC_` value, and the update job runs it before it publishes. The update's check that `main` has not moved on reads `main`'s head through the job's own checkout first, so a private copy can publish, and publishes with a loud warning when the head cannot be read at all. A copy takes `scripts/check-release-env.js` and `.eas/workflows/testflight.yml` with their tests, and changes the public address in that hook to its own. |
+| 16 Nov 2026 | Every way of leaving also deletes a downloaded theme's files (8.4). A copy takes `src/connect/user-files.ts`, `switch.ts` and `use-server-switch.ts`, and adds each folder of a person's files it keeps in the cache to `USER_FILE_CLEARERS`. |
+| 16 Nov 2026 | The app's words were read against its code and corrected where they said more than the code does: the pairing card, where speech is recognised, what each way of leaving deletes, the report sheet on the hosted server and the count of styles. Rule 11.5 says so for every app. |
+| 16 Nov 2026 | Rule 13.6 now says what survives a reinstall and what a backup carries, and 14.3 what the fingerprint reads. Nothing for a copy to take. An app whose downloads must stay keeps them under documents. |
 
 ## Related
 

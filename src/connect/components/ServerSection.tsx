@@ -11,7 +11,7 @@ import { SHELL_COPY } from '../../app-state/strings';
 import { useSignOut } from '../../app-state/use-sign-out';
 import { usePushSignOut } from '../../push/bind/use-push-sign-out';
 import { useTokens } from '../../styles/theme';
-import { Button, Card, Divider, Text } from '../../ui';
+import { Button, Card, Divider, Section, Text } from '../../ui';
 import { ownServer } from '../current-server';
 import { serverSectionView } from '../edges';
 import { SERVER_SECTION_COPY } from '../strings';
@@ -55,10 +55,7 @@ export function ServerSection({ server, edition }: ServerSectionProps) {
   const own = ownServer(useCurrentServer());
   const view = serverSectionView({ server, own, edition });
   return (
-    <View style={{ gap: spacing.space3 }}>
-      <Text variant="eyebrow" accessibilityRole="header">
-        {SERVER_SECTION_COPY.eyebrow}
-      </Text>
+    <Section title={SERVER_SECTION_COPY.eyebrow}>
       <Card>
         <Text variant="title" level={NAME_LEVEL} style={{ paddingTop: spacing.space3 }}>
           {view.name}
@@ -69,6 +66,6 @@ export function ServerSection({ server, edition }: ServerSectionProps) {
         <Row label={SERVER_SECTION_COPY.edition} value={view.edition} />
       </Card>
       {view.forgetQuestion ? <ForgetServer question={view.forgetQuestion} /> : <SignOutButton />}
-    </View>
+    </Section>
   );
 }

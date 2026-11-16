@@ -55,6 +55,8 @@ export const SHELL_COPY = Object.freeze({
   title: 'Command Centre',
   /** The stream's state, a word beside the dot (every colour status has a word, §4.6). */
   live: Object.freeze({ live: 'Streaming live', connecting: 'Connecting', offline: 'Offline' }),
+  /** Over a tab's list when its last refresh failed (rule 6.4): what it shows is kept. */
+  outOfDate: "Couldn't refresh, so this may be out of date. Pull down to try again.",
   tabsLabel: 'Command Centre sections',
   tabs: Object.freeze({
     board: 'Board',

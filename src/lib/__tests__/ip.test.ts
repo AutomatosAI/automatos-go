@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { PRIVATE_IPV4_RANGES } from '../config';
-import { inIpv4Range, isIpv6SelfAddress, mappedIpv4, parseIpv4, parseIpv6 } from '../ip';
+import {
+  PRIVATE_IPV4_RANGES,
+  inIpv4Range,
+  isIpv6LocalNetwork,
+  isIpv6SelfAddress,
+  mappedIpv4,
+  parseIpv4,
+  parseIpv6,
+} from '../ip';
 
 describe('parseIpv4: a strict dotted quad', () => {
   it('reads four decimal octets 0-255', () => {
@@ -77,5 +84,18 @@ describe('the IPv6 addresses that reach the phone itself', () => {
     expect(isIpv6SelfAddress([0, 0, 0, 0, 0, 0, 0, 1])).toBe(true);
     expect(isIpv6SelfAddress([0, 0, 0, 0, 0, 0, 0, 2])).toBe(false);
     expect(isIpv6SelfAddress([1, 0, 0, 0, 0, 0, 0, 1])).toBe(false);
+  });
+});
+
+describe('isIpv6LocalNetwork: unique local and link-local', () => {
+  it('knows fc00::/7 and fe80::/10, and nothing else', () => {
+    const local = ['fc00::1', 'fd12:3456::1', 'fe80::1', 'febf::1'];
+    const other = ['2001:db8::1', 'fec0::1', '::1', '2600::1'];
+    expect(local.map((text) => isIpv6LocalNetwork(parseIpv6(text) ?? []))).toEqual(
+      local.map(() => true),
+    );
+    expect(other.map((text) => isIpv6LocalNetwork(parseIpv6(text) ?? []))).toEqual(
+      other.map(() => false),
+    );
   });
 });

@@ -3,7 +3,8 @@
 // number (D26, useNeedsYou). It opens the Board. Since D73 no Studio header mounts it: home and the
 // chat route carry the number on the menu button and the menu's Command Centre row. Kept for HUD
 // (A5). A5: the dress gives its radius, least height, label face, case and tracking and the
-// outline paint (HUD: square, 44 high, Geist Mono capitals on the accent line).
+// outline paint (HUD: square, 44 high, Geist Mono capitals on the accent line). Its own size is the
+// style's (useStyle().controls.commandCentre, rule 3.5).
 
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet } from 'react-native';
@@ -18,7 +19,7 @@ import { Text } from './Text';
 import { buttonHeight, controlLabel, dressedButtonPaint } from './dressed';
 import { ICON_STROKE, hitSlopFor } from './paint';
 import { UI_COPY } from './strings';
-import { COMMAND_CENTRE_BUTTON, commandCentreLabel } from './variants';
+import { commandCentreLabel } from './variants';
 
 /** It takes nothing: the number and the destination are the app's, the same in every header. */
 export type CommandCentreButtonProps = Record<string, never>;
@@ -29,8 +30,9 @@ export function CommandCentreButton() {
   const style = useStyle();
   const dress = useDress();
   const { spacing } = style.tokens;
-  const height = buttonHeight(dress, COMMAND_CENTRE_BUTTON.height, false);
-  const labelFace = controlLabel(style, dress, COMMAND_CENTRE_BUTTON.level);
+  const { commandCentre } = style.controls;
+  const height = buttonHeight(dress, commandCentre.height, false);
+  const labelFace = controlLabel(style, dress, commandCentre.level);
   return (
     <Pressable
       onPress={() => router.push(routes.cc.board)}
@@ -59,7 +61,7 @@ export function CommandCentreButton() {
         return (
           <>
             <LayoutDashboard
-              size={COMMAND_CENTRE_BUTTON.iconSize}
+              size={commandCentre.iconSize}
               color={color}
               strokeWidth={ICON_STROKE}
             />

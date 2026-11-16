@@ -7,9 +7,10 @@ board, and look at what was made. It is a native app, not a web view, and a
 lite companion: the workspace, agents, Playbooks and themes are set up in
 Studio.
 
-Three styles: **Studio** (cream paper or Studio Dark) is on `main`; **Play**
-(Ember, with Auto the mascot) and **HUD** (voice first, square panels, glow and
-grid) are being built on `feat/a5-styles`. Hosted Studio users sign in with
+Five styles, all on `main`: **Studio** (cream paper or Studio Dark), **Play**
+(Ember, with Auto the mascot), **HUD** (voice first, square panels, glow and
+grid), **Arcade** and **Candy** ([docs/styles-and-themes.md](docs/styles-and-themes.md)).
+Hosted Studio users sign in with
 their Automatos account (Clerk). Self-hosted users pair their phone with a
 one-time code from Studio → Settings → Phones & devices, which also shows it as a
 QR image (automatos-ai PRD-266 W2, merged 24 Oct).
@@ -56,6 +57,7 @@ npm run check:bundle      # expo export --platform ios: compiles the JS bundle, 
 npm run check:bundle:android  # the same for Android (each *.android.ts twin compiles there only)
 npm run check:doctor      # expo-doctor
 npm run format:check      # prettier --check .
+node scripts/generate-licences.mjs  # after a dependency change: the licence list in Settings
 ```
 
 ## Environment
@@ -63,9 +65,12 @@ npm run format:check      # prettier --check .
 The app reads these build-time values; Expo inlines them into the bundle. Cloud
 builds take them from the EAS environment of the build profile, and there is no
 `.env.example` in this repository. `scripts/check-release-env.js` runs before
-every EAS build: a production build fails without the required ones, preview
-and TestFlight builds warn. An empty value turns the feature off with a "not
-configured" state instead of a crash (`src/lib/env.ts`).
+every EAS build and before every over-the-air update: a production build fails
+without the required ones, preview and TestFlight builds warn. Every build and
+update fails on an `EXPO_PUBLIC_*` value that is a secret, found by its name or by
+how it begins ([docs/release.md](docs/release.md), "The release-env guard"):
+everything under `EXPO_PUBLIC_` ships to every phone. An empty value turns the
+feature off with a "not configured" state instead of a crash (`src/lib/env.ts`).
 
 | Name                                | What it is                                                                      |
 | ----------------------------------- | ------------------------------------------------------------------------------- |
@@ -180,6 +185,30 @@ These need a person with the accounts; nothing in this repository does them.
 5. **Clerk.** On the production instance: Native API on, the iOS and Android
    apps registered (so Clerk serves the `webcredentials` association), passkeys
    enabled, the `mobile` JWT template, 30-day sessions.
+
+## The licences the app shows
+
+Settings → About → Licences lists every package the app is built from, with its version, the
+licence it declares and the text of its licence file ([docs/app-standard.md](docs/app-standard.md)
+rule 8.3). The list is `src/about/licences.json`, written by `scripts/generate-licences.mjs` from
+`package-lock.json` and the installed `node_modules`. After any change to the dependencies (an
+install, an update, a removal), regenerate it and commit it with the lockfile:
+
+```bash
+npm ci --ignore-scripts
+node scripts/generate-licences.mjs
+```
+
+`scripts/__tests__/release-licences.test.ts` fails CI while the committed file differs from what
+the script would write, and names the packages that differ. It also fails when a package declares
+no licence or `UNLICENSED` (unless `NO_LICENCE_ALLOWED` names it with its reason), and when a kind
+of licence arrives that `LICENCE_IDS` does not list: read that licence, decide whether the app may
+ship it and what it would owe beyond showing its text, then add it.
+
+Not listed: dev dependencies, and optional packages that name an `os` or a `cpu` (native binaries
+for the computer that builds, such as `@sentry/cli-*` and `lightningcss-*`; the package that pulls
+each one in is listed). The CocoaPods and Gradle libraries a native build fetches are not in
+`node_modules`, so they are not in the list either.
 
 ## Licence
 

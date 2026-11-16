@@ -13,6 +13,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { FONT_FAMILIES } from '../../styles/fonts';
+import { STUDIO_CONTROLS } from '../../styles/controls';
 import { dressOf } from '../../styles/dress/dress';
 import {
   ALL_STYLES,
@@ -43,7 +44,6 @@ import {
 } from '../dressed';
 import {
   BUTTON_PAINTS,
-  BUTTON_SIZES,
   buttonPaint,
   cardPaint,
   pillPaint,
@@ -166,7 +166,7 @@ describe('heights', () => {
   it("keeps Studio's button sizes in and out of a panel", () => {
     for (const style of STUDIO_STYLES) {
       const dress = dressOf(style);
-      for (const { height } of Object.values(BUTTON_SIZES)) {
+      for (const { height } of Object.values(STUDIO_CONTROLS.button)) {
         expect(buttonHeight(dress, height, false)).toBe(height);
         expect(buttonHeight(dress, height, true)).toBe(height);
       }
@@ -174,7 +174,7 @@ describe('heights', () => {
   });
 
   it('raises Play to 44, HUD to 44 and to 46 inside a panel', () => {
-    for (const { height } of Object.values(BUTTON_SIZES)) {
+    for (const { height } of Object.values(STUDIO_CONTROLS.button)) {
       expect(buttonHeight(dressOf(PLAY), height, false)).toBe(44);
       expect(buttonHeight(dressOf(PLAY), height, true)).toBe(44);
       expect(buttonHeight(dressOf(HUD), height, false)).toBe(44);
@@ -272,7 +272,7 @@ describe('Arcade', () => {
   });
 
   it('raises buttons to 44 in and out of a panel', () => {
-    for (const { height } of Object.values(BUTTON_SIZES)) {
+    for (const { height } of Object.values(STUDIO_CONTROLS.button)) {
       for (const inPanel of [false, true]) {
         expect(buttonHeight(dressOf(ARCADE), height, inPanel)).toBe(Math.max(height, 44));
       }

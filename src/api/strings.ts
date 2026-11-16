@@ -13,6 +13,14 @@ export const API_ERROR_COPY: Readonly<Record<ApiErrorKind, string>> = Object.fre
   stream: 'The reply was interrupted. Try again.',
   invalid_response:
     "Automatos sent something this version can't read. Try again, or update the app.",
+  limit: "You've reached a limit for now. Try again later.",
+});
+
+/** The limit's words when the server said when it lifts (errors.ts limitWords picks one). */
+export const LIMIT_COPY = Object.freeze({
+  underAMinute: "You've reached a limit for now. Try again in under a minute.",
+  inMinutes: (minutes: number) =>
+    `You've reached a limit for now. Try again in about ${minutes} minutes.`,
 });
 
 /** Words for an error the app raises itself, by its code (errors.ts APP_ERROR_CODES). */

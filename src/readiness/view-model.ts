@@ -19,7 +19,8 @@ import { isApiError, userMessage } from '../api/errors';
 import { appRouteForWebLink } from '../navigation/web-links';
 import { statusGlyph, type GlyphPaint } from '../styles/dress/status-glyphs';
 import type { ColourName, ColourScheme } from '../styles/tokens/types';
-import { STATE_WORD_TOKEN, glyphToken, statePaint } from '../ui/state-tokens';
+import { STATE_WORD_TONE, glyphToken, statePaint } from '../ui/state-tokens';
+import type { TextTone } from '../ui/variants';
 import { CLIENT_ROW_IDS, type AppFix, type RowInput } from './client-rows';
 import type { ReadinessFix, ReadinessItem, ReadinessState } from './schema';
 import { READINESS_COPY, READINESS_WORDS } from './strings';
@@ -101,7 +102,7 @@ export type MarkSpec = Readonly<{
   glyph: string;
   word: string;
   glyphToken: ColourName;
-  wordToken: ColourName;
+  wordTone: TextTone;
 }>;
 
 /**
@@ -121,7 +122,7 @@ export function readinessMark(
       glyph: glyph.glyph,
       word,
       glyphToken: glyphToken(state, glyphPaint),
-      wordToken: STATE_WORD_TOKEN,
+      wordTone: STATE_WORD_TONE,
     });
   }
   const paint = statePaint(state, scheme);
@@ -129,7 +130,7 @@ export function readinessMark(
     glyph: glyph.glyph,
     word,
     glyphToken: paint.glyph,
-    wordToken: paint.word,
+    wordTone: paint.word,
   });
 }
 

@@ -1,6 +1,9 @@
 // "Report this": who is offered it (the capability and the role), the draft the sheet holds and the
 // payload it sends, and the reason list's ids against the server's.
 
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import type { GateInput } from '../../api/capabilities';
@@ -17,6 +20,7 @@ import {
   canReport,
   draftPayload,
   noteCounter,
+  reportIntro,
   reportSentMessage,
   sameTarget,
   withNote,
@@ -168,5 +172,21 @@ describe('after sending', () => {
   it('thanks a new report and says so when it was already reported', () => {
     expect(reportSentMessage({ status: 'received' })).toBe(REPORT_COPY.sent);
     expect(reportSentMessage({ status: 'already_received' })).toBe(REPORT_COPY.alreadySent);
+  });
+});
+
+// Claims audit, 16 Nov: on the hosted server a report also reaches Automatos's moderation team
+// (docs/release/app-review-notes.md), so the sheet says so there; an own server's line is unchanged.
+describe('who the sheet says will see the report', () => {
+  it('names the moderation team on the hosted server only', () => {
+    expect(reportIntro('hosted')).toBe(
+      'Your workspace owner and the Automatos moderation team will see this report.',
+    );
+    expect(reportIntro('own')).toBe('Your workspace owner will see this report.');
+  });
+
+  it("is chosen in the sheet from the client's server", () => {
+    const sheet = readFileSync(path.resolve(__dirname, '../ReportSheet.tsx'), 'utf8');
+    expect(sheet).toContain('{reportIntro(client.server.source)}');
   });
 });

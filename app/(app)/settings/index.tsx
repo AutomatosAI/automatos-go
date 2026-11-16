@@ -15,10 +15,12 @@ import AudioLines from 'lucide-react-native/icons/audio-lines';
 import Bell from 'lucide-react-native/icons/bell';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 
+import { LICENCES_COPY } from '../../../src/about/strings';
 import { accountRows, type AccountRow } from '../../../src/app-state/account';
 import { useAppSession } from '../../../src/app-state/session';
 import { ACCOUNT_COPY } from '../../../src/app-state/strings';
 import { ServerSection } from '../../../src/connect/components/ServerSection';
+import { routes } from '../../../src/navigation/routes';
 import { useGoBack } from '../../../src/navigation/use-go-back';
 import { STYLE_SCREENS } from '../../../src/styles/nav';
 import { PICKER_COPY } from '../../../src/styles/strings';
@@ -29,7 +31,7 @@ import { PUSH_ACCOUNT_COPY } from '../../../src/push/strings';
 import { PrivacySection } from '../../../src/release/components/PrivacySection';
 import { PauseSection } from '../../../src/suggestions/PauseSection';
 import { useTokens } from '../../../src/styles/theme';
-import { Card, Divider, IconButton, ListRow, Screen, Text } from '../../../src/ui';
+import { Card, Divider, IconButton, ListRow, Screen, Section, Text } from '../../../src/ui';
 import { VOICE_SCREENS } from '../../../src/voice/nav';
 import { VOICE_SETTINGS_COPY } from '../../../src/voice/strings';
 
@@ -100,6 +102,15 @@ export default function AccountSettings() {
         <PauseSection />
         <ReadinessSection />
         <PrivacySection />
+        <Section title={LICENCES_COPY.section}>
+          <Card>
+            <ListRow
+              title={LICENCES_COPY.row}
+              accessibilityHint={LICENCES_COPY.rowHint}
+              onPress={() => router.push(routes.licences)}
+            />
+          </Card>
+        </Section>
         <RemovePhone />
       </View>
     </Screen>

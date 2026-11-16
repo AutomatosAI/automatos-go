@@ -31,12 +31,12 @@ function FiledLine({
   readonly link: WebLinkTarget | null;
   readonly onLink: (target: WebLinkTarget) => void;
 }) {
-  const { colours, type } = useTokens();
+  const { type } = useTokens();
   const words = link
     ? `${CARD_COPY.filed} · ${CARD_COPY.openMission} ${LINK_ARROW}`
     : CARD_COPY.filed;
   const line = (
-    <Text variant="mono" style={{ color: colours.olive }}>
+    <Text variant="mono" tone="success">
       {words}
     </Text>
   );

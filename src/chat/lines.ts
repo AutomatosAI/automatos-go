@@ -23,6 +23,7 @@ import type { Receipt, ToolCall } from '../core/web/types';
 import { appRouteForWebLink, type WebLinkTarget } from '../navigation/web-links';
 import type { ColourName } from '../styles/tokens';
 import { joinLabel } from '../ui/paint';
+import type { TextTone } from '../ui/variants';
 import { RECEIPT_BADGES, RECEIPT_STATUS_WORDS, TOOL_STATUS_WORDS } from './strings';
 
 export type LineOptions = {
@@ -64,6 +65,18 @@ export const MARK_COLOURS: Readonly<Record<LineTone, ColourName>> = Object.freez
   failed: 'destructive',
   waiting: 'accent',
   muted: 'mutedForeground',
+});
+
+/**
+ * A mark drawn as text (✓ ✕ ○), as the Text tone that reads MARK_COLOURS' token: the accent through
+ * accent.ts, so it can be read where the palette's accent is a ground. The spinner keeps the token.
+ */
+export const MARK_TONES: Readonly<Record<LineTone, TextTone>> = Object.freeze({
+  running: 'accent',
+  done: 'success',
+  failed: 'danger',
+  waiting: 'accent',
+  muted: 'muted',
 });
 
 const RECEIPT_LOOK: Readonly<

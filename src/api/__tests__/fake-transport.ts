@@ -1,9 +1,14 @@
 // A fake Transport for the client's tests: records every request and answers from a responder, so
 // nothing touches the network or imports expo/fetch.
 
-import { readBytes } from '../body';
+import { readBytes, readParts } from '../body';
 import type { Server } from '../server';
-import type { StreamingResponse, Transport, TransportRequest } from '../transport-types';
+import type {
+  FileResponse,
+  StreamingResponse,
+  Transport,
+  TransportRequest,
+} from '../transport-types';
 
 export const SERVER: Server = Object.freeze({
   apiUrl: 'https://api.example.test',
@@ -11,8 +16,8 @@ export const SERVER: Server = Object.freeze({
   source: 'hosted',
 });
 
-/** An answer for any of the three calls. */
-export type FakeResponse = StreamingResponse;
+/** An answer for any of the four calls; one without parts gives its bytes() as a file's parts. */
+export type FakeResponse = StreamingResponse & Partial<Pick<FileResponse, 'parts'>>;
 
 type Responder = (request: TransportRequest) => FakeResponse | Promise<FakeResponse>;
 
@@ -21,6 +26,18 @@ export type FakeTransport = Transport & { readonly calls: TransportRequest[] };
 /** A string as a body read under the caller's cap, as the real transport reads one. */
 function bytesOf(body: string): (maxBytes: number) => Promise<Uint8Array> {
   return (maxBytes) => readBytes(streamOf(new TextEncoder().encode(body)), maxBytes);
+}
+
+/** A file's parts from an answer that has none of its own: its bytes(), as one part. */
+function withParts(response: FakeResponse): FakeResponse & FileResponse {
+  if (response.parts) return { ...response, parts: response.parts };
+  return {
+    ...response,
+    parts: async function* (maxBytes: number) {
+      const bytes = await response.bytes(maxBytes);
+      if (bytes.byteLength > 0) yield bytes;
+    },
+  };
 }
 
 export function fakeTransport(responder: Responder): FakeTransport {
@@ -34,6 +51,36 @@ export function fakeTransport(responder: Responder): FakeTransport {
     request: handle,
     stream: handle,
     binary: handle,
+    file: async (request) => withParts(await handle(request)),
+  };
+}
+
+/** A file's body that arrives in these parts, read by the real readParts as the transport does. */
+export function partsReply(
+  status: number,
+  parts: readonly Uint8Array[],
+  headers: Readonly<Record<string, string>> = {},
+): FakeResponse {
+  const stream = () => {
+    let next = 0;
+    return new ReadableStream<Uint8Array>({
+      pull(controller) {
+        const part = parts[next];
+        next += 1;
+        if (part === undefined) controller.close();
+        else controller.enqueue(part);
+      },
+    });
+  };
+  const length = headersOf(headers)('content-length');
+  return {
+    status,
+    header: headersOf(headers),
+    bytes: (maxBytes) => readBytes(stream(), maxBytes, length),
+    chunks: async function* () {
+      yield* [];
+    },
+    parts: (maxBytes) => readParts(stream(), maxBytes, length, true),
   };
 }
 

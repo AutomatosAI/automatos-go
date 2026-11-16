@@ -113,7 +113,7 @@ WHERE THINGS ARE
 - "Auto is an AI" is the first line of every conversation and of the voice screen.
 - Report this (1.2): long-press a finished reply from Auto, or use the VoiceOver action "Report this". On a Deliverable, tap "Report this" on its page. Choose a reason and send. On our hosted service a report goes to the workspace owner and to our moderation inbox; on a customer's own server, to its operator.
 - Settings, "Privacy & legal": the privacy policy, the Terms, support, "Send crash reports" and the app version. The first screen links the policy and the Terms too.
-- Settings, "Style and look": three styles, Studio, Play and HUD.
+- Settings, "Style and look": five styles, Studio, Play, HUD, Arcade and Candy.
 
 ACCOUNTS (5.1.1(v), 4.8)
 The app only signs in. Automatos accounts are made in Studio on the web, where a workspace owner invites people. The app has no account creation and no link to it, so it deletes no account: a workspace is deleted in Studio by its owner or an admin, and a login is removed through support (https://automatos.app/contact), as our privacy policy says. Sign-in uses Automatos's own email code, password or passkey; there is no third-party or social sign-in.
@@ -125,7 +125,7 @@ NOTIFICATIONS
 The app offers notifications once something waits for you, or from your second visit; Settings, Notifications, "Turn on notifications" works at any time. Three kinds: a question needs your answer ("Reply…" answers it from the notification on an unlocked phone), a ticket is ready for review, and Auto messaged you (including a daily digest you can switch off). Approving always opens the app first.
 
 VOICE
-"Talk to Auto", the microphone button beside the message box, opens the voice screen. Hold "HOLD TO TALK" and speak: the phone turns your speech into text on the device, sends it to Auto as a chat message and reads the reply aloud. The first reply starts "Hi, this is Auto, your AI assistant." The microphone and speech recognition are asked for at the first hold, never at launch.
+"Talk to Auto", the microphone button beside the message box, opens the voice screen. Hold "HOLD TO TALK" and speak: your speech becomes text (on the iPhone in its own language; Apple may recognise another language chosen in Settings, Voice, "I speak"), goes to Auto as a chat message and the reply is read aloud. The first reply starts "Hi, this is Auto, your AI assistant." The microphone and speech recognition are asked for at the first hold, never at launch.
 
 OTHER PERMISSIONS
 Camera: scanning a pairing QR code and taking a photo to attach. Photos: the system photo picker. Face ID: before you approve or answer in the app (a setting, on by default; the passcode works too).

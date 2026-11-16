@@ -15,7 +15,7 @@ import { Text } from '../../ui';
 import { stackedSlop, type HitSlop } from '../../ui/paint';
 import { textRole } from '../../ui/variants';
 import { CHAT_COPY } from '../strings';
-import { MARK_COLOURS, type ReceiptRow, type ReceiptsView } from '../view-model';
+import { MARK_TONES, type ReceiptRow, type ReceiptsView } from '../view-model';
 
 const LINE_LEVEL = 4;
 const NOTE_LEVEL = 6;
@@ -30,11 +30,11 @@ type LineProps = {
 };
 
 function ReceiptLine({ row, onLink, slop }: LineProps) {
-  const { colours, spacing } = useTokens();
+  const { spacing } = useTokens();
   const { link } = row;
   const words = (
     <View style={[styles.line, { gap: spacing.space3 }]}>
-      <Text variant="mono" style={[styles.mark, { color: colours[MARK_COLOURS[row.tone]] }]}>
+      <Text variant="mono" tone={MARK_TONES[row.tone]} style={styles.mark}>
         {row.mark}
       </Text>
       <Text level={LINE_LEVEL} tone={link ? 'accent' : 'default'} style={styles.text}>

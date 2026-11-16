@@ -2,8 +2,9 @@
 // shadow. Light / Dark / System, the digest's 07:00 / 08:00 / 09:00, Ask | Plan. A tab list to
 // VoiceOver: the group has a label and each segment says whether it is selected. A5: the dress
 // gives the label's face, case and tracking and the paints (Play: the chosen segment cream, HUD:
-// the accent fill); the radii are the style's. A segment is at least 38 tall, so with the track's
-// 3 pt inset as its slop it takes the 44 pt touch in every style (a slop past the track is lost).
+// the accent fill); the radii and sizes are the style's (useStyle().controls.segment, rule 3.5). A
+// segment is at least 38 tall, so with the track's 3 pt inset as its slop it takes the 44 pt touch
+// in every style (a slop past the track is lost); the list's builder refuses one that would not.
 
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -12,15 +13,9 @@ import { useStyle } from '../styles/theme';
 import { Text } from './Text';
 import { controlLabel, dressedSegmentPaint } from './dressed';
 import { MIN_TOUCH } from './paint';
-import {
-  SEGMENT_GAP,
-  SEGMENT_MIN_HEIGHT,
-  SEGMENT_PADDING_Y,
-  SEGMENT_TRACK_INSET,
-} from './variants';
+import { segmentSlop } from './variants';
 
 const SEGMENT_LABEL_LEVEL = 6;
-const SEGMENT_SLOP = Object.freeze({ top: SEGMENT_TRACK_INSET, bottom: SEGMENT_TRACK_INSET });
 
 export type SegmentOption<T extends string> = { readonly value: T; readonly label: string };
 
@@ -44,6 +39,8 @@ export function SegmentedControl<T extends string>({
   const dress = useDress();
   const { radii, spacing, shadows } = style.tokens;
   const { segment } = dress.paints;
+  const sizes = style.controls.segment;
+  const slop = segmentSlop(sizes);
   const labelFace = controlLabel(style, dress, SEGMENT_LABEL_LEVEL);
   return (
     <View
@@ -54,8 +51,8 @@ export function SegmentedControl<T extends string>({
         {
           backgroundColor: segment.track,
           borderRadius: radii.control,
-          padding: SEGMENT_TRACK_INSET,
-          gap: SEGMENT_GAP,
+          padding: sizes.trackInset,
+          gap: sizes.gap,
         },
       ]}
     >
@@ -67,7 +64,7 @@ export function SegmentedControl<T extends string>({
             key={option.value}
             onPress={() => onChange(option.value)}
             disabled={disabled}
-            hitSlop={SEGMENT_SLOP}
+            hitSlop={slop}
             accessibilityRole="tab"
             accessibilityLabel={option.label}
             accessibilityState={{ selected, disabled }}
@@ -76,7 +73,8 @@ export function SegmentedControl<T extends string>({
               {
                 backgroundColor: tone.background,
                 borderRadius: radii.segment,
-                paddingVertical: SEGMENT_PADDING_Y,
+                paddingVertical: sizes.paddingY,
+                minHeight: sizes.minHeight,
                 paddingHorizontal: spacing.space4,
                 boxShadow: selected && segment.selectedShadow ? shadows.hairline : undefined,
               },
@@ -96,6 +94,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: MIN_TOUCH,
-    minHeight: SEGMENT_MIN_HEIGHT,
   },
 });

@@ -22,8 +22,9 @@ import type { MascotName } from '../../../core/frozen/lib/mascot/types';
 import type { HostToolCall } from '../../../core/frozen/lib/theme-sdk';
 import type { Receipt } from '../../../core/web/types/chat';
 import { routes } from '../../../navigation/routes';
-import { ICON_BUTTON_SIZES, commandCentreLabel } from '../../../ui/variants';
+import { commandCentreLabel } from '../../../ui/variants';
 import { PLAY_CHAT_COPY, PLAY_STATUS, PLAY_TABS_COPY } from '../../strings';
+import { STYLE_CONTROLS } from '../../tokens/controls';
 
 export * from './conversations';
 
@@ -74,9 +75,9 @@ export const COMPANION = Object.freeze({
     fieldPad: 6,
     size: 16,
     /** Send and Stop: a 42 pt round button, as Studio's composer and the voice button beside it. */
-    button: ICON_BUTTON_SIZES.lg.box,
+    button: STYLE_CONTROLS.play.iconButton.lg.box,
     /** Send's arrow. */
-    icon: ICON_BUTTON_SIZES.lg.icon,
+    icon: STYLE_CONTROLS.play.iconButton.lg.icon,
     square: 10,
     squareRadius: 2,
     maxLines: 6,

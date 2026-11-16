@@ -163,12 +163,12 @@ describe('stateMark', () => {
       glyph: '✓',
       word: 'Ready to look at',
       glyphToken: 'success',
-      wordToken: 'mutedForeground',
+      wordTone: 'muted',
     });
     expect(stateMark('needs_you', false, 'light')).toMatchObject({
       glyph: '◆',
       glyphToken: 'warnInk',
-      wordToken: 'warnInk',
+      wordTone: 'warning',
     });
     expect(stateMark('needs_you', false, 'dark').glyphToken).toBe('warning');
   });
@@ -178,7 +178,7 @@ describe('stateMark', () => {
       glyph: '✕',
       word: 'Failed',
       glyphToken: 'destructive',
-      wordToken: 'mutedForeground',
+      wordTone: 'muted',
     });
     expect(stateMark('ready', true, 'dark')).toMatchObject({
       word: 'Ready',

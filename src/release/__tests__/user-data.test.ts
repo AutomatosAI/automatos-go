@@ -21,7 +21,7 @@ import { createExpirySignal } from '../../auth/providers/expiry';
 import { createTokenCache } from '../../auth/token-cache';
 import { RECORD } from '../../connect/__tests__/paired-record';
 import { INSTALL_MARKER_KEY, INSTALL_MARKER_VALUE } from '../../connect/config';
-import { createCurrentServerStore } from '../../connect/current-server';
+import { createCurrentServerStore, ownServerOf } from '../../connect/current-server';
 import { createDeviceStore, type PairedRecord } from '../../connect/device-store';
 import { checkInstall } from '../../connect/install-marker';
 import { createServerSwitch, type ServerSwitchDeps } from '../../connect/switch';
@@ -223,6 +223,23 @@ describe('(b) leaving: one clearUserData', () => {
     expect(servers.getSnapshot()).toEqual({ status: 'ready', own: null, ended: null });
   });
 
+  // Clerk's own cache clears its item only when the publishable key changes (createClerkInstance's
+  // hasConfigChanged), so leaving the hosted server for a paired one must take it here
+  it("a new pairing from the hosted server: Clerk with its item, then Clerk's items go, then the record", async () => {
+    const phone = await usedPhone();
+    const { serverSwitch, servers } = await switchOver(phone, hostedProvider(phone), null);
+    await serverSwitch.connectTo(RECORD);
+    expect(native.order).toEqual(['push', 'clerk (item there: true)', 'files']);
+    expect(phone.secure.items.has(CLERK_CLIENT_ITEM)).toBe(false);
+    expect(phone.secure.items.has(CLERK_INDEXED_ITEM)).toBe(false);
+    expect(leftovers(phone).keychain).toEqual([...KEPT_KEYCHAIN, PAIRED_RECORD_ITEM].sort());
+    expect(servers.getSnapshot()).toEqual({
+      status: 'ready',
+      own: ownServerOf(RECORD),
+      ended: null,
+    });
+  });
+
   it("writes every item this phone only, and never deletes the install id or the store's key", async () => {
     const phone = await usedPhone();
     const { serverSwitch } = await switchOver(phone, hostedProvider(phone), null);
@@ -296,7 +313,7 @@ describe('(b) leaving: one clearUserData', () => {
     expect(leftovers(phone).keychain).toEqual(KEPT_KEYCHAIN);
   });
 
-  it('every way out runs it: Sign out, Forget this server, Remove this phone and an ended session', () => {
+  it('every way out runs it: Sign out, Remove this phone and forget this server, and an ended session', () => {
     const signOut = read('src/app-state/use-sign-out.ts');
     expect(signOut).toContain('const leaving = own ? forgetServer() : leaveHosted();');
     expect(signOut).toContain('endSession().catch(');
@@ -305,7 +322,11 @@ describe('(b) leaving: one clearUserData', () => {
     expect(wiring).toContain('forget: serverSwitch.forgetServer,');
     expect(wiring).toContain('keys: secureKeys,');
     expect(wiring).toContain('storage: appStorage,');
-    expect(wiring).toContain('files: clearViewerFiles,');
+    // claims audit, 16 Nov: the theme's downloaded files go too, beside the viewer's copies
+    expect(wiring).toContain('files: clearUserFiles,');
+    const files = read('src/connect/user-files.ts');
+    expect(files).toContain('clearViewerFiles,');
+    expect(files).toContain('clearThemeFiles,');
     expect(wiring).toContain('sessionMemory: digestNow.reset,');
   });
 });

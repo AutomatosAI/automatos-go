@@ -2,6 +2,7 @@
 // shows come from src/api/strings.ts through userMessage(); these are the frames around them.
 
 import type { ReportReason, ReportTargetType } from '../api/reports';
+import type { ServerSource } from '../api/server';
 
 export const UI_COPY = Object.freeze({
   loading: 'Loading…',
@@ -11,6 +12,8 @@ export const UI_COPY = Object.freeze({
   live: 'Live',
   /** The sheet's backdrop, for TalkBack (VoiceOver closes a sheet with the escape gesture). */
   closeSheet: 'Close',
+  /** The Header's way back, for VoiceOver (the button shows a chevron only). */
+  back: 'Back',
   /**
    * The Command Centre's name: the header menu's row (D73) and HUD's button (the web's
    * "Command Center", D-terms).
@@ -18,6 +21,9 @@ export const UI_COPY = Object.freeze({
   commandCentre: 'Command Centre',
   /** What the button's badge counts, for VoiceOver: '1 needs you', '6 need you'. */
   needYou: Object.freeze({ one: 'needs you', other: 'need you' }),
+  /** A switch's state in a word beside it (§4.6: never only a colour). */
+  switchOn: 'On',
+  switchOff: 'Off',
 });
 
 export type ReportReasonChoice = { readonly id: ReportReason; readonly label: string };
@@ -41,7 +47,15 @@ export const REPORT_COPY = Object.freeze({
     message: 'Report this message',
     deliverable: 'Report this Deliverable',
   } satisfies Record<ReportTargetType, string>),
-  intro: 'Your workspace owner will see this report.',
+  /**
+   * Who sees the report, by the server it goes to (report.ts reportIntro, from the client's
+   * server): on the hosted server Automatos's moderation team too (docs/release/privacy-facts.md
+   * 'Report this').
+   */
+  intro: Object.freeze({
+    hosted: 'Your workspace owner and the Automatos moderation team will see this report.',
+    own: 'Your workspace owner will see this report.',
+  } satisfies Record<ServerSource, string>),
   reasonLabel: 'What is wrong with it?',
   noteLabel: 'Anything else (optional)',
   notePlaceholder: 'Add a short note',

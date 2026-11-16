@@ -14,7 +14,8 @@ import type { ResolvedStyle } from '../../provider/resolve';
 import { arcadeWindowFrame, type ArcadeVars } from '../../tokens/arcade';
 import { ARCADE_STEPS } from '../../typeface/arcade-type';
 import { arcadePanelFrame } from '../arcade-frame';
-import { DRESS_MIN_HEIGHT, dressOf } from '../dress';
+import { DRESS_MIN_HEIGHT } from '../../tokens/controls';
+import { dressOf } from '../dress';
 import { ARCADE_CHIP_RING, type Paint } from '../paints';
 import { ARCADE, ARCADE_STYLES } from './fixtures';
 

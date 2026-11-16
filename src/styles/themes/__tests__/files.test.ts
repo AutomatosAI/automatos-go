@@ -1,85 +1,50 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createApiClient } from '../../../api/client';
-import { SERVER, fakeTransport, reply } from '../../../api/__tests__/fake-transport';
+import { FakeDirectory, memoryFs } from '../../../api/__tests__/fake-file-system';
+import {
+  SERVER,
+  fakeTransport,
+  partsReply,
+  reply,
+  type FakeResponse,
+} from '../../../api/__tests__/fake-transport';
+import type { TransportRequest } from '../../../api/transport-types';
 import { logger } from '../../../lib/logger';
 
-// files.ts over expo-file-system, replaced (it runs on a device only): an allowed theme file is
-// downloaded from the configured server with the client's bearer and workspace into
-// <cache>/theme-files/<digest>/<path>, through a partial copy that moves into place only under its
-// kind's cap; a copy already there is never downloaded again; two asks share one download; a
-// failure is null, never a throw.
-const native = vi.hoisted(() => {
-  const sizes = new Map<string, number>();
-  const calls: { op: string; uri: string; options?: unknown }[] = [];
-  const state = {
-    bytes: (_url: string): number => 1000,
-    download: (_url: string): Promise<void> => Promise.resolve(),
-  };
-  const join = (parts: readonly unknown[]) =>
-    parts
-      .map((part) => (typeof part === 'string' ? part : (part as { uri: string }).uri))
-      .join('/');
-  class FakeDirectory {
-    readonly uri: string;
-    constructor(...parts: unknown[]) {
-      this.uri = join(parts);
-    }
-    create(options: unknown) {
-      calls.push({ op: 'mkdir', uri: this.uri, options });
-    }
-  }
-  class FakeFile {
-    uri: string;
-    constructor(...parts: unknown[]) {
-      this.uri = join(parts);
-    }
-    get exists() {
-      return sizes.has(this.uri);
-    }
-    get size() {
-      return sizes.get(this.uri) ?? 0;
-    }
-    get parentDirectory() {
-      return new FakeDirectory(this.uri.slice(0, this.uri.lastIndexOf('/')));
-    }
-    delete() {
-      calls.push({ op: 'rm', uri: this.uri });
-      sizes.delete(this.uri);
-    }
-    move(to: FakeFile) {
-      calls.push({ op: 'mv', uri: `${this.uri} -> ${to.uri}` });
-      sizes.set(to.uri, this.size);
-      sizes.delete(this.uri);
-      this.uri = to.uri;
-    }
-    static async downloadFileAsync(url: string, to: FakeFile, options: unknown) {
-      calls.push({ op: 'download', uri: to.uri, options: { url, ...(options as object) } });
-      await state.download(url);
-      sizes.set(to.uri, state.bytes(url));
-      return new FakeFile(to.uri);
-    }
-  }
-  return { sizes, calls, state, FakeDirectory, FakeFile, cache: { uri: 'file:///cache' } };
-});
+// files.ts over expo-file-system in memory (it runs on a device only) and the fake transport: an
+// allowed theme file is downloaded through the transfer module from the configured server with the
+// client's bearer and workspace into <cache>/theme-files/<digest>/<path>, through a partial copy
+// that moves into place only when whole and under its kind's cap; a copy already there is never
+// downloaded again; two asks share one download; a failure is null, never a throw.
+vi.mock(
+  'expo-file-system',
+  async () => (await import('../../../api/__tests__/fake-file-system')).fakeExpoFileSystem,
+);
 
-vi.mock('expo-file-system', () => ({
-  Directory: native.FakeDirectory,
-  File: native.FakeFile,
-  Paths: { cache: native.cache },
-}));
-
-const { THEME_FILES_FOLDER, cacheThemeFile, cachePaintFiles, localThemeFile, paintFiles } =
-  await import('../files');
+const {
+  THEME_FILES_FOLDER,
+  cacheThemeFile,
+  cachePaintFiles,
+  clearThemeFiles,
+  localThemeFile,
+  paintFiles,
+} = await import('../files');
 const { themeFile } = await import('../file-url');
+const { stopDownloads } = await import('../../../api/transfer');
 const { themePaint } = await import('../paint');
 const { DIGEST, FONT_URL, HARBOUR_ID, answer, fileUrl } = await import('./fixtures');
 
+const server = {
+  answer: (_request: TransportRequest): FakeResponse | Promise<FakeResponse> =>
+    partsReply(200, [new Uint8Array(1000)]),
+};
+const transport = fakeTransport((request) => server.answer(request));
 const client = createApiClient({
   server: SERVER,
   getToken: async () => 'tok',
   getWorkspaceId: () => 'ws-1',
-  transport: fakeTransport(() => reply(500)),
+  transport,
 });
 
 const COPY = `file:///cache/${THEME_FILES_FOLDER}/${DIGEST}/assets/fonts/mobile/inter-regular.ttf`;
@@ -90,11 +55,12 @@ function fontFile() {
   return file;
 }
 
+const sized = (bytes: number) => () => partsReply(200, [new Uint8Array(bytes)]);
+
 beforeEach(() => {
-  native.sizes.clear();
-  native.calls.length = 0;
-  native.state.bytes = () => 1000;
-  native.state.download = () => Promise.resolve();
+  memoryFs.reset();
+  transport.calls.length = 0;
+  server.answer = sized(1000);
   vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
 });
 
@@ -106,53 +72,64 @@ describe('a theme file download', () => {
   it('fetches from the configured server with the bearer and workspace, into its digest path', async () => {
     const copy = await cacheThemeFile(client, fontFile());
     expect(copy?.uri).toBe(COPY);
-    const download = native.calls.find((call) => call.op === 'download');
-    expect(download?.options).toMatchObject({
+    expect(transport.calls).toHaveLength(1);
+    expect(transport.calls[0]).toMatchObject({
       url: `${SERVER.apiUrl}${FONT_URL}`,
+      method: 'GET',
       headers: { Authorization: 'Bearer tok', 'X-Workspace-ID': 'ws-1' },
-      idempotent: true,
     });
-    expect(download?.uri).toContain(`/${THEME_FILES_FOLDER}/.partial/`);
-    expect(native.sizes.has(COPY)).toBe(true);
+    expect(memoryFs.files.get(COPY)?.byteLength).toBe(1000);
+    expect(memoryFs.ops).toEqual([`create ${COPY}.partial`, `mv ${COPY}.partial -> ${COPY}`]);
   });
 
   it('never downloads a copy already on the phone (content-addressed)', async () => {
-    native.sizes.set(COPY, 2000);
+    memoryFs.files.set(COPY, new Uint8Array(2000));
     expect((await cacheThemeFile(client, fontFile()))?.uri).toBe(COPY);
-    expect(native.calls.some((call) => call.op === 'download')).toBe(false);
+    expect(transport.calls).toEqual([]);
   });
 
   it('refuses a file over its cap: the partial copy is deleted and nothing lands', async () => {
-    native.state.bytes = () => 400 * 1024 + 1;
+    server.answer = sized(400 * 1024 + 1);
     expect(await cacheThemeFile(client, fontFile())).toBeNull();
-    expect([...native.sizes.keys()]).toEqual([]);
-    native.state.bytes = () => 2 * 1024 * 1024 + 1;
+    expect([...memoryFs.files.keys()]).toEqual([]);
+    server.answer = sized(2 * 1024 * 1024 + 1);
     const clip = themeFile(fileUrl('assets/mascot/idle.mp4'), 'mascot');
     expect(clip && (await cacheThemeFile(client, clip))).toBeNull();
+    expect([...memoryFs.files.keys()]).toEqual([]);
   });
 
   it('takes a file at exactly its cap', async () => {
-    native.state.bytes = () => 400 * 1024;
+    server.answer = sized(400 * 1024);
     expect(await cacheThemeFile(client, fontFile())).not.toBeNull();
   });
 
   it('is null, logged, when the download fails, and leaves no partial copy', async () => {
-    native.state.download = () => Promise.reject(new Error('response has status 404'));
+    server.answer = () => reply(404, '{"detail":"Not found"}');
     expect(await cacheThemeFile(client, fontFile())).toBeNull();
-    expect([...native.sizes.keys()]).toEqual([]);
+    expect([...memoryFs.files.keys()]).toEqual([]);
     expect(logger.warn).toHaveBeenCalled();
+  });
+
+  it('never follows a redirect: the file is refused and nothing goes to the address', async () => {
+    server.answer = () => reply(302, '', { Location: 'https://elsewhere.example.test/font.ttf' });
+    expect(await cacheThemeFile(client, fontFile())).toBeNull();
+    expect(transport.calls.map((call) => call.url)).toEqual([`${SERVER.apiUrl}${FONT_URL}`]);
+    expect([...memoryFs.files.keys()]).toEqual([]);
   });
 
   it('shares one download between two asks for the same file', async () => {
     const gate: { release: () => void } = { release: () => undefined };
-    native.state.download = () => new Promise<void>((resolve) => (gate.release = resolve));
+    server.answer = () =>
+      new Promise<FakeResponse>((resolve) => {
+        gate.release = () => resolve(partsReply(200, [new Uint8Array(10)]));
+      });
     const first = cacheThemeFile(client, fontFile());
     const second = cacheThemeFile(client, fontFile());
     expect(second).toBe(first);
-    await vi.waitFor(() => expect(native.calls.some((call) => call.op === 'download')).toBe(true));
+    await vi.waitFor(() => expect(transport.calls).toHaveLength(1));
     gate.release();
     await first;
-    expect(native.calls.filter((call) => call.op === 'download')).toHaveLength(1);
+    expect(transport.calls).toHaveLength(1);
   });
 });
 
@@ -180,7 +157,7 @@ describe("a painting's files", () => {
   it('caches every file of a kind and says whether all are there', async () => {
     if (!paint) throw new Error('the fixture should paint');
     expect(await cachePaintFiles(client, paint, 'font')).toBe(true);
-    native.state.download = () => Promise.reject(new Error('offline'));
+    server.answer = () => Promise.reject(new TypeError('Network request failed'));
     expect(await cachePaintFiles(client, paint, 'mascot')).toBe(false);
   });
 
@@ -190,5 +167,63 @@ describe("a painting's files", () => {
     expect(localThemeFile(FONT_URL, 'font')?.uri).toBe(COPY);
     expect(localThemeFile(`https://evil.example${FONT_URL}`, 'font')).toBeNull();
     expect(localThemeFile(null, 'font')).toBeNull();
+  });
+});
+
+// Claims audit, 16 Nov: sign-out and leaving a server delete the theme's files too
+// (src/connect/user-files.ts), and a theme painted again downloads them cleanly.
+describe('leaving deletes the theme files', () => {
+  it('deletes every copy and a partial left beside one, and never throws', async () => {
+    await cacheThemeFile(client, fontFile());
+    memoryFs.files.set(`${COPY}.partial`, new Uint8Array(10));
+    clearThemeFiles();
+    expect([...memoryFs.files.keys()]).toEqual([]);
+    expect(() => clearThemeFiles()).not.toThrow();
+  });
+
+  it('downloads a cleared file again on the next ask, into its digest path', async () => {
+    await cacheThemeFile(client, fontFile());
+    clearThemeFiles();
+    expect(localThemeFile(FONT_URL, 'font')).toBeNull();
+    transport.calls.length = 0;
+    expect((await cacheThemeFile(client, fontFile()))?.uri).toBe(COPY);
+    expect(transport.calls).toHaveLength(1);
+    expect(localThemeFile(FONT_URL, 'font')?.uri).toBe(COPY);
+  });
+
+  it('a download running when the person leaves lands nothing, and the next ask starts afresh', async () => {
+    const gate: { release: () => void } = { release: () => undefined };
+    const held = new Promise<void>((resolve) => {
+      gate.release = resolve;
+    });
+    server.answer = () => ({
+      ...partsReply(200, []),
+      parts: async function* () {
+        yield new Uint8Array(10);
+        await held; // the body ends after the clear, deaf to the abort
+      },
+    });
+    const running = cacheThemeFile(client, fontFile());
+    await vi.waitFor(() => expect(memoryFs.files.get(`${COPY}.partial`)?.byteLength).toBe(10));
+    stopDownloads();
+    clearThemeFiles();
+    server.answer = sized(20);
+    const next = cacheThemeFile(client, fontFile());
+    expect(next).not.toBe(running);
+    gate.release();
+    expect(await running).toBeNull();
+    expect((await next)?.uri).toBe(COPY);
+    expect(memoryFs.files.get(COPY)?.byteLength).toBe(20);
+    expect([...memoryFs.files.keys()]).toEqual([COPY]);
+  });
+
+  it('logs a folder that will not delete, and does not throw', async () => {
+    await cacheThemeFile(client, fontFile());
+    const spy = vi.spyOn(FakeDirectory.prototype, 'delete').mockImplementation(() => {
+      throw new Error('busy');
+    });
+    expect(() => clearThemeFiles()).not.toThrow();
+    expect(logger.warn).toHaveBeenCalled();
+    spy.mockRestore();
   });
 });

@@ -13,7 +13,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { useDress } from '../styles/dress/use-dress';
 import { useTokens } from '../styles/theme';
-import { Button, Card, Divider, ListRow, Text } from '../ui';
+import { Button, Card, Divider, ListRow, Section, StateGlyph, Text } from '../ui';
 import type { TextLevel } from '../ui/variants';
 import type { ReadinessState } from './schema';
 import { READINESS_COPY } from './strings';
@@ -25,15 +25,13 @@ const LINE_LEVEL: TextLevel = 6;
 const MARK_MAX_WIDTH = '45%';
 
 function ReadinessMark({ state }: { readonly state: ReadinessState }) {
-  const { colours, scheme, spacing } = useTokens();
+  const { scheme, spacing } = useTokens();
   const dress = useDress();
   const mark = readinessMark(state, dress.status === 'glyph', scheme, dress.glyphPaint);
   return (
     <View style={[styles.mark, { gap: spacing.space1 }]}>
-      <Text variant="mono" style={{ color: colours[mark.glyphToken] }}>
-        {mark.glyph}
-      </Text>
-      <Text variant="mono" style={[styles.word, { color: colours[mark.wordToken] }]}>
+      <StateGlyph glyph={mark.glyph} role={mark.glyphToken} />
+      <Text variant="mono" tone={mark.wordTone} style={styles.word}>
         {mark.word}
       </Text>
     </View>
@@ -74,20 +72,6 @@ function ReadinessRowView({ row, onFix }: RowProps) {
   );
 }
 
-function Head({ count }: { readonly count: string }) {
-  const { spacing } = useTokens();
-  return (
-    <View style={[styles.head, { columnGap: spacing.space3, rowGap: spacing.space1 }]}>
-      <Text variant="eyebrow" accessibilityRole="header" style={styles.title}>
-        {READINESS_COPY.title}
-      </Text>
-      <Text variant="eyebrow" tone="muted">
-        {count}
-      </Text>
-    </View>
-  );
-}
-
 export type ReadinessCardProps = {
   readonly view: ReadinessView;
   readonly onFix: (route: string) => void;
@@ -97,8 +81,7 @@ export type ReadinessCardProps = {
 export function ReadinessCard({ view, onFix, onCheckAgain }: ReadinessCardProps) {
   const { spacing } = useTokens();
   return (
-    <View style={{ gap: spacing.space3 }}>
-      <Head count={view.count} />
+    <Section title={READINESS_COPY.title} aside={view.count}>
       <Card>
         {view.rows.map((row, index) => (
           <View key={row.id}>
@@ -122,7 +105,7 @@ export function ReadinessCard({ view, onFix, onCheckAgain }: ReadinessCardProps)
           />
         </View>
       </Card>
-    </View>
+    </Section>
   );
 }
 
@@ -140,8 +123,6 @@ export function ReadinessSection() {
 }
 
 const styles = StyleSheet.create({
-  head: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  title: { flexShrink: 1 },
   mark: { flexDirection: 'row', alignItems: 'center', flexShrink: 1, maxWidth: MARK_MAX_WIDTH },
   word: { flexShrink: 1 },
   start: { alignItems: 'flex-start' },

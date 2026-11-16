@@ -1,9 +1,31 @@
-// IP literals for the server-address rule (KC6), parsed strictly: an IPv4 address is four decimal
-// octets 0-255 with no leading zeros (never the integer, octal or hex forms a URL parser would
-// quietly reinterpret); an IPv6 address is eight 16-bit groups, '::' at most once, an IPv4 tail
-// allowed. Pure.
+// IP literals, parsed strictly, and the IPv4 blocks that are not the public internet: shared by
+// the server-address rule (src/connect/address.ts, KC6) and the storage hop's private-network
+// rule (src/api/private-host.ts). An IPv4 address is four decimal octets 0-255 with no leading
+// zeros (never the integer, octal or hex forms a URL parser would quietly reinterpret); an IPv6
+// address is eight 16-bit groups, '::' at most once, an IPv4 tail allowed. Pure.
 
-import type { Ipv4Quad, Ipv4Range } from './config';
+export type Ipv4Quad = readonly [number, number, number, number];
+export type Ipv4Range = { readonly base: Ipv4Quad; readonly prefix: number };
+
+/**
+ * The private (RFC 1918) blocks. connect lets http:// reach them (D-HTTPS, KC6): 172.16.0.0/12
+ * joins the PRD's 10.x and 192.168.x; 100.64.0.0/10 (Tailscale: use its HTTPS name) and
+ * 169.254.0.0/16 do not.
+ */
+export const PRIVATE_IPV4_RANGES: readonly Ipv4Range[] = Object.freeze([
+  { base: [10, 0, 0, 0], prefix: 8 },
+  { base: [172, 16, 0, 0], prefix: 12 },
+  { base: [192, 168, 0, 0], prefix: 16 },
+]);
+/** On a phone these reach the phone itself: 127.0.0.0/8, and 0.0.0.0/8, which connects there. */
+export const LOOPBACK_IPV4_RANGES: readonly Ipv4Range[] = Object.freeze([
+  { base: [127, 0, 0, 0], prefix: 8 },
+  { base: [0, 0, 0, 0], prefix: 8 },
+]);
+/** Link-local (RFC 3927): the network the phone is on, never the internet. */
+export const LINK_LOCAL_IPV4_RANGES: readonly Ipv4Range[] = Object.freeze([
+  { base: [169, 254, 0, 0], prefix: 16 },
+]);
 
 const IPV4_OCTET = '(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)';
 const IPV4_QUAD = new RegExp(`^${IPV4_OCTET}\\.${IPV4_OCTET}\\.${IPV4_OCTET}\\.${IPV4_OCTET}$`);
@@ -81,4 +103,13 @@ export function isIpv6SelfAddress(groups: Ipv6Groups): boolean {
   const leadingZero = groups.slice(0, IPV6_GROUP_COUNT - 1).every((group) => group === 0);
   const last = groups[IPV6_GROUP_COUNT - 1];
   return leadingZero && (last === 0 || last === 1);
+}
+
+const IPV6_UNIQUE_LOCAL = { mask: 0xfe00, prefix: 0xfc00 }; // fc00::/7
+const IPV6_LINK_LOCAL = { mask: 0xffc0, prefix: 0xfe80 }; // fe80::/10
+
+/** fc00::/7 (unique local) or fe80::/10 (link-local): a private network, never the internet. */
+export function isIpv6LocalNetwork(groups: Ipv6Groups): boolean {
+  const first = groups[0] ?? 0;
+  return [IPV6_UNIQUE_LOCAL, IPV6_LINK_LOCAL].some(({ mask, prefix }) => (first & mask) === prefix);
 }

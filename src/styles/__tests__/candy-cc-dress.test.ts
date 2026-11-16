@@ -22,7 +22,7 @@ import {
   labelStyle,
   panelHeaderStyle,
 } from '../../ui/dressed';
-import { BUTTON_SIZES } from '../../ui/variants';
+import { STUDIO_CONTROLS } from '../controls';
 import { FONT_FAMILIES } from '../fonts';
 import {
   dressedStripCell,
@@ -33,7 +33,8 @@ import {
   shellTitle,
 } from '../dress/cc-dress';
 import { CANDY_LINE } from '../dress/candy-paints';
-import { CANDY_ROW_HEIGHT, DRESS_MIN_HEIGHT, dressOf } from '../dress/dress';
+import { DRESS_MIN_HEIGHT } from '../tokens/controls';
+import { CANDY_ROW_HEIGHT, dressOf } from '../dress/dress';
 import { GLYPHS, GLYPH_ROLE_TOKENS, isGlyphStatus, statusGlyph } from '../dress/status-glyphs';
 import { CANDY, CANDY_STYLES } from '../dress/__tests__/fixtures';
 import type { ResolvedStyle } from '../provider/resolve';
@@ -234,10 +235,12 @@ describe('the primitives in Candy', () => {
       ]).toEqual(Array(4).fill(round));
       expect(dress.pill.minHeight).toBeGreaterThanOrEqual(DRESS_MIN_HEIGHT);
       for (const inPanel of [false, true]) {
-        expect(buttonHeight(dress, BUTTON_SIZES.sm.height, inPanel)).toBe(DRESS_MIN_HEIGHT);
+        expect(buttonHeight(dress, STUDIO_CONTROLS.button.sm.height, inPanel)).toBe(
+          DRESS_MIN_HEIGHT,
+        );
       }
     });
-    expect(controlLabel(CANDY, dressOf(CANDY), BUTTON_SIZES.md.level)).toMatchObject({
+    expect(controlLabel(CANDY, dressOf(CANDY), STUDIO_CONTROLS.button.md.level)).toMatchObject({
       fontFamily: NUNITO_EXTRA_BOLD,
       fontSize: 13,
     });

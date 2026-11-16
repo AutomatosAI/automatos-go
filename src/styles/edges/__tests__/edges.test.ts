@@ -32,6 +32,7 @@ describe('edgeFor', () => {
     server: 'something-wrong',
     stream: 'something-wrong',
     invalid_response: 'something-wrong',
+    limit: 'something-wrong',
     auth: null,
     forbidden: null,
     not_found: null,

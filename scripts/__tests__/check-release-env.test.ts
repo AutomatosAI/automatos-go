@@ -81,7 +81,8 @@ describe('checkReleaseEnv', () => {
     expect(warnings).toEqual([expect.stringContaining('EXPO_PUBLIC_SENTRY_DSN')]);
   });
 
-  it('skips development and local builds entirely', () => {
+  // a secret in an EXPO_PUBLIC_ value fails these too: check-release-env-secrets.test.ts
+  it('skips development and local builds, but for a secret', () => {
     expect(checkReleaseEnv({}, 'development')).toEqual({ errors: [], warnings: [] });
     expect(checkReleaseEnv({}, '')).toEqual({ errors: [], warnings: [] });
   });

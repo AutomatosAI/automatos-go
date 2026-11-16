@@ -1,25 +1,10 @@
 // The guards in eslint.config.js (US-004c, PRD-001 §4.11), proved on snippets linted with
 // ESLint's Node API under the repo's real config: each rule fires where it should and stays
-// silent where it is allowed. The snippets never touch disk; filePath only places them.
-import path from 'node:path';
-
-import { ESLint, type Linter } from 'eslint';
+// silent where it is allowed. Some guard families have suites of their own beside this one
+// (eslint-rules-*.test.ts), sharing its helpers (eslint-rules-helpers.ts).
 import { beforeAll, describe, expect, it } from 'vitest';
 
-const REPO = path.resolve(__dirname, '../..');
-const eslint = new ESLint({ cwd: REPO });
-
-async function messages(code: string, file: string): Promise<Linter.LintMessage[]> {
-  const [result] = await eslint.lintText(code, { filePath: path.join(REPO, file) });
-  return result?.messages ?? [];
-}
-
-async function rules(code: string, file: string): Promise<string[]> {
-  return (await messages(code, file)).map((m) => m.ruleId ?? 'parse-error');
-}
-
-const lines = (count: number, line: (n: number) => string) =>
-  Array.from({ length: count }, (_, n) => line(n)).join('\n');
+import { lines, messages, rules, said, warm, WARM_TIMEOUT } from './eslint-rules-helpers';
 
 /** A function spanning exactly `total` counted lines (header, body, closing brace). */
 const functionOf = (total: number, name = 'f') =>
@@ -38,9 +23,7 @@ const depthOf = (levels: number) =>
   `${'  '.repeat(levels + 1)}return a;\n` +
   `${lines(levels, (n) => `${'  '.repeat(levels - n)}}`)}\n  return 0;\n}\n`;
 
-beforeAll(async () => {
-  await rules('export const warm = 1;\n', 'src/warm.ts'); // loads the expo config's plugins
-}, 60_000);
+beforeAll(warm, WARM_TIMEOUT);
 
 describe('one way in: HTTP only through src/api (D-ONE-CLIENT)', () => {
   const call = "export const go = () => fetch('https://example.org');\n";
@@ -174,10 +157,34 @@ describe('a guard cannot be switched off inside a file (rule 13.5)', () => {
 describe('restricted imports', () => {
   const expoFetch = "export { fetch } from 'expo/fetch';\nimport 'expo/fetch';\n";
 
+  const EXPO_FETCH_ONLY = 'expo/fetch is imported by src/api/transport.ts only: use the API client.';
+
   it('expo/fetch is imported by src/api/transport.ts only', async () => {
     expect(await rules(expoFetch, 'src/api/transport.ts')).not.toContain('no-restricted-imports');
-    expect(await rules(expoFetch, 'src/api/client.ts')).toContain('no-restricted-imports');
     expect(await rules(expoFetch, 'app/_layout.tsx')).toContain('no-restricted-imports');
+  });
+
+  // rule 13.2: inside src/api/ as well, the client and the modules beside it send through the
+  // transport, so src/api/** lifting the network globals does not lift this
+  it.each([
+    'src/api/client.ts',
+    'src/api/transfer.ts',
+    'src/api/stream.ts',
+    'src/api/__tests__/client.test.ts',
+  ])('another file in src/api, %s, may not import expo/fetch', async (file) => {
+    const found = await said(expoFetch, file, 'no-restricted-imports');
+    expect(found).toHaveLength(2);
+    expect(found.every((message) => message.includes(EXPO_FETCH_ONLY))).toBe(true);
+  });
+
+  it("nor expo's own file behind expo/fetch, in src/api/transport.ts either", async () => {
+    const code = "import { fetch } from 'expo/src/winter/fetch';\nexport const f = fetch;\n";
+    expect(await rules(code, 'src/api/transport.ts')).toContain('no-restricted-imports');
+    expect(await rules(code, 'src/api/client.ts')).toContain('no-restricted-imports');
+    const nested = "import 'expo/src/winter/fetch/FetchResponse';\n";
+    expect(await rules(nested, 'src/api/transport.ts')).toContain('no-restricted-imports');
+    const loaded = "export const f = () => import('expo/src/winter/fetch/index');\n";
+    expect(await rules(loaded, 'src/api/transport.ts')).toContain('no-restricted-syntax');
   });
 
   it.each([
@@ -247,46 +254,6 @@ describe('size limits (D-SHAPE)', () => {
   it('complexity: 10 passes, 11 fails', async () => {
     expect(await rules(complexityOf(10), 'src/x.ts')).not.toContain('complexity');
     expect(await rules(complexityOf(11), 'src/x.ts')).toContain('complexity');
-  });
-});
-
-describe('no colour literals outside the tokens (D-TOKENS)', () => {
-  it.each([
-    "export const c = '#fff';\n",
-    "export const c = '#1A2b3C';\n",
-    "export const c = '#1a2b3c80';\n",
-    "export const c = 'rgb(0, 0, 0)';\n",
-    "export const c = 'rgba(0,0,0,0.5)';\n",
-    "export const c = 'hsl(10 20% 30%)';\n",
-    "export const c = 'hsla(10, 20%, 30%, 0.5)';\n",
-    "export const c = { borderColor: '1px solid #abcdef' };\n",
-    'export const c = (a: number) => `rgba(0, 0, 0, ${a})`;\n',
-  ])('refuses %s in app/', async (code) => {
-    expect(await rules(code, 'app/(app)/index.tsx')).toContain('no-restricted-syntax');
-  });
-
-  it('refuses a colour in src/ui and in src/styles outside the tokens', async () => {
-    const code = "export const c = '#ff6b35';\n";
-    expect(await rules(code, 'src/ui/button.tsx')).toContain('no-restricted-syntax');
-    expect(await rules(code, 'src/styles/theme.ts')).toContain('no-restricted-syntax');
-  });
-
-  it('allows a colour only in src/styles/tokens/**', async () => {
-    const code = "export const c = '#ff6b35';\nexport const d = 'rgba(0,0,0,0.5)';\n";
-    expect(await rules(code, 'src/styles/tokens/colors.ts')).toEqual([]);
-    expect(await rules(code, 'src/styles/tokens/studio/dark.ts')).toEqual([]);
-    expect(await rules(code, 'src/styles/ai-label.tsx')).toContain('no-restricted-syntax');
-  });
-
-  it('allows what is not a colour: ticket numbers, anchors, words, scripts/', async () => {
-    const code = [
-      "export const ticket = '#0422';",
-      "export const big = '#1234567';",
-      "export const anchor = '/docs#defaults';",
-      "export const word = 'a hsl value, rgb or #hash';",
-    ].join('\n');
-    expect(await rules(`${code}\n`, 'src/cc/board.ts')).toEqual([]);
-    expect(await rules("export const c = '#fff';\n", 'scripts/x.ts')).toEqual([]);
   });
 });
 

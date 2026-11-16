@@ -4,6 +4,7 @@
 // that (KV18), and say nothing commercial (D8).
 
 import type { RecognizerFailure, VoiceMessage } from './machine/voice-state';
+import { PHONE_VOICE_COPY } from './voice-copy';
 
 /** Which words say why hold to talk cannot start (recognition-policy.ts refusalCopyKey). */
 export type RecognitionCopyKey = 'androidTooOld' | 'notOnPhone' | 'download';
@@ -196,7 +197,8 @@ export const VOICE_SETTINGS_COPY = Object.freeze({
   back: 'Back',
   eyebrow: 'Settings',
   title: 'Voice',
-  lede: 'How Auto sounds when it answers you out loud. It uses the voices on this phone.',
+  /** By platform: Android's engine may speak with its default voice (voice-copy.android.ts). */
+  lede: PHONE_VOICE_COPY.lede,
   voiceSection: "Auto's voice",
   automatic: 'Automatic',
   automaticSummary: 'Best voice on this phone',

@@ -1,13 +1,11 @@
-// Where a Deliverable's file is loaded from, pure but for the client's headers (D-ONE-CLIENT). The
-// link is resolved the way the web's Open does (deliverable-open-button.tsx): preview_url, else
-// content_url; an http(s) link to another site stays a link (the system browser, and never with the
-// bearer), and anything else is an API route behind auth (/api/workspaces/{id}/files/raw?path=…),
-// loaded with the client's bearer and X-Workspace-ID, never opened in a browser. A workspace file's
-// content route answers JSON for the web's code viewer, so it becomes the same file's raw route
-// (the web's download.ts, M49): the phone always wants the bytes.
+// Where a Deliverable's file is loaded from, pure (D-ONE-CLIENT). The link is resolved the way the
+// web's Open does (deliverable-open-button.tsx): preview_url, else content_url; an http(s) link to
+// another site stays a link (the system browser, and never with the bearer), and anything else is
+// an API route behind auth (/api/workspaces/{id}/files/raw?path=…), downloaded through the client
+// (src/api/transfer.ts), never opened in a browser. A workspace file's content route answers JSON
+// for the web's code viewer, so it becomes the same file's raw route (the web's download.ts, M49):
+// the phone always wants the bytes.
 
-import type { ApiClient } from '../../api/client';
-import type { AuthHeaders } from '../../api/auth-headers';
 import { buildUrl, withoutTrailingSlash } from '../../api/url';
 import { CC_ROUTES } from '../routes';
 import type { ViewerFormat } from './file-kind';
@@ -20,9 +18,6 @@ export type FileLink =
   | { readonly kind: 'external'; readonly url: string };
 
 export type ApiFileLink = Extract<FileLink, { readonly kind: 'api' }>;
-
-/** What a native load (expo-file-system, React Native's Image) sends. */
-export type AuthenticatedRequest = { readonly url: string; readonly headers: AuthHeaders };
 
 const ABSOLUTE_HTTP = /^(https?:\/\/[^/?#]+)/i;
 /** Whitespace or a control character: not a link the server built. */
@@ -78,14 +73,6 @@ export function fileLink(href: string | null, apiUrl: string): FileLink | null {
   }
   const apiPath = link.startsWith('/') && !link.startsWith('//');
   return apiPath ? { kind: 'api', url: rawRoute(apiUrl, link) } : null;
-}
-
-/** The URL and the client's own bearer and workspace headers, for a load outside its fetch. */
-export async function authenticatedRequest(
-  client: ApiClient,
-  link: ApiFileLink,
-): Promise<AuthenticatedRequest> {
-  return { url: link.url, headers: await client.authHeaders() };
 }
 
 /**

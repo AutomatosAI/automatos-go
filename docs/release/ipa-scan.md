@@ -14,6 +14,22 @@ needed.
 
 Requirement R07 and owner step OT-R4 in [README.md](README.md).
 
+## Waiting for the next native build
+
+**16 Nov 2026, to correct at the next native build (not done yet).** The speech recognition usage
+string says "…using speech recognition on this iPhone." That is not always true. If a language
+chosen in Settings → Voice → I speak is not the iPhone's own, hold to talk starts without an
+on-device check. If that language's dictation model is not installed, iOS sends the audio to
+Apple's servers (`src/voice/quick-ask/recognition-policy.ts`, `recognitionPolicy`). Correcting the
+string is an `app.json` edit, which moves the fingerprint, so it waits for a build that is native
+anyway. Paste this as `NSSpeechRecognitionUsageDescription` in `app.json` (`ios.infoPlist`) and in
+[ios-usage-keys.json](ios-usage-keys.json) in the same change, because `permissions.test.ts`
+checks that the two match. Then update that key's `differences` entry and delete this section.
+
+```text
+Automatos Go turns what you say to Auto into text with Apple's speech recognition, on this iPhone when it can.
+```
+
 ## The rule
 
 **Scan every native build before it is first submitted.**

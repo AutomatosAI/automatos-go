@@ -18,7 +18,7 @@ import { useStepUp } from '../../step-up/use-step-up';
 import { useTokens } from '../../styles/theme';
 import { Button, Text } from '../../ui';
 import { tint } from '../../ui/paint';
-import { MARK_COLOURS } from '../lines';
+import { MARK_TONES } from '../lines';
 import { GRANT_COPY } from '../strings';
 import { grantRefusalText, type CardAccess } from './actions';
 import { ReadOnlyNote, RefusalText } from './CardNotes';
@@ -37,7 +37,7 @@ const PARAMS_TINT = 0.4;
 
 /** The card's state: a mark in Play's tones and its words, one element to screen readers. */
 function GrantStatusLine({ line }: { readonly line: GrantLine }) {
-  const { colours, spacing } = useTokens();
+  const { spacing } = useTokens();
   return (
     <View
       accessible
@@ -45,7 +45,7 @@ function GrantStatusLine({ line }: { readonly line: GrantLine }) {
       accessibilityLabel={line.text}
       style={[styles.row, { gap: spacing.space3 }]}
     >
-      <Text variant="mono" style={[styles.mark, { color: colours[MARK_COLOURS[line.tone]] }]}>
+      <Text variant="mono" tone={MARK_TONES[line.tone]} style={styles.mark}>
         {line.mark}
       </Text>
       <Text level={LINE_LEVEL} style={styles.fill}>

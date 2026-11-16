@@ -5,11 +5,11 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { DRESS_MIN_HEIGHT, PLAY_PILL_HEIGHT } from '../../styles/dress/dress';
+import { DRESS_MIN_HEIGHT, PLAY_PILL_HEIGHT } from '../../styles/tokens/controls';
 import { HUD_CORE } from '../../styles/hud/core/model';
 import type { KeyValueStorage } from '../../storage/encrypted-storage';
 import { MIN_TOUCH, hitSlopFor } from '../../ui/paint';
-import { PILL_HEIGHT } from '../../ui/variants';
+import { STUDIO_CONTROLS } from '../../styles/controls';
 import {
   languageSwitch,
   listeningLocale,
@@ -112,7 +112,7 @@ describe('a 44 pt target', () => {
 
   it('the pill is 44 pt wide and, with its slop, 44 pt tall in every style', () => {
     // Studio's, Play's and HUD's pill heights (styles/dress/dress.ts).
-    for (const minHeight of [PILL_HEIGHT, PLAY_PILL_HEIGHT, DRESS_MIN_HEIGHT]) {
+    for (const minHeight of [STUDIO_CONTROLS.pillMinHeight, PLAY_PILL_HEIGHT, DRESS_MIN_HEIGHT]) {
       const slop = hitSlopFor(minHeight);
       expect(minHeight + slop.top + slop.bottom, String(minHeight)).toBeGreaterThanOrEqual(
         MIN_TOUCH,

@@ -205,10 +205,13 @@ An http server adds a warning on the card. Once paired, a one-line "Unencrypted 
 {host}" bar sits above every signed-in screen while the server uses http
 ([app/(app)/_layout.tsx](../app/(app)/_layout.tsx)).
 
-The card also carries the data note: chats, files and reports stay on the server; the app itself
-sends crash reports to Automatos, checks Expo for app updates and, if the operator agrees, sends
-notifications through Expo and Apple or Google ([src/connect/strings.ts](../src/connect/strings.ts)).
-Crash reporting is not started on `main` yet; see "Known gaps".
+The card also carries the data note ([src/connect/strings.ts](../src/connect/strings.ts)): chats,
+files and reports are kept on the server, which passes what the person sends to the AI providers it
+uses (the consent sheet asks them to agree first, [src/consent/policy.ts](../src/consent/policy.ts));
+the app itself sends crash reports, scrubbed of the person's words, to Sentry for Automatos
+([src/observability/](../src/observability/), started in [app/_layout.tsx](../app/_layout.tsx)),
+checks Expo for app updates and, if the operator agrees, sends notifications through Expo and Apple
+or Google.
 
 ### 5. The code is exchanged for a token
 
@@ -243,9 +246,12 @@ How the phone reads a refusal:
 
 ### 6. The phone saves the pairing and switches
 
-[src/connect/switch.ts](../src/connect/switch.ts) clears the last server first: the query cache and
-its saved copy, the stored workspace id, the active provider and the consent memory. Then it saves
-the paired record to the keychain, and only then moves the current server. `AuthRoot` remounts on
+[src/connect/switch.ts](../src/connect/switch.ts) clears the last server first, with the one
+`clearUserData` every way out runs: the query cache and its saved copy, the stored workspace id, the
+active provider, the consent memory, the encrypted store but Light / Dark and the style, the
+person's files in the cache and their keychain items (the full list:
+[docs/release/privacy-facts.md](release/privacy-facts.md), "On the phone"). Then it saves the paired
+record to the keychain, and only then moves the current server. `AuthRoot` remounts on
 the device session with no `ClerkProvider`, and the gate opens the workspace (see "The gate" in
 [architecture.md](architecture.md)).
 
@@ -270,11 +276,33 @@ to be followed elsewhere is an error, so the token never goes to an address the 
 given. A phone paired with an http address that later starts redirecting to https stops
 connecting: pair it again, with the https address.
 
+**Files.** A file the phone keeps (a theme's fonts and mascot files, a Deliverable's file for the
+system viewer) is fetched through the same client and policy, never by the file system's own
+downloader, and written to the phone as it arrives, under a size cap
+([src/api/transfer.ts](../src/api/transfer.ts)). One route may answer with a redirect:
+`GET /api/documents/generated/{filename}`, with a `302` to a presigned storage address when the
+server keeps the document in storage. For that route only, the phone follows the one redirect, to
+an `https` address only, and sends nothing with it: no bearer, no `X-Workspace-ID`, no cookie
+([src/api/transfer-request.ts](../src/api/transfer-request.ts)). A second redirect, or one to an
+`http` address, fails the download as any other redirect does. A server whose storage presigns
+`http` addresses (a local storage service without TLS) cannot hand the phone those documents.
+
+**Streams.** Once a chat turn or the live events have answered, the stream ends, as an
+interrupted reply, when nothing has come for 15 minutes (a chat turn, which has no heartbeat) or
+90 seconds (the live events, whose heartbeat comes every 20 seconds), when it has sent more than
+32 Mi characters, or when one line or event is over 1 Mi characters
+([src/api/config.ts](../src/api/config.ts)).
+
+**Limits.** A `429` is the limit kind: the phone reads its `Retry-After` (seconds, or an HTTP
+date) and says roughly when to try again; a wait it cannot read, or one over a day, is "later".
+
 **The token.** `amd_` plus `token_urlsafe(32)`. The server stores only its hash. On the phone it
 lives in one keychain item, `automatos.paired-server.v1`, with
-`AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY`: never in a backup, never on another phone, readable after
-the first unlock. It is never in MMKV, the query cache, a log or Sentry
-([src/connect/device-store.ts](../src/connect/device-store.ts)). The record is written to the
+`AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY`: readable after the first unlock, never in iCloud Keychain
+and never readable on another phone. An encrypted backup of the iPhone holds it, and restoring that
+backup onto the same iPhone brings it back; on another phone it cannot be read. On Android,
+`allowBackup` is false in app.json, so no backup carries it. It is never in MMKV, the query cache,
+a log or Sentry ([src/connect/device-store.ts](../src/connect/device-store.ts)). The record is written to the
 keychain before the token is used.
 
 **What a paired phone may do.** On the server an `amd_` bearer is resolved before Clerk
@@ -285,15 +313,20 @@ workspace is 403. A removed member or a deactivated user gets a plain 401 (`core
 SaaS refuses every `amd_` bearer.
 
 **The install id.** 16 random bytes in its own keychain item, `automatos.install-id.v1`, kept
-outside the key registry so sign-out and the reinstall wipe leave it
-([src/connect/install-id.ts](../src/connect/install-id.ts)). Pairing again with the same person and
-install id keeps the same row in Studio: a new token, the old tokens dead.
+outside the key registry on purpose, so sign-out and the reinstall wipe leave it: on an iPhone it
+survives deleting and reinstalling the app ([src/connect/install-id.ts](../src/connect/install-id.ts)).
+It is sent at pairing (`install_id` in `POST /api/v1/mobile/pair`,
+[src/connect/api.ts](../src/connect/api.ts)) and at every push registration
+([src/push/api.ts](../src/push/api.ts)). Pairing again with the same person and install id keeps
+the same row in Studio: a new token, the old tokens dead.
 
 **The reinstall wipe.** iOS keeps keychain items after the app is deleted. A fresh install finds
 no marker in its own small MMKV file and deletes every keychain item in the registry, and the paired
 record once more by name, before anything reads the keychain
 ([src/connect/install-marker.ts](../src/connect/install-marker.ts),
-[src/session/InstallGate.tsx](../src/session/InstallGate.tsx)).
+[src/session/InstallGate.tsx](../src/session/InstallGate.tsx)). So a reinstalled app starts signed
+out and unpaired, but not wholly new: the install id stays (above), and the next pairing or push
+registration sends the same one.
 
 ### Token rotation
 
@@ -342,9 +375,6 @@ while running. The way out is **Remove this phone and forget this server**.
 - **`FRONTEND_URL` at its default.** The mint script warns only about a loopback API address, not
   about `FRONTEND_URL` left at `localhost`, which leaves the phone's Studio links on a page the phone
   cannot load. Pairing itself still works: the app ignores the link's host.
-- **Crash reports.** The confirm card's data note says the app sends crash reports, but Sentry is
-  not started on `main`: only [src/lib/env.ts](../src/lib/env.ts) reads `EXPO_PUBLIC_SENTRY_DSN`.
-  Crash reporting is in the release wave's kit (A7).
 
 ## Related
 

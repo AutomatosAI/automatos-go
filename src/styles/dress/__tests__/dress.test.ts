@@ -9,10 +9,9 @@ import { describe, expect, it } from 'vitest';
 
 import { AA_TEXT, contrastRatio } from '../../../core/web/lib/look-kit/contrast';
 import { rgba } from '../../../core/web/lib/look-kit/css';
+import { STUDIO_CONTROLS } from '../../controls';
 import {
   BUTTON_PAINTS,
-  BUTTON_SIZES,
-  PILL_HEIGHT,
   buttonPaint,
   cardPaint,
   pillPaint,
@@ -26,14 +25,8 @@ import { PLAY_CHIP_LINE_ALPHA, PLAY_OUTLINE_ALPHA } from '../../tokens/dress-col
 import { HUD_BRACKET } from '../../tokens/hud';
 import { STYLE_RADII } from '../../tokens/radii';
 import { MIN_TEXT_SIZE, TYPE_SPECS } from '../../type';
-import {
-  DRESS_MIN_HEIGHT,
-  HUD_PANEL_BUTTON_HEIGHT,
-  PLAY_PILL_HEIGHT,
-  bracketBars,
-  dressOf,
-  type Dress,
-} from '../dress';
+import { DRESS_MIN_HEIGHT, HUD_PANEL_BUTTON_HEIGHT, PLAY_PILL_HEIGHT } from '../../tokens/controls';
+import { bracketBars, dressOf, type Dress } from '../dress';
 import { HUD_SELECTED_BORDER } from '../paints';
 import {
   ALL_STYLES,
@@ -147,12 +140,15 @@ describe('Studio: exactly what the foundation draws', () => {
     expect(dress.button.radius).toBe(STYLE_RADII.studio.control);
     expect(dress.sheetRadius).toBe(14);
     expect(dress.grabberRadius).toBe(GRABBER.radius);
-    for (const metrics of Object.values(BUTTON_SIZES)) {
+    for (const metrics of Object.values(STUDIO_CONTROLS.button)) {
       expect(Math.max(metrics.height, dress.button.minHeight)).toBe(metrics.height);
       expect(Math.max(metrics.height, dress.button.panelMinHeight)).toBe(metrics.height);
     }
     expect(dress.button.labelSize).toBeNull();
-    expect(dress.pill).toMatchObject({ radius: STYLE_RADII.studio.pill, minHeight: PILL_HEIGHT });
+    expect(dress.pill).toMatchObject({
+      radius: STYLE_RADII.studio.pill,
+      minHeight: STUDIO_CONTROLS.pillMinHeight,
+    });
     expect(dress.pill.paddingX).toBe('space4');
   });
 
@@ -290,7 +286,7 @@ describe('the 11 pt floor (D38)', () => {
   });
 
   it('keeps every Studio-sized button label at or over 11', () => {
-    for (const metrics of Object.values(BUTTON_SIZES)) {
+    for (const metrics of Object.values(STUDIO_CONTROLS.button)) {
       const role = `body${metrics.level}` as keyof typeof TYPE_SPECS;
       expect(TYPE_SPECS[role].size).toBeGreaterThanOrEqual(MIN_TEXT_SIZE);
     }

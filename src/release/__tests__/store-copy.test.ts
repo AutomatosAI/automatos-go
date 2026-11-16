@@ -150,7 +150,9 @@ const SAMPLES: readonly (readonly [CopyRule, readonly string[], readonly string[
       'Your chats stay on your server',
     ],
     [
-      "Your chats, files and reports stay on {server}. Automatos Go itself sends crash reports to Automatos, checks Expo for app updates and, if this server's operator agrees, sends notifications through Expo and Apple or Google.",
+      // the pairing card's data note as corrected 16 Nov (src/connect/strings.ts): 'kept on', and
+      // what goes to the AI providers and to Sentry, in place of 'stay on'
+      "Your chats, files and reports are kept on {server}. To answer you, it passes what you send to the AI providers it uses, and the app asks you to agree to that first. Automatos Go itself sends crash reports (never your messages) to Sentry for Automatos, checks Expo for app updates and, if this server's operator agrees, sends notifications through Expo and Apple or Google.",
       'Leave this server',
     ],
   ],

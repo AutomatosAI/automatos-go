@@ -76,6 +76,7 @@ export function speech(overrides: Partial<SpeechFacts> = {}): SpeechFacts {
     verdict: GRANTED,
     policy: Object.freeze({ kind: 'ready', options: onDeviceOptions(EN_GB) }),
     locale: EN_GB,
+    elsewhereNote: null,
     ...overrides,
   });
 }
@@ -95,6 +96,7 @@ export function ports(overrides: Partial<ClientPorts> = {}): ClientPorts {
     recognitionPolicy: async (locale: string) =>
       Object.freeze({ kind: 'ready', options: onDeviceOptions(locale) }),
     listeningLocale: () => EN_GB,
+    languageNote: () => null,
     voiceSource: () => 'server' as const,
     serverVoices: async () => true,
     ...overrides,

@@ -8,9 +8,9 @@
 import { RefreshControl, ScrollView } from 'react-native';
 
 import { useTokens } from '../../styles/theme';
-import { ErrorState, LoadingState } from '../../ui';
+import { ErrorState, LoadingState, OutOfDateNote } from '../../ui';
 import { TabFrame, TabHead } from '../shell/TabHead';
-import { CALENDAR_COPY } from '../strings';
+import { CALENDAR_COPY, SHELL_COPY } from '../strings';
 import { CALENDAR_LAYOUT } from './chrome';
 import { DayStrip } from './DayStrip';
 import { DayView } from './DayView';
@@ -55,6 +55,7 @@ export function CalendarTab() {
       >
         <TabHead bleed={spacing[CALENDAR_LAYOUT.paddingX]} />
         <DayStrip cells={view.strip} onChoose={choose} />
+        {query.isRefetchError ? <OutOfDateNote words={SHELL_COPY.outOfDate} /> : null}
         <DayView
           view={view}
           onOpenRow={(row) => sheet.open({ itemId: row.itemId, rowKey: row.key })}

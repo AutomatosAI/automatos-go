@@ -8,6 +8,9 @@ import { describe, expect, it } from 'vitest';
 
 import { ApiError } from '../../api/errors';
 import { NO_ACTIONS, NOTHING_ON_THE_BOARD } from '../../core/web/lib/chat/receipts';
+import { tokensFor } from '../../styles/tokens';
+import { toneColour } from '../../ui/tone-colour';
+import { TEXT_TONES } from '../../ui/variants';
 import { createThread, type ThreadState } from '../controller/thread';
 import type { ChatFile } from '../request';
 import { markdownBlocks } from '../markdown/blocks';
@@ -15,6 +18,8 @@ import type { StoredMessage } from '../schemas';
 import {
   LIVE_AUTO_KEY,
   LIVE_USER_KEY,
+  MARK_COLOURS,
+  MARK_TONES,
   WORKING_KEY,
   answerMarkdown,
   receiptsView,
@@ -307,5 +312,21 @@ describe('scrolling and motion', () => {
   it('stops the working pulse under Reduce Motion', () => {
     expect(workingMotion(true)).toEqual({ pulse: false });
     expect(workingMotion(false)).toEqual({ pulse: true });
+  });
+});
+
+describe('a mark drawn as text (rule 2.1)', () => {
+  const tones = Object.keys(MARK_COLOURS) as (keyof typeof MARK_COLOURS)[];
+
+  it("takes the tone whose token is the mark's own, for every line tone", () => {
+    expect(Object.keys(MARK_TONES).sort()).toEqual([...tones].sort());
+    for (const tone of tones) expect(TEXT_TONES[MARK_TONES[tone]], tone).toBe(MARK_COLOURS[tone]);
+  });
+
+  it('reads the accent through the lookup: Candy, whose accent is its chip, draws primary', () => {
+    const candy = tokensFor('candy', 'light').colours;
+    const studio = tokensFor('studio', 'light').colours;
+    expect(toneColour(candy, MARK_TONES.running)).toBe('primary');
+    expect(toneColour(studio, MARK_TONES.running)).toBe(MARK_COLOURS.running);
   });
 });

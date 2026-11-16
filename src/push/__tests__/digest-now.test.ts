@@ -119,7 +119,7 @@ describe('what the answer becomes', () => {
   });
 
   it('429 with no usable retry_after_seconds still waits, with no number', async () => {
-    for (const seconds of ['240', -5, null, undefined]) {
+    for (const seconds of ['240', -5, null, undefined, 1e9, 86_401]) {
       await expect(outcomeFor(429, RATE_LIMITED(seconds))).resolves.toEqual({
         kind: 'rate_limited',
         retryAfterSeconds: null,
@@ -130,6 +130,13 @@ describe('what the answer becomes', () => {
       kind: 'rate_limited',
       retryAfterSeconds: null,
     });
+  });
+
+  it('bounds a wait on an error made anywhere, as the limit kind does', () => {
+    const hostile = new ApiError('server', { status: 429, retryAfterSeconds: 1e12 });
+    expect(outcomeOfError(hostile)).toEqual({ kind: 'rate_limited', retryAfterSeconds: null });
+    const fair = new ApiError('limit', { status: 429, retryAfterSeconds: 120 });
+    expect(outcomeOfError(fair)).toEqual({ kind: 'rate_limited', retryAfterSeconds: 120 });
   });
 
   it('503 digest_unavailable: unavailable', async () => {

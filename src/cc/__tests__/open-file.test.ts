@@ -1,153 +1,248 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createApiClient } from '../../api/client';
 import { ApiError } from '../../api/errors';
+import { memoryFs } from '../../api/__tests__/fake-file-system';
+import {
+  SERVER,
+  fakeTransport,
+  partsReply,
+  reply,
+  type FakeResponse,
+} from '../../api/__tests__/fake-transport';
+import type { TransportRequest } from '../../api/transport-types';
 
-// US-013b: open-file.ts over the native modules, replaced (they run on a device only): the copy is
-// downloaded into the cache folder with the request's headers, shown by the viewer, deleted when
-// the viewer closes, and the folder is emptied before every download.
-const native = vi.hoisted(() => {
-  const files = new Set<string>();
-  const calls: { op: string; uri: string; options?: unknown }[] = [];
-  const state = {
-    download: (_url: string): Promise<void> => Promise.resolve(),
-    open: (_uri: string): Promise<void> => Promise.resolve(),
-    dismiss: null as (() => void) | null,
-  };
-  const join = (parts: readonly unknown[]) =>
-    parts
-      .map((part) => (typeof part === 'string' ? part : (part as { uri: string }).uri))
-      .join('/');
-  class FakeDirectory {
-    readonly uri: string;
-    constructor(...parts: unknown[]) {
-      this.uri = join(parts);
-    }
-    get exists() {
-      return [...files].some((uri) => uri.startsWith(`${this.uri}/`)) || files.has(this.uri);
-    }
-    create(options: unknown) {
-      calls.push({ op: 'mkdir', uri: this.uri, options });
-      files.add(this.uri);
-    }
-    delete() {
-      calls.push({ op: 'rmdir', uri: this.uri });
-      [...files].filter((uri) => uri.startsWith(this.uri)).forEach((uri) => files.delete(uri));
-    }
-  }
-  class FakeFile {
-    readonly uri: string;
-    constructor(...parts: unknown[]) {
-      this.uri = join(parts);
-    }
-    get exists() {
-      return files.has(this.uri);
-    }
-    delete() {
-      calls.push({ op: 'rm', uri: this.uri });
-      files.delete(this.uri);
-    }
-    static async downloadFileAsync(url: string, to: FakeFile, options: unknown) {
-      calls.push({ op: 'download', uri: to.uri, options: { url, ...(options as object) } });
-      await state.download(url);
-      files.add(to.uri);
-      return new FakeFile(to.uri);
-    }
-  }
-  return { files, calls, state, FakeDirectory, FakeFile, cache: { uri: 'file:///cache' } };
-});
-
-vi.mock('expo-file-system', () => ({
-  Directory: native.FakeDirectory,
-  File: native.FakeFile,
-  Paths: { cache: native.cache },
+// US-013b: open-file.ts over expo-file-system in memory, the viewer module replaced (they run on a
+// device only) and the fake transport: the copy is downloaded through the transfer module with
+// the client's bearer and workspace into the cache folder, shown by the viewer, deleted when the
+// viewer closes, and the folder is emptied before every download. Only a generated document's
+// route follows a redirect, once, to storage, with nothing of the session (T15).
+const viewer = vi.hoisted(() => ({
+  calls: [] as { uri: string; displayName?: string }[],
+  open: (_uri: string): Promise<void> => Promise.resolve(),
+  dismiss: null as (() => void) | null,
 }));
+
+vi.mock(
+  'expo-file-system',
+  async () => (await import('../../api/__tests__/fake-file-system')).fakeExpoFileSystem,
+);
 
 vi.mock('react-native-file-viewer-turbo', () => ({
   open: async (uri: string, options: { displayName?: string; onDismiss?: () => void }) => {
-    native.calls.push({ op: 'view', uri, options: { displayName: options.displayName } });
-    await native.state.open(uri);
-    native.state.dismiss = options.onDismiss ?? null;
+    viewer.calls.push({ uri, displayName: options.displayName });
+    await viewer.open(uri);
+    viewer.dismiss = options.onDismiss ?? null;
   },
 }));
 
-const { VIEWER_FOLDER, ViewerError, clearViewerFiles, downloadError, openInSystemViewer } =
-  await import('../deliverables/open-file');
+const {
+  VIEWER_FOLDER,
+  ViewerError,
+  clearViewerFiles,
+  downloadError,
+  openInSystemViewer,
+  redirectsToStorage,
+} = await import('../deliverables/open-file');
 
 const FOLDER = `file:///cache/${VIEWER_FOLDER}`;
-const FILE_URL = 'https://api.example.test/api/workspaces/w/files/raw?path=q3.pdf';
-const HEADERS = { Authorization: 'Bearer tok', 'X-Workspace-ID': 'w' };
-const FILE = { request: { url: FILE_URL, headers: HEADERS }, fileName: 'q3.pdf', title: 'Q3 plan' };
+const RAW_URL = `${SERVER.apiUrl}/api/workspaces/w/files/raw?path=q3.pdf`;
+const GENERATED_URL = `${SERVER.apiUrl}/api/documents/generated/q3.pdf`;
+const STORAGE = 'https://bucket.storage.example.test/w/q3.pdf?X-Amz-Signature=abc';
+const PDF = new TextEncoder().encode('%PDF-1.7');
+
+const server = {
+  answers: [] as ((request: TransportRequest) => FakeResponse)[],
+};
+const transport = fakeTransport((request) => {
+  const answer = server.answers.shift();
+  if (!answer) throw new Error('an unexpected request');
+  return answer(request);
+});
+const client = createApiClient({
+  server: SERVER,
+  getToken: async () => 'tok',
+  getWorkspaceId: () => 'w',
+  transport,
+});
+const file = (url = RAW_URL) => ({ client, url, fileName: 'q3.pdf', title: 'Q3 plan' });
+const pdf = () => partsReply(200, [PDF]);
+
+beforeEach(() => {
+  memoryFs.reset();
+  transport.calls.length = 0;
+  server.answers = [pdf];
+  viewer.calls.length = 0;
+  viewer.open = () => Promise.resolve();
+  viewer.dismiss = null;
+});
 
 describe('the system viewer', () => {
-  beforeEach(() => {
-    native.files.clear();
-    native.calls.length = 0;
-    native.state.download = () => Promise.resolve();
-    native.state.open = () => Promise.resolve();
-    native.state.dismiss = null;
-  });
-
   it("downloads into the cache folder with the client's headers, then shows the copy", async () => {
-    await openInSystemViewer(FILE);
-    expect(native.calls.filter((call) => call.op !== 'rmdir')).toEqual([
-      { op: 'mkdir', uri: FOLDER, options: { intermediates: true, idempotent: true } },
-      {
-        op: 'download',
-        uri: `${FOLDER}/q3.pdf`,
-        options: { url: FILE_URL, headers: HEADERS, idempotent: true },
-      },
-      { op: 'view', uri: `${FOLDER}/q3.pdf`, options: { displayName: 'Q3 plan' } },
-    ]);
-    expect(native.files.has(`${FOLDER}/q3.pdf`)).toBe(true);
+    await openInSystemViewer(file());
+    expect(transport.calls).toHaveLength(1);
+    expect(transport.calls[0]).toMatchObject({
+      url: RAW_URL,
+      method: 'GET',
+      headers: { Authorization: 'Bearer tok', 'X-Workspace-ID': 'w' },
+    });
+    expect(memoryFs.files.get(`${FOLDER}/q3.pdf`)).toEqual(PDF);
+    expect(viewer.calls).toEqual([{ uri: `${FOLDER}/q3.pdf`, displayName: 'Q3 plan' }]);
   });
 
   it('deletes the copy when the viewer closes', async () => {
-    await openInSystemViewer(FILE);
-    native.state.dismiss?.();
-    expect(native.files.has(`${FOLDER}/q3.pdf`)).toBe(false);
+    await openInSystemViewer(file());
+    viewer.dismiss?.();
+    expect(memoryFs.files.has(`${FOLDER}/q3.pdf`)).toBe(false);
   });
 
   it('empties the folder on the next open: a copy whose close was never reported goes', async () => {
-    native.files.add(`${FOLDER}/old.xlsx`);
-    await openInSystemViewer(FILE);
-    expect(native.files.has(`${FOLDER}/old.xlsx`)).toBe(false);
-    expect(native.calls[0]).toEqual({ op: 'rmdir', uri: FOLDER });
+    memoryFs.folders.add(FOLDER);
+    memoryFs.files.set(`${FOLDER}/old.xlsx`, new Uint8Array(3));
+    await openInSystemViewer(file());
+    expect(memoryFs.files.has(`${FOLDER}/old.xlsx`)).toBe(false);
+    expect(memoryFs.ops[0]).toBe(`rmdir ${FOLDER}`);
     clearViewerFiles();
-    expect(native.files.size).toBe(0);
+    expect(memoryFs.files.size).toBe(0);
   });
 
-  it("a refused download is the taxonomy's error, and nothing is shown", async () => {
-    native.state.download = () => Promise.reject(new Error('response has status 404'));
-    await expect(openInSystemViewer(FILE)).rejects.toMatchObject({
+  it("a refused download is the taxonomy's error, and nothing is shown or left", async () => {
+    server.answers = [() => reply(404, '{"detail":"File not found"}')];
+    await expect(openInSystemViewer(file())).rejects.toMatchObject({
       kind: 'not_found',
       status: 404,
     });
-    expect(native.calls.some((call) => call.op === 'view')).toBe(false);
+    expect(viewer.calls).toEqual([]);
+    expect(memoryFs.files.size).toBe(0);
   });
 
   it('a viewer that cannot show the file deletes the copy and says so', async () => {
-    native.state.open = () => Promise.reject(new Error('No app associated with this mime type'));
-    await expect(openInSystemViewer(FILE)).rejects.toBeInstanceOf(ViewerError);
-    expect(native.files.has(`${FOLDER}/q3.pdf`)).toBe(false);
+    viewer.open = () => Promise.reject(new Error('No app associated with this mime type'));
+    await expect(openInSystemViewer(file())).rejects.toBeInstanceOf(ViewerError);
+    expect(memoryFs.files.has(`${FOLDER}/q3.pdf`)).toBe(false);
+  });
+});
+
+describe('two opens at once', () => {
+  /** A body that sends its first part, then waits until the request is aborted, as fetch's does. */
+  function stalling(request: TransportRequest): FakeResponse {
+    const parts = async function* () {
+      yield new TextEncoder().encode('%PDF-first');
+      await new Promise<never>((_, reject) => {
+        const fail = () => reject(Object.assign(new Error('Aborted'), { name: 'AbortError' }));
+        if (request.signal.aborted) fail();
+        else request.signal.addEventListener('abort', fail, { once: true });
+      });
+    };
+    return { ...reply(200), parts };
+  }
+
+  const partials = () => [...memoryFs.files.keys()].filter((uri) => uri.endsWith('.partial'));
+
+  it('the same file tapped twice: the first download stops, the second shows the one copy', async () => {
+    server.answers = [stalling, pdf];
+    const first = openInSystemViewer(file());
+    await vi.waitFor(() => expect(partials()).toHaveLength(1));
+    const second = openInSystemViewer(file());
+    await expect(first).rejects.toMatchObject({ name: 'AbortError' });
+    await second;
+    expect(transport.calls).toHaveLength(2);
+    expect(transport.calls[0]?.signal.aborted).toBe(true);
+    expect(memoryFs.files.get(`${FOLDER}/q3.pdf`)).toEqual(PDF);
+    expect(partials()).toEqual([]);
+    expect(viewer.calls).toEqual([{ uri: `${FOLDER}/q3.pdf`, displayName: 'Q3 plan' }]);
+  });
+
+  it('a second file opened while the first downloads: only the second lands and is shown', async () => {
+    server.answers = [stalling, pdf];
+    const first = openInSystemViewer(file());
+    await vi.waitFor(() => expect(partials()).toHaveLength(1));
+    const other = { ...file(GENERATED_URL), fileName: 'budget.pdf', title: 'Budget' };
+    const second = openInSystemViewer(other);
+    await expect(first).rejects.toMatchObject({ name: 'AbortError' });
+    await second;
+    expect([...memoryFs.files.keys()]).toEqual([`${FOLDER}/budget.pdf`]);
+    expect(viewer.calls).toEqual([{ uri: `${FOLDER}/budget.pdf`, displayName: 'Budget' }]);
+  });
+
+  it('three quick opens: only the last one downloads after the first is stopped', async () => {
+    server.answers = [stalling, pdf];
+    const first = openInSystemViewer(file());
+    await vi.waitFor(() => expect(partials()).toHaveLength(1));
+    const second = openInSystemViewer(file());
+    const third = openInSystemViewer({ ...file(), fileName: 'q4.pdf', title: 'Q4' });
+    await expect(first).rejects.toMatchObject({ name: 'AbortError' });
+    await expect(second).rejects.toMatchObject({ name: 'AbortError' });
+    await third;
+    expect(transport.calls).toHaveLength(2);
+    expect([...memoryFs.files.keys()]).toEqual([`${FOLDER}/q4.pdf`]);
+  });
+});
+
+describe('a redirect on the way to the file', () => {
+  const toStorage = () => reply(302, '', { Location: STORAGE });
+
+  it("a generated document's redirect to storage is followed once, with nothing of the session", async () => {
+    server.answers = [toStorage, pdf];
+    await openInSystemViewer(file(GENERATED_URL));
+    expect(transport.calls.map((call) => call.url)).toEqual([GENERATED_URL, STORAGE]);
+    expect(transport.calls[1]?.headers).toEqual({});
+    expect(memoryFs.files.get(`${FOLDER}/q3.pdf`)).toEqual(PDF);
+  });
+
+  it('any other route that redirects is refused, and nothing goes to the address', async () => {
+    server.answers = [toStorage];
+    await expect(openInSystemViewer(file())).rejects.toMatchObject({ kind: 'server', status: 302 });
+    expect(transport.calls.map((call) => call.url)).toEqual([RAW_URL]);
+    expect(viewer.calls).toEqual([]);
+  });
+
+  it('never marks a name that could lead out of the route: it is then an ordinary download', () => {
+    const route = `${SERVER.apiUrl}/api/documents/generated/`;
+    for (const name of [
+      '../x',
+      '..',
+      'a..b.pdf',
+      '%2e%2e/x',
+      '%2E%2e%2Fx',
+      'x%2fy.pdf',
+      'x%5Cy.pdf',
+      'x\\y.pdf',
+      'sub/q3.pdf',
+      '',
+      '?x=1',
+    ]) {
+      expect(redirectsToStorage(SERVER.apiUrl, `${route}${name}`), name).toBe(false);
+    }
+    expect(redirectsToStorage(SERVER.apiUrl, `${route}q3.pdf?download=1`)).toBe(true);
+    expect(redirectsToStorage(SERVER.apiUrl, `${route}Q3 plan-v2.pdf`)).toBe(true);
+  });
+
+  it('an unmarked generated path that redirects is refused, and nothing goes to the address', async () => {
+    server.answers = [() => reply(302, '', { Location: STORAGE })];
+    const odd = `${SERVER.apiUrl}/api/documents/generated/../x.pdf`;
+    await expect(openInSystemViewer(file(odd))).rejects.toMatchObject({
+      kind: 'server',
+      status: 302,
+    });
+    expect(transport.calls.map((call) => call.url)).toEqual([odd]);
+  });
+
+  it('knows the generated route by its path on this server only', () => {
+    expect(redirectsToStorage(SERVER.apiUrl, GENERATED_URL)).toBe(true);
+    expect(redirectsToStorage(`${SERVER.apiUrl}/`, GENERATED_URL.toUpperCase())).toBe(false);
+    expect(redirectsToStorage(SERVER.apiUrl, RAW_URL)).toBe(false);
+    expect(
+      redirectsToStorage(SERVER.apiUrl, 'https://elsewhere.example.test/api/documents/generated/x'),
+    ).toBe(false);
   });
 });
 
 describe('downloadError', () => {
-  it("reads the status from either platform's words", () => {
-    expect(downloadError(new Error('response has status 401'))).toMatchObject({ kind: 'auth' });
-    expect(downloadError(new Error('response has status: 403'))).toMatchObject({
-      kind: 'forbidden',
-      status: 403,
-    });
-    expect(downloadError(new Error('response has status 500'))).toMatchObject({ kind: 'server' });
-  });
-
-  it('anything else is the network; an ApiError stays itself', () => {
-    expect(
-      downloadError(new Error('The Internet connection appears to be offline.')),
-    ).toMatchObject({ kind: 'network' });
-    expect(downloadError('no file url')).toMatchObject({ kind: 'network' });
+  it("keeps the client's error, and calls anything else the network", () => {
     const own = new ApiError('auth');
     expect(downloadError(own)).toBe(own);
+    expect(downloadError(new Error('no space left on device'))).toMatchObject({ kind: 'network' });
+    expect(downloadError('no file url')).toMatchObject({ kind: 'network' });
   });
 });

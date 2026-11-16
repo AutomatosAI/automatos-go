@@ -21,7 +21,8 @@ import { CANDY_GLOW, candyGlowAlpha, innerRadius, type CandyVars } from '../../t
 import { STUDIO_RADII } from '../../tokens/studio';
 import { CANDY_MIN, CANDY_STEPS } from '../../typeface/candy-type';
 import { CANDY_LINE, CSS_BLUR_PER_SHADOW_RADIUS, candyShadowLayers } from '../candy-paints';
-import { CANDY_EDGE_ACTION_HEIGHT, CANDY_ROW_HEIGHT, DRESS_MIN_HEIGHT, dressOf } from '../dress';
+import { DRESS_MIN_HEIGHT } from '../../tokens/controls';
+import { CANDY_EDGE_ACTION_HEIGHT, CANDY_ROW_HEIGHT, dressOf } from '../dress';
 import type { Paint } from '../paints';
 import { ALL_STYLES, CANDY, CANDY_STYLES } from './fixtures';
 

@@ -1,13 +1,16 @@
 // The primitives' logic, pure (PRD-001 §4.11, K5): each variant, size and state names token keys,
 // and these functions turn them into the values a component paints with, so src/ui/*.tsx only
-// wires. Sizes and paints follow the handoff (README 'Design Tokens' and the design system's
-// studio.css: at-btn, cc-filter-pill, cc-seg, at-input, the reason chip, the count badge). Status
-// words for the board are the web's own (STATUS_CONFIG); every colour status carries one (§4.6).
+// wires. Paints follow the handoff (README 'Design Tokens' and the design system's studio.css:
+// at-btn, cc-filter-pill, cc-seg, at-input, the reason chip, the count badge). The controls' sizes
+// are the style's (styles/controls.ts, rule 3.5): a primitive reads them from useStyle().controls.
+// Status words for the board are the web's own (STATUS_CONFIG); every colour status carries one
+// (§4.6).
 
 import { userMessage, isApiError, type ApiErrorKind } from '../api/errors';
 import { STATUS_CONFIG, type BoardStatus } from '../core/web/types/board';
+import type { SegmentMetrics } from '../styles/controls';
 import { TYPE_FAMILIES, fontFace } from '../styles/fonts';
-import type { ColourName, Colours, SpaceName } from '../styles/tokens';
+import type { ColourName, Colours } from '../styles/tokens';
 import {
   specsOf,
   toTypeStyle,
@@ -17,7 +20,7 @@ import {
   type TypeStyle,
 } from '../styles/type';
 import { accentInk, markColour } from './accent';
-import { DISABLED_OPACITY, MIN_TOUCH, joinLabel, paint, tint, type ColourKey } from './paint';
+import { DISABLED_OPACITY, joinLabel, paint, tint, type ColourKey } from './paint';
 import { UI_COPY } from './strings';
 
 // ── Text ────────────────────────────────────────────────────────────────────────────────────
@@ -25,7 +28,7 @@ import { UI_COPY } from './strings';
 export type TextVariant = 'title' | 'body' | 'mono' | 'eyebrow' | 'thread';
 export type TextLevel = 1 | 2 | 3 | 4 | 5 | 6;
 export type TextTone =
-  'default' | 'muted' | 'subtle' | 'accent' | 'success' | 'info' | 'warning' | 'inverse';
+  'default' | 'muted' | 'subtle' | 'accent' | 'success' | 'info' | 'warning' | 'danger' | 'inverse';
 
 const TITLES = ['title1', 'title2', 'title3', 'title4', 'title5', 'title6'] as const;
 const BODIES = ['body1', 'body2', 'body3', 'body4', 'body5', 'body6'] as const;
@@ -60,6 +63,7 @@ export const TEXT_TONES: Readonly<Record<TextTone, ColourName>> = Object.freeze(
   success: 'olive',
   info: 'navy',
   warning: 'warnInk',
+  danger: 'destructive',
   inverse: 'primaryForeground',
 });
 
@@ -91,8 +95,7 @@ export function textFace(
 // ── Buttons ─────────────────────────────────────────────────────────────────────────────────
 
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost';
-export type ButtonSize = 'sm' | 'md';
-export type IconButtonSize = 'sm' | 'md' | 'lg';
+export type { ButtonSize, IconButtonSize } from '../styles/controls';
 
 type Paint = {
   readonly background: ColourKey;
@@ -156,31 +159,8 @@ export function buttonPaint(
   };
 }
 
-export type ButtonMetrics = {
-  readonly height: number;
-  readonly paddingX: SpaceName;
-  readonly gap: SpaceName;
-  /** The label's Body level: textRole('body', level). */
-  readonly level: TextLevel;
-  readonly iconSize: number;
-};
-
-/** at-btn (40 tall, 14 pt) and at-btn--xs / cc-btn (30 tall, 12 pt); labels at Geist 500. */
-export const BUTTON_SIZES: Readonly<Record<ButtonSize, ButtonMetrics>> = Object.freeze({
-  sm: { height: 30, paddingX: 'space5', gap: 'space2', level: 5, iconSize: 13 },
-  md: { height: 40, paddingX: 'space7', gap: 'space2', level: 1, iconSize: 16 },
-});
-
+/** A button's label at Geist 500. */
 export const BUTTON_LABEL_WEIGHT = 500;
-
-/** 30 (at-btn--xs icon), 36 (the header's buttons) and 42 (the composer's round send). */
-export const ICON_BUTTON_SIZES: Readonly<
-  Record<IconButtonSize, { readonly box: number; readonly icon: number }>
-> = Object.freeze({
-  sm: { box: 30, icon: 13 },
-  md: { box: 36, icon: 16 },
-  lg: { box: 42, icon: 18 },
-});
 
 /** at-card at rest; pressed takes the handoff's hover: --cc-hover ground, --cc-hover-border. */
 export function cardPaint(
@@ -209,7 +189,6 @@ export function pillPaint(
   };
 }
 
-export const PILL_HEIGHT = 28;
 export const DOT_SIZE = 7;
 export const PILL_COUNT_OPACITY = 0.75;
 
@@ -224,11 +203,12 @@ export function segmentPaint(
   };
 }
 
-export const SEGMENT_TRACK_INSET = 3;
-export const SEGMENT_GAP = 2;
-export const SEGMENT_PADDING_Y = 5;
-/** A segment's least height: with the track's inset as its slop, the 44 pt touch in every style. */
-export const SEGMENT_MIN_HEIGHT = MIN_TOUCH - 2 * SEGMENT_TRACK_INSET;
+export type SegmentSlop = { readonly top: number; readonly bottom: number };
+
+/** A segment's slop: the track's inset above and below it, all it has (a slop past it is lost). */
+export function segmentSlop({ trackInset }: Pick<SegmentMetrics, 'trackInset'>): SegmentSlop {
+  return { top: trackInset, bottom: trackInset };
+}
 
 export type Tone = 'accent' | 'success' | 'warning' | 'info' | 'muted';
 
@@ -309,16 +289,6 @@ export function countPhrase(count: number, forms: PluralForms): string {
   return `${count} ${pluralForm(count, forms)}`;
 }
 
-/**
- * The Command Centre button (handoff §1 Header; since D73 HUD's, A5): 36 pt high, a 15 pt icon,
- * 12 pt label.
- */
-export const COMMAND_CENTRE_BUTTON = Object.freeze({
-  height: ICON_BUTTON_SIZES.md.box,
-  iconSize: 15,
-  level: 5 as TextLevel,
-});
-
 /** 'Command Centre', or 'Command Centre, 6 need you': the badge inside says nothing on its own. */
 export function commandCentreLabel(total: number): string {
   const count = badgeText(total) === null ? null : countPhrase(Math.floor(total), UI_COPY.needYou);
@@ -327,8 +297,6 @@ export function commandCentreLabel(total: number): string {
 
 // ── Fields and errors ───────────────────────────────────────────────────────────────────────
 
-export const FIELD_HEIGHT = 40;
-export const FIELD_MULTILINE_MIN_HEIGHT = 80;
 /** The handoff's focus ring: olive (--ring), 3 pt at 18 %. */
 export const FOCUS_RING = Object.freeze({ width: 3, alpha: 0.18 });
 
