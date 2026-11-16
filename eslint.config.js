@@ -2,11 +2,12 @@
 // guards (PRD-001 §4.11, US-004c): no console.* outside src/lib/logger.ts; the network only
 // through src/api/ (fetch, XMLHttpRequest, WebSocket, EventSource and navigator.sendBeacon;
 // expo/fetch only in src/api/transport.ts; no other HTTP client anywhere; no picture fetched by
-// address by react-native-svg); never a web view (react-native-webview, DOM components and
-// their 'use dom' directive); the size limits; no colour literals outside the tokens; a pure
-// hand-written core. A guard cannot be switched off from inside a file: inline eslint comments
-// are not read (docs/app-standard.md rules 13.2, 13.5 and 13.8).
-// scripts/__tests__/eslint-rules*.test.ts prove each guard fires where it should.
+// address by react-native-svg; the file system's own downloads and uploads only in src/api/);
+// never a web view (react-native-webview, DOM components and their 'use dom' directive); the size
+// limits; no colour literals outside the tokens; a pure hand-written core. A guard cannot be
+// switched off from inside a file: inline eslint comments are not read (docs/app-standard.md
+// rules 13.2, 13.5 and 13.8). scripts/__tests__/eslint-rules*.test.ts prove each guard fires
+// where it should.
 const { builtinRules } = require('eslint/use-at-your-own-risk');
 const expoConfig = require('eslint-config-expo/flat');
 const prettierConfig = require('eslint-config-prettier');
@@ -92,6 +93,36 @@ const NO_SVG_FILES = {
   message: `Import react-native-svg, react-native-svg/css or react-native-svg/filter-image, never its own files. ${SVG_MESSAGE}`,
 };
 
+// The file system's own transfers, each fetching or sending by address (rule 13.2): in
+// expo-file-system File.downloadFileAsync, in expo-file-system/legacy downloadAsync, uploadAsync,
+// createDownloadResumable, createUploadTask and the DownloadResumable and UploadTask classes (and
+// the stubs of those names the package root keeps). Only src/api/ may name them.
+const FILE_TRANSFERS = [
+  'downloadFileAsync',
+  'downloadAsync',
+  'uploadAsync',
+  'createDownloadResumable',
+  'createUploadTask',
+  'DownloadResumable',
+  'UploadTask',
+];
+const TRANSFER_MESSAGE =
+  'Fetch or send a file through src/api/transfer.ts (rule 13.2): the file system never fetches or sends by address on its own.';
+const NO_TRANSFER_IMPORTS = [
+  { name: 'expo-file-system', importNames: FILE_TRANSFERS, message: TRANSFER_MESSAGE },
+];
+const NO_TRANSFER_IMPORT_PATTERNS = [
+  { group: ['expo-file-system/*'], importNames: FILE_TRANSFERS, message: TRANSFER_MESSAGE },
+];
+const TRANSFER_NAMES = `/^(${FILE_TRANSFERS.join('|')})$/`;
+// A member by its name, whatever holds it (File.downloadFileAsync, FileSystem.uploadAsync,
+// a resumable's downloadAsync), and the same names taken out by destructuring.
+const NO_FILE_TRANSFERS = [
+  { selector: `MemberExpression[property.name=${TRANSFER_NAMES}]`, message: TRANSFER_MESSAGE },
+  { selector: `MemberExpression[property.value=${TRANSFER_NAMES}]`, message: TRANSFER_MESSAGE },
+  { selector: `ObjectPattern > Property[key.name=${TRANSFER_NAMES}]`, message: TRANSFER_MESSAGE },
+];
+
 const PURE_CORE_PATTERN = {
   group: [
     'react',
@@ -126,7 +157,7 @@ function restrictedImports(paths, patterns) {
     },
   ];
 }
-const OUTSIDE_THE_CLIENT_IMPORTS = [NO_EXPO_FETCH];
+const OUTSIDE_THE_CLIENT_IMPORTS = [NO_EXPO_FETCH, ...NO_TRANSFER_IMPORTS];
 
 // The same modules reached by require() or import(), which no-restricted-imports does not see.
 // No slash in the pattern: a selector's own /.../ cannot hold one, so a dot stands for it.
@@ -166,11 +197,12 @@ const NO_COLOUR_LITERALS = [
 
 // One rule holds every list a file gets: a second no-restricted-syntax for the same files would
 // replace the first, not add to it.
-function restrictedSyntax({ colours }) {
+function restrictedSyntax({ transfers, colours }) {
   return [
     'error',
     ...NO_OTHER_LOADERS,
     NO_DOM_DIRECTIVE,
+    ...(transfers ? NO_FILE_TRANSFERS : []),
     ...(colours ? NO_COLOUR_LITERALS : []),
   ];
 }
@@ -218,8 +250,11 @@ module.exports = [
         ),
         { object: 'navigator', property: 'sendBeacon', message: ONE_WAY_IN },
       ],
-      'no-restricted-syntax': restrictedSyntax({ colours: false }),
-      'no-restricted-imports': restrictedImports(OUTSIDE_THE_CLIENT_IMPORTS, []),
+      'no-restricted-syntax': restrictedSyntax({ transfers: true, colours: false }),
+      'no-restricted-imports': restrictedImports(
+        OUTSIDE_THE_CLIENT_IMPORTS,
+        NO_TRANSFER_IMPORT_PATTERNS,
+      ),
       'max-lines': ['error', { max: MAX_FILE_LINES }],
       'shape/target-file-lines': ['warn', { max: TARGET_FILE_LINES }],
       'max-lines-per-function': functionLines(MAX_FUNCTION_LINES),
@@ -239,17 +274,26 @@ module.exports = [
   {
     files: HAND_WRITTEN_CORE,
     rules: {
-      'no-restricted-imports': restrictedImports(OUTSIDE_THE_CLIENT_IMPORTS, [PURE_CORE_PATTERN]),
+      'no-restricted-imports': restrictedImports(OUTSIDE_THE_CLIENT_IMPORTS, [
+        ...NO_TRANSFER_IMPORT_PATTERNS,
+        PURE_CORE_PATTERN,
+      ]),
     },
   },
   {
     files: APP_CODE,
     ignores: TOKEN_FILES,
-    rules: { 'no-restricted-syntax': restrictedSyntax({ colours: true }) },
+    rules: { 'no-restricted-syntax': restrictedSyntax({ transfers: true, colours: true }) },
   },
   {
+    // the one client: the network globals, and the file system's transfers (src/api/transfer.ts)
     files: ['src/api/**'],
-    rules: { 'no-restricted-globals': 'off', 'no-restricted-properties': 'off' },
+    rules: {
+      'no-restricted-globals': 'off',
+      'no-restricted-properties': 'off',
+      'no-restricted-syntax': restrictedSyntax({ transfers: false, colours: true }),
+      'no-restricted-imports': restrictedImports([NO_EXPO_FETCH], []),
+    },
   },
   {
     files: ['src/api/transport.ts'],

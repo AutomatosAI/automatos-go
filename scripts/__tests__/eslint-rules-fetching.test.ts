@@ -1,11 +1,14 @@
 // What fetches or sends by address on its own, outside the one API client (docs/app-standard.md
-// rule 13.2), refused by eslint.config.js: react-native-svg's pictures loaded by address.
+// rule 13.2), refused by eslint.config.js: react-native-svg's pictures loaded by address, and the
+// file system's own downloads and uploads, which only src/api/ (src/api/transfer.ts) may name.
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { rules, said, warm, WARM_TIMEOUT } from './eslint-rules-helpers';
 
 const SVG_MESSAGE =
   'A picture is fetched through src/api/ (D-ONE-CLIENT): fetch its text with the API client and draw it with SvgXml.';
+const TRANSFER_MESSAGE =
+  'Fetch or send a file through src/api/transfer.ts (rule 13.2): the file system never fetches or sends by address on its own.';
 
 beforeAll(warm, WARM_TIMEOUT);
 
@@ -70,5 +73,77 @@ describe('no picture fetched by address by react-native-svg (rule 13.2)', () => 
       'export type Props = UriProps;',
     ].join('\n');
     expect(await rules(`${code}\n`, 'src/ui/picture.tsx')).toEqual([]);
+  });
+});
+
+describe("the file system's own transfers only in src/api (rule 13.2)", () => {
+  it.each([
+    ['File.downloadFileAsync', 'export const d = (t: never) => File.downloadFileAsync("/a", t);'],
+    ['FileSystem.downloadAsync', 'export const d = () => FileSystem.downloadAsync("/a", "b");'],
+    ['FileSystem.uploadAsync', 'export const u = () => FileSystem.uploadAsync("/a", "b");'],
+    [
+      'FileSystem.createDownloadResumable',
+      'export const r = () => FileSystem.createDownloadResumable("/a", "b");',
+    ],
+    ['FileSystem.createUploadTask', 'export const t = () => FileSystem.createUploadTask("/a", "b");'],
+    ['new FileSystem.DownloadResumable', 'export const r = () => new FileSystem.DownloadResumable();'],
+    ['new FileSystem.UploadTask', 'export const t = () => new FileSystem.UploadTask("/a", "b");'],
+    ['a resumable, resumed', 'export const r = (task: { downloadAsync(): void }) => task.downloadAsync();'],
+    ['a computed member', "export const d = () => File['downloadFileAsync'];"],
+    ['a destructured name', 'export const { uploadAsync } = FileSystem;'],
+  ])('refuses %s outside src/api and allows it inside', async (_name, line) => {
+    const code = `declare const File: any;\ndeclare const FileSystem: any;\n${line}\n`;
+    for (const file of ['src/styles/themes/files.ts', 'app/(app)/index.tsx', 'scripts/x.ts']) {
+      expect(await said(code, file, 'no-restricted-syntax')).toEqual([TRANSFER_MESSAGE]);
+    }
+    expect(await rules(code, 'src/api/transfer.ts')).not.toContain('no-restricted-syntax');
+  });
+
+  it.each([
+    ['expo-file-system', 'downloadAsync'],
+    ['expo-file-system', 'createUploadTask'],
+    ['expo-file-system/legacy', 'downloadAsync'],
+    ['expo-file-system/legacy', 'uploadAsync'],
+    ['expo-file-system/legacy', 'createDownloadResumable'],
+    ['expo-file-system/legacy', 'createUploadTask'],
+    ['expo-file-system/legacy', 'DownloadResumable'],
+    ['expo-file-system/legacy', 'UploadTask'],
+    ['expo-file-system/next', 'uploadAsync'],
+    ['expo-file-system/src/legacy', 'downloadAsync'],
+  ])('refuses importing %s %s outside src/api and allows it inside', async (from, name) => {
+    const code = `import { ${name} as transfer } from '${from}';\nexport const t = transfer;\n`;
+    for (const file of ['src/cc/deliverables/open-file.ts', 'src/core/turn-reducer.ts']) {
+      const found = await said(code, file, 'no-restricted-imports');
+      expect(found.some((message) => message.includes(TRANSFER_MESSAGE))).toBe(true);
+    }
+    expect(await rules(code, 'src/api/transfer.ts')).not.toContain('no-restricted-imports');
+    expect(await rules(code, 'src/api/__tests__/transfer.test.ts')).not.toContain(
+      'no-restricted-imports',
+    );
+  });
+
+  it('refuses a namespace import of the file system outside src/api, as it carries them all', async () => {
+    const code = "import * as FileSystem from 'expo-file-system/legacy';\nexport const f = FileSystem;\n";
+    expect(await rules(code, 'src/voice/server/speech-files.ts')).toContain('no-restricted-imports');
+    expect(await rules(code, 'src/api/transfer.ts')).not.toContain('no-restricted-imports');
+  });
+
+  it("allows the file system's local work everywhere, and a test's fake of a transfer", async () => {
+    const local = [
+      "import { Directory, File, Paths } from 'expo-file-system';",
+      "import { readAsStringAsync, deleteAsync } from 'expo-file-system/legacy';",
+      "export const read = () => new File(new Directory(Paths.cache), 'a.txt').text();",
+      'export const old = [readAsStringAsync, deleteAsync];',
+    ].join('\n');
+    expect(await rules(`${local}\n`, 'src/voice/server/speech-files.ts')).toEqual([]);
+    const fake = 'export class FakeFile {\n  static async downloadFileAsync() {\n    return 1;\n  }\n}\n';
+    expect(await rules(fake, 'src/cc/__tests__/open-file.test.ts')).toEqual([]);
+  });
+
+  it('src/api/ still refuses a colour and a picture fetched by address', async () => {
+    const code = "import { SvgUri } from 'react-native-svg';\nexport const c = [SvgUri, '#fff'];\n";
+    const found = await rules(code, 'src/api/transfer.ts');
+    expect(found).toContain('no-restricted-imports');
+    expect(found).toContain('no-restricted-syntax');
   });
 });
