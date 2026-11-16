@@ -7,7 +7,9 @@
 //
 // The builder refuses a list that would put a pressable under the 44 pt touch target: a control
 // drawn smaller than 44 takes the rest as slop (ui/paint.ts hitSlopFor) where the primitive gives
-// it one, and a segment takes only its track's inset (a slop past the track is lost). It refuses
+// it one, the text field too (its frame's slop, with room for it in the field's own box:
+// ui/variants.ts fieldTouch), and a segment takes only its track's inset (a slop past the track is
+// lost). It refuses
 // nonsense too: a size that is not a number of points above 0, a negative inset or gap, an icon
 // larger than its control, a multiline field shorter than one line.
 
@@ -129,7 +131,7 @@ function slopTouch(height: number): number {
 
 /** Each pressable's touch in points, by its name: none may be under MIN_TOUCH. */
 export function controlTouchesOf(specs: ControlSizes): Named {
-  const { button, commandCentre, iconButton, segment } = specs;
+  const { button, commandCentre, field, iconButton, segment } = specs;
   return [
     ...Object.entries(button).map(
       ([size, { height }]) => [`button.${size}`, slopTouch(height)] as const,
@@ -139,6 +141,8 @@ export function controlTouchesOf(specs: ControlSizes): Named {
       ([size, { box }]) => [`iconButton.${size}`, slopTouch(box)] as const,
     ),
     ['pill', slopTouch(specs.pillMinHeight)],
+    ['field', slopTouch(field.height)],
+    ['field.multiline', slopTouch(field.multilineMinHeight)],
     ['segment', segment.minHeight + 2 * segment.trackInset],
   ];
 }
