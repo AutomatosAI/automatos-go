@@ -67,8 +67,9 @@ type LineProps = {
 
 function Line({ view, reply, report }: LineProps) {
   const { vars, type } = useArcadePaint();
-  // the finished reply, said once by its id (iOS; Android hears the live region)
-  useAnnounce(reply.text, view.announce, { occasion: reply.id });
+  // the finished reply, said once by its id for good (iOS; Android hears the live region): the
+  // thinking line between turns, then a failed turn showing it again, does not say it twice
+  useAnnounce(reply.text, view.announce, { occasion: reply.id, once: true });
   // on (and not listening to the clock) while the line types or Arcade is still
   const cursorOn = useCursorOn(view.blinking);
   const lineStyle = type.body(ARCADE_DIALOGUE.size);

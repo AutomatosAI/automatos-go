@@ -12,8 +12,13 @@ import { AccessibilityInfo, Platform } from 'react-native';
 import { NOTHING_HEARD, announceStep, type Heard } from './announce-model';
 
 export type AnnounceOptions = {
-  /** Makes the same words new (a reply's id, a press's refusal): each occasion is told once. */
+  /**
+   * Makes the same words new (a press's refusal): each occasion is told once while its words are
+   * on screen, and again if they go and it comes back.
+   */
   readonly occasion?: unknown;
+  /** The occasion is an identity (a reply's id), told once for good even if its words go and return. */
+  readonly once?: boolean;
   /**
    * The region is on screen from the start and its words change later (a status line): the words
    * it opens with are left to VoiceOver to read in order, and only a change is said.
@@ -27,17 +32,17 @@ export function useAnnounce(
   showing: boolean = true,
   options: AnnounceOptions = {},
 ): void {
-  const { occasion, changesOnly = false } = options;
+  const { occasion, once = false, changesOnly = false } = options;
   const heard = useRef<Heard>(NOTHING_HEARD);
   const first = useRef(true);
   useEffect(() => {
     const quietAtFirst = first.current && changesOnly;
     first.current = false;
     const step = announceStep(
-      { platform: Platform.OS, words, showing, occasion, quietAtFirst },
+      { platform: Platform.OS, words, showing, occasion, once, quietAtFirst },
       heard.current,
     );
     heard.current = step.heard;
     if (step.say !== null) AccessibilityInfo.announceForAccessibility(step.say);
-  }, [words, showing, occasion, changesOnly]);
+  }, [words, showing, occasion, once, changesOnly]);
 }
