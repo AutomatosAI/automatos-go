@@ -167,6 +167,30 @@ describe('the addresses a build is given', () => {
     expect(isServerAddress('http://localhost:8000', RELEASE)).toBe(false);
   });
 
+  it('holds development http to this machine and a home network, never a public name', () => {
+    for (const value of [
+      'http://192.168.1.20:8000',
+      'http://10.0.0.2:8000',
+      'http://172.16.4.1',
+      'http://automatos.local:8000',
+      'http://localhost:8000',
+      'http://127.0.0.1:8000',
+      'http://[::1]:8000',
+    ]) {
+      expect(isServerAddress(value, DEVELOPMENT), value).toBe(true);
+    }
+    for (const value of [
+      'http://api.automatos.app',
+      'http://52.95.110.1:8000',
+      'http://100.64.1.1:8000',
+      'http://169.254.169.254',
+      'http://nas',
+      'http://[2600::1]:8000',
+    ]) {
+      expect(isServerAddress(value, DEVELOPMENT), value).toBe(false);
+    }
+  });
+
   it('names the variable and the rule, never the value', () => {
     const value = 'https://user:secret@api.automatos.app';
     const refused = () => parseEnv({ apiUrl: value }, RELEASE);

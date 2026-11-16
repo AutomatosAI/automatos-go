@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { comparableHost, plainLabels, readsAsNumber } from '../host-text';
+import {
+  comparableHost,
+  isPlainHost,
+  isPlainOrigin,
+  plainLabels,
+  readsAsNumber,
+} from '../host-text';
 
 describe('plainLabels: a host written plainly, or nothing', () => {
   it('reads ASCII letters, digits and hyphens in labels of legal length, lower-cased', () => {
@@ -67,5 +73,45 @@ describe('readsAsNumber: what a URL parser takes for an IP address', () => {
 describe('comparableHost', () => {
   it('lower-cases and drops one last dot', () => {
     expect(comparableHost('Bucket.Example.TEST.')).toBe('bucket.example.test');
+  });
+});
+
+describe('isPlainOrigin: a scheme, a plain host and a port, and nothing more', () => {
+  it('takes the origins the app is given', () => {
+    for (const origin of [
+      'https://api.automatos.app',
+      'https://api.automatos.app:8443',
+      'http://192.168.1.20:8000',
+      'https://nas',
+      'https://[::1]:8443',
+    ]) {
+      expect(isPlainOrigin(origin), origin).toBe(true);
+    }
+  });
+
+  it('refuses a path, a slash, a user, a query, capitals, another scheme or a port out of range', () => {
+    for (const origin of [
+      'https://api.automatos.app/',
+      'https://api.automatos.app/api',
+      'https://user@api.automatos.app',
+      'https://api.automatos.app?x=1',
+      'https://API.automatos.app',
+      'HTTPS://api.automatos.app',
+      'ftp://api.automatos.app',
+      'https://api.automatos.app:0',
+      'https://api.automatos.app:65536',
+      'https://0x7f.1',
+      'https://127.1',
+      'https://[::G]',
+      'api.automatos.app',
+      '',
+    ]) {
+      expect(isPlainOrigin(origin), origin).toBe(false);
+    }
+  });
+
+  it('isPlainHost: lower-case plain labels, a strict quad when numeric, or an IPv6 literal', () => {
+    expect(['a.example', '10.0.0.1', '[fd00::1]'].map(isPlainHost)).toEqual([true, true, true]);
+    expect(['A.example', '10.1', '[x]'].map(isPlainHost)).toEqual([false, false, false]);
   });
 });

@@ -35,12 +35,14 @@ import {
   STREAM_IDLE_TIMEOUT_MS,
   STREAM_MAX_DURATION_MS,
 } from './config';
-import { callFailure, startDeadline, timedOutError, type Deadline } from './deadline';
+import { callFailure, startDeadline, type Deadline } from './deadline';
 import { ApiError, errorFromResponse } from './errors';
 import { parseJson } from './json';
 import type { Route } from './routes';
+import { isPlainOrigin } from '../lib/host-text';
 import type { Server } from './server';
-import { limitedChunks, streamLimits, type StreamLimits } from './stream-limits';
+import { opened } from './opened-stream';
+import { streamLimits } from './stream-limits';
 import { openFile, type FileBody, type FileCallOptions, type FilePort } from './transfer-request';
 import type {
   StreamingResponse,
@@ -302,47 +304,6 @@ async function fetchBinary(
   }
 }
 
-async function* chunksThen(
-  chunks: AsyncIterable<string>,
-  done: () => void,
-): AsyncGenerator<string> {
-  try {
-    yield* chunks;
-  } finally {
-    done();
-  }
-}
-
-/** How a stream was opened: its deadline, the connect timeout it ran under, its limits. */
-type Opening = { readonly deadline: Deadline; readonly ms: number; readonly limits: StreamLimits };
-
-/**
- * The opened stream. Read as it arrives, the connect deadline stops and the body runs as long as
- * the server keeps it going, under the stream's limits (stream-limits.ts). Read whole (bytes()),
- * the deadline keeps running until the body is in, so a body that drips cannot hold the call open
- * without end. Either way the caller's abort listener is released once the body is finished with.
- */
-function opened(response: StreamingResponse, { deadline, ms, limits }: Opening): StreamingResponse {
-  return {
-    status: response.status,
-    bytes: async (maxBytes) => {
-      try {
-        return await response.bytes(maxBytes);
-      } catch (error) {
-        throw deadline.timedOut() ? timedOutError(ms) : error;
-      } finally {
-        deadline.dispose();
-      }
-    },
-    header: (name) => response.header(name),
-    chunks: () => {
-      deadline.settle(); // the body may now run as long as it needs, within its limits
-      const chunks = limitedChunks(response.chunks(), limits, deadline.expire);
-      return chunksThen(chunks, deadline.dispose);
-    },
-  };
-}
-
 async function open(
   ctx: Context,
   route: Route,
@@ -373,7 +334,15 @@ function filePort(ctx: Context): FilePort {
   };
 }
 
+/**
+ * The one client, over `options.server`. Its address must be a plain origin (host-text.ts
+ * isPlainOrigin): every request and the bearer start from it, so one built by hand, outside
+ * hostedServerFrom and ownServerFrom, is refused here too, with a TypeError before anything is sent.
+ */
 export function createApiClient(options: ApiClientOptions): ApiClient {
+  if (!isPlainOrigin(options.server.apiUrl)) {
+    throw new TypeError('The API client needs a plain origin: a scheme, a host and a port');
+  }
   const ctx: Context = {
     server: options.server,
     getToken: options.getToken,
