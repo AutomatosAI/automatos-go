@@ -7,7 +7,7 @@
 // What this measures is the Text primitive's tones and the shape's foreground pairs. Shared code
 // that paints the accent itself reads it from src/ui/accent.ts, whose own test holds it.
 
-import { contrastRatio, mixHex } from '../core/web/lib/look-kit/contrast';
+import { contrastRatio, mixHex, toHex } from '../core/web/lib/look-kit/contrast';
 import { toneColour } from '../ui/tone-colour';
 import { TEXT_TONES, type TextTone } from '../ui/variants';
 import type { ColourName, Colours } from './tokens/types';
@@ -36,17 +36,33 @@ export function textOnFor(
 const SOLID_LENGTH = 7;
 const ALPHA_MAX = 255;
 const HEX_RADIX = 16;
+/** No paint: what is behind shows. */
+const CLEAR = 'transparent';
+/** The vendored rgba()'s form (0 to 255 channels and an alpha), as the styles' own colours carry. */
+const RGBA = /^rgba\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3}),\s*(\d*\.?\d+)\)$/;
 
 const isSolid = (colour: string) => colour.length <= SOLID_LENGTH;
 
+/** An rgba() colour over a solid ground, or null for a colour of another form. */
+function rgbaOver(colour: string, ground: string): string | null {
+  const match = RGBA.exec(colour);
+  if (!match) return null;
+  const [, red, green, blue, alpha] = match.map(Number);
+  return mixHex(ground, toHex([red ?? 0, green ?? 0, blue ?? 0]), alpha ?? 1);
+}
+
 /**
  * A colour as it reads over an opaque ground: itself, or blended by its own alpha when it carries
- * one. Throws for a ground that carries transparency, which reads as nothing until it is itself
- * blended over what is behind it (contrastFailures blends a ground over the palette's page).
+ * one (#RRGGBBAA, or rgba() as a style's own colours write it); 'transparent' is the ground. Throws
+ * for a ground that carries transparency, which reads as nothing until it is itself blended over
+ * what is behind it (contrastFailures blends a ground over the palette's page).
  */
 export function solidOver(colour: string, ground: string): string {
   if (isSolid(colour)) return colour;
   if (!isSolid(ground)) throw new Error(`${ground} carries transparency: blend it over a solid`);
+  if (colour === CLEAR) return ground;
+  const blended = rgbaOver(colour, ground);
+  if (blended !== null) return blended;
   const alpha = parseInt(colour.slice(SOLID_LENGTH), HEX_RADIX) / ALPHA_MAX;
   return mixHex(ground, colour.slice(0, SOLID_LENGTH), alpha);
 }

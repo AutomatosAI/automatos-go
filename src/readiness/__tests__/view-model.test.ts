@@ -10,6 +10,7 @@ import { ApiError } from '../../api/errors';
 import { API_ERROR_COPY } from '../../api/strings';
 import { routes } from '../../navigation/routes';
 import { GLYPHS } from '../../styles/dress/status-glyphs';
+import { stateGlyphMark, type GlyphLook } from '../../ui/state-tokens';
 import { clientRows, type RowInput } from '../client-rows';
 import { ReadinessSchema, READINESS_STATES, type ReadinessItem } from '../schema';
 import { CLIENT_ROW_COPY, READINESS_COPY, READINESS_WORDS } from '../strings';
@@ -125,41 +126,47 @@ describe('rowLabel (VoiceOver)', () => {
 });
 
 describe('readinessMark', () => {
+  const HUD: GlyphLook = { glyphs: true, glyphPaint: 'glyph-role', scheme: 'dark' };
+  const studio = (scheme: 'light' | 'dark'): GlyphLook => ({
+    glyphs: false,
+    glyphPaint: 'state-role',
+    scheme,
+  });
+
   it('✓ Ready · ○ Not checked · ◆ Needs setup, the same word in every layout', () => {
+    for (const look of [HUD, studio('light'), studio('dark')]) {
+      expect(stateGlyphMark('ready', look).glyph).toBe(GLYPHS.done);
+      expect(stateGlyphMark('not_checked', look).glyph).toBe(GLYPHS.waiting);
+      expect(stateGlyphMark('needs_setup', look).glyph).toBe(GLYPHS.attention);
+    }
     for (const glyphs of [true, false]) {
-      expect(readinessMark('ready', glyphs, 'light')).toMatchObject({
-        glyph: GLYPHS.done,
-        word: 'Ready',
-      });
-      expect(readinessMark('not_checked', glyphs, 'dark')).toMatchObject({
-        glyph: GLYPHS.waiting,
-        word: 'Not checked',
-      });
-      expect(readinessMark('needs_setup', glyphs, 'dark')).toMatchObject({
-        glyph: GLYPHS.attention,
-        word: 'Needs setup',
-      });
+      expect(readinessMark('ready', glyphs).word).toBe('Ready');
+      expect(readinessMark('not_checked', glyphs).word).toBe('Not checked');
+      expect(readinessMark('needs_setup', glyphs).word).toBe('Needs setup');
     }
   });
 
   it('HUD paints the glyph in its role: ready and needs setup in the accent, not checked in text2', () => {
-    expect(readinessMark('ready', true, 'dark').glyphToken).toBe('primary');
-    expect(readinessMark('needs_setup', true, 'dark').glyphToken).toBe('primary');
-    expect(readinessMark('not_checked', true, 'dark').glyphToken).toBe('mutedForeground');
+    expect(stateGlyphMark('ready', HUD).token).toBe('primary');
+    expect(stateGlyphMark('needs_setup', HUD).token).toBe('primary');
+    expect(stateGlyphMark('not_checked', HUD).token).toBe('mutedForeground');
   });
 
   it('Studio, a theme and Play paint by the colour role (§6.12.2), the word muted', () => {
-    expect(readinessMark('ready', false, 'light')).toMatchObject({
-      glyphToken: 'success',
-      wordTone: 'muted',
-    });
-    expect(readinessMark('needs_setup', false, 'dark').glyphToken).toBe('info');
-    expect(readinessMark('not_checked', false, 'light').glyphToken).toBe('mutedForeground');
+    expect(stateGlyphMark('ready', studio('light')).token).toBe('success');
+    expect(readinessMark('ready', false).wordTone).toBe('muted');
+    expect(stateGlyphMark('needs_setup', studio('dark')).token).toBe('info');
+    expect(stateGlyphMark('not_checked', studio('light')).token).toBe('mutedForeground');
   });
 
-  it('has a mark for every state', () => {
+  it('has a word for every state, muted, and no colour of its own', () => {
     for (const state of READINESS_STATES) {
-      expect(readinessMark(state, false, 'light').word).toBe(READINESS_WORDS[state]);
+      for (const glyphs of [true, false]) {
+        expect(readinessMark(state, glyphs)).toEqual({
+          word: READINESS_WORDS[state],
+          wordTone: 'muted',
+        });
+      }
     }
   });
 });

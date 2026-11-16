@@ -8,6 +8,10 @@
 // a drag or tap ends on.
 // VoiceOver and TalkBack adjust it a step at a time (role 'adjustable', increment and decrement)
 // and read its value, in words when given. The logic is slider-model.ts (pure, tested).
+//   The faded part past maxAllowed is decoration, not a mark the contrast test holds (rule 10.4):
+// it reads about 1 to 1 on its track in every palette, and nothing depends on seeing it. The thumb
+// stops at the cap, the value beside the slider says where it is, and at the cap its spoken words
+// say why (the glow's 'the most this look keeps readable').
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -222,6 +226,7 @@ const styles = StyleSheet.create({
   row: { height: SLIDER.rowHeight, justifyContent: 'center' },
   disabled: { opacity: DISABLED_OPACITY },
   track: { position: 'absolute', left: HALF_THUMB, right: HALF_THUMB },
+  // decoration: the cap is said by the thumb stopping and by the value's words (see the top)
   past: { position: 'absolute', right: HALF_THUMB, opacity: 1 - DISABLED_OPACITY },
   fill: { position: 'absolute', left: HALF_THUMB },
   thumb: {

@@ -35,12 +35,12 @@ const LINE_LEVEL: TextLevel = 6;
 const MARK_MAX_WIDTH = '45%';
 
 function ReadinessMark({ state }: { readonly state: ReadinessState }) {
-  const { scheme, spacing } = useTokens();
+  const { spacing } = useTokens();
   const dress = useDress();
-  const mark = readinessMark(state, dress.status === 'glyph', scheme, dress.glyphPaint);
+  const mark = readinessMark(state, dress.status === 'glyph');
   return (
     <View style={[styles.mark, { gap: spacing.space1 }]}>
-      <StateGlyph glyph={mark.glyph} role={mark.glyphToken} />
+      <StateGlyph state={state} />
       <Text variant="mono" tone={mark.wordTone} style={styles.word}>
         {mark.word}
       </Text>

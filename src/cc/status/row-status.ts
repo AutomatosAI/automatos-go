@@ -11,14 +11,8 @@ import type { DisplayState, RetryKind, RowStatusFields } from '../../api/row-sta
 import type { Route } from '../../api/routes';
 import type { PathParams } from '../../api/url';
 import { isTaskId } from '../../navigation/routes';
-import {
-  stateGlyph,
-  statusGlyph,
-  type GlyphPaint,
-  type StatusState,
-} from '../../styles/dress/status-glyphs';
-import type { ColourName, ColourScheme } from '../../styles/tokens/types';
-import { STATE_WORD_TONE, glyphToken, statePaint } from '../../ui/state-tokens';
+import { stateGlyph, statusGlyph, type StatusState } from '../../styles/dress/status-glyphs';
+import { STATE_WORD_TONE, stateWordTone } from '../../ui/state-tokens';
 import type { TextTone } from '../../ui/variants';
 import { CC_ROUTES } from '../routes';
 
@@ -111,39 +105,17 @@ export function rowStatusView(
   };
 }
 
+/** A state mark's word and its tone; its glyph is StateGlyph's, from the state alone. */
 export type StateMarkSpec = {
-  readonly glyph: string;
   readonly word: string;
-  readonly glyphToken: ColourName;
   readonly wordTone: TextTone;
 };
 
 /**
- * What a state's mark draws: HUD's glyph and its own word (capitals come from its label face), the
- * glyph in its glyph's role (HUD) or its state's (Arcade: `glyphPaint` 'state-role', never the
- * accent); else the vocabulary's word and the state's colour role for the ground's scheme.
+ * The word a state's mark says beside its glyph: under glyphs (HUD, Arcade) HUD's own word, muted
+ * (capitals come from its label face); else the vocabulary's word in the state's tone.
  */
-export function stateMark(
-  state: StatusState,
-  glyphs: boolean,
-  scheme: ColourScheme,
-  glyphPaint: GlyphPaint = 'glyph-role',
-): StateMarkSpec {
-  if (glyphs) {
-    const hud = statusGlyph(state);
-    return {
-      glyph: hud.glyph,
-      word: hud.word,
-      glyphToken: glyphToken(state, glyphPaint),
-      wordTone: STATE_WORD_TONE,
-    };
-  }
-  const vocabulary = stateGlyph(state);
-  const paint = statePaint(state, scheme);
-  return {
-    glyph: vocabulary.glyph,
-    word: vocabulary.word,
-    glyphToken: paint.glyph,
-    wordTone: paint.word,
-  };
+export function stateMark(state: StatusState, glyphs: boolean): StateMarkSpec {
+  if (glyphs) return { word: statusGlyph(state).word, wordTone: STATE_WORD_TONE };
+  return { word: stateGlyph(state).word, wordTone: stateWordTone(state) };
 }

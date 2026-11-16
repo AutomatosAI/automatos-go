@@ -1,5 +1,5 @@
 // The settings Section's logic, pure: a titled group of rows is its title as an eyebrow header,
-// then its card and lines, 12 pt apart (space3); a section that counts its rows ('3 of 5 ready')
+// then its card and lines, 8 pt apart (space3); a section that counts its rows ('3 of 5 ready')
 // shows the count beside the title, the title wrapping first. The muted line under a section
 // (whose switches these are, which time zone) is Body 6, and a section without one draws nothing.
 
