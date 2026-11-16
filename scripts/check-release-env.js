@@ -43,10 +43,24 @@ function startsWithOne(prefixes) {
   return (value) => prefixes.some((prefix) => value.startsWith(prefix));
 }
 
+/** A long run of the characters keys and tokens are written in (base64url). */
+const KEY_RUN = '[A-Za-z0-9_-]';
+
+/**
+ * The EXPO_PUBLIC_ names allowed to hold a JSON Web Token, empty by default. Some stacks hand out
+ * a token that is public by design (an anonymous client key, say). A name goes here only with a
+ * comment beside it saying what the token is and why it is public: every other token is someone's
+ * session or a server's key.
+ * @type {readonly string[]}
+ */
+const PUBLIC_TOKEN_NAMES = [];
+
 /**
  * How secret keys begin, by kind. A publishable key (pk_live_, pk_test_) and a DSN are public and
  * match none. A cloud access key id is matched with its length too (four capitals, then 16
- * capitals or digits), so a word such as a region name that happens to begin the same passes.
+ * capitals or digits), so a word such as a region name that happens to begin the same passes; a
+ * generic sk- key and a cloud platform's API key likewise. The first kind a value matches is the
+ * one named. A JSON Web Token is allowed only under a name in PUBLIC_TOKEN_NAMES.
  */
 const SECRET_VALUE_SHAPES = [
   {
@@ -64,6 +78,21 @@ const SECRET_VALUE_SHAPES = [
   { kind: "a chat platform's bot or user token", test: startsWithOne(['xoxb-', 'xoxp-']) },
   { kind: "the platform's server key", test: startsWithOne(['ak_srv_']) },
   { kind: 'a PEM block (a private key or certificate)', test: startsWithOne(['-----BEGIN']) },
+  {
+    kind: 'a secret API key',
+    test: (value) => new RegExp(`^sk-${KEY_RUN}{20,}`).test(value),
+  },
+  {
+    kind: "a cloud platform's API key",
+    test: (value) => new RegExp(`^AIza${KEY_RUN}{35}`).test(value),
+  },
+  { kind: 'a token from an Authorization header', test: (value) => /^bearer\s+\S/i.test(value) },
+  {
+    kind: 'a signed token (a JSON Web Token)',
+    test: (value) => new RegExp(`^eyJ${KEY_RUN}*\\.${KEY_RUN}+\\.${KEY_RUN}*`).test(value),
+    // allowed under a name in PUBLIC_TOKEN_NAMES
+    publicUnderListedNames: true,
+  },
 ];
 
 const SHIPS_TO_EVERY_PHONE =
@@ -157,11 +186,19 @@ function bareValue(value) {
   return (value ?? '').trim().replace(/^["']+/, '');
 }
 
+/** True when the value has the shape, and the shape is not allowed under this name. */
+function giveaway(shape, name, bare, publicTokenNames) {
+  const allowed = shape.publicUnderListedNames === true && publicTokenNames.includes(name);
+  return !allowed && shape.test(bare);
+}
+
 /** What one EXPO_PUBLIC_ variable gives away, if anything: by its value first, then its name. */
-function secretProblem(name, value) {
+function secretProblem(name, value, publicTokenNames) {
   const bare = bareValue(value);
   if (!bare) return [];
-  const shape = SECRET_VALUE_SHAPES.find((candidate) => candidate.test(bare));
+  const shape = SECRET_VALUE_SHAPES.find((candidate) =>
+    giveaway(candidate, name, bare, publicTokenNames),
+  );
   if (shape) return [`${name} looks like ${shape.kind}${SHIPS_TO_EVERY_PHONE}`];
   const unprefixed = name.slice(PUBLIC_PREFIX.length).toUpperCase();
   const word = SECRET_NAME_WORDS.find((candidate) => unprefixed.includes(candidate));
@@ -169,21 +206,22 @@ function secretProblem(name, value) {
 }
 
 /** Every set EXPO_PUBLIC_ variable that is, or looks like, a secret: its name, never its value. */
-function publicSecretProblems(env) {
+function publicSecretProblems(env, publicTokenNames = PUBLIC_TOKEN_NAMES) {
   return Object.keys(env)
     .filter((name) => name.startsWith(PUBLIC_PREFIX))
     .sort()
-    .flatMap((name) => secretProblem(name, env[name]));
+    .flatMap((name) => secretProblem(name, env[name], publicTokenNames));
 }
 
 /**
  * Pure check over an env map — returns `{ errors, warnings }` as message lists. A secret in an
  * EXPO_PUBLIC_ value is an error in every profile, checked or not. For a profile that is not
  * strict (store-bound), `errors` holds besides only what the app itself would refuse at launch: a
- * hosted address that is not a bare https address.
+ * hosted address that is not a bare https address. publicTokenNames is PUBLIC_TOKEN_NAMES; a
+ * test may give another list.
  */
-function checkReleaseEnv(env, profile) {
-  const leaked = publicSecretProblems(env);
+function checkReleaseEnv(env, profile, publicTokenNames = PUBLIC_TOKEN_NAMES) {
+  const leaked = publicSecretProblems(env, publicTokenNames);
   if (!CHECKED_PROFILES.has(profile)) return { errors: leaked, warnings: [] };
   const strict = STRICT_PROFILES.has(profile);
   const problems = [
@@ -238,6 +276,6 @@ function main() {
   process.exit(1);
 }
 
-module.exports = { checkReleaseEnv, isEuDsn, isServerAddress, profileFrom };
+module.exports = { checkReleaseEnv, isEuDsn, isServerAddress, profileFrom, PUBLIC_TOKEN_NAMES };
 
 if (require.main === module) main();

@@ -16,6 +16,7 @@ import easJson from '../../../eas.json';
 import { EAS_OWNER, EAS_PROJECT_ID, EAS_UPDATES_URL, expo, PROJECT_ROOT } from './app-json';
 import {
   beforeUpdateSteps,
+  EXACT_MAIN,
   ORIGIN,
   OWN_MAIN,
   PUBLIC_ADDRESS,
@@ -213,6 +214,10 @@ describe('.eas/workflows/testflight.yml (every push to main)', () => {
       // git's own error lines can show a remote's address: neither read prints them
       expect(run.split(`${OWN_MAIN} 2>/dev/null`)).toHaveLength(2);
       expect(run.split(`${PUBLIC_MAIN} 2>/dev/null`)).toHaveLength(2);
+      // each keeps only the line for exactly refs/heads/main (since 16 Nov)
+      expect(run.split(`${OWN_MAIN} 2>/dev/null ${EXACT_MAIN}`)).toHaveLength(2);
+      expect(run.split(`${PUBLIC_MAIN} 2>/dev/null ${EXACT_MAIN}`)).toHaveLength(2);
+      expect(run).not.toContain('cut -f1');
       // the one stop is main having moved on
       expect(run.match(/exit 1/g)).toHaveLength(1);
       expect(run).toMatch(/\[ "\$head" = "\$sha" \] \|\| \{[^}]*exit 1; \}/);
@@ -237,6 +242,20 @@ describe('.eas/workflows/testflight.yml (every push to main)', () => {
       const result = runHeadCheck(run, OLDER, remotes);
       expect(result.status).toBe(1);
       expect(result.out).toContain(`main is at ${NEWER}, past ${OLDER}`);
+    });
+
+    // ls-remote's pattern also matches refs that only end in refs/heads/main, which anyone who
+    // can push may create: before 16 Nov their lines joined main's and no head ever matched
+    it.each([
+      ['publishes', 'the checkout', SHA, { origin: SHA, lookAlike: NEWER }],
+      ['publishes', 'the public address', SHA, { public: SHA, lookAlike: NEWER }],
+      ['stops', 'the checkout', OLDER, { origin: NEWER, lookAlike: OLDER }],
+    ])("%s by main's own line when %s also lists a look-alike ref", (verdict, _, sha, remotes) => {
+      const result = runHeadCheck(run, sha, remotes);
+      expect(result.status).toBe(verdict === 'publishes' ? 0 : 1);
+      // one head, on one line: the look-alike's sha is in neither verdict
+      const stop = `main is at ${NEWER}, past ${OLDER}: that run publishes both.\n`;
+      expect(result.out).toBe(verdict === 'stops' ? stop : '');
     });
 
     it("publishes with a loud warning when main's head cannot be read at all", () => {

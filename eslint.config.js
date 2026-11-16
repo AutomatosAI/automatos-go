@@ -115,13 +115,26 @@ const NO_TRANSFER_IMPORT_PATTERNS = [
   { group: ['expo-file-system/*'], importNames: FILE_TRANSFERS, message: TRANSFER_MESSAGE },
 ];
 const TRANSFER_NAMES = `/^(${FILE_TRANSFERS.join('|')})$/`;
-// A member by its name, whatever holds it (File.downloadFileAsync, FileSystem.uploadAsync,
-// a resumable's downloadAsync), and the same names taken out by destructuring.
-const NO_FILE_TRANSFERS = [
-  { selector: `MemberExpression[property.name=${TRANSFER_NAMES}]`, message: TRANSFER_MESSAGE },
-  { selector: `MemberExpression[property.value=${TRANSFER_NAMES}]`, message: TRANSFER_MESSAGE },
-  { selector: `ObjectPattern > Property[key.name=${TRANSFER_NAMES}]`, message: TRANSFER_MESSAGE },
+// The name written as a string or a template with nothing in it: File['downloadFileAsync'],
+// { 'uploadAsync': send } = FileSystem.
+const AS_TEXT = (node) => [
+  `${node}[value=${TRANSFER_NAMES}]`,
+  `${node}[type='TemplateLiteral'][expressions.length=0][quasis.0.value.cooked=${TRANSFER_NAMES}]`,
 ];
+const FILE_SYSTEM_LOADED_ANOTHER_WAY =
+  'Import expo-file-system statically (File, Paths, Directory), so the guard reads the names. ' +
+  TRANSFER_MESSAGE;
+// A member by its name, whatever holds it (File.downloadFileAsync, FileSystem.uploadAsync,
+// a resumable's downloadAsync), the same names taken out by destructuring, and the package
+// reached by require() or import(), whose members the guard cannot follow.
+const NO_FILE_TRANSFERS = [
+  `MemberExpression[property.name=${TRANSFER_NAMES}]`,
+  ...AS_TEXT('MemberExpression > .property'),
+  `ObjectPattern > Property[key.name=${TRANSFER_NAMES}]`,
+  ...AS_TEXT('ObjectPattern > Property > .key'),
+]
+  .map((selector) => ({ selector, message: TRANSFER_MESSAGE }))
+  .concat(loadedBy(['expo-file-system'], FILE_SYSTEM_LOADED_ANOTHER_WAY));
 
 const PURE_CORE_PATTERN = {
   group: [
