@@ -303,10 +303,12 @@ and the question opens in the app, where the server's own text is shown:
   first), so it does not run in the time iOS gives a background notification action. The read
   waits at most 4 s (`STALE_CHECK_TIMEOUT_MS`, the same as Open's check); the answer's POST keeps
   the client's own 30 s limit.
-- A signed payload is replied to once. Before the answer is posted, its workspace, grant and
-  notification ids and its `iat` are claimed in the store of responses handled (ids only, never
-  words; the last 50 keys; kept across launches; cleared by sign-out). The same payload sent again
-  opens the question with "You already replied to this notification, so nothing was sent again."
+- A signed payload is replied to once. After every check has passed, in the same step as the
+  send, its workspace, grant and notification ids and its `iat` are claimed in the store of
+  responses handled (ids only, never words; the last 50 keys; kept across launches; cleared by
+  sign-out). A Reply that is not posted (a read that failed, a copy under a wrong title) never uses
+  it up. The same payload sent again after a Reply was posted opens the question with "You already
+  replied to this notification, so nothing was sent again."
 
 What a person sees: a Reply to a question Auto asked, or one a named agent asked whose name the
 server confirms, posts and says "Answered". A question whose words carry a link or a picture, or

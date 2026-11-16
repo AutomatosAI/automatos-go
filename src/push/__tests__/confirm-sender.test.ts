@@ -186,6 +186,47 @@ describe('the read is chosen by the signed id, never by what the notification sh
   });
 });
 
+describe('the once-only key is used only by a Reply that posts', () => {
+  const replyAs = (title: string, identifier: string) =>
+    response(QUESTION, 'reply', { userText: REPLY_TEXT, body: WORDS, title, identifier });
+
+  it('a read that failed offline leaves it: the same payload sent again, read, posts', async () => {
+    let reads = 0;
+    const flaky = () => (reads++ === 0 ? offline() : jsonReply(200, { grants: [grant()] }));
+    const { deps, paths } = overRoute({ [LIST]: flaky });
+    expect(await handleResponse(replyAs(AGENT_TITLE, 'first'), deps)).toEqual(
+      inTheApp(PUSH_ACTION_COPY.notSent),
+    );
+    expect(await handleResponse(replyAs(AGENT_TITLE, 'again'), deps)).toMatchObject({
+      toast: 'Answered #0419.',
+    });
+    expect(paths()).toEqual([LIST, LIST, `POST ${ANSWER_PATH}`, `POST ${READ_PATH}`]);
+  });
+
+  it('a copy under a wrong title does not use up the real notification', async () => {
+    const { deps, paths } = overRoute({ [LIST]: listing(grant()) });
+    expect(await handleResponse(replyAs(`Finance Bot${SEP}AI`, 'copy'), deps)).toEqual(
+      inTheApp(PUSH_ACTION_COPY.senderUnchecked),
+    );
+    expect(await handleResponse(replyAs(AGENT_TITLE, 'real'), deps)).toMatchObject({
+      toast: 'Answered #0419.',
+    });
+    expect(paths().filter((path) => path === `POST ${ANSWER_PATH}`)).toHaveLength(1);
+  });
+
+  it('two quick Replies to one payload, both confirmed: one is posted', async () => {
+    const { deps, paths } = overRoute({ [LIST]: listing(grant()) });
+    const outcomes = await Promise.all([
+      handleResponse(replyAs(AGENT_TITLE, 'one'), deps),
+      handleResponse(replyAs(AGENT_TITLE, 'two'), deps),
+    ]);
+    expect(outcomes.map((outcome) => outcome?.toast).sort()).toEqual(
+      ['Answered #0419.', PUSH_ACTION_COPY.repliedBefore].sort(),
+    );
+    expect(paths().filter((path) => path === `POST ${ANSWER_PATH}`)).toHaveLength(1);
+  });
+});
+
 describe('the pure checks', () => {
   it('sameWords: marks and spaces aside; never empty, a link or a cut question', () => {
     expect(sameWords('# Ship  the\n- `Lisbon` ~~deck~~?', 'Ship the Lisbon deck?')).toBe(true);

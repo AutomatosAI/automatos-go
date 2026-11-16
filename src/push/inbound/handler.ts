@@ -5,7 +5,8 @@
 // server's result, only when its notification showed the signed question and nothing else
 // (shown.ts, intent.ts), its title is Auto's own or names the agent the server says asked
 // (confirm-sender.ts, read first), and its signed payload was never replied to before (dedupe.ts
-// signedReplyKey, claimed in the same store); otherwise it opens the question with nothing sent.
+// signedReplyKey, claimed in the same store just before the send, so a reply that is not posted
+// never uses it up); otherwise it opens the question with nothing sent.
 // Open and a tap open the link's screen after its stale check (links/stale.ts), acting on the
 // signed payload only, never the words shown;
 // anything else opens the notifications inbox (the push's own row first), or the question, with
@@ -307,8 +308,13 @@ async function answerConfirmed(
   const check = intent.confirm
     ? await confirmSender(intent.confirm, intent.grantId, deps.checks)
     : 'confirmed';
-  if (check === 'confirmed') return answer(intent, seen.event, deps);
-  return neutralShown(deps, Object.freeze({ kind: 'neutral', reason: check }), seen);
+  if (check !== 'confirmed') {
+    return neutralShown(deps, Object.freeze({ kind: 'neutral', reason: check }), seen);
+  }
+  // claimed now, in the same turn as the send: a reply that is not posted never uses it up, and
+  // the same signed payload sent again under a new identifier posts nothing more
+  if (!firstTime(deps.handled, intent.once)) return neutralShown(deps, REPLIED_BEFORE, seen);
+  return answer(intent, seen.event, deps);
 }
 
 async function act(event: ReadableEvent, deps: HandlerDeps): Promise<Handled> {
@@ -329,8 +335,6 @@ async function act(event: ReadableEvent, deps: HandlerDeps): Promise<Handled> {
   const seen: Seen = { event, payload, verification, role };
   switch (intent.kind) {
     case 'answer':
-      // the same signed payload sent again, under a new identifier, posts nothing more
-      if (!firstTime(deps.handled, intent.once)) return neutralShown(deps, REPLIED_BEFORE, seen);
       return answerConfirmed(intent, seen, deps);
     case 'open':
       return open(intent, deps);
