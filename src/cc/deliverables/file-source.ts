@@ -7,6 +7,7 @@
 // the phone always wants the bytes.
 
 import { buildUrl, withoutTrailingSlash } from '../../api/url';
+import { trimRuns } from '../../lib/text-runs';
 import { CC_ROUTES } from '../routes';
 import type { ViewerFormat } from './file-kind';
 import type { DeliverableDetail } from './schemas';
@@ -25,6 +26,7 @@ const UNSAFE_CHARACTERS = /[\s\u0000-\u001f\u007f]/;
 /** A workspace file's JSON content route: the workspace id, then the path as the query encodes it. */
 const CONTENT_ROUTE = /^\/api\/workspaces\/([^/?#]+)\/files\/content\?path=([^&#]*)/;
 const UNSAFE_NAME = /[^A-Za-z0-9._-]+/g;
+const isDotOrHyphen = (char: string) => char === '.' || char === '-';
 const NAME_MAX_CHARS = 96;
 const DEFAULT_NAME = 'deliverable';
 
@@ -82,9 +84,7 @@ export function fileLink(href: string | null, apiUrl: string): FileLink | null {
 export function viewerFileName(name: string | null | undefined, format: ViewerFormat): string {
   const base = (name ?? '').split('/').pop() ?? '';
   const stem = base.toLowerCase().endsWith(`.${format}`) ? base.slice(0, -format.length - 1) : base;
-  const safe = stem
-    .replace(UNSAFE_NAME, '-')
-    .replace(/^[.-]+|[.-]+$/g, '')
-    .slice(0, NAME_MAX_CHARS);
+  // no '.' or '-' at either end, trimmed in one read (/^[.-]+|[.-]+$/g grew with the square of a run)
+  const safe = trimRuns(stem.replace(UNSAFE_NAME, '-'), isDotOrHyphen).slice(0, NAME_MAX_CHARS);
   return `${safe || DEFAULT_NAME}.${format}`;
 }

@@ -10,6 +10,7 @@ import { isApiError, userMessage } from '../../api/errors';
 import type { ReportTarget } from '../../api/reports';
 import type { WorkspaceRole } from '../../api/workspace';
 import { deliverableHref } from '../../core/web/lib/chat/deliverables';
+import { runStart, trimRuns } from '../../lib/text-runs';
 import type { RouteParams } from '../../navigation/routes';
 import { studioUrl } from '../../navigation/web-links';
 import { canReport } from '../../ui/report';
@@ -25,7 +26,24 @@ export const DELIVERABLE_ID_PARAM = 'id';
 /** A Deliverable id is a UUID (deliverable_service.py `str(row.id)`). */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const BLANK_LINES = /\n[ \t]*\n+/;
-const LINE_ENDS = /[ \t]+$/gm;
+/** What ends a line where /$/m does: the text keeps each one as it was. */
+const LINE_BREAK = /([\n\r\u2028\u2029])/;
+const isSpaceOrTab = (char: string) => char === ' ' || char === '\t';
+const isNewline = (char: string) => char === '\n';
+
+/**
+ * Each line without the spaces and tabs it ends with, read once: what text.replace(/[ \t]+$/gm, '')
+ * gave, which grew with the square of a long run of spaces in the middle of a line (a file's content
+ * is up to a megabyte the server chooses).
+ */
+function withoutLineEndSpaces(text: string): string {
+  return text
+    .split(LINE_BREAK)
+    .map((piece, at) =>
+      at % 2 === 1 ? piece : piece.slice(0, runStart(piece, piece.length, isSpaceOrTab)),
+    )
+    .join('');
+}
 
 /** The Deliverable id from the route, or null when it is missing or not a UUID. */
 export function deliverableIdParam(params: RouteParams): string | null {
@@ -76,7 +94,7 @@ export function monoParagraphs(text: string): string[] {
   return text
     .replace(/\r\n?/g, '\n')
     .split(BLANK_LINES)
-    .map((block) => block.replace(LINE_ENDS, '').replace(/^\n+|\n+$/g, ''))
+    .map((block) => trimRuns(withoutLineEndSpaces(block), isNewline))
     .filter((block) => block.trim() !== '');
 }
 

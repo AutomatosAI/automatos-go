@@ -18,6 +18,8 @@
 //   (A2 retracting narration), the chunker keeps the sentences that still stand in the common prefix
 //   and carries on from there.
 
+import { terminatorsIn, wordBefore } from './runs';
+
 export type SentenceChunker = {
   /** The complete sentences new since the last push. */
   readonly push: (textSoFar: string) => readonly string[];
@@ -37,13 +39,11 @@ export type ChunkerOptions = {
   readonly firstUnitMinRestChars?: number;
 };
 
-const TERMINATOR = /[.!?…]+["'”’)\]]*(?=\s)/g;
-/** The same, or the terminator is the last thing in the text so far. */
-const TERMINATOR_OR_END = /[.!?…]+["'”’)\]]*(?=\s|$)/g;
+// The terminators and the word before one are found in one read (runs.ts): the patterns they
+// replaced grew with the square of a long run of dots or of one long word.
 /** A clause mark with whitespace after it, so `3,` can still become `3,500`. Never a bare space. */
 const CLAUSE = /[,;:]["'”’)\]]*(?=\s)/g;
 const RUN = /^[.!?…]+/;
-const WORD_BEFORE = /[^\s(“"'‘[]+$/;
 /** A dotted abbreviation: e.g, i.e, a.m, U.S (the last '.' is the terminator's). */
 const DOTTED = /^(?:\p{L}\.)+\p{L}$/u;
 /** One letter: an initial. */
@@ -70,7 +70,7 @@ const ABBREVIATIONS: ReadonlySet<string> = new Set([
 /** A lone '.' after an abbreviation or an initial does not end the sentence. */
 function endsSentence(text: string, index: number, terminator: string): boolean {
   if (RUN.exec(terminator)?.[0] !== '.') return true;
-  const word = (WORD_BEFORE.exec(text.slice(0, index))?.[0] ?? '').toLowerCase();
+  const word = wordBefore(text, index).toLowerCase();
   return !(ABBREVIATIONS.has(word) || DOTTED.test(word) || INITIAL.test(word));
 }
 
@@ -80,9 +80,9 @@ function endsSentence(text: string, index: number, terminator: string): boolean 
  * that ends the text counts too; an abbreviation or an initial there is still not an end.
  */
 function sentenceEnds(text: string, atTextEnd = false): readonly number[] {
-  return [...text.matchAll(atTextEnd ? TERMINATOR_OR_END : TERMINATOR)]
-    .filter((match) => endsSentence(text, match.index, match[0]))
-    .map((match) => match.index + match[0].length);
+  return terminatorsIn(text, atTextEnd)
+    .filter((found) => endsSentence(text, found.index, found.text))
+    .map((found) => found.index + found.text.length);
 }
 
 /** The first unit's limits (voice latency E-5); min 0: the first unit is a sentence, as ever. */

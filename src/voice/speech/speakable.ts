@@ -10,6 +10,7 @@
 
 import { hasWords } from '../machine/voice-state';
 import { SPOKEN_COPY } from '../strings';
+import { isSeparatorRow, withoutClosingHashes } from './runs';
 
 type BlockKind = 'code' | 'table' | 'text';
 
@@ -17,11 +18,11 @@ const FENCE = /^\s*(`{3,}|~{3,})/;
 const QUOTES = /^(?:\s*>\s?)+/;
 const QUOTE = /^\s*>\s?/;
 const HEADING = /^\s*#{1,6}(?:\s+|$)/;
-const HEADING_CLOSE = /\s+#+\s*$/;
 const ITEM = /^\s*(?:[-*+•]|\d{1,3}[.)])\s+(?:\[[ xX]\]\s+)?/;
 const RULE = /^\s*([-*_=])(?:\s*\1){2,}\s*$/;
 const SETEXT_UNDERLINE = /^\s*(?:={3,}|-{3,})\s*$/;
-const TABLE_SEPARATOR = /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)*\|?\s*$/;
+// A heading's closing hashes and a table's separator row are read once (runs.ts): their patterns
+// grew with the square of a long run of spaces.
 const ENDED = /[.!?…]["'”’)\]]*$/;
 const SOFT_END = /[,:;]$/;
 
@@ -57,7 +58,7 @@ const INLINE: readonly (readonly [RegExp, string])[] = [
 const MAX_ROUNDS = 4;
 
 function isTableSeparator(line: string | undefined): boolean {
-  return line !== undefined && line.includes('|') && TABLE_SEPARATOR.test(line);
+  return line !== undefined && line.includes('|') && isSeparatorRow(line);
 }
 
 /** A row of a table: a leading pipe, the separator, its header, or a pipe row after them. */
@@ -105,7 +106,7 @@ function stripMarks(line: string): { readonly text: string; readonly sentence: b
   // Each mark removes at least its marker character, so this ends.
   for (let mark = markOf(text); mark !== undefined; mark = markOf(text)) {
     text = text.replace(mark.pattern, '');
-    if (mark.pattern === HEADING) text = text.replace(HEADING_CLOSE, '');
+    if (mark.pattern === HEADING) text = withoutClosingHashes(text);
     sentence = sentence || mark.sentence;
   }
   return { text, sentence };
