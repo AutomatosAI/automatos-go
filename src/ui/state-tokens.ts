@@ -1,7 +1,8 @@
 // PRD-268 §6.12.2's colour roles for its states, on Studio's token names: PIP_TOKENS' companion
 // (variants.ts) for the vocabulary's states (dress/status-glyphs.ts StatusState), pure. Studio, an
-// installed theme and Play paint a state's glyph in its role's token and its word muted, as every
-// status word is, except Needs you's, in warn-ink. HUD paints by the glyph's role instead
+// installed theme and Play paint a state's glyph in its role's token (a mark, drawn by StateGlyph)
+// and its word in a Text tone: muted, as every status word is, except Needs you's, in warning
+// (warn-ink). HUD paints by the glyph's role instead
 // (status-glyphs.ts GLYPH_ROLE_TOKENS: the accent, text2, the error), never by these.
 //   Two roles fail 3:1 as a mark on a light ground, so there they paint in their light stand-in:
 // warning (1.58:1 on Studio Light) in warn-ink, as §6.12.2 says, and running in muted-foreground.
@@ -22,6 +23,7 @@ import {
   type StatusState,
 } from '../styles/dress/status-glyphs';
 import type { ColourName, ColourScheme } from '../styles/tokens/types';
+import type { TextTone } from './variants';
 
 /** Each state's role (§6.12.2), on any ground. */
 export const STATE_TOKENS: Readonly<Record<StatusState, ColourName>> = Object.freeze({
@@ -41,20 +43,20 @@ export const LIGHT_STAND_INS: Readonly<Partial<Record<ColourName, ColourName>>> 
   running: 'mutedForeground',
 });
 
-/** A state's word: muted, except the one the person must act on. */
-const WORD_TOKENS: Readonly<Partial<Record<StatusState, ColourName>>> = Object.freeze({
-  needs_you: 'warnInk',
+/** A state's word, as a Text tone: muted, except the one the person must act on (warn-ink). */
+const WORD_TONES: Readonly<Partial<Record<StatusState, TextTone>>> = Object.freeze({
+  needs_you: 'warning',
 });
 
-export const STATE_WORD_TOKEN: ColourName = 'mutedForeground';
+export const STATE_WORD_TONE: TextTone = 'muted';
 
-export type StatePaint = { readonly glyph: ColourName; readonly word: ColourName };
+export type StatePaint = { readonly glyph: ColourName; readonly word: TextTone };
 
-/** The tokens a state's glyph and word paint in, on a ground of this scheme. */
+/** The token a state's glyph paints in on a ground of this scheme, and its word's tone. */
 export function statePaint(state: StatusState, scheme: ColourScheme): StatePaint {
   const role = STATE_TOKENS[state];
   const glyph = scheme === 'light' ? (LIGHT_STAND_INS[role] ?? role) : role;
-  return Object.freeze({ glyph, word: WORD_TOKENS[state] ?? STATE_WORD_TOKEN });
+  return Object.freeze({ glyph, word: WORD_TONES[state] ?? STATE_WORD_TONE });
 }
 
 /**

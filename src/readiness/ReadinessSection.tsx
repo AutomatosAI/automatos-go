@@ -13,7 +13,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { useDress } from '../styles/dress/use-dress';
 import { useTokens } from '../styles/theme';
-import { Button, Card, Divider, ListRow, Text } from '../ui';
+import { Button, Card, Divider, ListRow, StateGlyph, Text } from '../ui';
 import type { TextLevel } from '../ui/variants';
 import type { ReadinessState } from './schema';
 import { READINESS_COPY } from './strings';
@@ -25,15 +25,13 @@ const LINE_LEVEL: TextLevel = 6;
 const MARK_MAX_WIDTH = '45%';
 
 function ReadinessMark({ state }: { readonly state: ReadinessState }) {
-  const { colours, scheme, spacing } = useTokens();
+  const { scheme, spacing } = useTokens();
   const dress = useDress();
   const mark = readinessMark(state, dress.status === 'glyph', scheme, dress.glyphPaint);
   return (
     <View style={[styles.mark, { gap: spacing.space1 }]}>
-      <Text variant="mono" style={{ color: colours[mark.glyphToken] }}>
-        {mark.glyph}
-      </Text>
-      <Text variant="mono" style={[styles.word, { color: colours[mark.wordToken] }]}>
+      <StateGlyph glyph={mark.glyph} role={mark.glyphToken} />
+      <Text variant="mono" tone={mark.wordTone} style={styles.word}>
         {mark.word}
       </Text>
     </View>

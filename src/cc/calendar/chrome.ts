@@ -34,6 +34,14 @@ export function kindTone(colours: Colours, kind: KindWord): string {
   return kind.tone ?? colours.mutedForeground;
 }
 
+/**
+ * The kind's word: the muted ink. The kind's colour is the square's (a mark): core's six tones are
+ * the same in every palette and read under 4.5:1 as text, five of them on every dark ground (2.45
+ * to 4.34), Mission SLA's on Studio Dark's and Arcade's cards and three on Studio Light's page, so
+ * the word takes a tone the contrast test measures (rule 10.4).
+ */
+export const KIND_WORD_TONE: TextTone = 'muted';
+
 /** The kind's square: 8 pt, 2 pt radius, in the kind's colour. */
 export const KIND_SQUARE = Object.freeze({
   size: 8,

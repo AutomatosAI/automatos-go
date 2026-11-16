@@ -18,7 +18,8 @@ import {
   type StatusState,
 } from '../../styles/dress/status-glyphs';
 import type { ColourName, ColourScheme } from '../../styles/tokens/types';
-import { STATE_WORD_TOKEN, glyphToken, statePaint } from '../../ui/state-tokens';
+import { STATE_WORD_TONE, glyphToken, statePaint } from '../../ui/state-tokens';
+import type { TextTone } from '../../ui/variants';
 import { CC_ROUTES } from '../routes';
 
 type RetryParam = 'task_id' | 'mission_id';
@@ -114,7 +115,7 @@ export type StateMarkSpec = {
   readonly glyph: string;
   readonly word: string;
   readonly glyphToken: ColourName;
-  readonly wordToken: ColourName;
+  readonly wordTone: TextTone;
 };
 
 /**
@@ -134,7 +135,7 @@ export function stateMark(
       glyph: hud.glyph,
       word: hud.word,
       glyphToken: glyphToken(state, glyphPaint),
-      wordToken: STATE_WORD_TOKEN,
+      wordTone: STATE_WORD_TONE,
     };
   }
   const vocabulary = stateGlyph(state);
@@ -143,6 +144,6 @@ export function stateMark(
     glyph: vocabulary.glyph,
     word: vocabulary.word,
     glyphToken: paint.glyph,
-    wordToken: paint.word,
+    wordTone: paint.word,
   };
 }

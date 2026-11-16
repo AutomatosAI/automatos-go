@@ -24,6 +24,7 @@ export {
   type SegmentedControlProps,
 } from './SegmentedControl';
 export { Slider, type SliderProps } from './Slider';
+export { StateGlyph, type StateGlyphProps } from './StateGlyph';
 export { StatusPip, type StatusPipProps } from './StatusPip';
 export { Text, type TextProps } from './Text';
 export { TextField, type TextFieldProps } from './TextField';

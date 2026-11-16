@@ -138,7 +138,7 @@ describe('a notice carries no box of its own', () => {
   });
 
   it('keeps the mark in its tone, the words muted, and Try again where offered', () => {
-    expect(notice).toMatch(/color: colours\[MARK_COLOURS\[notice\.tone\]\]/);
+    expect(notice).toMatch(/tone=\{MARK_TONES\[notice\.tone\]\}/);
     expect(notice).toMatch(/tone="muted"/);
     expect(notice).toMatch(/notice\.retry && onRetry \?/);
     expect(notice).toMatch(/label=\{CHAT_COPY\.retry\}/);
