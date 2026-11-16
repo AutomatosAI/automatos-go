@@ -51,6 +51,7 @@ const KEY_RUN = '[A-Za-z0-9_-]';
  * a token that is public by design (an anonymous client key, say). A name goes here only with a
  * comment beside it saying what the token is and why it is public: every other token is someone's
  * session or a server's key.
+ * @type {readonly string[]}
  */
 const PUBLIC_TOKEN_NAMES = [];
 

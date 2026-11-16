@@ -377,7 +377,7 @@ describe('what the generator refuses', () => {
     expect(() => licenceData(over)).toThrow(LicenceError);
     const named = /^node_modules\/big \(big@1\.0\.0\): .* over MAX_TEXT_BYTES/;
     expect(() => licenceData(over)).toThrow(named);
-    expect(run(over, () => undefined)).toBe(1);
+    expect(run(over, () => true)).toBe(1);
     expect(existsSync(path.join(over, OUTPUT_PATH))).toBe(false);
   });
 
