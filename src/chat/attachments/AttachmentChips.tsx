@@ -5,16 +5,16 @@
 // keeps the chip's look and still takes a 44 pt touch: the chip passes the button's slop above,
 // below and after it (a touch outside a view's box never reaches its children), the row is padded to
 // 44 and takes the padding back (touchRoom), and the end of the row leaves the last button's slop.
+// The button's box is the style's (useStyle().controls), so the room follows it.
 
 import FileText from 'lucide-react-native/icons/file-text';
 import ImageIcon from 'lucide-react-native/icons/image';
 import X from 'lucide-react-native/icons/x';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { useTokens } from '../../styles/theme';
+import { useStyle, useTokens } from '../../styles/theme';
 import { IconButton, Text } from '../../ui';
-import { ICON_STROKE, hitSlopFor, touchRoom } from '../../ui/paint';
-import { ICON_BUTTON_SIZES } from '../../ui/variants';
+import { ICON_STROKE, hitSlopFor, touchRoom, type HitSlop } from '../../ui/paint';
 import { ATTACH_COPY } from '../strings';
 import type { AttachmentChip } from './attachment-list';
 
@@ -24,11 +24,19 @@ const ICON_SIZE = 14;
 /** A long name is cut at the end so a chip stays readable beside the others. */
 const NAME_MAX_WIDTH = 180;
 const REMOVE_SIZE = 'sm';
-const REMOVE_BOX = ICON_BUTTON_SIZES[REMOVE_SIZE].box;
-const REMOVE_SLOP = hitSlopFor(REMOVE_BOX, REMOVE_BOX);
-/** The chip lets the remove button's slop through above, below and after it; never before it. */
-const CHIP_SLOP = Object.freeze({ ...REMOVE_SLOP, left: 0 });
-const ROW_ROOM = touchRoom(REMOVE_BOX);
+
+/**
+ * The room a remove button of this box needs: its own slop, the chip's (the same above, below and
+ * after it; never before it) and the row's padding taken back.
+ */
+function removeRoom(box: number) {
+  const slop = hitSlopFor(box, box);
+  return { slop, chip: { ...slop, left: 0 }, row: touchRoom(box) };
+}
+
+function useRemoveRoom() {
+  return removeRoom(useStyle().controls.iconButton[REMOVE_SIZE].box);
+}
 
 export type AttachmentChipsProps = {
   readonly chips: readonly AttachmentChip[];
@@ -37,16 +45,18 @@ export type AttachmentChipsProps = {
 
 function Chip({
   chip,
+  chipSlop,
   onRemove,
 }: {
   readonly chip: AttachmentChip;
+  readonly chipSlop: HitSlop;
   readonly onRemove: () => void;
 }) {
   const { colours, radii, spacing } = useTokens();
   const Icon = chip.image ? ImageIcon : FileText;
   return (
     <View
-      hitSlop={CHIP_SLOP}
+      hitSlop={chipSlop}
       style={[
         styles.chip,
         {
@@ -85,6 +95,7 @@ function Chip({
 
 export function AttachmentChips({ chips, onRemove }: AttachmentChipsProps) {
   const { spacing } = useTokens();
+  const room = useRemoveRoom();
   if (chips.length === 0) return null;
   return (
     <ScrollView
@@ -92,15 +103,15 @@ export function AttachmentChips({ chips, onRemove }: AttachmentChipsProps) {
       showsHorizontalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       accessibilityLabel={ATTACH_COPY.chips}
-      style={{ marginVertical: ROW_ROOM.marginVertical }}
+      style={{ marginVertical: room.row.marginVertical }}
       contentContainerStyle={{
         gap: spacing.space3,
-        paddingVertical: ROW_ROOM.paddingVertical,
-        paddingRight: REMOVE_SLOP.right,
+        paddingVertical: room.row.paddingVertical,
+        paddingRight: room.slop.right,
       }}
     >
       {chips.map((chip) => (
-        <Chip key={chip.key} chip={chip} onRemove={() => onRemove(chip.key)} />
+        <Chip key={chip.key} chip={chip} chipSlop={room.chip} onRemove={() => onRemove(chip.key)} />
       ))}
     </ScrollView>
   );

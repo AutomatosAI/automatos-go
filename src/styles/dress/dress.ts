@@ -4,8 +4,9 @@
 // panel (Studio's, Play's and Candy's cards, HUD's bracketed panels, Arcade's windows), the status
 // (a dot and a word, or a glyph plus WORD), the button (radius, height, label face, case and
 // tracking), the small label, the filter pill, a list's rows and rules, the radii, the sheet's top,
-// the ground behind the screen, the least an edge screen's action is tall and the paints. Pure:
-// src/ui reads it through useDress() (use-dress.ts) and src/ui/dressed.ts.
+// the ground behind the screen, the least an edge screen's action is tall and the paints. The least
+// a button and a filter pill are tall are the style's control sizes (tokens/controls.ts, rule 3.5).
+// Pure: src/ui reads it through useDress() (use-dress.ts) and src/ui/dressed.ts.
 //
 //   Studio  exactly what the foundation draws (an installed theme too: the Studio layout, D58)
 //   Play    Ember: cards 14 on the surface with the ground's line, buttons 10 and 44 high in
@@ -31,7 +32,6 @@ import type { SpaceName } from '../tokens/types';
 import { ARCADE_STEPS } from '../typeface/arcade-type';
 import { CANDY_STEPS } from '../typeface/candy-type';
 import type { GlyphPaint } from './status-glyphs';
-import { BUTTON_SIZES, PILL_HEIGHT } from '../../ui/variants';
 import { GRABBER } from '../../ui/overlay';
 import { MIN_TOUCH } from '../../ui/paint';
 import { CANDY_LINE, candyPaints } from './candy-paints';
@@ -118,12 +118,6 @@ export type Dress = {
   readonly paints: DressPaints;
 };
 
-/** Ember and HUD: Apple's 44 pt, the least a button or chip is tall. */
-export const DRESS_MIN_HEIGHT = 44;
-/** HUD's README: buttons inside a panel are 46 high. */
-export const HUD_PANEL_BUTTON_HEIGHT = 46;
-/** Ember 04's filter chips. */
-export const PLAY_PILL_HEIGHT = 40;
 /** CANDY-LAYOUT §7: an edge screen's primary is an accent pill 50 tall. */
 export const CANDY_EDGE_ACTION_HEIGHT = 50;
 /** CANDY-LAYOUT §7: Settings' rows are at least 52 tall (the design's min-height 52px). */
@@ -136,8 +130,6 @@ const STUDIO_BUTTON_WEIGHT: FontWeight = 500;
 
 const STUDIO = Object.freeze({
   button: {
-    minHeight: BUTTON_SIZES.sm.height,
-    panelMinHeight: BUTTON_SIZES.sm.height,
     labelFace: { role: 'sans', weight: STUDIO_BUTTON_WEIGHT },
     labelSize: null,
     labelCase: 'as-written',
@@ -145,7 +137,6 @@ const STUDIO = Object.freeze({
   },
   label: { face: { role: 'mono', weight: 600 }, size: 11, case: 'capitals', trackingEm: 0.12 },
   pill: {
-    minHeight: PILL_HEIGHT,
     paddingX: 'space4',
     restWeight: STUDIO_BUTTON_WEIGHT,
     selectedWeight: STUDIO_BUTTON_WEIGHT,
@@ -154,28 +145,24 @@ const STUDIO = Object.freeze({
 
 const PLAY = Object.freeze({
   button: {
-    minHeight: DRESS_MIN_HEIGHT,
-    panelMinHeight: DRESS_MIN_HEIGHT,
     labelFace: { role: 'sans', weight: 600 },
     labelSize: 14,
     labelCase: 'as-written',
     trackingEm: 0,
   },
   label: { face: { role: 'sans', weight: 500 }, size: 11, case: 'capitals', trackingEm: 0.14 },
-  pill: { minHeight: PLAY_PILL_HEIGHT, paddingX: 'space7', restWeight: 500, selectedWeight: 600 },
+  pill: { paddingX: 'space7', restWeight: 500, selectedWeight: 600 },
 } as const);
 
 const HUD = Object.freeze({
   button: {
-    minHeight: DRESS_MIN_HEIGHT,
-    panelMinHeight: HUD_PANEL_BUTTON_HEIGHT,
     labelFace: { role: 'mono', weight: 500 },
     labelSize: 12,
     labelCase: 'capitals',
     trackingEm: 0.14,
   },
   label: { face: { role: 'mono', weight: 500 }, size: 11, case: 'capitals', trackingEm: 0.1 },
-  pill: { minHeight: DRESS_MIN_HEIGHT, paddingX: 'space7', restWeight: 500, selectedWeight: 500 },
+  pill: { paddingX: 'space7', restWeight: 500, selectedWeight: 500 },
 } as const);
 
 /** Press Start 2P has one weight. */
@@ -183,8 +170,6 @@ const PIXEL_WEIGHT: FontWeight = 400;
 
 const ARCADE = Object.freeze({
   button: {
-    minHeight: DRESS_MIN_HEIGHT,
-    panelMinHeight: DRESS_MIN_HEIGHT,
     labelFace: { role: 'pixel', weight: PIXEL_WEIGHT },
     labelSize: ARCADE_STEPS.button,
     labelCase: 'capitals',
@@ -196,9 +181,8 @@ const ARCADE = Object.freeze({
     case: 'capitals',
     trackingEm: 0.1,
   },
-  // the Inventory's tabs: 44 high (--arcade-target), 16 in (inventory.module.css .tab)
+  // the Inventory's tabs: 16 in (inventory.module.css .tab), 44 high in its list (--arcade-target)
   pill: {
-    minHeight: DRESS_MIN_HEIGHT,
     paddingX: 'space7',
     restWeight: PIXEL_WEIGHT,
     selectedWeight: PIXEL_WEIGHT,
@@ -211,8 +195,6 @@ const CANDY_BUTTON_WEIGHT: FontWeight = 800;
 
 const CANDY = Object.freeze({
   button: {
-    minHeight: DRESS_MIN_HEIGHT,
-    panelMinHeight: DRESS_MIN_HEIGHT,
     labelFace: { role: 'sans', weight: CANDY_BUTTON_WEIGHT },
     labelSize: CANDY_STEPS.button,
     labelCase: 'as-written',
@@ -225,15 +207,25 @@ const CANDY = Object.freeze({
     case: 'as-written',
     trackingEm: 0,
   },
-  // the kit's filter pill (ui.module.css .pill: 40 high, 0 18px, 800), 44 high (D-A11Y)
+  // the kit's filter pill (ui.module.css .pill: 0 18px, 800), 44 high in its list (D-A11Y)
   pill: {
-    minHeight: DRESS_MIN_HEIGHT,
     paddingX: 'space8',
     restWeight: CANDY_BUTTON_WEIGHT,
     selectedWeight: CANDY_BUTTON_WEIGHT,
   },
   row: { minHeight: CANDY_ROW_HEIGHT, separatorWidth: CANDY_LINE },
 } as const);
+
+/** The least a button (anywhere, and in a panel) and a filter pill are tall: the style's list. */
+function least({ controls }: ResolvedStyle) {
+  return {
+    button: {
+      minHeight: controls.buttonMinHeight,
+      panelMinHeight: controls.panelButtonMinHeight,
+    },
+    pill: { minHeight: controls.pillMinHeight },
+  };
+}
 
 function needs<T>(vars: T | undefined, layout: Layout): T {
   if (vars === undefined) throw new Error(`a resolved ${layout} style without its variables`);
@@ -242,15 +234,16 @@ function needs<T>(vars: T | undefined, layout: Layout): T {
 
 function studio(style: ResolvedStyle): Dress {
   const { radii } = style;
+  const heights = least(style);
   return {
     layout: 'studio',
     panel: 'card',
     panelHeader: 'eyebrow',
     status: 'pip',
     glyphPaint: 'state-role',
-    button: { ...STUDIO.button, radius: radii.control },
+    button: { ...STUDIO.button, ...heights.button, radius: radii.control },
     label: STUDIO.label,
-    pill: { ...STUDIO.pill, radius: radii.pill },
+    pill: { ...STUDIO.pill, ...heights.pill, radius: radii.pill },
     row: ROW,
     radii,
     sheetRadius: radii.sheet,
@@ -263,15 +256,16 @@ function studio(style: ResolvedStyle): Dress {
 
 function play(style: ResolvedStyle): Dress {
   const { radii } = style;
+  const heights = least(style);
   return {
     layout: 'play',
     panel: 'card',
     panelHeader: 'label',
     status: 'pip',
     glyphPaint: 'state-role',
-    button: { ...PLAY.button, radius: radii.control },
+    button: { ...PLAY.button, ...heights.button, radius: radii.control },
     label: PLAY.label,
-    pill: { ...PLAY.pill, radius: radii.pill },
+    pill: { ...PLAY.pill, ...heights.pill, radius: radii.pill },
     row: ROW,
     radii,
     sheetRadius: radii.sheet,
@@ -284,15 +278,16 @@ function play(style: ResolvedStyle): Dress {
 
 function hud(style: ResolvedStyle): Dress {
   const { radii } = style;
+  const heights = least(style);
   return {
     layout: 'hud',
     panel: 'bracket',
     panelHeader: 'display',
     status: 'glyph',
     glyphPaint: 'glyph-role',
-    button: { ...HUD.button, radius: radii.control },
+    button: { ...HUD.button, ...heights.button, radius: radii.control },
     label: HUD.label,
-    pill: { ...HUD.pill, radius: radii.pill },
+    pill: { ...HUD.pill, ...heights.pill, radius: radii.pill },
     row: ROW,
     radii,
     sheetRadius: radii.sheet,
@@ -305,15 +300,16 @@ function hud(style: ResolvedStyle): Dress {
 
 function arcade(style: ResolvedStyle): Dress {
   const { radii } = style;
+  const heights = least(style);
   return {
     layout: 'arcade',
     panel: 'window',
     panelHeader: 'display',
     status: 'glyph',
     glyphPaint: 'state-role',
-    button: { ...ARCADE.button, radius: radii.control },
+    button: { ...ARCADE.button, ...heights.button, radius: radii.control },
     label: ARCADE.label,
-    pill: { ...ARCADE.pill, radius: radii.pill },
+    pill: { ...ARCADE.pill, ...heights.pill, radius: radii.pill },
     row: ROW,
     radii,
     sheetRadius: radii.sheet,
@@ -326,15 +322,16 @@ function arcade(style: ResolvedStyle): Dress {
 
 function candy(style: ResolvedStyle): Dress {
   const { radii } = style;
+  const heights = least(style);
   return {
     layout: 'candy',
     panel: 'card',
     panelHeader: 'section',
     status: 'glyph',
     glyphPaint: 'state-role',
-    button: { ...CANDY.button, radius: radii.control },
+    button: { ...CANDY.button, ...heights.button, radius: radii.control },
     label: CANDY.label,
-    pill: { ...CANDY.pill, radius: radii.pill },
+    pill: { ...CANDY.pill, ...heights.pill, radius: radii.pill },
     row: CANDY.row,
     radii,
     sheetRadius: radii.sheet,

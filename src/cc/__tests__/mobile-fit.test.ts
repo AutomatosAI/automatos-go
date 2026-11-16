@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 
 import { tokensFor } from '../../styles/tokens';
 import { MIN_TOUCH, hitSlopFor } from '../../ui/paint';
-import { BUTTON_SIZES, PILL_HEIGHT } from '../../ui/variants';
+import { STUDIO_CONTROLS } from '../../styles/controls';
 import { ALWAYS_ON_BAND } from '../calendar/chrome';
 import { QUESTION_CONTROLS } from '../questions/chrome';
 
@@ -50,8 +50,8 @@ describe('the filter pills (Board, Deliverables)', () => {
   );
 
   it('a 28 pt Studio pill and its slop fit the padded row exactly', () => {
-    const slop = hitSlopFor(PILL_HEIGHT).top;
-    expect(PILL_HEIGHT + 2 * slop).toBe(MIN_TOUCH);
+    const slop = hitSlopFor(STUDIO_CONTROLS.pillMinHeight).top;
+    expect(STUDIO_CONTROLS.pillMinHeight + 2 * slop).toBe(MIN_TOUCH);
   });
 });
 
@@ -72,10 +72,10 @@ describe('the always-on band', () => {
 describe('a question’s option buttons', () => {
   it('wrap 14 apart, so two small buttons’ slops meet and never overlap', () => {
     const { spacing } = tokensFor('studio', 'light');
-    const slop = hitSlopFor(BUTTON_SIZES.sm.height).top;
+    const slop = hitSlopFor(STUDIO_CONTROLS.button.sm.height).top;
     expect(2 * slop).toBeLessThanOrEqual(spacing[QUESTION_CONTROLS.optionRowGap]);
     // a button reaches 44 only up and down: the gap within a row can stay 8
-    expect(hitSlopFor(BUTTON_SIZES.sm.height).left).toBe(0);
+    expect(hitSlopFor(STUDIO_CONTROLS.button.sm.height).left).toBe(0);
   });
 
   it('uses that row gap between wrapped rows, and keeps the gap between buttons in a row', () => {

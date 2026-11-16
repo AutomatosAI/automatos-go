@@ -1,13 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
+import { STUDIO_CONTROLS } from '../../styles/controls';
 import { STUDIO_TYPE } from '../../styles/type';
 import { UI_COPY } from '../strings';
-import {
-  COMMAND_CENTRE_BUTTON,
-  ICON_BUTTON_SIZES,
-  commandCentreLabel,
-  textRole,
-} from '../variants';
+import { commandCentreLabel, textRole } from '../variants';
 
 describe('the Command Centre button (the header, K5)', () => {
   it('says the needs-you number to VoiceOver, as the badge inside cannot', () => {
@@ -20,8 +16,8 @@ describe('the Command Centre button (the header, K5)', () => {
   });
 
   it("is sized as the header's 36 pt buttons, with a 15 pt icon and a 12 pt label", () => {
-    expect(COMMAND_CENTRE_BUTTON.height).toBe(ICON_BUTTON_SIZES.md.box);
-    expect(COMMAND_CENTRE_BUTTON.iconSize).toBe(15);
-    expect(STUDIO_TYPE[textRole('body', COMMAND_CENTRE_BUTTON.level)].fontSize).toBe(12);
+    expect(STUDIO_CONTROLS.commandCentre.height).toBe(STUDIO_CONTROLS.iconButton.md.box);
+    expect(STUDIO_CONTROLS.commandCentre.iconSize).toBe(15);
+    expect(STUDIO_TYPE[textRole('body', STUDIO_CONTROLS.commandCentre.level)].fontSize).toBe(12);
   });
 });

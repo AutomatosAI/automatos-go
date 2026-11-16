@@ -4,7 +4,8 @@
 // Auto'). The error, else the helper, is the accessibility hint. A5: the dress gives the field's
 // radius (the style's input: Play's 12, HUD's 0) and the label's face, case and tracking (Play's
 // and HUD's small label in capitals); the keyboard takes Play's and HUD's tone
-// (keyboardAppearanceFor), a caller's keyboardAppearance first.
+// (keyboardAppearanceFor), a caller's keyboardAppearance first. Its heights are the style's
+// (useStyle().controls.field, rule 3.5).
 
 import { useState } from 'react';
 import {
@@ -22,14 +23,7 @@ import { useStyle } from '../styles/theme';
 import type { Tokens } from '../styles/tokens';
 import { Text } from './Text';
 import { fieldLabelStyle } from './dressed';
-import {
-  FIELD_HEIGHT,
-  FIELD_MULTILINE_MIN_HEIGHT,
-  fieldNote,
-  fieldPaint,
-  textFace,
-  type FieldPaint,
-} from './variants';
+import { fieldNote, fieldPaint, textFace, type FieldPaint } from './variants';
 import { selectionProps } from './selection';
 
 const NOTE_LEVEL = 5;
@@ -81,6 +75,7 @@ export function TextField({
   const style = useStyle();
   const dress = useDress();
   const { tokens } = style;
+  const { field } = style.controls;
   const [focused, setFocused] = useState(false);
   const tone = fieldPaint(tokens.colours, { focused, invalid: error !== undefined, disabled });
   const note = fieldNote(error, helper);
@@ -120,7 +115,8 @@ export function TextField({
         style={[
           styles.input,
           inputStyle(tokens, tone, multiline, dress.radii.input),
-          multiline ? styles.multiline : styles.single,
+          multiline ? styles.multiline : null,
+          { minHeight: multiline ? field.multilineMinHeight : field.height },
         ]}
       />
       {note ? (
@@ -135,6 +131,5 @@ export function TextField({
 const styles = StyleSheet.create({
   field: { alignSelf: 'stretch' },
   input: { borderWidth: 1 },
-  single: { minHeight: FIELD_HEIGHT },
-  multiline: { minHeight: FIELD_MULTILINE_MIN_HEIGHT, textAlignVertical: 'top' },
+  multiline: { textAlignVertical: 'top' },
 });

@@ -7,15 +7,14 @@ import { describe, expect, it } from 'vitest';
 import { ApiError, type ApiErrorKind } from '../../api/errors';
 import { API_ERROR_COPY } from '../../api/strings';
 import { BOARD_COLUMNS, STATUS_CONFIG, type BoardStatus } from '../../core/web/types/board';
+import { STUDIO_CONTROLS } from '../../styles/controls';
 import { tokensFor, type ColourName, type Tokens } from '../../styles/tokens';
 import { MIN_TEXT_SIZE, STUDIO_TYPE, type TypeScale } from '../../styles/type';
 import { UI_COPY } from '../strings';
 import { tint } from '../paint';
 import {
   BUTTON_PAINTS,
-  BUTTON_SIZES,
   FOCUS_RING,
-  ICON_BUTTON_SIZES,
   PIP_TOKENS,
   TEXT_TONES,
   TONES,
@@ -170,21 +169,22 @@ describe('buttons', () => {
   });
 
   it('sizes sm at 30 and md at 40, with labels from the scale at 11 pt or more', () => {
-    expect(BUTTON_SIZES.sm.height).toBe(30);
-    expect(BUTTON_SIZES.md.height).toBe(40);
-    for (const size of Object.values(BUTTON_SIZES)) {
+    expect(STUDIO_CONTROLS.button.sm.height).toBe(30);
+    expect(STUDIO_CONTROLS.button.md.height).toBe(40);
+    for (const size of Object.values(STUDIO_CONTROLS.button)) {
       expect(LIGHT.spacing[size.paddingX]).toBeGreaterThan(0);
       expect(LIGHT.spacing[size.gap]).toBeGreaterThan(0);
       const role = textRole('body', size.level);
       expect(STUDIO_TYPE[role].fontSize).toBeGreaterThanOrEqual(MIN_TEXT_SIZE);
     }
-    expect(STUDIO_TYPE[textRole('body', BUTTON_SIZES.md.level)].fontSize).toBe(14);
-    expect(STUDIO_TYPE[textRole('body', BUTTON_SIZES.sm.level)].fontSize).toBe(12);
+    expect(STUDIO_TYPE[textRole('body', STUDIO_CONTROLS.button.md.level)].fontSize).toBe(14);
+    expect(STUDIO_TYPE[textRole('body', STUDIO_CONTROLS.button.sm.level)].fontSize).toBe(12);
   });
 
   it('sizes icon buttons 30, 36 and 42 with the icon inside the box', () => {
-    expect(Object.values(ICON_BUTTON_SIZES).map((s) => s.box)).toEqual([30, 36, 42]);
-    for (const { box, icon } of Object.values(ICON_BUTTON_SIZES)) expect(icon).toBeLessThan(box);
+    expect(Object.values(STUDIO_CONTROLS.iconButton).map((s) => s.box)).toEqual([30, 36, 42]);
+    for (const { box, icon } of Object.values(STUDIO_CONTROLS.iconButton))
+      expect(icon).toBeLessThan(box);
   });
 });
 

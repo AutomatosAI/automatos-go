@@ -1,8 +1,8 @@
 // Settings → Notifications' wiring, pure: the caches after a write hold what the server now has
 // (the cached value untouched); the phone link PushRoot attaches and the screen reads (a later
 // attach wins, a stale detach changes nothing; 'Turn on notifications' asks, then registers once);
-// and, read from the source, the wave's own path, the route file, the feature-local switch and the
-// one permission ask. (The settings logic modules' purity is prefs.test.ts's.)
+// and, read from the source, the wave's own path, the route file, src/ui's switch and the one
+// permission ask. (The settings logic modules' purity is prefs.test.ts's.)
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -137,12 +137,13 @@ describe('the source', () => {
     expect(route).toContain('NotificationsScreen');
   });
 
-  it('a settings switch says it is a switch (the feature-local Switch, no src/ui primitive)', () => {
-    const switches = sources(path.join(root, 'settings/components')).filter((file) =>
-      file.text.includes('NativeSwitch'),
-    );
-    expect(switches).toHaveLength(1);
-    expect(switches[0]?.text).toContain('accessibilityRole="switch"');
+  it("a settings switch is src/ui's SwitchRow, which says it is a switch", () => {
+    const settings = sources(path.join(root, 'settings'));
+    const ownSwitch = settings.filter((file) => /<Switch\b|NativeSwitch/.test(file.text));
+    expect(ownSwitch.map((file) => file.file)).toEqual([]);
+    expect(settings.some((file) => file.text.includes("from '../../ui/SwitchRow'"))).toBe(true);
+    const primitive = readFileSync(path.resolve(root, '../ui/Switch.tsx'), 'utf8');
+    expect(primitive).toContain('accessibilityRole="switch"');
   });
 
   it('only registration/permission.ts asks the OS (KP11): the screen goes through the link', () => {

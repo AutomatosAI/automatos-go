@@ -17,7 +17,7 @@ import { ownServerInWords } from '../connect/edges';
 import { useCurrentServer } from '../connect/use-current-server';
 import { AiLabel } from '../styles/ai-label';
 import { useTokens } from '../styles/theme';
-import { Button, Card, Divider, Screen, Text } from '../ui';
+import { Button, Card, Divider, Screen, Section, Text } from '../ui';
 import { consentSheetView, type ConsentLeave } from './sheet';
 import { CONSENT_SHEET_COPY } from './strings';
 import { useConsent } from './use-consent';
@@ -30,10 +30,7 @@ const NOTE_LEVEL = 3;
 function ProviderList({ names }: { readonly names: readonly string[] }) {
   const { spacing } = useTokens();
   return (
-    <View style={{ gap: spacing.space3 }}>
-      <Text variant="eyebrow" accessibilityRole="header">
-        {CONSENT_SHEET_COPY.providersLabel}
-      </Text>
+    <Section title={CONSENT_SHEET_COPY.providersLabel}>
       <Card padding="space6">
         <View accessibilityRole="list">
           {names.map((name, index) => (
@@ -46,7 +43,7 @@ function ProviderList({ names }: { readonly names: readonly string[] }) {
           ))}
         </View>
       </Card>
-    </View>
+    </Section>
   );
 }
 

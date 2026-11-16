@@ -13,7 +13,7 @@ import { TAB_STRIP } from '../../cc/shell/chrome';
 import { SHELL_COPY } from '../../cc/strings';
 import { AA_TEXT, contrastRatio } from '../../core/web/lib/look-kit/contrast';
 import { buttonHeight, controlLabel, dressedPanelPaint, labelStyle } from '../../ui/dressed';
-import { BUTTON_SIZES } from '../../ui/variants';
+import { STUDIO_CONTROLS } from '../controls';
 import { FONT_FAMILIES } from '../fonts';
 import {
   arcadeShellRuns,
@@ -23,7 +23,8 @@ import {
   shellTabPaint,
   shellTitle,
 } from '../dress/cc-dress';
-import { DRESS_MIN_HEIGHT, dressOf } from '../dress/dress';
+import { DRESS_MIN_HEIGHT } from '../tokens/controls';
+import { dressOf } from '../dress/dress';
 import { ARCADE_CHIP_RING } from '../dress/paints';
 import { GLYPHS, GLYPH_ROLE_TOKENS, isGlyphStatus, statusGlyph } from '../dress/status-glyphs';
 import { ARCADE, ARCADE_STYLES } from '../dress/__tests__/fixtures';
@@ -200,10 +201,12 @@ describe('the primitives in Arcade', () => {
       expect([...corners, dress.radii.chip, dress.button.radius]).toEqual([0, 0, 0, 0, 0, 0]);
       expect(dress.pill.minHeight).toBeGreaterThanOrEqual(DRESS_MIN_HEIGHT);
       for (const inPanel of [false, true]) {
-        expect(buttonHeight(dress, BUTTON_SIZES.sm.height, inPanel)).toBe(DRESS_MIN_HEIGHT);
+        expect(buttonHeight(dress, STUDIO_CONTROLS.button.sm.height, inPanel)).toBe(
+          DRESS_MIN_HEIGHT,
+        );
       }
     });
-    expect(controlLabel(ARCADE, dressOf(ARCADE), BUTTON_SIZES.md.level)).toEqual(
+    expect(controlLabel(ARCADE, dressOf(ARCADE), STUDIO_CONTROLS.button.md.level)).toEqual(
       ARCADE.type.button,
     );
   });

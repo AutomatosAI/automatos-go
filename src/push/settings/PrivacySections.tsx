@@ -6,8 +6,8 @@
 import { useAppSession } from '../../app-state/session';
 import { Card, ErrorState, LoadingState } from '../../ui';
 import { PUSH_SETTINGS_COPY } from '../strings';
-import { Section } from './components/Section';
-import { SwitchRow } from './components/Switch';
+import { Section } from '../../ui/Section';
+import { SwitchRow } from '../../ui/SwitchRow';
 import { useFaceId, useRedact } from './use-notification-settings';
 import { redactView } from './view-model';
 

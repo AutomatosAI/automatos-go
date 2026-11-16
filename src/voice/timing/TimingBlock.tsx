@@ -7,13 +7,12 @@ import { Share, StyleSheet, View } from 'react-native';
 
 import { logger } from '../../lib/logger';
 import { useTokens } from '../../styles/theme';
-import { Button, Card, Text } from '../../ui';
+import { Button, Card, Section, SectionNote, Text } from '../../ui';
 import { VOICE_TIMING_COPY } from '../strings';
 import { useTimings } from './use-timing';
 import { timingLine, timingRows, type TurnTiming } from './voice-timing';
 
 const COPY = VOICE_TIMING_COPY;
-const NOTE_LEVEL = 6;
 const ROW_LEVEL = 4;
 
 function share(turns: readonly TurnTiming[]): void {
@@ -55,22 +54,16 @@ function Readings({ turn }: { readonly turn: TurnTiming }) {
 }
 
 export function TimingBlock() {
-  const { spacing } = useTokens();
   const turns = useTimings();
   const last = turns[0];
   return (
-    <View style={{ gap: spacing.space3 }}>
-      <Text variant="eyebrow" accessibilityRole="header">
-        {COPY.title}
-      </Text>
-      <Text level={NOTE_LEVEL} tone="muted">
-        {last === undefined ? COPY.empty : COPY.hint}
-      </Text>
+    <Section title={COPY.title}>
+      <SectionNote>{last === undefined ? COPY.empty : COPY.hint}</SectionNote>
       {last === undefined ? null : <Readings turn={last} />}
       {last === undefined ? null : (
         <Button label={COPY.share} variant="outline" onPress={() => share(turns)} />
       )}
-    </View>
+    </Section>
   );
 }
 

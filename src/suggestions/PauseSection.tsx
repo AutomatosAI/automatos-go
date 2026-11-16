@@ -3,14 +3,14 @@
 // notifications) and what it leaves alone (the daily brief, unless Daily digest is off), then the
 // failure line when there is one ('Your suggestions weren't paused. Can't reach Automatos…'),
 // never a crash. Shown only when discovery lists `suggestions`: an older server's Settings are
-// unchanged. The switch row is the one Settings → Notifications built (src/ui has no switch
-// primitive), so VoiceOver hears one switch named "Pause suggestions" with the line as its hint;
-// the card and the text are src/ui's, so every style dresses them.
+// unchanged. The switch row is src/ui's SwitchRow, so VoiceOver hears one switch named "Pause
+// suggestions" with the line as its hint; the section, card and text are src/ui's too, so every
+// style dresses them.
 
 import { View } from 'react-native';
 
-import { Section } from '../push/settings/components/Section';
-import { SwitchRow } from '../push/settings/components/Switch';
+import { Section } from '../ui/Section';
+import { SwitchRow } from '../ui/SwitchRow';
 import { useTokens } from '../styles/theme';
 import { Card, Text } from '../ui';
 import type { TextLevel } from '../ui/variants';

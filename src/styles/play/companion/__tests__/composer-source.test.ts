@@ -9,7 +9,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { ICON_BUTTON_SIZES } from '../../../../ui/variants';
+import { STYLE_CONTROLS } from '../../../tokens/controls';
 import { COMPANION, composerView, draftComposerState } from '../model';
 
 const source = readFileSync(path.resolve(__dirname, '..', 'PlayComposer.tsx'), 'utf8')
@@ -19,9 +19,9 @@ const button = source.match(/function ComposerButton[\s\S]*?\n}/)?.[0] ?? '';
 
 describe("Play's send button", () => {
   it('is 42 pt, as Studio’s send and the voice button', () => {
-    expect(COMPANION.composer.button).toBe(ICON_BUTTON_SIZES.lg.box);
+    expect(COMPANION.composer.button).toBe(STYLE_CONTROLS.play.iconButton.lg.box);
     expect(COMPANION.composer.button).toBe(42);
-    expect(COMPANION.composer.icon).toBe(ICON_BUTTON_SIZES.lg.icon);
+    expect(COMPANION.composer.icon).toBe(STYLE_CONTROLS.play.iconButton.lg.icon);
   });
 
   it('is a circle in Play’s paint, with the arrow up to send and the square to stop', () => {

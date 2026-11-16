@@ -27,7 +27,7 @@ describe('Settings → Voice: "I speak"', () => {
   });
 
   it('is a list of rows that say whether they are chosen, each saving its choice', () => {
-    expect(sections).toMatch(/<Titled title=\{LANGUAGE_COPY\.section\}>/);
+    expect(sections).toMatch(/<Section title=\{LANGUAGE_COPY\.section\}>/);
     expect(sections).toMatch(
       /hint=\{LANGUAGE_COPY\.rowHint\} onPress=\{\(row\) => onChoose\(row\.key\)\}/,
     );
@@ -47,7 +47,9 @@ describe('Settings → Voice: "I speak"', () => {
       /<LanguageList\s+rows=\{view\.languages\}\s+note=\{view\.languageNote\}/,
     );
     const list = sections.slice(sections.indexOf('export function LanguageList'));
-    expect(list.indexOf('<Note text={note} />')).toBeGreaterThan(list.indexOf('<Rows'));
+    expect(list.indexOf('<SectionNote>{note}</SectionNote>')).toBeGreaterThan(
+      list.indexOf('<Rows'),
+    );
   });
 });
 

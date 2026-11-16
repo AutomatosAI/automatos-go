@@ -20,6 +20,9 @@ export const UI_COPY = Object.freeze({
   commandCentre: 'Command Centre',
   /** What the button's badge counts, for VoiceOver: '1 needs you', '6 need you'. */
   needYou: Object.freeze({ one: 'needs you', other: 'need you' }),
+  /** A switch's state in a word beside it (§4.6: never only a colour). */
+  switchOn: 'On',
+  switchOff: 'Off',
 });
 
 export type ReportReasonChoice = { readonly id: ReportReason; readonly label: string };

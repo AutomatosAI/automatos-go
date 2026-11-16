@@ -3,7 +3,8 @@
 // label unless one is given; a small button reaches the 44 pt touch target through hitSlop. A5: the
 // dress gives its radius, least height (Play's and HUD's 44, HUD's 46 inside a panel), label face,
 // case and tracking, and its paints (Play's accent, cream and line; HUD's accent and accent line);
-// a screen may ask for more height (the edge screens' 48 pt actions).
+// a screen may ask for more height (the edge screens' 48 pt actions). The sizes are the style's
+// (useStyle().controls, rule 3.5): Studio's 30 and 40 unless a style's list says otherwise.
 
 import type { LucideIcon } from 'lucide-react-native';
 import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
@@ -13,7 +14,7 @@ import { useStyle } from '../styles/theme';
 import { Text } from './Text';
 import { buttonHeight, controlLabel, dressedButtonPaint } from './dressed';
 import { ICON_STROKE, hitSlopFor } from './paint';
-import { BUTTON_SIZES, type ButtonSize, type ButtonVariant } from './variants';
+import type { ButtonSize, ButtonVariant } from './variants';
 
 export type ButtonProps = {
   readonly label: string;
@@ -48,7 +49,7 @@ export function Button({
   const dress = useDress();
   const inPanel = useInPanel();
   const { spacing } = style.tokens;
-  const metrics = BUTTON_SIZES[size];
+  const metrics = style.controls.button[size];
   const height = Math.max(buttonHeight(dress, metrics.height, inPanel), minHeight);
   const labelFace = controlLabel(style, dress, metrics.level);
   const inactive = disabled || busy;

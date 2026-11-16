@@ -12,7 +12,8 @@ import { useTokens } from '../../styles/theme';
 import { Card, Text } from '../../ui';
 import { tapLogOver, type TapEntry } from '../inbound/tap-log';
 import { PUSH_TAPS_COPY } from '../strings';
-import { Section, SectionNote } from './components/Section';
+import { Section } from '../../ui/Section';
+import { SectionNote } from '../../ui/SectionNote';
 import { tapRows } from './taps-view';
 
 const LINE_LEVEL = 6;

@@ -13,7 +13,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { ICON_BUTTON_SIZES } from '../../ui/variants';
+import { STUDIO_CONTROLS } from '../../styles/controls';
 import { COVERED } from '../interruptions/interruption-policy';
 
 const SRC = path.resolve(__dirname, '..', '..');
@@ -38,7 +38,7 @@ const homeVoice = read('voice/home/use-hud-home-voice.ts');
 
 describe('VoiceButton', () => {
   it('is a 42 pt round IconButton with lucide’s mic', () => {
-    expect(ICON_BUTTON_SIZES.lg.box).toBe(42);
+    expect(STUDIO_CONTROLS.iconButton.lg.box).toBe(42);
     expect(button).toMatch(/<IconButton[\s\S]*size="lg"\s+round/);
     expect(button).toMatch(/from 'lucide-react-native\/icons\/mic'/);
     expect(button).toMatch(/accessibilityLabel=\{entry\.label\}/);

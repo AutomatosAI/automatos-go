@@ -152,11 +152,6 @@ export function screenHead(workspaceName: string) {
   });
 }
 
-/** A switch's state in a word beside it (§4.6: never only a colour). */
-export function switchWord(on: boolean): string {
-  return on ? PUSH_SETTINGS_COPY.on : PUSH_SETTINGS_COPY.off;
-}
-
 /** A switch's value while its write is out: what the person chose, until the server answers. */
 export type Overrides = Readonly<Partial<Record<string, boolean>>>;
 
