@@ -14,6 +14,9 @@
 
 import { z } from 'zod';
 
+import { plainLabels, readsAsNumber } from './host-text';
+import { parseIpv4 } from './ip';
+
 /** True in a development build only (Metro sets it); a release build and a test run are not one. */
 const IS_DEVELOPMENT = typeof __DEV__ !== 'undefined' && __DEV__;
 
@@ -45,6 +48,22 @@ function parsedUrl(value: string): URL | null {
   }
 }
 
+/** An IPv6 literal as a parser writes it: hex digits, colons and dots in brackets, nothing else. */
+const IPV6_LITERAL = /^\[[0-9a-f:.]+\]$/;
+
+/**
+ * The host as every parser reads it alike (src/lib/host-text.ts): ASCII letters, digits, hyphens
+ * and dots in lower case, a strict dotted quad when it reads as a number, or an IPv6 literal. A
+ * phone's URL (Expo's, with no Unicode) keeps a non-ASCII, full-width or capital host as it is
+ * written, so the parser's own origin cannot be the only check on a phone.
+ */
+function isPlainServerHost(host: string): boolean {
+  if (IPV6_LITERAL.test(host)) return true;
+  const labels = plainLabels(host);
+  if (!labels || labels.join('.') !== host) return false;
+  return !readsAsNumber(labels) || parseIpv4(host) !== null;
+}
+
 /** The value as it is used: without the one slash an address may end with. */
 function withoutLastSlash(value: string): string {
   return value.endsWith(ROOT_PATH) ? value.slice(0, -1) : value;
@@ -57,7 +76,8 @@ function withoutLastSlash(value: string): string {
  * so an address that hides one from the parser is refused too. And the value must be written as
  * the parser reads it (its origin): the text itself is what every request is built on, so a form
  * the parser forgives (`https:host`, a tab in the host, capitals, a host in percent signs, the
- * default port written out) is refused.
+ * default port written out) is refused. The host must also be written plainly (isPlainServerHost),
+ * because the parser that checks it at launch is not the one the phone connects with.
  */
 export function isServerAddress(value: string, development: boolean): boolean {
   if (NEVER_IN_AN_ADDRESS.some((mark) => value.includes(mark))) return false;
@@ -65,7 +85,7 @@ export function isServerAddress(value: string, development: boolean): boolean {
   if (url === null) return false;
   const scheme = url.protocol === HTTPS || (development && url.protocol === HTTP);
   if (!scheme || url.hostname === '' || url.pathname !== ROOT_PATH) return false;
-  return url.origin === withoutLastSlash(value);
+  return url.origin === withoutLastSlash(value) && isPlainServerHost(url.hostname);
 }
 
 const blank = z.literal('');

@@ -119,6 +119,13 @@ const REQUIRED = [
 const SERVER_ADDRESSES = ['EXPO_PUBLIC_API_URL', 'EXPO_PUBLIC_WEB_URL'];
 /** What never belongs in a server's address: a user name, a query, a fragment, a backslash. */
 const NEVER_IN_AN_ADDRESS = ['@', '?', '#', '\\'];
+/** A host written plainly (src/lib/host-text.ts): the labels, a strict dotted quad, IPv6. */
+const HOST_LABEL = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+const HOST_MAX_LENGTH = 253;
+const NUMBER_LABEL = /^(?:\d+|0x[0-9a-f]*)$/;
+const OCTET = '(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)';
+const DOTTED_QUAD = new RegExp(`^${OCTET}\\.${OCTET}\\.${OCTET}\\.${OCTET}$`);
+const IPV6_LITERAL = /^\[[0-9a-f:.]+\]$/;
 
 const RECOMMENDED = [{ name: SENTRY_DSN, why: 'error reporting (Sentry EU) stays off without it' }];
 
@@ -146,6 +153,16 @@ function isEuDsn(dsn) {
   return protocol === 'https' && host.toLowerCase().endsWith(EU_INGEST_HOST_SUFFIX);
 }
 
+/** The host as every parser reads it alike: src/lib/env.ts isPlainServerHost. */
+function isPlainServerHost(host) {
+  if (IPV6_LITERAL.test(host)) return true;
+  const labels = host.split('.');
+  if (host.length > HOST_MAX_LENGTH || !labels.every((label) => HOST_LABEL.test(label))) {
+    return false;
+  }
+  return !NUMBER_LABEL.test(labels[labels.length - 1]) || DOTTED_QUAD.test(host);
+}
+
 /** https, a host and an optional port, and nothing more: src/lib/env.ts for a release build. */
 function isServerAddress(value) {
   if (NEVER_IN_AN_ADDRESS.some((mark) => value.includes(mark))) return false;
@@ -157,7 +174,8 @@ function isServerAddress(value) {
   }
   if (url.protocol !== 'https:' || url.hostname === '' || url.pathname !== '/') return false;
   // written as the parser reads it: the text itself is what every request is built on
-  return url.origin === (value.endsWith('/') ? value.slice(0, -1) : value);
+  const asWritten = url.origin === (value.endsWith('/') ? value.slice(0, -1) : value);
+  return asWritten && isPlainServerHost(url.hostname);
 }
 
 /** A hosted address that is set and is not one the app accepts: the variable's name, never its value. */
