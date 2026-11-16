@@ -339,18 +339,39 @@ describe('stream', () => {
   });
 });
 
-describe('authHeaders', () => {
-  it('gives the bearer and the workspace header from the same getter the client uses', async () => {
+describe('headersFor', () => {
+  it('gives the bearer and the workspace header for an address on this server', async () => {
     const getToken = vi.fn(async () => 'jwt.token.value');
     const client = clientWith(
       fakeTransport(() => reply(204)),
       { getToken },
     );
-    expect(await client.authHeaders()).toEqual({
+    expect(await client.headersFor(`${SERVER.apiUrl}/api/socials/posts/p1/media/a.png`)).toEqual({
       Authorization: 'Bearer jwt.token.value',
       'X-Workspace-ID': WORKSPACE_ID,
     });
     expect(getToken).toHaveBeenCalledTimes(1);
+  });
+
+  it('gives nothing, and asks for no token, for any address not on this server', async () => {
+    const getToken = vi.fn(async () => 'jwt.token.value');
+    const client = clientWith(
+      fakeTransport(() => reply(204)),
+      { getToken },
+    );
+    for (const url of [
+      'https://elsewhere.example.test/api/socials/posts/p1/media/a.png',
+      `${SERVER.apiUrl}.evil.example.test/x`,
+      `${SERVER.apiUrl}@evil.example.test/x`,
+      `${SERVER.apiUrl}:8443/x`,
+      SERVER.apiUrl.replace('https:', 'http:') + '/x',
+      '/api/socials/posts/p1/media/a.png',
+      `${SERVER.apiUrl}/x y`,
+      '',
+    ]) {
+      expect(await client.headersFor(url), url).toEqual({});
+    }
+    expect(getToken).not.toHaveBeenCalled();
   });
 
   it('gives none for a signed-out provider', async () => {
@@ -358,6 +379,6 @@ describe('authHeaders', () => {
       fakeTransport(() => reply(204)),
       { getToken: async () => null },
     );
-    expect(await client.authHeaders()).toEqual({});
+    expect(await client.headersFor(`${SERVER.apiUrl}/x`)).toEqual({});
   });
 });

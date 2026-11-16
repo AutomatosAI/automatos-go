@@ -141,8 +141,10 @@ viewer ([src/api/workspace.ts](../src/api/workspace.ts)). The server enforces th
 - maps every failure to one error kind ([errors.ts](../src/api/errors.ts));
 - parses every JSON response with the caller's zod schema. With no schema the body is discarded.
 
-Native loads that cannot go through the client (expo-file-system downloads, expo-image sources)
-take the same two headers from `authHeaders()`.
+A file the phone keeps goes through the client too (`file()`, written to the phone by
+[transfer.ts](../src/api/transfer.ts)). A native load that cannot go through it (an expo-image
+source) asks `headersFor(url)` for the same two headers, and gets them only for an address on the
+client's own server; for any other address it gets none.
 
 Timeouts ([config.ts](../src/api/config.ts)): 30 s for a request; 30 s for a stream to answer
 with its status, after which the body runs until the caller aborts.

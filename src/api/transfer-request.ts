@@ -20,7 +20,7 @@ import { storageHost, storageHostAllowed } from './private-host';
 import { BodyTooLargeError } from './body';
 import type { Server } from './server';
 import type { FileResponse, Transport, TransportResponse } from './transport-types';
-import { withoutTrailingSlash } from './url';
+import { isOnServer } from './url';
 
 const LOCATION_HEADER = 'location';
 const GET = 'GET';
@@ -63,10 +63,7 @@ export type FilePort = {
 
 /** `url` when it is on the client's own server; anything else is refused before it is asked. */
 export function assertOnServer(apiUrl: string, url: string): void {
-  const origin = withoutTrailingSlash(apiUrl).toLowerCase();
-  const onServer =
-    url.slice(0, origin.length).toLowerCase() === origin && url.charAt(origin.length) === '/';
-  if (!onServer || UNSAFE.test(url)) {
+  if (!isOnServer(apiUrl, url)) {
     throw new TypeError("a file is fetched only from the client's own server");
   }
 }

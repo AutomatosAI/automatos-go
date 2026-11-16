@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   AUTHORIZATION_HEADER,
   buildAuthHeaders,
-  createAuthHeaders,
+  createHeadersFor,
   resolveToken,
   WORKSPACE_HEADER,
 } from '../auth-headers';
@@ -52,18 +52,39 @@ describe('resolveToken', () => {
   });
 });
 
-describe('createAuthHeaders', () => {
+describe('createHeadersFor', () => {
+  const API = 'https://api.example.test';
+
   it('asks the provider each time, so a refreshed token is used', async () => {
     let token: string | null = 'first';
-    const authHeaders = createAuthHeaders(
+    const headersFor = createHeadersFor(
+      API,
       async () => token,
       () => 'ws-1',
     );
-    expect(await authHeaders()).toEqual({
+    expect(await headersFor(`${API}/x`)).toEqual({
       Authorization: 'Bearer first',
       'X-Workspace-ID': 'ws-1',
     });
     token = null;
-    expect(await authHeaders()).toEqual({});
+    expect(await headersFor(`${API}/x`)).toEqual({});
+  });
+
+  it('gives nothing for another host, a look-alike, another scheme or a relative address', async () => {
+    const headersFor = createHeadersFor(
+      API,
+      async () => 'tok',
+      () => 'ws-1',
+    );
+    for (const url of [
+      'https://elsewhere.example.test/x',
+      'https://api.example.test.evil.example/x',
+      'https://api.example.testx/x',
+      'http://api.example.test/x',
+      '/x',
+      'api.example.test/x',
+    ]) {
+      expect(await headersFor(url), url).toEqual({});
+    }
   });
 });

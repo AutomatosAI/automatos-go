@@ -70,7 +70,8 @@ function LoadedImage({ source, title }: { readonly source: Source; readonly titl
 /** An image on the API waits for the headers; one on another site is loaded without them. */
 function ImageBody({ link, title }: { readonly link: FileLink; readonly title: string }) {
   const { colours } = useTokens();
-  const { headers, failed } = useMediaHeaders();
+  // an image on another site asks for no headers at all, and would be given none
+  const { headers, failed } = useMediaHeaders(link.kind === 'api' ? link.url : null);
   if (link.kind === 'external') return <LoadedImage source={{ uri: link.url }} title={title} />;
   if (failed) return <Note text={DELIVERABLE_COPY.imageFailed} alert />;
   if (!headers) {

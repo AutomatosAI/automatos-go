@@ -19,7 +19,7 @@ import type { z } from 'zod';
 import { acceptLanguageHeaders, readLanguage, type LanguageGetter } from './accept-language';
 import {
   buildAuthHeaders,
-  createAuthHeaders,
+  createHeadersFor,
   resolveToken,
   type AuthHeaders,
   type TokenGetter,
@@ -129,8 +129,11 @@ export interface ApiClient {
    * a file); a non-OK status throws first (transfer-request.ts).
    */
   file(url: string, options?: FileCallOptions): Promise<FileBody>;
-  /** The bearer and workspace headers, for native loads outside the client (auth-headers.ts). */
-  authHeaders(): Promise<AuthHeaders>;
+  /**
+   * The bearer and workspace headers for a native load of `url` outside the client (an image
+   * source), only when `url` is on this server; none for any other address (auth-headers.ts).
+   */
+  headersFor(url: string): Promise<AuthHeaders>;
 }
 
 type Context = {
@@ -385,6 +388,6 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     stream: (route: Route, call: StreamCallOptions = {}) => open(ctx, route, call),
     binary: (route: Route, call: BinaryCallOptions = {}) => fetchBinary(ctx, route, call),
     file: (url: string, call: FileCallOptions = {}) => openFile(filePort(ctx), url, call),
-    authHeaders: createAuthHeaders(ctx.getToken, ctx.getWorkspaceId),
+    headersFor: createHeadersFor(ctx.server.apiUrl, ctx.getToken, ctx.getWorkspaceId),
   });
 }

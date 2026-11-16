@@ -96,3 +96,17 @@ export function buildUrl(
 ): string {
   return `${withoutTrailingSlash(baseUrl)}${fillPath(path, params)}${queryString(query)}`;
 }
+
+/** Whitespace, a control character or a backslash: nothing a real address holds. */
+const UNSAFE_IN_ADDRESS = /[\s\u0000-\u001f\u007f\\]/;
+
+/**
+ * Whether `url` is on the server at `apiUrl` (a plain origin): it starts with that origin, in any
+ * case, then a '/', and holds no character a real address never holds. Another host, a look-alike
+ * (the origin followed by '.', ':' or '@'), another scheme and a relative address are not.
+ */
+export function isOnServer(apiUrl: string, url: string): boolean {
+  const origin = withoutTrailingSlash(apiUrl).toLowerCase();
+  const sameOrigin = url.slice(0, origin.length).toLowerCase() === origin;
+  return sameOrigin && url.charAt(origin.length) === '/' && !UNSAFE_IN_ADDRESS.test(url);
+}
