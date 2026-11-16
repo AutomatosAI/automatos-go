@@ -205,10 +205,13 @@ An http server adds a warning on the card. Once paired, a one-line "Unencrypted 
 {host}" bar sits above every signed-in screen while the server uses http
 ([app/(app)/_layout.tsx](../app/(app)/_layout.tsx)).
 
-The card also carries the data note: chats, files and reports stay on the server; the app itself
-sends crash reports to Automatos, checks Expo for app updates and, if the operator agrees, sends
-notifications through Expo and Apple or Google ([src/connect/strings.ts](../src/connect/strings.ts)).
-Crash reporting is not started on `main` yet; see "Known gaps".
+The card also carries the data note ([src/connect/strings.ts](../src/connect/strings.ts)): chats,
+files and reports are kept on the server, which passes what the person sends to the AI providers it
+uses (the consent sheet asks them to agree first, [src/consent/policy.ts](../src/consent/policy.ts));
+the app itself sends crash reports, scrubbed of the person's words, to Sentry for Automatos
+([src/observability/](../src/observability/), started in [app/_layout.tsx](../app/_layout.tsx)),
+checks Expo for app updates and, if the operator agrees, sends notifications through Expo and Apple
+or Google.
 
 ### 5. The code is exchanged for a token
 
@@ -342,9 +345,6 @@ while running. The way out is **Remove this phone and forget this server**.
 - **`FRONTEND_URL` at its default.** The mint script warns only about a loopback API address, not
   about `FRONTEND_URL` left at `localhost`, which leaves the phone's Studio links on a page the phone
   cannot load. Pairing itself still works: the app ignores the link's host.
-- **Crash reports.** The confirm card's data note says the app sends crash reports, but Sentry is
-  not started on `main`: only [src/lib/env.ts](../src/lib/env.ts) reads `EXPO_PUBLIC_SENTRY_DSN`.
-  Crash reporting is in the release wave's kit (A7).
 
 ## Related
 

@@ -285,12 +285,15 @@ describe('connectView: the confirm card (KC5, KC8, KC16)', () => {
     expect(asConfirm(viewOf(other)).card.edition).toBe('enterprise');
   });
 
+  // Corrected 16 Nov (claims audit): 'stay on {server}' said more than the code keeps. The server
+  // sends what the person sends to its AI providers (the consent sheet, next), and crash reports go
+  // to Sentry; the note now says both.
   it("carries KC16's data note word for word, the server filled in", () => {
     expect(DATA_NOTE_OWN_SERVER).toBe(
-      "Your chats, files and reports stay on {server}. Automatos Go itself sends crash reports to Automatos, checks Expo for app updates and, if this server's operator agrees, sends notifications through Expo and Apple or Google.",
+      "Your chats, files and reports are kept on {server}. To answer you, it passes what you send to the AI providers it uses, and the app asks you to agree to that first. Automatos Go itself sends crash reports (never your messages) to Sentry for Automatos, checks Expo for app updates and, if this server's operator agrees, sends notifications through Expo and Apple or Google.",
     );
     expect(asConfirm(viewOf(CONFIRM)).card.dataNote).toBe(
-      "Your chats, files and reports stay on 192.168.1.20:8000. Automatos Go itself sends crash reports to Automatos, checks Expo for app updates and, if this server's operator agrees, sends notifications through Expo and Apple or Google.",
+      "Your chats, files and reports are kept on 192.168.1.20:8000. To answer you, it passes what you send to the AI providers it uses, and the app asks you to agree to that first. Automatos Go itself sends crash reports (never your messages) to Sentry for Automatos, checks Expo for app updates and, if this server's operator agrees, sends notifications through Expo and Apple or Google.",
     );
     expect(authorityOf(HTTPS)).toBe('automatos.example.com');
   });
