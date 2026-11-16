@@ -24,7 +24,7 @@ test reads the update job's `environment` field instead.
 
 | Phone | How | Review |
 |---|---|---|
-| iPhone (Gerard, Dave, Rikki) | TestFlight, internal group with automatic distribution. Every build `submit_testflight` uploads reaches the group. | None: internal testers need no Beta App Review [D51] |
+| iPhone (Gerard, Dave, Rikki) | TestFlight, internal group with automatic distribution. Every build `submit_testflight` uploads reaches the group, once the group exists and has testers ([README.md](README.md), "First release"; `node scripts/release/state.mjs` checks both). | None: internal testers need no Beta App Review [D51] |
 | Android (team testers) | The EAS `preview` APK, installed by link from the build's page on expo.dev [D10] | None: no Play Console exists yet |
 | Visitors | Watch on Gerard's phone, against the VPS demo [D51] | No public TestFlight link: a public link needs Beta App Review |
 
@@ -210,7 +210,8 @@ Android. Option B can follow with the first store build, once a production relea
 
 1. **App Store Connect users.** Add Dave and Rikki as App Store Connect users on team `KGVA9933BG`
    (Users and Access), and add them to the TestFlight internal group with automatic distribution.
-   Confirm each one sees the latest build in the TestFlight app.
+   A group eas-cli made holds only the team's Admin users, and a group `first-release.mjs` made
+   holds no one yet. Confirm each one sees the latest build in the TestFlight app.
 2. **EAS environment values.** In the EAS project (`gerard161/automatos-go`), set the four values
    in the table above, in both `preview` and `production`. The Sentry DSN is the EU one (OT-R1).
 3. **The Clerk key.** Choose option A or B before the WebSummit build is cut. Record the choice in

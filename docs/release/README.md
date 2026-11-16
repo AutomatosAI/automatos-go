@@ -21,7 +21,11 @@ requirement is proven in one of three ways:
   "Human steps (OWNER)" below.
 
 How a merge reaches phones (CI, EAS Workflows, over-the-air updates and native builds) is in
-[../release.md](../release.md).
+[../release.md](../release.md). How a build reaches its testers the first time, what signing needs
+by hand, the EAS environment's names and the release's state check are at the end of this page
+([First release](#first-release), [Signing and capabilities](#signing-and-capabilities),
+[EAS environment](#eas-environment), [State check](#state-check)). Every app copied from this one
+takes those steps from these files (docs/app-standard.md, rule 14.7).
 
 ## Requirement → where it is proven
 
@@ -53,6 +57,7 @@ wording the privacy policy and the Terms can use, is in [privacy-facts.md](priva
 | R21 | Reviewer access: a demo account without MFA in a Business workspace, a long-lived review pairing code, review notes | Apple 2.1, 2.3.1; Play App access; D13 | Test: [src/release/\_\_tests\_\_/release-docs.test.ts](../../src/release/__tests__/release-docs.test.ts) (US-021p): the Notes block of [app-review-notes.md](app-review-notes.md) is within App Store Connect's 4,000 characters, describes both ways in, and names every app label it sends a reviewer to, each imported from its strings module, so a renamed button fails until the notes follow; the demo account, the review server and the code are placeholders 'in App Store Connect only' (or 'in Play Console only' in [play-app-access.md](play-app-access.md)). The long-lived review code exists on automatos-ai `main` since PRD-266 W1/W2: `scripts/mint_pairing_code.py --review --ttl-hours N` (1 to 336 hours, one phone, once, audited). OWNER OT-R12 |
 | R22 | Store listing, age-rating answers, export compliance | App Store Connect; Play IARC; ITSAppUsesNonExemptEncryption | Test: [src/release/\_\_tests\_\_/release-docs.test.ts](../../src/release/__tests__/release-docs.test.ts) (US-021p): [store-listing.md](store-listing.md)'s fields are within their limits (name 30, and it is `app.json`'s; subtitle 30; promotional text 170; description 4,000, saying "AI assistant"; keywords 100, comma-separated, no spaces or repeats); its support and privacy policy URLs are `legal-links.ts`'s; no pasted block of the listing, the review notes or Play's App access uses a SIGNUP, BILLING or DATA_CLAIMS phrase (US-021k's lists) or a word the app's terms rule out; across `docs/release`, every privacy, terms or support address is `legal-links.ts`'s and no file holds a secret-shaped string (pk\_/sk\_ keys, `amd_` tokens, Expo push tokens, private-key blocks, JWTs, Sentry DSNs), a password value or a person's email address; [export-compliance.md](export-compliance.md) states `app.json`'s `ITSAppUsesNonExemptEncryption` false. Answers: [age-rating.md](age-rating.md) (Apple and IARC, each with its reason), [export-compliance.md](export-compliance.md) (every use of cryptography in the app). OWNER OT-R13 |
 | R23 | The WebSummit checklist run on Gerard's phone | US-021 AC4; PRD §10 | The checklist: [websummit-checklist.md](websummit-checklist.md) (US-021q): the demo (sign in, pair with the VPS, answer from a notification, flip styles, change a look, quick-ask), the store-duty spot checks and the iOS App Privacy Report domain check, with a results table and a sign-off line; gate check "US-021q" (the checklist and privacy-facts.md exist, CLAUDE.md has its Release (A7) section). The run: OWNER OT-R14 |
+| R24 | Every build reaches its testers: an internal TestFlight group with automatic distribution and testers, the EAS environment's names set, and a delivery that started | App standard 14.7; an app's first build that reached no tester (16 Nov) | Tests: [scripts/\_\_tests\_\_/release-first-release.test.ts](../../scripts/__tests__/release-first-release.test.ts) (the group is created only when none delivers every build, never changed or deleted, only with `--apply`; the token signed with a key made for the test; nothing of the key printed) [release-state.test.ts](../../scripts/__tests__/release-state.test.ts) and [release-state-eas.test.ts](../../scripts/__tests__/release-state-eas.test.ts), over the fakes in `release-state-harness.ts` and `release-fixtures.ts` (each check's ok, FAIL and not-checked lines over fake answers; no value from `eas env:list` ever printed; [eas-env.json](eas-env.json) holds exactly the names `src/lib/env.ts` reads). The run: OWNER OT-R17 |
 
 ### What R11's test checks
 
@@ -93,3 +98,170 @@ request.
 | OT-R14 | Run the WebSummit checklist (`websummit-checklist.md`) on Gerard's phone against hosted Studio and the VPS demo, including the iOS App Privacy Report domain check, and fill in its results table. | R23 | [websummit-checklist.md](websummit-checklist.md) |
 | OT-R15 | When a Play Console exists (D10), fill in the Data safety form from `play-data-safety.md`, including the "encrypted in transit" answer for plain HTTP on private networks. | R05 | [play-data-safety.md](play-data-safety.md) |
 | OT-R16 | After P001R-AF-1, in HUD style and on the voice screen (Studio): long-press Auto's finished reply, and use the VoiceOver action "Report this": the sheet opens titled "Report this message" and sends. Nothing is offered on your own words or on a reply still being written. | R15 | [privacy-facts.md](privacy-facts.md) ("Report this") |
+| OT-R17 | With the team's App Store Connect API key in the three variables and eas-cli signed in: run `node scripts/release/first-release.mjs`, then again with `--apply` if it says "would create"; add the team's App Store Connect users to the group if it has none; then run `node scripts/release/state.mjs` and act on every FAIL line. Run the state check again before each release. | R24 | This page: [First release](#first-release), [State check](#state-check) |
+
+## First release
+
+A build reaches testers only through a TestFlight group. The one the delivery relies on is an
+internal group with automatic distribution: App Store Connect adds every build the delivery uploads
+to it, and its testers get the build in the TestFlight app. An upload with no such group succeeds
+and reaches no one.
+
+What eas-cli does about the group (read in eas-cli 27.10.0, `submit/ios/AppProduce` and
+`submit/ios/ensureTestFlightSetup`, on 16 Nov 2026):
+
+- **A new app.** With no `ascAppId` in the submit profile, `eas submit` creates the app in App
+  Store Connect, signed in as the Apple ID on its prompt, then creates the group "Team (Expo)",
+  internal, with automatic distribution, and invites the team's Admin users to it.
+- **An app App Store Connect already has.** With an `ascAppId`, `eas submit` tries the same group
+  (on by default; `--no-auto-testflight-setup` turns it off). eas-cli 22.0.0 added this for an
+  interactive submit, and 27.10.0's code runs it in a non-interactive one too. It gives up,
+  printing "skipping TestFlight setup" or "Skipping TestFlight group setup", and the upload goes on
+  when:
+  - it cannot sign in to App Store Connect. With any `EXPO_ASC_*` variable set, it needs
+    `EXPO_ASC_API_KEY_PATH`, `EXPO_ASC_KEY_ID` and `EXPO_APPLE_TEAM_ID` together. With none set,
+    it uses the App Store Connect API key stored on EAS for the app, and there must be one;
+  - the app has any TestFlight group at all, even one without automatic distribution or without
+    testers;
+  - anything else fails: the group setup never stops an upload.
+- **The delivery's `submit` job** (`.eas/workflows/testflight.yml`) runs on Expo's servers.
+  Nothing in eas-cli shows whether it runs that group setup, so the release never relies on it.
+
+So the first release is a step of its own, `scripts/release/first-release.mjs`:
+
+```bash
+node scripts/release/first-release.mjs
+node scripts/release/first-release.mjs --apply
+```
+
+- It reads the app's `ascAppId` from `eas.json` (`submit.testflight.ios`, or `--profile <name>`)
+  and the bundle id from `app.json`. It stops when App Store Connect's app has another bundle id.
+- It needs a team App Store Connect API key, named by the three variables eas-cli reads:
+  `EXPO_ASC_API_KEY_PATH` (the `.p8` file), `EXPO_ASC_KEY_ID` and `EXPO_ASC_ISSUER_ID`. An
+  individual key, which has no issuer id, is not supported. The key stays outside the repository,
+  and the script prints nothing of it: not the file, not the key's id, not the issuer, not the
+  token.
+- Without `--apply` it prints what it found and what it would do. With `--apply`, when the app has
+  no internal group with automatic distribution, it creates one named "Team (Expo)" (or
+  `--group <name>`), the name eas-cli uses. It never changes or deletes a group. Apple's API cannot
+  turn automatic distribution on for a group that exists, so a group of that name without it stops
+  the script, which names the step in App Store Connect.
+- It says how many testers the group has. An internal group's testers are App Store Connect users,
+  and adding them is a step in App Store Connect (TestFlight, the group, Testers). A group with no
+  testers delivers to no one.
+- It is safe to run again at any time: when the group is there, it changes nothing.
+
+**A new app.** Let the first `eas submit` create the app, so its group comes with it: build, then
+`npx eas-cli submit -p ios --profile testflight` with no `ascAppId` in `eas.json`, signed in as the
+Apple ID on the prompt. Then commit the new `ascAppId` in `eas.json` (a native change: `eas.json`
+moves the fingerprint) and run `first-release.mjs`, which finds the group and counts its testers.
+Never give eas an Apple ID password through a variable or a script: scripted sign-ins lock the
+Apple ID.
+
+## Signing and capabilities
+
+- **A capability Apple's API cannot set.** On every build that signs in to Apple, eas-cli makes the
+  identifier's capabilities match the app's entitlements, and turns off any it does not find there
+  (`credentials/ios/appstore/bundleIdCapabilities`). Some capabilities have no value in Apple's
+  API: Time Sensitive Notifications fails with "USERNOTIFICATIONS_TIMESENSITIVE is not a valid
+  value for capabilityType". An app that uses one ticks it by hand on the identifier in the Apple
+  developer portal (Certificates, Identifiers & Profiles, Identifiers, the bundle id). It then runs
+  `credentials:configure-build` and every `eas build` with `EXPO_NO_CAPABILITY_SYNC=1`, so eas-cli
+  neither sets nor clears a capability. Automatos Go has no Time Sensitive entitlement, so it
+  needs none of this.
+
+```bash
+EXPO_NO_CAPABILITY_SYNC=1 npx eas-cli credentials:configure-build -p ios -e testflight
+EXPO_NO_CAPABILITY_SYNC=1 npx eas-cli build -p ios --profile testflight
+```
+
+- **The push key is attached on expo.dev.** In eas-cli 27.10.0, `eas credentials`, Push
+  Notifications, "Set up" and "Use an existing push key" both answer "Only user authentication is
+  supported" and ask for the Apple ID: an App Store Connect API key cannot attach one. Attach the
+  team's existing push key on expo.dev instead: the project, Credentials, iOS, the bundle id.
+- **eas needs the app's `node_modules`.** eas evaluates `app.json`'s plugins before every project
+  command, so in an app folder without `node_modules` every eas command fails. The project
+  commands that need only the EAS link (`env:*`, `account:usage`, `workflow:*`) run from a folder
+  that holds only the link: an `app.json` with `owner`, `slug` and `extra.eas.projectId` and no
+  plugins, and a `package.json`. The state check makes one for each run. `eas build` runs from a
+  clean worktree of `main` after `npm ci --ignore-scripts`.
+- **Driving an eas prompt with `expect`.** `(?i)` is ignored by expect's gate: use `-nocase` and
+  lower-case patterns. "2fa" can appear inside a certificate's serial number, so match the whole
+  prompt line. Answer only after "(y/n)" is drawn. A select menu is drawn twice: read the last copy
+  before moving. Never script an Apple ID sign-in.
+
+## EAS environment
+
+The names each EAS environment must hold are committed in [eas-env.json](eas-env.json), names only,
+per environment. `scripts/__tests__/release-state.test.ts` holds them to the names `src/lib/env.ts`
+reads, so a new `EXPO_PUBLIC_*` name is added there too. The values live on EAS only: what each one
+is, per environment, is in [testflight.md](testflight.md), "EAS environment values".
+
+- **Setting a value.** `eas env:set` creates or updates one; `eas env:create` is deprecated (eas-cli
+  27.10.0 hides it and says to use `env:set`).
+
+```bash
+npx eas-cli env:set --environment preview --name EXPO_PUBLIC_API_URL --value <the address>
+```
+
+- **Reading the names.** `eas env:list` has neither `--non-interactive` nor `--json`, and it prints
+  each variable as `NAME=value`, a plain value in the clear. Give it `--environment` (without one
+  it asks) and close its input (`< /dev/null`). Read the names off it, and never paste its output
+  anywhere.
+- **Both scopes.** A build reads the project's variables and the account's. The state check reads
+  both (`--scope project` and `--scope account`).
+- **The `preview` environment holds public values only** ([../release.md](../release.md), Traps).
+
+## State check
+
+`scripts/release/state.mjs` reads the state of the release and changes nothing. It prints one line
+per check, `<check>: ok: …`, `<check>: FAIL: …` or `<check>: not checked: <why>`, and exits 1 when
+any line says FAIL.
+
+```bash
+node scripts/release/state.mjs
+```
+
+| Check | What it reads | FAIL when |
+|---|---|---|
+| `testflight-group` | App Store Connect: the app's TestFlight groups | No internal group with automatic distribution, or no `ascAppId` in `eas.json` |
+| `testflight-testers` | That group's testers | It has none |
+| `testflight-build` | The app's newest build, then its TestFlight state for internal testers (`buildBetaDetail`) | There is none, it expired or failed processing, or its state keeps testers from it (waiting for export compliance, among others) |
+| `eas-env:<name>` | `eas env:list` for that environment, both scopes, names only | A name [eas-env.json](eas-env.json) lists is missing |
+| `workflow-run` | The latest runs of `.eas/workflows/testflight.yml` (`eas workflow:runs`, then `workflow:view` for a failed one) | It failed to start, failed, or waits for an approval, or there is none. A cancelled run is said as "cancelled (by a newer run or by hand)", never as a merge that shipped nothing, and the run before it that was not cancelled gives the verdict. A failed run whose jobs cannot be read says it is not known whether it started |
+| `build-quota` | `eas account:usage <owner> --json`: iOS builds this cycle | None is left |
+| `cicd-minutes` | The same answer's CI/CD minutes, when it has them | They are spent |
+
+- **The group takes every build.** A build is not added to a group with automatic distribution one
+  by one: the group has access to all of them, and eas-cli's own build steps skip assigning a build
+  to such a group for that reason. So the check does not look for the build in the group: it reads
+  the build's TestFlight state, `READY_FOR_BETA_TESTING` or `IN_BETA_TESTING` when testers can
+  install it. Apple answers `hasAccessToAllBuilds` with null for some groups. Only `true` counts
+  as automatic distribution, and an internal group answered with null stops `first-release.mjs`
+  and fails `testflight-group`, naming the group to check in App Store Connect: no second group is
+  made beside it.
+- **Credentials.** The App Store Connect lines need the key in the three variables (First release,
+  above). The EAS lines need eas-cli signed in: `npx eas-cli login`, or `EXPO_TOKEN`. Without them a
+  line says "not checked" and why, and never passes. The script runs eas-cli 27.10.0 through
+  `npx --yes`, in a folder that holds only the EAS link (Signing and capabilities, above), with its
+  input closed, and prints nothing eas-cli printed but the first line of an error, and never one
+  from `env:list`. eas gets an allowed list of variables (the path, home, temporary folders, user,
+  shell, locale, `EXPO_TOKEN`, other `EAS_*` and `EXPO_*` settings, npm's settings, proxies and
+  certificate files, `CI`), never `EXPO_ASC_*` or `EXPO_APPLE_*`. Each eas command runs in its own
+  process group: after 120 seconds the group gets SIGTERM, then SIGKILL, and every EAS line says
+  "not checked: eas timed out".
+- **In GitHub CI** the repository holds no Expo token and no App Store Connect key (app standard,
+  rule 14.4), so every line would say not checked. CI runs the scripts' tests instead.
+- **A merge can ship nothing without a red mark anywhere.** The Expo free plan has a monthly pool of
+  CI/CD minutes, apart from the build credits. When it is spent, every EAS Workflows job fails to
+  start ("Free plan CI/CD and Simulator 60 minute limit reached"), the PR check and the delivery
+  alike, and nothing in GitHub turns red. eas-cli 27.10.0's `account:usage --json` reports the pool
+  in its `simulator` block (`simulator.minutes.plan`, with `byJobType.workflows`) when the account
+  has that block. When it has not, the `workflow-run` line is the only sign. Read it before saying
+  a merge shipped.
+- **A server's deployed commit.** A hosting service can keep rebuilding an old commit while `main`
+  moves on. An app whose product runs a server of its own adds a check that the deployed commit is
+  `main`'s head. Automatos Go runs none, so its state check has no such line.
+- **What a copy changes.** Nothing in the scripts: they read the app's `app.json`, `eas.json` and
+  [eas-env.json](eas-env.json) from their own folder. A copy lists its own names in `eas-env.json`,
+  and passes `--profile`, `--workflow` or `--group` where its names differ from these.

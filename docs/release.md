@@ -61,7 +61,10 @@ fingerprint, which costs a native build.
   next launch. No build quota is used.
 - **Not found** means something native changed: a native dependency, a config plugin or
   `app.json`. EAS builds iOS with the `testflight` profile and uploads it to TestFlight. Internal
-  groups with automatic distribution get it.
+  groups with automatic distribution get it, and only they: with no such group the upload succeeds
+  and reaches no tester. eas-cli does not always make that group for an app App Store Connect
+  already has, so `scripts/release/first-release.mjs` does
+  ([release/README.md](release/README.md), "First release").
 - **Only `main`'s head publishes an update.** The `before_update` hook reads `main`'s head through
   the job's own checkout (`git ls-remote origin`) or, when that gives nothing, from the repository's
   public address, and stops an older run (red, "main is at …"); the newer run ships both changes.
@@ -166,6 +169,11 @@ second time.
 - **The `preview` environment holds only public values.** `pr-check.yml` runs a PR branch's config
   plugins in it, so a secret there would be readable from any branch. Secrets go in an environment
   only `main`'s build uses.
+- **A run that fails to start ships nothing, and nothing turns red in GitHub.** When the Expo
+  plan's CI/CD minutes are spent, every EAS Workflows job fails to start ("Free plan CI/CD and
+  Simulator 60 minute limit reached"): this PR check and the delivery alike. Read the latest run
+  before saying a merge shipped: `node scripts/release/state.mjs` prints it on its `workflow-run`
+  line ([release/README.md](release/README.md), "State check").
 - **Builds 5–7 never update.** They were made without `updates.url`. Install a newer build from
   TestFlight. The first build after the EAS Workflows change was native, because `app.json` gained
   the EAS link.
@@ -175,7 +183,9 @@ second time.
 - EAS's `testflight` job type needs a paid plan: EAS refused it on the free plan (run `01a16b62`,
   24 Oct). The workflow uses the `submit` job instead, the same upload `eas submit` does. The cost is
   that builds arrive without "What to Test" notes.
-- Over-the-air updates use no build quota.
+- Over-the-air updates use no build quota, but every workflow job (the fingerprint, the lookup, the
+  update, the PR check) spends the plan's monthly CI/CD minutes, a pool apart from the build
+  credits. On the free plan, once they are spent no job starts until the next cycle.
 - An EAS workflow file must stay under 16 KiB (noted in `eas-release.test.ts`).
 
 ## Human steps
@@ -183,11 +193,12 @@ second time.
 These need a person with the accounts. The full list is in [README.md](../README.md), "Human
 steps":
 
-1. EAS environment values for `preview` and `production`.
+1. EAS environment values for `preview` and `production`, for every name
+   [release/eas-env.json](release/eas-env.json) lists.
 2. The Expo GitHub app on `AutomatosAI/automatos-go`, the repository linked in EAS, and the three
    required checks on `main`.
 3. App Store Connect: the app record, an API key assigned on EAS, a TestFlight internal group with
-   automatic distribution.
+   automatic distribution and its testers (`scripts/release/first-release.mjs`, OT-R17).
 4. Expo's "enhanced push security" left off ([push.md](push.md)).
 5. Clerk: Native API, the apps, passkeys, the `mobile` template, 30-day sessions
    ([connecting.md](connecting.md)).
