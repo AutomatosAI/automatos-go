@@ -2,9 +2,10 @@
 // notification response → exactly one honest outcome. parse (parse.ts) → handled once
 // (handled-store.ts) → the push record's key (registration/key-store.ts) → verifyPushSignature →
 // intentFor → act. A reply posts its answer once (answer.ts) and lands on Questions with the
-// server's result, only when its notification showed the signed question's words (intent.ts) and
-// its signed payload was never replied to before (dedupe.ts signedReplyKey, claimed in the same
-// store); otherwise it opens the question with nothing sent. Open and a tap open the link's screen
+// server's result, only when its notification showed the signed question and the server's own
+// text and nothing else (shown.ts, intent.ts), and its signed payload was never replied to before
+// (dedupe.ts signedReplyKey, claimed in the same store); otherwise it opens the question with
+// nothing sent. Open and a tap open the link's screen
 // after its stale check (links/stale.ts), acting on the signed payload only, never the words shown;
 // anything else opens the notifications inbox (the push's own row first), or the question, with
 // nothing done (outcomes.ts): a tap never lands on home with nothing to show. A tap on an approval's

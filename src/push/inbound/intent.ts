@@ -5,10 +5,11 @@
 // link — and a verified one is acted on only in the current workspace. Only 'reply', 'open' and
 // the tap exist (no Approve, no option buttons: D-LOCK-SCREEN); any other identifier is 'unknown'.
 // The category is unsigned and never decides anything: a reply answers only a signed question
-// (link_type 'question' with a grant_id), and only when the words the notification showed are
-// that signed question: the title, the body, the sound and the buttons are set outside the
-// signature, so an old signed payload sent again with words of its own still verifies, and its
-// Reply opens the question in the app instead of posting what the person typed to other words.
+// (link_type 'question' with a grant_id), and only when everything the notification showed is
+// that signed question or the server's own (shown.ts): the title, the body, the sound and the
+// buttons are set outside the signature, so an old signed payload sent again with words of its own
+// still verifies, and its Reply opens the question in the app instead of posting what the person
+// typed to other words.
 // An Open or a tap on an approval's push carries its signed grant_id, for the approval sheet
 // (PRD-268 US-G08). A signed field sent as '' reads as absent.
 
@@ -26,6 +27,7 @@ import {
 import type { PushPayload } from '../schemas/payload';
 import { signedReplyKey } from './dedupe';
 import type { InboundEvent } from './parse';
+import { unboundShown } from './shown';
 
 /** A push's signed link (link_type, link_id); an absent field is left out. */
 export type PushLink = Readonly<{ link_type?: string; link_id?: string }>;
@@ -36,6 +38,7 @@ export type NeutralReason =
   | 'cannot_answer'
   | 'blank_reply'
   | 'words_differ'
+  | 'sender_unchecked'
   | 'replayed'
   | 'unknown';
 
@@ -54,7 +57,7 @@ export type PushIntent =
   | Readonly<{ kind: 'neutral'; reason: NeutralReason; link?: PushLink }>;
 
 export type IntentInput = Readonly<{
-  event: Pick<InboundEvent, 'action' | 'userText' | 'body'>;
+  event: Pick<InboundEvent, 'action' | 'userText' | 'shown'>;
   /** verifyPushSignature's answer for this payload. */
   verified: boolean;
   /** parsePushData's output for event.data; null when it is not a v2 payload. */
@@ -105,22 +108,13 @@ function openIntent(payload: PushPayload): PushIntent {
   });
 }
 
-/**
- * The notification showed the question the server signed, word for word (edge spaces aside): the
- * server sends a question's body as its signed `question`, so a body that differs, or a question
- * the payload does not carry (a redacted one), is not what the person was answering.
- */
-export function showsSignedQuestion(shown: string | null, signed: string | undefined): boolean {
-  return !!shown && !!signed && shown.trim() === signed.trim();
-}
-
 function replyIntent(input: IntentInput, payload: PushPayload): PushIntent {
   const grantId = present(payload.grant_id);
   if (payload.link_type !== QUESTION_LINK_TYPE || !grantId) return neutral('unknown');
   const question = linkOf(payload);
-  if (!showsSignedQuestion(input.event.body, payload.question)) {
-    return neutral('words_differ', question);
-  }
+  // what was shown, held to what the server signed or sets itself (shown.ts)
+  const unbound = unboundShown(input.event.shown, payload.question);
+  if (unbound) return neutral(unbound, question);
   if (!roleCan(input.role, 'answer')) return neutral('cannot_answer', question);
   const answerText = answerTextOf(input.event.userText);
   if (!answerText) return neutral('blank_reply', question);

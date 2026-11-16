@@ -70,11 +70,16 @@ export function signed(fields: Fields, key: string = PHONE_KEY) {
   return { ...fields, sig };
 }
 
+/** The title the server sets on a push no agent is named on (English badge). */
+export const SERVER_TITLE = 'Auto · AI';
+
 export type ResponseOptions = {
   readonly userText?: string;
   readonly identifier?: string;
-  readonly title?: string;
+  readonly title?: string | null;
+  readonly subtitle?: string | null;
   readonly body?: string;
+  readonly attachments?: readonly unknown[];
 };
 
 /** A response as expo-notifications 0.32.17 hands it over on iOS. */
@@ -85,8 +90,10 @@ export function response(data: unknown, actionIdentifier: string, options: Respo
       request: {
         identifier: options.identifier ?? IOS_ID,
         content: {
-          title: options.title ?? 'Auto needs an answer',
+          title: options.title === undefined ? SERVER_TITLE : options.title,
+          subtitle: options.subtitle ?? null,
           body: options.body ?? 'Ship the Lisbon deck?',
+          attachments: options.attachments ?? [],
           data,
           categoryIdentifier: 'automatos.question.3',
         },
@@ -112,7 +119,7 @@ export function received(
     request: {
       identifier: IOS_ID,
       content: {
-        title: text.title ?? 'Auto needs an answer',
+        title: text.title ?? SERVER_TITLE,
         body: text.body ?? 'Ship the Lisbon deck?',
         data,
         categoryIdentifier: category,

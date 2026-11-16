@@ -220,25 +220,35 @@ proves each of these.
 **What is signed.** `sig` is HMAC-SHA256, keyed with this phone's own push key, over
 `["v2", type, workspace_id, notification_id, grant_id, link_type, link_id, ticket_number, question, options, iat]`
 ([src/push/signature/canonical.ts](../../src/push/signature/canonical.ts)). Nothing else in a push
-is signed: not the title ("{agent or Auto} · {AI badge}"), the body, the sound, the priority, the
-category (which chooses the buttons), the Android channel, or the unsigned `message_id` a brief's
-push carries. The server sends a question's body as its signed `question`. A push with no
-`question` (any other event, or a question hidden by the workspace's "Hide question text in
-notifications") shows a fixed line, such as "A question needs your answer", that no signed field
-names.
+is signed: not the title, the body, the sound, the priority, the category (which chooses the
+buttons), the Android channel, or the unsigned `message_id` a brief's push carries.
+
+**What the server sends a person to read.** Each push it sends a phone is `to`, `title`, `body`,
+`data` (the signed payload), `priority`, `categoryId`, `channelId` and `sound`: no subtitle, no
+picture, no badge count, nothing else a person reads.
+
+| Field | What the server puts there | Can the phone check it? |
+|---|---|---|
+| `title` | "{sender} · {badge}": the sender is the agent that asked, or "Auto" when no agent is named; the badge is the fixed AI term of the language the phone registered: AI, IA (Portuguese, Spanish, French, Italian) or KI (German) | Only "Auto · AI", "Auto · IA" and "Auto · KI". An agent's name is not in the signed payload. |
+| `body` | A question's own `question`, exactly as signed. A push with no `question` (any other event, or a question hidden by the workspace's "Hide question text in notifications") shows a fixed line, such as "A question needs your answer", that no signed field names | Yes, for a question: it must be the signed `question`. |
+| subtitle, pictures | Never sent | They must be absent. |
+
+A question asked by a named agent, the usual case, therefore arrives under a title the phone
+cannot check.
 
 **What each action trusts.**
 
 | Action | What it acts on |
 |---|---|
-| A tap, or **Open** | The signed payload only. The screen is the signed link's, read again from the server with the person's own sign-in before it opens. The bell row marked read is the signed `notification_id`. An approval's sheet is the signed `grant_id`'s and shows the server's own record; with "Face ID before approve or answer" on (the default) it asks for Face ID before Approve. The words shown change nothing. |
-| **Reply**, with typed words | Where the answer goes: the signed `grant_id` of a signed `link_type` `question`. What the answer says: what the person typed, in answer to the words the notification showed. |
+| A tap, or **Open** | The signed payload only. The screen is the signed link's, read again from the server with the person's own sign-in before it opens, so the real question is what the app shows. The bell row marked read is the signed `notification_id`. An approval's sheet is the signed `grant_id`'s and shows the server's own record; with "Face ID before approve or answer" on (the default) it asks for Face ID before Approve. The title, body and subtitle change nothing, so a tap stays as it was. |
+| **Reply**, with typed words | Where the answer goes: the signed `grant_id` of a signed `link_type` `question`. What the answer says: what the person typed, in answer to everything the notification showed. |
 | A push while the app is open | Shown only when it verifies within 2 s, with its own title and body. |
 
 **The worst case, before this change.** Anyone who holds this phone's Expo push token and one
 signed question payload less than 7 days old, for a question still open in the workspace the app
-is in, could send it again with words of their own and a Reply button. What the person typed in
-answer to those words was then posted as their answer to the real question, once.
+is in, could send it again with words of their own (in its body, its title or a subtitle) and a
+Reply button. What the person typed in answer to those words was then posted as their answer to
+the real question, once.
 
 **What already bounds it.** The age limit (7 days old, 5 minutes ahead); the workspace check (a push
 of another workspace acts on nothing); the role check (a viewer cannot answer); the server takes one
@@ -248,26 +258,38 @@ phone before the reply field opens. Not a bound: the record of responses handled
 asked for a notification Reply.
 
 **What the phone does now**
-([src/push/inbound/intent.ts](../../src/push/inbound/intent.ts),
-[handler.ts](../../src/push/inbound/handler.ts), [dedupe.ts](../../src/push/inbound/dedupe.ts)):
+([src/push/inbound/shown.ts](../../src/push/inbound/shown.ts),
+[intent.ts](../../src/push/inbound/intent.ts), [handler.ts](../../src/push/inbound/handler.ts),
+[dedupe.ts](../../src/push/inbound/dedupe.ts)). A Reply is posted only when everything the
+notification showed is the signed question or the server's own text; otherwise nothing is sent and
+the question opens in the app, where the server's own text is shown:
 
-- A Reply is posted only when the notification's body is the signed `question`, word for word
-  (spaces at either end aside). Otherwise (other words, no words, or a payload with no signed
-  question) nothing is sent, the question opens in the app, where the server's own text is shown,
-  and the line says "This notification didn't show the question's own words, so nothing was sent.
-  Answer it here."
+- The body must be the signed `question`, word for word (spaces at either end aside), and there
+  must be no subtitle and no picture. Otherwise: "This notification's words couldn't be matched to
+  the question, so nothing was sent. Answer it here."
+- The title must be absent or one of Auto's three. Any other title, an agent's name included:
+  "This phone can't check the sender named on this notification, so nothing was sent. Answer it
+  here."
 - A signed payload is replied to once. Before the answer is posted, its workspace, grant and
   notification ids and its `iat` are claimed in the store of responses handled (ids only, never
   words; the last 50 keys; kept across launches; cleared by sign-out). The same payload sent again
   opens the question with "You already replied to this notification, so nothing was sent again."
 
+What a person sees: a Reply to a question Auto asked still posts and says "Answered". A Reply to a
+question a named agent asked now opens the question in the app, with the sender line, and is
+answered there.
+
 [src/push/\_\_tests\_\_/reply-binding.test.ts](../../src/push/__tests__/reply-binding.test.ts)
-and [inbound.test.ts](../../src/push/__tests__/inbound.test.ts) prove each branch.
+and [inbound.test.ts](../../src/push/__tests__/inbound.test.ts) prove each branch, for a Reply and
+for a plain tap.
+
+**What the server would need to sign.** For an agent's question to be answered from the
+notification again, the canonical message must cover the title it sends: the sender's name as a
+signed field (the phone then rebuilds "{sender} · {badge}"), or the title itself (or its SHA-256),
+under a new payload version. To check a push that is not a question, the body's fixed line too.
 
 **What a verified push still does not prove.** The words on the lock screen. A notification that
 arrives while the app is closed is drawn by iOS or Android without any of the app's code, so a push
-with genuine signed data and words of its own is shown as it was sent. Checking it before it is shown
-needs a notification service extension, which is native code this app does not have. The title (the
-sender's name and the AI badge) and the fixed lines of other pushes are not signed, so the phone
-cannot check them. For it to, the server would have to sign the title and the body it sends (both,
-or a SHA-256 of each) in the canonical message, under a new payload version.
+with genuine signed data and words of its own is shown as it was sent. Checking it before it is
+shown needs a notification service extension, which is native code this app does not have. Android
+also draws a large picture from an image link without telling the app; the server never sends one.

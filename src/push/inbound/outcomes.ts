@@ -5,8 +5,9 @@
 // is (GET /api/notifications, with the person's own credentials), the push's own first when its
 // notification_id is a notification's. An unverified push's id only chooses which of the person's
 // own rows is shown first: nothing is posted, followed or marked read for it (D-SIGNATURE). A
-// reply that cannot be sent opens the question, as before: so does one whose notification did not
-// show the signed question's words, and one carrying a signed payload this phone already replied to.
+// reply that cannot be sent opens the question, as before: so does one whose notification showed
+// words other than the signed question's, or a sender the phone cannot check, and one carrying a
+// signed payload this phone already replied to.
 
 import type { WorkspaceRole } from '../../api/workspace';
 import { ROLE_COPY } from '../../auth/strings';
@@ -39,8 +40,18 @@ function questionRoute(link: PushLink | undefined): string {
   return (link && routeFor(targetFor(link))) || routes.cc.questions;
 }
 
+/** A reply not sent from the notification, for want of words or a check: the question, and why. */
+const ANSWER_IN_THE_APP: Readonly<Record<string, string>> = Object.freeze({
+  blank_reply: PUSH_ACTION_COPY.answerHere,
+  words_differ: PUSH_ACTION_COPY.wordsDiffer,
+  sender_unchecked: PUSH_ACTION_COPY.senderUnchecked,
+  replayed: PUSH_ACTION_COPY.repliedBefore,
+});
+
 /** Nothing is sent: the inbox, or the question with where to answer it, and a line that says why. */
 export function neutralOutcome(intent: Neutral, context: NeutralContext): HandledOutcome {
+  const inTheApp = ANSWER_IN_THE_APP[intent.reason];
+  if (inTheApp) return outcome(questionRoute(intent.link), inTheApp);
   switch (intent.reason) {
     case 'unverified':
       return outcome(
@@ -55,13 +66,7 @@ export function neutralOutcome(intent: Neutral, context: NeutralContext): Handle
         questionRoute(intent.link),
         context.role ? ROLE_COPY.viewerReadOnly : PUSH_ACTION_COPY.answerHere,
       );
-    case 'blank_reply':
-      return outcome(questionRoute(intent.link), PUSH_ACTION_COPY.answerHere);
-    case 'words_differ':
-      return outcome(questionRoute(intent.link), PUSH_ACTION_COPY.wordsDiffer);
-    case 'replayed':
-      return outcome(questionRoute(intent.link), PUSH_ACTION_COPY.repliedBefore);
-    case 'unknown':
+    default:
       return outcome(inboxRoute(context.focus));
   }
 }

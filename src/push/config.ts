@@ -47,6 +47,15 @@ export const OPEN_ACTION_ID = 'open';
  */
 export const DEFAULT_ACTION_ID = 'expo.modules.notifications.actions.DEFAULT';
 
+/**
+ * A push's title as the server sets it, outside the signature: "{sender} · {badge}", the sender
+ * the agent that asked or, with none named, Auto, and the badge the fixed AI term of the phone's
+ * language. Only Auto's titles are known to the phone (inbound/shown.ts).
+ */
+export const PUSH_TITLE_SENDER = 'Auto';
+export const PUSH_TITLE_SEPARATOR = ' · ';
+export const PUSH_AI_BADGES: readonly string[] = Object.freeze(['AI', 'IA', 'KI']);
+
 /** The link_type of a question push: its grant_id is what a reply answers (W2 US-011a). */
 export const QUESTION_LINK_TYPE = 'question';
 

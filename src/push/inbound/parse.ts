@@ -9,14 +9,24 @@
 // (EXNotificationSerializer.m serializedNotificationData), and the trigger keeps the whole userInfo
 // (trigger.payload): when content.data comes over empty, trigger.payload.body is read instead, so a
 // push the phone holds is never unreadable for want of the one copy the JS mapping used.
-// content.body is the text the notification showed (outside the signature: intent.ts holds a
-// Reply to it). Anything missing or malformed is {kind: 'unreadable'}: this never throws. Nothing
+// content's title, subtitle, body and attachments are what the notification showed (outside the
+// signature: shown.ts holds a Reply to them). Anything missing or malformed is {kind: 'unreadable'}
+// (text shown that is not text reads as none): this never throws. Nothing
 // here is verified: event.data is the data as received, and only src/push/signature decides
 // whether it came from the phone's own server (the action handler acts on parsePushData's output).
 
 import { z } from 'zod';
 
 import { parseJson } from '../../api/json';
+
+/** The words a notification showed: its title, subtitle and body, and how many pictures (iOS). */
+export type ShownText = Readonly<{
+  title: string | null;
+  subtitle: string | null;
+  body: string | null;
+  /** iOS attachments shown with it; 0 with none (Android exposes none to the app). */
+  attachments: number;
+}>;
 
 export type InboundEvent = Readonly<{
   kind: 'readable';
@@ -26,8 +36,8 @@ export type InboundEvent = Readonly<{
   category: string | null;
   /** The notification's data as received: an object, never verified here. */
   data: Readonly<Record<string, unknown>>;
-  /** The text the notification showed (content.body), as received; null without one. Never logged. */
-  body: string | null;
+  /** What the notification showed, as received (outside the signature). Never logged. */
+  shown: ShownText;
   /** The response's actionIdentifier; null for a notification received in the foreground. */
   action: string | null;
   /** What the person typed into 'Reply…'; null when nothing was typed. */
@@ -40,11 +50,17 @@ const UNREADABLE: InboundRead = Object.freeze({ kind: 'unreadable' });
 
 const RecordShape = z.record(z.string(), z.unknown());
 
+/** Text the notification showed; one that is not text reads as none and never makes it unreadable. */
+const ShownLine = z.string().nullish().catch(null);
+
 const RequestShape = z.object({
   identifier: z.string().min(1),
   content: z.object({
     categoryIdentifier: z.string().nullish(),
-    body: z.string().nullish().catch(null),
+    title: ShownLine,
+    subtitle: ShownLine,
+    body: ShownLine,
+    attachments: z.unknown(),
     data: z.unknown(),
   }),
 });
@@ -95,6 +111,21 @@ function triggerDataOf(rawRequest: unknown): Record<string, unknown> | null {
   return typeof body === 'string' ? recordFromJson(body) : nonEmptyRecord(body);
 }
 
+/** How many attachments: an array's length, none for none, and anything else counts as one. */
+function attachmentsOf(raw: unknown): number {
+  if (Array.isArray(raw)) return raw.length;
+  return raw === null || raw === undefined ? 0 : 1;
+}
+
+function shownOf(content: Request['content']): ShownText {
+  return Object.freeze({
+    title: content.title ?? null,
+    subtitle: content.subtitle ?? null,
+    body: content.body ?? null,
+    attachments: attachmentsOf(content.attachments),
+  });
+}
+
 function eventOf(
   request: Request,
   rawRequest: unknown,
@@ -109,7 +140,7 @@ function eventOf(
     id: request.identifier,
     category: request.content.categoryIdentifier ?? null,
     data: Object.freeze(data),
-    body: request.content.body ?? null,
+    shown: shownOf(request.content),
     action,
     userText,
   });

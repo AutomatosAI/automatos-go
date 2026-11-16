@@ -17,7 +17,12 @@ import {
   withHandled,
 } from '../inbound/dedupe';
 import { answerTextOf, intentFor, type IntentInput } from '../inbound/intent';
-import { fromNotification, fromResponse, type InboundEvent } from '../inbound/parse';
+import {
+  fromNotification,
+  fromResponse,
+  type InboundEvent,
+  type ShownText,
+} from '../inbound/parse';
 import { parsePushData, type PushPayload } from '../schemas/payload';
 import { FULL, MINIMAL, WS } from './data-fixtures';
 import {
@@ -39,16 +44,24 @@ function readable(raw: unknown, read: (value: unknown) => ReturnType<typeof from
 const QUESTION = parsePushData(FULL) as PushPayload;
 const QUESTION_LINK = { link_type: 'question', link_id: '42' };
 
+/** What the server's own question push shows: Auto's title and the signed question. */
+const SHOWN: ShownText = Object.freeze({
+  title: 'Auto · AI',
+  subtitle: null,
+  body: FULL.question,
+  attachments: 0,
+});
+
 function input(
   overrides: Partial<IntentInput> & {
     action?: string | null;
     userText?: string | null;
-    body?: string | null;
+    shown?: Partial<ShownText>;
   },
 ) {
-  const { action = 'reply', userText = 'Yes, ship it', body = FULL.question, ...rest } = overrides;
+  const { action = 'reply', userText = 'Yes, ship it', shown = {}, ...rest } = overrides;
   return {
-    event: { action, userText, body },
+    event: { action, userText, shown: { ...SHOWN, ...shown } },
     verified: true,
     payload: QUESTION,
     currentWorkspaceId: WS,
@@ -65,7 +78,7 @@ describe('fromResponse / fromNotification', () => {
       id: IOS_ID,
       category: 'automatos.question.3',
       data: FULL,
-      body: 'Ship the Lisbon deck?',
+      shown: SHOWN,
       action: 'reply',
       userText: '  Yes, ship it  ',
     });
@@ -73,14 +86,22 @@ describe('fromResponse / fromNotification', () => {
     expect(Object.isFrozen(event.data)).toBe(true);
   });
 
-  it('reads the text the notification showed; none, or one that is not text, is null and still readable', () => {
-    expect(readable(androidResponse(DEFAULT_ACTION_ID), fromResponse).body).toBe(
-      'Ship the Lisbon deck?',
-    );
-    for (const body of [undefined, null, 42]) {
-      const event = readable(responseWithContent({ ...iosContent(), body }), fromResponse);
-      expect([event.body, event.data]).toEqual([null, FULL]);
+  it('reads what the notification showed; text that is not text is none, and it stays readable', () => {
+    expect(readable(androidResponse(DEFAULT_ACTION_ID), fromResponse).shown).toEqual(SHOWN);
+    for (const odd of [undefined, null, 42]) {
+      const content = { ...iosContent(), title: odd, subtitle: odd, body: odd };
+      const event = readable(responseWithContent(content), fromResponse);
+      expect([event.shown, event.data]).toEqual([
+        { title: null, subtitle: null, body: null, attachments: 0 },
+        FULL,
+      ]);
     }
+    const shownWith = (attachments: unknown) =>
+      readable(responseWithContent({ ...iosContent(), attachments }), fromResponse).shown;
+    expect([shownWith([{ id: 'a' }, { id: 'b' }]), shownWith('odd')]).toMatchObject([
+      { attachments: 2 },
+      { attachments: 1 },
+    ]);
   });
 
   it('reads an Android-shaped response: the Expo body still as dataString', () => {
@@ -168,15 +189,29 @@ describe('intentFor', () => {
   it("a reply whose notification did not show the signed question's words → words_differ", () => {
     const differ = { kind: 'neutral', reason: 'words_differ', link: QUESTION_LINK };
     for (const body of ['Reply YES to keep your account', 'Ship the Lisbon deck', '', null]) {
-      expect(intentFor(input({ body }))).toEqual(differ);
+      expect(intentFor(input({ shown: { body } }))).toEqual(differ);
     }
     const { question: _redacted, ...rest } = QUESTION;
-    expect(intentFor(input({ payload: rest, body: 'A question needs your answer' }))).toEqual(
-      differ,
-    );
-    expect(intentFor(input({ body: `  ${FULL.question}\n` })).kind).toBe('answer');
+    const generic = { body: 'A question needs your answer' };
+    expect(intentFor(input({ payload: rest, shown: generic }))).toEqual(differ);
+    expect(intentFor(input({ shown: { subtitle: 'Approve the payment?' } }))).toEqual(differ);
+    expect(intentFor(input({ shown: { attachments: 1 } }))).toEqual(differ);
+    expect(intentFor(input({ shown: { body: `  ${FULL.question}\n` } })).kind).toBe('answer');
     // Open and a tap act on the signed link only: the words shown never change where they go
-    expect(intentFor(input({ action: 'open', body: 'Something else' })).kind).toBe('open');
+    expect(intentFor(input({ action: 'open', shown: { body: 'Something else' } })).kind).toBe(
+      'open',
+    );
+  });
+
+  it('a reply under a title the phone cannot check → sender_unchecked; Auto’s titles and none pass', () => {
+    const unchecked = { kind: 'neutral', reason: 'sender_unchecked', link: QUESTION_LINK };
+    for (const title of ['Approve the payment?', 'Ops Agent · AI', 'Auto · AI!', 'Auto']) {
+      expect(intentFor(input({ shown: { title } }))).toEqual(unchecked);
+    }
+    for (const title of ['Auto · AI', 'Auto · IA', 'Auto · KI', ' Auto · AI ', '', null]) {
+      expect(intentFor(input({ shown: { title } })).kind).toBe('answer');
+    }
+    expect(intentFor(input({ action: 'open', shown: { title: 'Approve it' } })).kind).toBe('open');
   });
 
   it.each(['owner', 'admin', 'editor'] as const)('%s may answer', (role) => {
