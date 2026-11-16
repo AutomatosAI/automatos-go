@@ -3,16 +3,21 @@
 // persister mounts only while someone is signed in because the saved cache belongs to that one
 // person (query-client.ts cacheBuster): keyed by their id, a different person's sign-in starts a
 // fresh restore that discards the other's copy. While it restores, queries wait (useIsRestoring).
+// Beside the one client, TanStack's focus follows AppState (app-focus.ts): when the app comes back
+// from the background, each stale query a screen holds asks the server again (rule 6.4).
 
 import { QueryClientProvider } from '@tanstack/react-query';
 import { PersistQueryClientProvider, type Persister } from '@tanstack/react-query-persist-client';
 import { useMemo, type ReactNode } from 'react';
+import { AppState } from 'react-native';
 
+import { followAppFocus } from '../api/app-focus';
 import { createQueryClient, createQueryPersister, persistOptions } from '../api/query-client';
 import { logger } from '../lib/logger';
 import { appStorage } from '../storage/mmkv';
 
 export const appQueryClient = createQueryClient();
+followAppFocus(AppState);
 
 let persister: Persister | null = null;
 
