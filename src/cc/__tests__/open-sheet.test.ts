@@ -78,4 +78,10 @@ describe('useSheetRoute (read from the source)', () => {
     );
     expect(source).toMatch(/useOpenWhileFocused\(exits\.push\);/);
   });
+
+  it('leaves once per exit: its effect is leaveOnceAfterSlide over a ref kept across renders', () => {
+    expect(source).toContain('const left = useRef<SheetExit | null>(null);');
+    expect(source).toMatch(/leaveOnceAfterSlide\(\s*exit,[\s\S]*?left,\s*\)/);
+    expect(source).not.toMatch(/\bleaveAfterSlide\(/);
+  });
 });

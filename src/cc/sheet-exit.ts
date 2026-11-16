@@ -56,6 +56,28 @@ export function leaveSheet(exit: SheetExit, navigation: SheetNavigation): void {
 
 /** Leave once the sheet has slid away; returns the cancel (the route unmounted first). */
 export function leaveAfterSlide(exit: SheetExit, navigation: SheetNavigation): () => void {
-  const timer = setTimeout(() => leaveSheet(exit, navigation), SHEET_DURATION_MS);
+  return leaveOnceAfterSlide(exit, navigation, { current: null }) ?? (() => undefined);
+}
+
+/** The exit a route has already left by, kept across its renders (a ref). */
+export type LeftBy = { current: SheetExit | null };
+
+/**
+ * The hook's effect: leave by `exit` after the slide, once. An exit already left by is never left by
+ * again, whatever renders the route again before it unmounts (the screen stays mounted through its
+ * transition, and a new navigation function would run the effect again): a second leave would pop
+ * the screen underneath or put home in its place. Returns the cancel, or nothing to cancel.
+ */
+export function leaveOnceAfterSlide(
+  exit: SheetExit | null,
+  navigation: SheetNavigation,
+  left: LeftBy,
+): (() => void) | undefined {
+  if (exit === null || left.current === exit) return undefined;
+  const timer = setTimeout(() => {
+    if (left.current === exit) return;
+    left.current = exit;
+    leaveSheet(exit, navigation);
+  }, SHEET_DURATION_MS);
   return () => clearTimeout(timer);
 }

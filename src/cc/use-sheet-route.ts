@@ -12,13 +12,13 @@
 // sheet (open-sheet.ts) that a notification's tap leaves through, with the same push.
 
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useGoBack } from '../navigation/use-go-back';
 import { openSheets } from './open-sheet';
 import {
   firstExit,
-  leaveAfterSlide,
+  leaveOnceAfterSlide,
   sheetExits,
   type SheetExit,
   type SheetExits,
@@ -54,15 +54,18 @@ export function useSheetRoute(fallback: string): SheetRoute {
   const goBack = useGoBack(fallback);
   const focused = useFocused();
   const [exit, setExit] = useState<SheetExit | null>(null);
+  const left = useRef<SheetExit | null>(null);
 
-  useEffect(() => {
-    if (!exit) return undefined;
-    return leaveAfterSlide(exit, {
-      goBack,
-      replace: (href) => router.replace(href),
-      push: (href) => router.push(href),
-    });
-  }, [exit, goBack, router]);
+  // once per exit (leaveOnceAfterSlide), however often this runs again before the route unmounts
+  useEffect(
+    () =>
+      leaveOnceAfterSlide(
+        exit,
+        { goBack, replace: (href) => router.replace(href), push: (href) => router.push(href) },
+        left,
+      ),
+    [exit, goBack, router],
+  );
 
   const exits = useMemo(
     () => sheetExits((next) => setExit((current) => firstExit(current, next))),
