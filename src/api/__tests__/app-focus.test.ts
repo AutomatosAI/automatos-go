@@ -7,12 +7,13 @@ import { focusManager, QueryObserver, type QueryClient } from '@tanstack/react-q
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { readRepoFile } from '../../release/__tests__/support/tree';
-import { followAppFocus, judgedFrom, returnedToFront, type AppStatusSource } from '../app-focus';
+import { followAppFocus, judgedFrom, returnedToFront } from '../app-focus';
 import { createApiClient } from '../client';
 import { createLiveController, isForeground } from '../live-connection';
 import { createLiveHub } from '../live-events';
 import { createQueryClient, QUERY_STALE_TIME_MS } from '../query-client';
 import { queryKeys } from '../query-keys';
+import { fakeAppState } from './fake-app-state';
 import { SERVER, fakeTransport, flush, hangUntilAborted } from './fake-transport';
 
 type Board = { readonly tasks: readonly string[] };
@@ -23,25 +24,6 @@ const KEY = queryKeys.board();
 /** Read longer ago than the app's stale time: a screen holding it should ask again. */
 const OLD_MS = QUERY_STALE_TIME_MS + 1_000;
 const WS = '7f1c2a54-0000-4000-8000-000000000001';
-
-/** AppState as the phone drives it: the status at setup, then each change the test sends. */
-function fakeAppState(initial: string) {
-  let listeners: readonly ((next: string) => void)[] = [];
-  const source: AppStatusSource = {
-    currentState: initial,
-    addEventListener: (_type, listener) => {
-      listeners = [...listeners, listener];
-      return {
-        remove: () => {
-          listeners = listeners.filter((each) => each !== listener);
-        },
-      };
-    },
-  };
-  const go = (...statuses: readonly string[]) =>
-    statuses.forEach((next) => listeners.forEach((listener) => listener(next)));
-  return { source, go };
-}
 
 let mounted: QueryClient | null = null;
 

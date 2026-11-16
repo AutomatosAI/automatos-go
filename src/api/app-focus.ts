@@ -3,9 +3,10 @@
 // show hours-old data with no out-of-date line, because no refresh was tried and so none failed.
 // Wired once, where the app's query client is made (src/app-state/query-root.tsx): on a return,
 // every query a screen holds that is stale (older than QUERY_STALE_TIME_MS, or invalidated) asks
-// again; a fresh one, a disabled one and one no screen holds do not. TanStack's focus refetch never
-// cancels one in flight, it joins it, so the live stream's resume refetch (live-connection.ts) and
-// this cost one request. While the app is away, TanStack also holds its polling and its retries
+// again; a fresh one, a disabled one and one no screen holds do not, nor one with a rule of its own
+// for a return (refetchOnWindowFocus: false: the gate's workspace query). TanStack's focus refetch
+// never cancels one in flight, it joins it, so the live stream's resume refetch
+// (live-connection.ts) and this cost one request. While the app is away, TanStack also holds its polling and its retries
 // until the return. 'inactive' is not away: a permission prompt, Face ID or the app switcher half
 // open passes over an app that never left, so it asks nothing. Pure: AppState is handed in.
 
