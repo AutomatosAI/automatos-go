@@ -3,8 +3,16 @@
 // one text that does not grow with Dynamic Type. A new one fails the audit until it is moved to the
 // primitive (or scales) or is listed here with a reason. A listed one that is gone fails it too.
 // The audit's own rules (the 11 pt floor, the least cap, the IconButton file) are in support/a11y.ts.
+// The icon set the app draws its icons from is ICON_SET.
 
 import { frozen } from './types';
+
+/**
+ * The one icon set (rule 3.6). A pressable that draws a value imported from it, or from one of its
+ * paths ('<set>/icons/menu'), draws an icon, as does a tag whose name ends in Icon. An app on
+ * another set names that set here.
+ */
+export const ICON_SET = 'lucide-react-native';
 
 export type A11yRule = 'ICON_ONLY' | 'SCALING_OFF';
 

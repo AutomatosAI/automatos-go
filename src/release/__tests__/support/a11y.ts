@@ -7,6 +7,8 @@
 
 import ts from 'typescript';
 
+import { ICON_SET } from '../settings/a11y-audit';
+
 /** D38's floor: no text under 11 pt (src/styles/type.ts MIN_TEXT_SIZE). */
 export const MIN_TEXT_POINTS = 11;
 
@@ -17,7 +19,6 @@ export const LEAST_FONT_SCALE_CAP = 2;
 export const ICON_BUTTON_FILE = 'src/ui/IconButton.tsx';
 
 const RAW_PRESSABLE = /^(?:Animated\.)?(?:Pressable|Touchable(?:Opacity|Highlight|WithoutFeedback|NativeFeedback)?)$/;
-const LUCIDE = /^lucide-react-native(?:\/|$)/;
 const ICON_TAG = /Icon$/;
 const TEXT_TAG = /(?:^|\.|Native)Text$/;
 
@@ -40,7 +41,7 @@ export type FoundPressable = Readonly<{
   emptyLabel: boolean;
   /** It shows words: JSX text or a Text element, in any branch. */
   words: boolean;
-  /** It draws an icon: a lucide import, or a tag named …Icon. */
+  /** It draws an icon: a value imported from the icon set, or a tag named …Icon. */
   icon: boolean;
 }>;
 
@@ -74,12 +75,17 @@ function lineOf(tree: ts.SourceFile, node: ts.Node): number {
   return tree.getLineAndCharacterOfPosition(node.getStart(tree)).line + 1;
 }
 
-/** The names a file imports from lucide-react-native (default or named, never `import type`). */
-function lucideNames(tree: ts.SourceFile): Set<string> {
+/** True for an import from the icon set (settings/a11y-audit.ts ICON_SET) or one of its paths. */
+function fromIconSet(from: string): boolean {
+  return from === ICON_SET || from.startsWith(`${ICON_SET}/`);
+}
+
+/** The names a file imports from the icon set (default or named, never `import type`). */
+function iconNames(tree: ts.SourceFile): Set<string> {
   const names = tree.statements.filter(ts.isImportDeclaration).flatMap((node) => {
     const clause = node.importClause;
     const from = ts.isStringLiteral(node.moduleSpecifier) ? node.moduleSpecifier.text : '';
-    if (!clause || clause.isTypeOnly || !LUCIDE.test(from)) return [];
+    if (!clause || clause.isTypeOnly || !fromIconSet(from)) return [];
     const bindings = clause.namedBindings;
     const named = bindings && ts.isNamedImports(bindings) ? bindings.elements : [];
     const values = named.filter((each) => !each.isTypeOnly).map((each) => each.name.text);
@@ -191,7 +197,7 @@ function describePressable(
 /** Every pressable a file draws: raw ones, and each use of a local component forwarding into one. */
 export function pressablesOf(file: string, source: string): FoundPressable[] {
   const tree = parse(file, source);
-  const icons = lucideNames(tree);
+  const icons = iconNames(tree);
   const forwarding = forwardingComponents(tree, icons);
   const found: FoundPressable[] = [];
   eachNode(tree, (node) => {

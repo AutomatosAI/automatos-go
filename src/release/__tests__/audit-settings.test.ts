@@ -10,6 +10,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { ALLOWED_LISTS, APP_IDENTITY, AUDIT_TREE } from './settings';
+import { ICON_SET } from './settings/a11y-audit';
 import { FORWARDERS, PORT_WRITES } from './settings/secure-store-audit';
 import { readRepoFile, repoRoot, walkFiles } from './support/tree';
 
@@ -83,6 +84,7 @@ const MOVED_NAMES: readonly string[] = [
   'NEVER_DECLARED',
   'NOT_THIN',
   'PRESENT_FROM_START',
+  'LUCIDE',
 ];
 
 /** A declaration of `name` given a value of its own: a literal, a list, an object or a set. */
@@ -201,6 +203,11 @@ describe('no audit keeps a private copy of what moved', () => {
     const found = audits.flatMap(({ file, text }) =>
       IDENTITY_VALUES.filter((value) => text.includes(value)).map((value) => `${file}: ${value}`),
     );
+    expect(found).toEqual([]);
+  });
+
+  it('names the icon set only through settings/a11y-audit.ts', () => {
+    const found = audits.filter(({ text }) => text.includes(ICON_SET)).map(({ file }) => file);
     expect(found).toEqual([]);
   });
 

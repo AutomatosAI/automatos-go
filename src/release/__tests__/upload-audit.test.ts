@@ -8,8 +8,6 @@
 // src/chat/__tests__/upload.test.ts proves the pipeline's order, refusals and sniffing; it posts a
 // HEIC and a PDF but only prepares the JPEG, PNG and WebP, so (c) posts each kind here.
 
-import type { DocumentPickerAsset } from 'expo-document-picker';
-import type { ImagePickerAsset } from 'expo-image-picker';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ApiClient } from '../../api/client';
@@ -219,11 +217,15 @@ function recordingClient(sent: Sent[]): Pick<ApiClient, 'request'> {
   return { request } as unknown as Pick<ApiClient, 'request'>;
 }
 
+/** What each picker hands over, as the app's own picked.ts takes it. */
+type PhotoAsset = NonNullable<Parameters<typeof pickedPhotos>[0]>[number];
+type DocumentAsset = NonNullable<Parameters<typeof pickedDocuments>[0]>[number];
+
 const NOW = new Date(2026, 9, 26, 9, 15, 0);
-const pickedPhoto = (asset: Partial<ImagePickerAsset> & { uri: string }): PickedFile =>
+const pickedPhoto = (asset: Partial<PhotoAsset> & { uri: string }): PickedFile =>
   pickedPhotos([{ width: 4032, height: 3024, type: 'image', ...asset }], NOW)[0];
 const pickedDocument = (
-  asset: Partial<DocumentPickerAsset> & { uri: string; name: string },
+  asset: Partial<DocumentAsset> & { uri: string; name: string },
 ): PickedFile => pickedDocuments([{ lastModified: 0, size: 2048, ...asset }], NOW)[0];
 
 const CAMERA_JPEG = pickedPhoto({
