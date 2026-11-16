@@ -10,6 +10,17 @@ export { CountBadge, type CountBadgeProps } from './CountBadge';
 export { Divider, type DividerProps } from './Divider';
 export { EmptyState, type EmptyStateProps } from './EmptyState';
 export { ErrorState, type ErrorStateProps } from './ErrorState';
+export { Header, type HeaderAction, type HeaderActions, type HeaderProps } from './Header';
+export { SCROLL_EVENT_THROTTLE_MS, type CollapsingTitle } from './header-model';
+export { useCollapsingTitle, type CollapsingTitleHandlers } from './use-collapsing-title';
+export { TabBar, type TabBarProps } from './TabBar';
+export {
+  TABS_MOST,
+  TAB_BAR_CHROME,
+  type TabBarChrome,
+  type TabBarShape,
+  type TabSpec,
+} from './tab-bar';
 export { IconButton, type IconButtonProps } from './IconButton';
 export { KeyboardLift, type KeyboardLiftProps } from './KeyboardLift';
 export { ListRow, type ListRowProps } from './ListRow';
