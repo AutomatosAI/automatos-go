@@ -163,6 +163,23 @@ describe('a download under its cap', () => {
     expect(textOf(TARGET_URI)).toBe('12345678');
   });
 
+  it('a close that fails after a write that failed keeps the write error, and nothing is left', async () => {
+    memoryFs.failWrites = true;
+    memoryFs.failCloses = true;
+    const transport = answering(() => partsReply(200, [encode('x')]));
+    await expect(download(clientWith(transport), FILE_URL, target())).rejects.toThrow('no space');
+    expect(memoryFs.files.size).toBe(0);
+  });
+
+  it('a close that fails after a whole body is the failure, and nothing lands', async () => {
+    memoryFs.failCloses = true;
+    const transport = answering(() => partsReply(200, [encode('x')]));
+    await expect(download(clientWith(transport), FILE_URL, target())).rejects.toThrow(
+      'could not be closed',
+    );
+    expect(memoryFs.files.size).toBe(0);
+  });
+
   it('a write that fails removes the partial file and closes its handle', async () => {
     memoryFs.failWrites = true;
     const transport = answering(() => partsReply(200, [encode('x')]));

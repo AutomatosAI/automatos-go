@@ -47,6 +47,22 @@ function openPartial(partial: File) {
   return partial.open();
 }
 
+type Handle = ReturnType<typeof openPartial>;
+
+/**
+ * Closes the partial file's handle. After a failure the first error is the one that counts: a
+ * close that fails too is logged, never thrown over it. After a whole body, a failed close is the
+ * failure (what was written may not all be there).
+ */
+function closeHandle(handle: Handle, failed: boolean): void {
+  try {
+    handle.close();
+  } catch (error) {
+    if (!failed) throw error;
+    logger.warn('[api] a partial download could not be closed', error);
+  }
+}
+
 /** The whole file is in: it replaces whatever the target held. */
 function placeInto(partial: File, target: File): void {
   if (target.exists) target.delete();
@@ -72,13 +88,17 @@ export async function download(
   const partial = partialOf(target);
   try {
     const handle = openPartial(partial);
+    let failed = false;
     try {
       const body = await client.file(url, callOf(options));
       for await (const part of body.parts(options.maxBytes ?? DOWNLOAD_MAX_BYTES)) {
         handle.writeBytes(part);
       }
+    } catch (error) {
+      failed = true;
+      throw error;
     } finally {
-      handle.close();
+      closeHandle(handle, failed);
     }
     placeInto(partial, target);
     return target;
