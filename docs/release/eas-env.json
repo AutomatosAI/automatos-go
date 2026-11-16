@@ -1,0 +1,17 @@
+{
+  "note": "The names each EAS environment must hold for this app: names only, never a value. scripts/release/state.mjs checks them with eas env:list (project and account scope); scripts/__tests__/release-state.test.ts holds this list to the names src/lib/env.ts reads. preview is the testflight profile's environment (eas.json), so the TestFlight builds, their updates and the PR check's fingerprint read it; production is the store build's. docs/release/README.md, 'EAS environment'.",
+  "environments": {
+    "preview": [
+      "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY",
+      "EXPO_PUBLIC_API_URL",
+      "EXPO_PUBLIC_WEB_URL",
+      "EXPO_PUBLIC_SENTRY_DSN"
+    ],
+    "production": [
+      "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY",
+      "EXPO_PUBLIC_API_URL",
+      "EXPO_PUBLIC_WEB_URL",
+      "EXPO_PUBLIC_SENTRY_DSN"
+    ]
+  }
+}

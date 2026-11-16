@@ -324,10 +324,25 @@ that a new kind is read by a person. The list does not hold the native libraries
 fetches.
 
 **8.4 Leaving is plain. (Must)** Whatever the app or its server holds about the person or the
-phone is named in one sentence, next to the one action that removes it. In the template every way
-of leaving (sign-out, switching to another server, forgetting a server, a session that ends) runs
-one clearing, which also deletes the person's files in the cache, a downloaded theme's files among
-them. Template: `clearUserData` in `src/connect/switch.ts`, `src/connect/user-files.ts`. Held by:
+phone is named in one sentence, next to the one action that removes it. A session the server ends
+is not the person leaving. An app that holds the person's work not yet sent keeps it. While signed
+out it shows none of it, and the signed-out screen names what is kept in one sentence next to one
+action that removes it. It sends the work when the same person signs in again, and clears
+everything before any sync when a different person signs in. Every way the person chooses to leave
+(sign-out, switching or forgetting a server, deleting the account) still runs the one clearing. A
+sign-out first sends the waiting work while the token still works, and if it cannot, says what will
+be lost before clearing. Any partial wipe while signed in (for example, deleting one kind of data)
+keeps the record the different-person check reads; otherwise the next person's sign-in looks like
+the install's first and keeps the previous person's work. While signed out, every screen that shows
+the person's data is gated in its own layout, not only by navigation, so a link cannot open it;
+scheduled local notifications are held and cleared from the screen too. An app on Clerk cannot tell
+an account deleted on the server from a session that ended: `useAuth` reports an expired session, a
+revoked one and an account deleted elsewhere the same way (`isSignedIn` false, no reason). So the
+carve-out relies on the signed-out screen's remove action, and on a deleted account's next sign-in
+being a different id. The template holds no work not yet sent, so its behaviour is unchanged: every
+way of leaving, and a session the server ends, runs one clearing, which also deletes the person's
+files in the cache, a downloaded theme's files among them. Template: `clearUserData` in
+`src/connect/switch.ts`, `src/connect/user-files.ts`. Held by:
 `src/connect/__tests__/user-files.test.ts`. Owed: pictures the app has shown may stay in the
 phone's own picture cache until the phone clears it.
 
@@ -621,6 +636,24 @@ update runs no build hook. Template: `scripts/check-release-env.js`,
 `.eas/workflows/testflight.yml`. Held by: `scripts/__tests__/check-release-env-secrets.test.ts`,
 `src/config/__tests__/eas-release.test.ts`.
 
+**14.7 Every release step comes from the template's release files, copied. (Must)** Never from
+memory, and never from another app's handoff. A step the template lacks is added to the template
+first, then copied. The files are the delivery, `.eas/workflows/testflight.yml` and `pr-check.yml`
+(rules 14.3 and 14.6); the first release, `scripts/release/first-release.mjs`, which makes the
+internal TestFlight group with automatic distribution that eas-cli does not always make; the state
+check, `scripts/release/state.mjs` with `state-eas.mjs`; the modules both read,
+`scripts/release/asc.mjs`, `eas.mjs` and `project.mjs`; the list of the EAS environment's names,
+`docs/release/eas-env.json`; and the steps in `docs/release/README.md` under First release, Signing
+and capabilities, EAS environment and State check. A copy takes them whole. It lists its own names
+in `eas-env.json`, changes the public address in the update hook (14.6), and passes `--profile`,
+`--workflow` or `--group` where its names differ. The scripts read the app's own `app.json` and
+`eas.json`, so no id is written into them. Before an app's first build goes to TestFlight,
+`first-release.mjs --apply` has made the group and the group has testers; before each release,
+`state.mjs` prints no FAIL. Template: those files. Held by:
+`scripts/__tests__/release-first-release.test.ts` and `scripts/__tests__/release-state.test.ts`,
+which also holds `eas-env.json` to the names `src/lib/env.ts` reads and these files and sections to
+this rule.
+
 ## 15. Android
 
 **15.1 iOS first, Android kept compiling. (Shaped)** What differs by platform is a `*.android.ts`
@@ -741,6 +774,8 @@ template, or records why not.
 | 16 Nov 2026 | A copy that gains `src/config/__tests__` moves its identity values into `settings/identity.ts` in the same change: `audit-settings.test.ts` reads every file there as an audit and fails on one that spells the app's identity (14.2). That test and `audit-imports.test.ts` both walk the folder, and fail while it is missing. |
 | 16 Nov 2026 | The client was hardened after two security reviews and a correctness review of a copy (13.2, 13.2a, 13.2c, 13.2d, 6.2). The bearer is given to a loader outside the client only for an address on the client's own server: `headersFor(url)` replaces `authHeaders()`, so a copy updates its callers. A stream has a total time as well as an idle time; a download names its time limit, which covers the whole body, and a stopped one never shares a partial file; a query in a limit is not asked again by a remount, a return to the front or a reconnect until the limit lifts; a route path starts with exactly one slash; a redirect's address is kept on no error when it carries a query; development http stays on a home network, and the client itself refuses an address that is not a plain origin. A copy takes `src/api/` whole, with `src/lib/host-text.ts` and `src/lib/ip.ts`. |
 | 16 Nov 2026 | Push was hardened after a review of a copy's push code (5.2, 7.3, 8.4). The person's last choice wins over a registration call that is out: a tap releases its hold when it is made, and a removal runs in the registrar's own queue. A sign-out finds and removes the server's row of a registration whose answer was lost, and a removal the server has not confirmed is kept as owed and tried again. A Reply typed on a notification is posted only when every word the notification shows is the server's own: the body is the signed question, there is no subtitle or picture, and the sender in the title is either the app's fixed one or the one the server names for that question when the phone asks it; each signed payload can be replied to once. What the lock screen draws is still not signed. A copy with push takes `src/push/registration/`, `src/push/bind/` and `src/push/inbound/` with their tests, and `docs/release/push-security.md`. |
+| 16 Nov 2026 | Every release step comes from the template's release files, copied (14.7). A copy's first build reached no tester: the app already existed in App Store Connect, and eas-cli makes the internal TestFlight group only when it creates the app, or when the app has no group and it can sign in to App Store Connect. `scripts/release/first-release.mjs` makes that group (dry run by default, `--apply` to act, never changing or deleting a group), `scripts/release/state.mjs` reads the release's state in one line per check (the group, its testers, the newest build, the EAS environment's names, the latest delivery run, the build quota and the CI/CD minutes), and `docs/release/README.md` gains First release, Signing and capabilities, EAS environment and State check. A copy takes `scripts/release/first-release.mjs`, `state.mjs`, `state-eas.mjs`, `asc.mjs`, `eas.mjs` and `project.mjs`, `docs/release/eas-env.json` with its own names, those four sections, and `scripts/__tests__/release-first-release.test.ts`, `release-state.test.ts` and `release-fixtures.ts`; then runs `first-release.mjs` once and `state.mjs` before each release. |
+| 16 Nov 2026 | A session the server ends is not the person leaving (8.4), decided by the template as the standard's chair and agreed by the owner. An app that holds the person's work not yet sent keeps it, shows none of it while signed out, names it beside one action that removes it, sends it when the same person signs in again and clears everything first when another person does. Every way the person chooses to leave still runs the one clearing, and a sign-out sends the waiting work first or says what will be lost. A partial wipe while signed in keeps the record the different-person check reads, every screen with the person's data is gated in its own layout while signed out, and scheduled local notifications are held and cleared; Clerk reports a deleted account and an ended session alike, so the carve-out leans on the signed-out screen's remove action. The template holds no work not yet sent, so nothing changes in it, and a copy that holds none takes nothing. |
 
 ## Related
 

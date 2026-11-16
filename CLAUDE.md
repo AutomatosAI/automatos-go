@@ -95,6 +95,16 @@ run it a second time.
   rules). Add an entry there, never in the audit.
   `src/release/__tests__/audit-settings.test.ts` holds the folder: every allowed entry has its reason,
   and no audit keeps a copy of a value that moved.
+- The first release and the release's state are code (`docs/release/README.md`, "First release"
+  and "State check"; rule 14.7): `node scripts/release/first-release.mjs` (dry run; `--apply` acts)
+  makes the internal TestFlight group with automatic distribution that eas-cli skips for an app App
+  Store Connect already has, and `node scripts/release/state.mjs` prints one line per check (the
+  group, its testers, the newest build, each EAS environment's names from `docs/release/eas-env.json`,
+  the latest delivery run, the build quota, the CI/CD minutes). Both need the team's App Store
+  Connect key (`EXPO_ASC_API_KEY_PATH`, `EXPO_ASC_KEY_ID`, `EXPO_ASC_ISSUER_ID`). Neither is one of
+  the local checks above: `--apply` changes App Store Connect, and the state check runs eas-cli
+  (`npx --yes eas-cli@27.10.0`), so each is run on purpose, like an `eas` command. Their tests run
+  in `npx vitest run`. Without a credential a state line says "not checked".
 - Before the first submit of every native build, download its IPA and run
   `node scripts/release/scan-ipa.mjs <ipa>` (`docs/release/ipa-scan.md`): it must say PASS
   (ITMS-90683).
@@ -153,7 +163,7 @@ src/readiness/       Settings → What Auto depends on
 src/suggestions/     Auto's suggestions: the pinned card, the sheet, Pause suggestions
 src/observability/   crash reporting: the fixed Sentry options, the person's switch, scrubbing
 src/config/          tests only: app.json and its privacy rules, the icon and splash, eas.json and the EAS workflows, pinned
-scripts/             release-env guard, sync-core, check-routes
+scripts/             release-env guard, sync-core, check-routes; release/ (first release, state check, IPA scan, push security)
 .eas/workflows/      EAS Workflows: testflight.yml (push to main), pr-check.yml (PRs)
 plugins/             local config plugins: pinned background modes, Sentry upload guard, Gradle memory (docs/native-modules.md)
 ```
@@ -250,8 +260,8 @@ pair beside it, as `src/step-up/check-copy.ts`; the store-copy audit reads both)
   a new style's composer follows them.
 - **No `.env.example`.** The workspace's secrets hook blocks Claude Code from writing
   `*.env.*` files, so the repo has none (lead decision, 20 Oct): every `EXPO_PUBLIC_*` name is
-  listed under Environment above and in README.md. A new name goes in all three places
-  (README, this file, `scripts/check-release-env.js`).
+  listed under Environment above and in README.md. A new name goes in all four places
+  (README, this file, `scripts/check-release-env.js`, `docs/release/eas-env.json`).
 
 ## Terms
 
