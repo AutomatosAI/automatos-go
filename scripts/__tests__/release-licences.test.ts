@@ -7,6 +7,7 @@
 // before it ships. The generator's own rules are proved on small installs written to a temp folder.
 
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -24,14 +25,17 @@ import { readRepoFile, repoRoot } from '../../src/release/__tests__/support/tree
 import {
   GENERATED_NOTE,
   LicenceError,
+  MAX_TEXT_BYTES,
   OUTPUT_PATH,
   TEXT_KEY_LENGTH,
   buildLicenceData,
+  checkedKey,
   declaredLicence,
   installReader,
   licenceData,
   licenceFiles,
   normaliseText,
+  run,
   serialise,
   textKey,
 } from '../generate-licences.mjs';
@@ -328,5 +332,57 @@ describe('what the generator reads from a package', () => {
 
   it('keeps a text whole but for its byte-order mark, line ends and trailing spaces', () => {
     expect(normaliseText('\uFEFF\r\nMIT  \r\n\r\nCopyright\r\n\n')).toBe('MIT\n\nCopyright');
+  });
+});
+
+// Since 16 Nov: a lockfile key is joined into the path files are read from, and the list ships in
+// the app, so a key that leaves the repository and a text of any size are refused, by name.
+describe('what the generator refuses', () => {
+  const neverRead = () => {
+    throw new Error('read before the key was checked');
+  };
+
+  it.each([
+    'node_modules/../../outside',
+    'node_modules/a/../../../etc',
+    'node_modules//a',
+    'node_modules/a/',
+    'node_modules\\a',
+    '/abs/node_modules/a',
+    'C:/node_modules/a',
+  ])('a lockfile key %j, named in the error, before anything is read', (key) => {
+    const lock = { packages: { '': {}, [key]: { version: '1.0.0' } } };
+    expect(() => buildLicenceData(lock, neverRead)).toThrow(LicenceError);
+    expect(() => buildLicenceData(lock, neverRead)).toThrow(JSON.stringify(key));
+    expect(() => installReader(scratch)(key)).toThrow(JSON.stringify(key));
+  });
+
+  it("checks every key, a dev package's too, and passes a nested, scoped one", () => {
+    const lock = { packages: { 'node_modules/../tool': { version: '1.0.0', dev: true } } };
+    expect(() => buildLicenceData(lock, neverRead)).toThrow(LicenceError);
+    const nested = 'node_modules/a/node_modules/@scope/b';
+    expect(checkedKey(nested)).toBe(nested);
+  });
+
+  it('fails the run on a text over MAX_TEXT_BYTES, naming the package, and never cuts one', () => {
+    const install = (text: string, name: string) =>
+      writeInstall(
+        [{ key: 'node_modules/big', entry: { version: '1.0.0' }, files: { LICENSE: text } }],
+        name,
+      );
+    const whole = 'x'.repeat(MAX_TEXT_BYTES);
+    const fits = licenceData(install(whole, 'cap-at'));
+    expect(fits.texts[fits.packages[0]?.text ?? '']).toBe(whole);
+    const over = install(`${whole}x`, 'cap-over');
+    expect(() => licenceData(over)).toThrow(LicenceError);
+    const named = /^node_modules\/big \(big@1\.0\.0\): .* over MAX_TEXT_BYTES/;
+    expect(() => licenceData(over)).toThrow(named);
+    expect(run(over, () => undefined)).toBe(1);
+    expect(existsSync(path.join(over, OUTPUT_PATH))).toBe(false);
+  });
+
+  it("sets the cap well above today's longest text", () => {
+    const sizes = Object.values(committed.texts).map((text) => Buffer.byteLength(text, 'utf8'));
+    expect(Math.max(...sizes) * 3).toBeLessThan(MAX_TEXT_BYTES);
   });
 });
