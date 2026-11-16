@@ -169,8 +169,9 @@ The template is held to the standard too. Each line is a rule's "Owed".
 ## Found by a copy while lifting, fixed 16 Nov
 
 These were faults in the template's own code. A copy that reads the template closely while it
-lifts it is how they are found. Each is fixed in the template, and recorded in the standard's
-Changes.
+lifts it is how most of them were found; the rest turned up in the template's own pass over the
+same code once the first were known. Each is fixed in the template, and recorded in the
+standard's Changes.
 
 | Fault | Rule | Found by |
 |---|---|---|
@@ -178,12 +179,14 @@ Changes.
 | Back, with nothing behind and a fallback that was the screen already showing, put the screen in its own place, and the Header drew a Back that did nothing on it | 4.2 | App A |
 | A switch row's only touch was the native switch inside it, not the row, and the off track read under 3 to 1 under the thumb and on the page in every palette | 10.1, 10.4 | App A |
 | `StateGlyph` took any colour name, and the screen reader read its glyph beside the state's word | 1.4, 10.6 | App A |
-| A pill's count was its label's ink under an opacity, which no test measured | 10.5 | App A |
+| A pill's count was its label's ink under an opacity, which no test measured | 10.5 | The template's own pass |
 | A return from the background asked the server nothing, so a screen could show old data with no out-of-date line | 6.4 | App C |
-| A suggestion past its expiry stayed offered until its list changed, though its Start would be refused | 6.5 | App A |
+| A suggestion past its expiry stayed offered until its list changed, though its Start would be refused. If it expired while its Start was out, the answer was never shown | 6.5 | The template's own pass |
 | CI's actions were pinned to tags, which can be moved to other code after review | 14.1 | App A |
-| Text a server chooses was trimmed and cut with patterns whose work grew with the square of a long run | 13.2a | App A |
+| Text a server chooses was trimmed, cut and stripped of its marks with patterns whose work grew with the square of a long run: a megabyte of one kind took over a minute | 13.2a | App A found the first, in a link's slashes; the template's own pass found the rest |
 | Comments gave `space3` as 12 or 6 points. It is 8 | 3.3 | App A |
+| The request path builder turned any value into one segment by encoding it, so a value with an encoded slash would have been decoded by the server into its own path. Every caller checked first; the builder now refuses it itself | 13.2 | The security review of the link fix |
+| The accessibility audit reads the icon library's types, so a copy without that library cannot take it as it is. Not fixed: owed | 3.6, 14.2 | App A |
 
 ## Open for the owner
 
