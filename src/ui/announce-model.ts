@@ -4,8 +4,12 @@
 // region's words at each run of the hook, whether to say them: on iOS, once each time they appear
 // or change, never again for the same words still on screen, never a blank line; on Android never
 // (its live region speaks). An occasion (a reply's id, a press's refusal) makes the same words new:
-// each occasion is told once. Words that were on screen from the very first run can be left to
-// VoiceOver to read in order (`quietAtFirst`), so only a later change is said.
+// each occasion is told once while its words are on screen. Once they have gone (hidden, null or
+// blank), the same occasion coming back is a new appearance: a second press refused with the same
+// frozen refusal is said again. An occasion that is an identity (`once`: a reply's id) is told
+// once for good, so a reply hidden under 'Thinking' and shown again after a failed turn is not said
+// again. Words that were on screen from the very first run can be left to VoiceOver to read in
+// order (`quietAtFirst`), so only a later change is said.
 
 /** The platform as React Native names it (Platform.OS). */
 export type AnnouncePlatform = 'ios' | 'android' | 'windows' | 'macos' | 'web';
@@ -14,7 +18,10 @@ export type AnnouncePlatform = 'ios' | 'android' | 'windows' | 'macos' | 'web';
 export type Heard = Readonly<{
   /** The words on screen at the last run; null when none were showing. */
   shown: string | null;
-  /** The last occasion told (or let pass at the first run); undefined before any. */
+  /**
+   * The last occasion told (or let pass at the first run) while its words are on screen; undefined
+   * before any, and again once they have gone, unless the occasion is told `once`.
+   */
   told: unknown;
 }>;
 
@@ -28,6 +35,8 @@ export type AnnounceInput = Readonly<{
   showing: boolean;
   /** Makes the same words new: each occasion is told once. Undefined: the words alone decide. */
   occasion?: unknown;
+  /** The occasion is an identity, told once for good: its words going and coming back say nothing. */
+  once?: boolean;
   /** The first run, for a region whose first words VoiceOver reads in order: say nothing yet. */
   quietAtFirst: boolean;
 }>;
@@ -47,7 +56,11 @@ function wordsShown(input: AnnounceInput): string | null {
 /** One run of the hook: what to say, and what to keep for the next run. */
 export function announceStep(input: AnnounceInput, heard: Heard): AnnounceStep {
   const words = wordsShown(input);
-  if (words === null) return Object.freeze({ say: null, heard: { shown: null, told: heard.told } });
+  if (words === null) {
+    // gone: the occasion is forgotten, so coming back is a new appearance, unless it is an identity
+    const told = input.once === true ? heard.told : undefined;
+    return Object.freeze({ say: null, heard: Object.freeze({ shown: null, told }) });
+  }
   const byOccasion = input.occasion !== undefined;
   const fresh = byOccasion ? !Object.is(heard.told, input.occasion) : heard.shown !== words;
   const next: Heard = Object.freeze({

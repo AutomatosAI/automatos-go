@@ -7,7 +7,8 @@
 // (keyboardAppearanceFor), a caller's keyboardAppearance first. Its heights are the style's
 // (useStyle().controls.field, rule 3.5). A single-line field is drawn 40 tall and takes the 44 pt
 // touch the other controls take (rules 3.2, 10.1; variants.ts fieldTouch): the input sits in a
-// frame whose slop grows it to 44, and a tap in that slop focuses the input. The slop is on the
+// frame whose slop grows it to 44, and a tap in that slop focuses the input, unless the field
+// cannot be edited (disabled, readOnly or editable={false}: text-field-model.ts). The slop is on the
 // frame, not the input, because Android's text input does not read hitSlop (React Native reads it
 // only on a view); the field's own box makes room for it, so nothing is drawn or laid out anew.
 
@@ -27,6 +28,7 @@ import { useStyle } from '../styles/theme';
 import type { Tokens } from '../styles/tokens';
 import { Text } from './Text';
 import { fieldLabelStyle } from './dressed';
+import { fieldEditable } from './text-field-model';
 import { fieldNote, fieldPaint, fieldTouch, textFace, type FieldPaint } from './variants';
 import { selectionProps } from './selection';
 
@@ -36,7 +38,7 @@ type FocusEvent = NativeSyntheticEvent<TargetedEvent>;
 
 export type TextFieldProps = Omit<
   TextInputProps,
-  'style' | 'editable' | 'placeholderTextColor' | 'accessibilityLabel' | 'multiline'
+  'style' | 'placeholderTextColor' | 'accessibilityLabel' | 'multiline'
 > & {
   readonly label: string;
   readonly hideLabel?: boolean;
@@ -72,6 +74,8 @@ export function TextField({
   helper,
   error,
   disabled = false,
+  readOnly,
+  editable,
   onFocus,
   onBlur,
   ...input
@@ -83,6 +87,7 @@ export function TextField({
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const touch = fieldTouch(field, multiline);
+  const canEdit = fieldEditable({ disabled, readOnly, editable });
   const tone = fieldPaint(tokens.colours, { focused, invalid: error !== undefined, disabled });
   const note = fieldNote(error, helper);
   const handleFocus = (event: FocusEvent) => {
@@ -94,7 +99,7 @@ export function TextField({
     onBlur?.(event);
   };
   // a touch in the frame's slop, just outside the drawn field, focuses it as a touch on it does
-  const takesTouch = () => !disabled;
+  const takesTouch = () => canEdit;
   const focus = () => inputRef.current?.focus();
   return (
     <View style={[styles.field, touch.room, { gap: tokens.spacing.space2 }]}>
@@ -118,7 +123,7 @@ export function TextField({
           {...input}
           ref={inputRef}
           multiline={multiline}
-          editable={!disabled}
+          editable={canEdit}
           onFocus={handleFocus}
           onBlur={handleBlur}
           allowFontScaling

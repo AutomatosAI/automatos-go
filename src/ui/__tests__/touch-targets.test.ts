@@ -64,7 +64,7 @@ describe('the text field', () => {
     expect(textField).toContain('onStartShouldSetResponder={takesTouch}');
     expect(textField).toContain('onResponderRelease={focus}');
     expect(textField).toContain('const focus = () => inputRef.current?.focus();');
-    expect(textField).toContain('const takesTouch = () => !disabled;');
+    expect(textField).toContain('const takesTouch = () => canEdit;');
     expect(textField).toContain(
       '<View style={[styles.field, touch.room, { gap: tokens.spacing.space2 }]}>',
     );

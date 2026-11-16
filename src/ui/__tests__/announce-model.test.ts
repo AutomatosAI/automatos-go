@@ -20,6 +20,8 @@ import {
 const WORDS = "Couldn't refresh, so this may be out of date.";
 const OTHER = 'Checked just now.';
 const HOOK = readFileSync(path.resolve(__dirname, '../use-announce.ts'), 'utf8');
+const readSource = (file: string) =>
+  readFileSync(path.resolve(__dirname, '../../..', file), 'utf8');
 
 const input = (change: Partial<AnnounceInput> = {}): AnnounceInput => ({
   platform: 'ios',
@@ -74,18 +76,69 @@ describe('on an iPhone', () => {
     ]);
   });
 
-  it('keeps an occasion told across a gap: the same one coming back is not said again', () => {
-    expect(run([{ occasion: 'a' }, { showing: false, occasion: 'a' }, { occasion: 'a' }])).toEqual([
+  it('says the same occasion again once its words have gone: a second refusal of the same kind', () => {
+    // Send today's brief now: each press clears the refusal, and 'unavailable' is one frozen object
+    const unavailable = Object.freeze({ kind: 'unavailable' });
+    const refusal = (shown: object | null) => ({
+      words: shown ? WORDS : null,
+      showing: shown !== null,
+      occasion: shown ?? undefined,
+    });
+    expect(
+      run([refusal(unavailable), refusal(null), refusal(unavailable), refusal(unavailable)]),
+    ).toEqual([WORDS, null, WORDS, null]);
+    expect(run([{ occasion: 'a' }, { words: '  ', occasion: 'a' }, { occasion: 'a' }])).toEqual([
       WORDS,
       null,
-      null,
+      WORDS,
     ]);
+  });
+
+  it('lets a refusal held when the screen opens pass, and says the next press’s', () => {
+    const held = Object.freeze({ kind: 'unavailable' });
+    expect(
+      run([
+        { occasion: held, quietAtFirst: true },
+        { occasion: held },
+        { words: null, showing: false },
+        { occasion: held },
+      ]),
+    ).toEqual([null, null, null, WORDS]);
+  });
+
+  it('says an occasion once while it stays, whatever its words do', () => {
     expect(
       run([
         { occasion: 'a', words: WORDS },
         { occasion: 'a', words: OTHER },
       ]),
     ).toEqual([WORDS, null]);
+    // HUD's Started line: one object per press, gone after 4 s; the next press is a new one
+    const first = Object.freeze({ id: 's1' });
+    const second = Object.freeze({ id: 's2' });
+    expect(
+      run([{ occasion: first }, { occasion: first }, { showing: false }, { occasion: second }]),
+    ).toEqual([WORDS, null, null, WORDS]);
+  });
+
+  it('tells an identity once for good: a reply under the thinking line, then shown again', () => {
+    // Arcade's dialogue: while Auto thinks the line holds an empty reply of its own; a failed turn
+    // shows the reply already said again, which stays quiet; a new reply is said
+    const once = true;
+    expect(
+      run([
+        { occasion: 'a', once },
+        { words: '', occasion: 'thinking', once },
+        { occasion: 'a', once },
+        { showing: false, occasion: 'a', once },
+        { occasion: 'a', once },
+        { words: OTHER, occasion: 'b', once },
+      ]),
+    ).toEqual([WORDS, null, null, null, null, OTHER]);
+    // without `once` the same sequence is a reply coming back, said again
+    expect(
+      run([{ occasion: 'a' }, { words: '', occasion: 'thinking' }, { occasion: 'a' }]),
+    ).toEqual([WORDS, null, WORDS]);
   });
 
   it('leaves a status line’s first words to VoiceOver, and says a later change', () => {
@@ -129,16 +182,35 @@ describe('sentences', () => {
 
 describe('the hook', () => {
   it('runs the decision with Platform.OS after a change, and announces only what it says', () => {
-    expect(HOOK).toContain('{ platform: Platform.OS, words, showing, occasion, quietAtFirst }');
+    expect(HOOK).toContain(
+      '{ platform: Platform.OS, words, showing, occasion, once, quietAtFirst }',
+    );
     expect(HOOK).toContain(
       'if (step.say !== null) AccessibilityInfo.announceForAccessibility(step.say);',
     );
-    expect(HOOK).toContain('}, [words, showing, occasion, changesOnly]);');
+    expect(HOOK).toContain('}, [words, showing, occasion, once, changesOnly]);');
   });
 
   it('keeps what it heard between renders, and is quiet at first only for a status line', () => {
     expect(HOOK).toContain('const heard = useRef<Heard>(NOTHING_HEARD);');
     expect(HOOK).toContain('const quietAtFirst = first.current && changesOnly;');
     expect(HOOK).toContain('heard.current = step.heard;');
+  });
+});
+
+describe('the callers that pass an occasion', () => {
+  it('tells the dialogue’s reply once for good, by its id', () => {
+    expect(readSource('src/styles/arcade/parts/DialogueWindow.tsx')).toContain(
+      'useAnnounce(reply.text, view.announce, { occasion: reply.id, once: true });',
+    );
+  });
+
+  it('says each refusal of Send today’s brief now, the same kind again included', () => {
+    const button = readSource('src/push/settings/DigestNowButton.tsx');
+    expect(button).toContain(
+      'useAnnounce(refusal ? refusalLine(refusal) : null, refusal !== null, {',
+    );
+    expect(button).toContain('occasion: refusal ?? undefined,');
+    expect(button).not.toMatch(/\bonce:/);
   });
 });
