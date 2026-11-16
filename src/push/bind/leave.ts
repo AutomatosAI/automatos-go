@@ -5,7 +5,8 @@
 // pairing runs it from the provider's onExpired (PushRoot). In order: the session's one registrar is
 // closed (the run under way ends and none starts after it, so a resume or a new token never
 // registers the phone again); on the hosted server only, DELETE /api/v1/mobile/devices/{device_id}
-// for the row the push record names — or, with no record, the row the registrar last heard the
+// for the row the push record names (or a Remove this phone the server has not confirmed:
+// removal-owed.ts) — or, with no record, the row the registrar last heard the
 // server answer (a registration whose answer came while the registrar was closing, or a row with no
 // key), else the row learned for a registration whose answer was lost (registration/attempts.ts) —
 // with the still-valid Clerk token, best effort: learning the row and the DELETE together within
@@ -28,6 +29,7 @@ import type { RegistrationAttempts } from '../registration/attempts';
 import type { PushKeyStore } from '../registration/key-store';
 import type { RecordScope } from '../registration/record';
 import type { Registrar } from '../registration/registrar';
+import type { RemovalOwed } from '../registration/removal-owed';
 import type { PushSource } from '../registration/state';
 import { clearShown, teardownLocal, type TeardownDeps, type TeardownStep } from '../teardown';
 import { goneAlready, recordedDeviceId } from './remove-phone';
@@ -45,6 +47,8 @@ export type LeaveDeps = Readonly<{
   learn?: (signal: AbortSignal) => Promise<string | null>;
   /** That note, cleared once a DELETE in this scope is confirmed (and kept when it is not). */
   attempts?: Pick<RegistrationAttempts, 'clear'>;
+  /** A Remove this phone the server has not confirmed: its row is revoked here too. */
+  owed?: Pick<RemovalOwed, 'owed' | 'settle'>;
   teardown: TeardownDeps;
   timeoutMs?: number;
 }>;
@@ -129,7 +133,8 @@ export function pushLeaveFor(deps: LeaveDeps): PushLeave {
   // the record's row; with none, on the first leave the row the server answered or the one learned,
   // and on a later one the row whose DELETE failed
   const rowToRevoke = async (signal: AbortSignal): Promise<string | null> => {
-    const recorded = await recordedDeviceId(deps.store, deps.scope);
+    const recorded =
+      (await recordedDeviceId(deps.store, deps.scope)) ?? deps.owed?.owed(deps.scope) ?? null;
     if (recorded) return recorded;
     if (tried) return unrevoked;
     return answeredRow(deps.registrar) ?? (await learned(deps.learn, signal));
@@ -143,7 +148,10 @@ export function pushLeaveFor(deps: LeaveDeps): PushLeave {
     const revoked = await withinTime(attempt, timeoutMs, lateSignOut);
     tried = true;
     unrevoked = revoked ? null : found.deviceId;
-    if (revoked) deps.attempts?.clear(deps.scope);
+    if (revoked) {
+      deps.attempts?.clear(deps.scope);
+      deps.owed?.settle(deps.scope);
+    }
     return revoked;
   };
   return async () => {

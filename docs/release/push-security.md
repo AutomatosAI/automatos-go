@@ -222,8 +222,15 @@ key. What the phone does
   setting stops every notification from showing, the screen says the setting is off, and turning it
   on again registers.
 - **Remove this phone** is offered only with a push record, which names the one row the server keeps
-  for this install. "Removed" is shown only when the server answered the DELETE (or said the row was
-  already gone).
+  for this install, or while a removal is owed (below). "Removed" is shown only when the server
+  answered the DELETE (or said the row was already gone).
+- **A removal the server has not confirmed** (no network, a refusal, no answer) still clears the
+  phone, and says "This phone couldn't be removed from your workspace's devices. Studio may still
+  list this phone." The row's id is kept as owed (`src/push/registration/removal-owed.ts`, the
+  encrypted store, ids only), so the button stays offered, and the next tap, the next launch (while
+  the person's hold stands) or the next Sign out sends the DELETE again; a confirmed one, or a 404,
+  settles it. Turned on again since, the person owes nothing, and it is settled unsent. The yes
+  never leaves the button busy: a removal that fails on its way says the same line.
 
 [src/push/\_\_tests\_\_/lost-registration.test.ts](../../src/push/__tests__/lost-registration.test.ts)
 proves each of these.

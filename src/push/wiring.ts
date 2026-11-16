@@ -39,6 +39,7 @@ import { recoveryLogOver } from './registration/recovery-log';
 import type { RegisterDeps, RegistrationOutcome } from './registration/register';
 import { createRegistrar, type Registrar } from './registration/registrar';
 import { removalHoldOver, type RemovalHold } from './registration/removal-hold';
+import { removalOwedOver, type RemovalOwed } from './registration/removal-owed';
 import type { PermissionState } from './registration/state';
 import { registrationSessionOf, responseSessionOf, type PushSession } from './session';
 import type { Sha256 } from './signature/hmac';
@@ -159,6 +160,7 @@ type RemovalParts = Readonly<{
   registrar: Registrar;
   teardown: TeardownDeps;
   attempts: RegistrationAttempts;
+  owed: RemovalOwed;
 }>;
 
 function scopeOf(input: WiringInput) {
@@ -182,6 +184,7 @@ type LeavingParts = Readonly<{
   registrar: Registrar;
   teardown: TeardownDeps;
   registration: RegisterDeps;
+  owed: RemovalOwed;
 }>;
 
 /** The session's leave, its expiry handler and the leftover check (bind/leave.ts, US-014i). */
@@ -196,6 +199,7 @@ function leavingFor(input: WiringInput, natives: PushNatives, parts: LeavingPart
     revoke: (deviceId, signal) => revokeDevice(input.client, deviceId, signal),
     learn: (signal) => learnRowId(parts.registration, signal),
     attempts: parts.registration.attempts,
+    owed: parts.owed,
   });
   return Object.freeze({
     leave,
@@ -213,6 +217,7 @@ export function pushWiringFor(input: WiringInput, natives: PushNatives): PushWir
   const responses = responsesFor(input, natives, { handled, refresh, taps });
   const prompt = promptMemoryOver(storage);
   const hold = removalHoldOver(storage);
+  const owed = removalOwedOver(storage);
   const registration = registrationFor(input, natives, storage, hold);
   const registrar = reportingRegistrar(createRegistrar(registration), input.onOutcome);
   const teardown: TeardownDeps = Object.freeze({
@@ -240,7 +245,8 @@ export function pushWiringFor(input: WiringInput, natives: PushNatives): PushWir
       registrar,
       teardown,
       attempts: registration.attempts,
+      owed,
     }),
-    ...leavingFor(input, natives, { registrar, teardown, registration }),
+    ...leavingFor(input, natives, { registrar, teardown, registration, owed }),
   });
 }

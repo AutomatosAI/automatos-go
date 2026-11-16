@@ -78,6 +78,7 @@ export async function leavingPhone(options: PhoneOptions = {}) {
     removal: {
       deviceId: async () => null,
       remove: async () => ({ removed: false, status: { kind: 'ask' } }),
+      finish: async () => false,
     },
     leave,
   };

@@ -21,6 +21,7 @@ import { createSecureKeyRegistry } from '../../../lib/secure-keys';
 import {
   HANDLED_KEYS_ITEM,
   REGISTRATION_ATTEMPTS_ITEM,
+  REMOVALS_OWED_ITEM,
   REMOVED_SCOPES_ITEM,
 } from '../../../push/config';
 import { memoryStorage } from '../../../storage/encrypted-storage';
@@ -47,6 +48,7 @@ export const PERSON_ENTRIES: readonly string[] = Object.freeze([
   HANDLED_KEYS_ITEM,
   REMOVED_SCOPES_ITEM,
   REGISTRATION_ATTEMPTS_ITEM,
+  REMOVALS_OWED_ITEM,
 ]);
 
 /** The phone's own choices: Light / Dark / System and the style. */

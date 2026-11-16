@@ -137,6 +137,13 @@ export const REMOVED_SCOPES_ITEM = 'push.removed.v1';
 export const REMOVED_SCOPES_MAX = 16;
 
 /**
+ * The MMKV item of the rows whose Remove this phone the server has not confirmed: server and
+ * workspace → the row's id, nothing else (registration/removal-owed.ts).
+ */
+export const REMOVALS_OWED_ITEM = 'push.removal-owed.v1';
+export const REMOVALS_OWED_MAX = 16;
+
+/**
  * The MMKV item of the scopes where a registration went out and no push record was kept for it
  * since (its answer lost): server and workspace pairs, nothing else (registration/attempts.ts).
  */

@@ -250,7 +250,7 @@ describe('Remove this phone (KP16): DELETE, then teardown, then ask', () => {
     let record = storedRecord();
     const deps: RemovalDeps = {
       scope: SCOPE,
-      hold: { hold: () => void order.push('hold') },
+      hold: { hold: () => void order.push('hold'), held: () => true },
       registrar: {
         run: async () => {
           order.push('run');

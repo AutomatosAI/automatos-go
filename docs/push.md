@@ -237,7 +237,9 @@ So the phone sends every row it read for those events, with only the `push` rows
 Notifications stop here until you turn them on again. You stay signed in." It removes the device row
 and nothing else. Registration then waits until the person turns notifications on again. The
 DELETE and the clearing run between registrations, never in the middle of one, so a **Turn on**
-tapped meanwhile registers after them ([release/push-security.md](release/push-security.md)).
+tapped meanwhile registers after them. A DELETE the server does not confirm leaves the removal owed:
+the button stays, and the next tap, the next launch or the next Sign out sends it again
+([release/push-security.md](release/push-security.md)).
 
 ## Operator side (self-hosted, W2)
 
