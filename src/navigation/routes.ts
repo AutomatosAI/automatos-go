@@ -155,4 +155,6 @@ export const routes = Object.freeze({
   }),
   /** Settings, opening on Account: app/(app)/settings/index.tsx. */
   settings: '/settings',
+  /** Settings → About → Licences, what the app is built from: app/(app)/settings/licences.tsx. */
+  licences: '/settings/licences',
 });
