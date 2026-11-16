@@ -257,12 +257,15 @@ export const NOT_RUNNING_COPY = Object.freeze({
 export const SERVER_PLACEHOLDER = '{server}';
 
 /**
- * KC16's data note, the one statement this wave makes about where data goes, word for word. No copy
- * says more (nothing like 'nothing leaves your server'): the app still reports crashes, checks for
- * updates and may send notifications through Expo.
+ * KC16's data note, the one statement about where data goes. No copy says more (nothing like
+ * 'nothing leaves your server'). Corrected 16 Nov: the server keeps the chats but sends what the
+ * person sends to its AI providers, which the consent sheet asks them to agree to first
+ * (src/consent/policy.ts consentNeeded); crash reports go to Sentry (src/observability/options.ts),
+ * scrubbed of the person's words (scrub.ts); Expo is asked for updates (app.json updates.url) and
+ * carries push only where the server offers it (src/push/registration/state.ts gateStatus).
  */
 export const DATA_NOTE_OWN_SERVER =
-  "Your chats, files and reports stay on {server}. Automatos Go itself sends crash reports to Automatos, checks Expo for app updates and, if this server's operator agrees, sends notifications through Expo and Apple or Google.";
+  "Your chats, files and reports are kept on {server}. To answer you, it passes what you send to the AI providers it uses, and the app asks you to agree to that first. Automatos Go itself sends crash reports (never your messages) to Sentry for Automatos, checks Expo for app updates and, if this server's operator agrees, sends notifications through Expo and Apple or Google.";
 
 /** The data note for one own server. */
 export function dataNoteFor(server: string): string {

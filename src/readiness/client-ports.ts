@@ -4,8 +4,11 @@
 //     run from here) through the Notifications screen's own status (view-model.ts phoneStatusOf:
 //     the server's gates, then that answer);
 //   the microphone and speech recognition: permissions.check, which reads and never prompts;
-//   the recognizer's policy for the language hold to talk listens in ("I speak");
+//   the recognizer's policy for the language hold to talk listens in ("I speak"), and I speak's
+//     note for it (an iPhone in another language than its own: language-rows.ts languageNote);
 //   the server voice: discovery's tts, then voice's one cache of the server's voices.
+
+import { Platform } from 'react-native';
 
 import type { ApiClient } from '../api/client';
 import { canServerVoice } from '../api/capabilities';
@@ -13,13 +16,17 @@ import type { Discovery } from '../api/discovery';
 import { readDeviceFacts } from '../push/registration/device-facts';
 import { phoneLinks } from '../push/settings/phone-link';
 import { phoneStatusOf } from '../push/settings/view-model';
+import { languageNote } from '../voice/language/language-rows';
 import { listeningLocale } from '../voice/language/speak-language';
 import { permissions } from '../voice/permissions/permissions';
 import { phoneLocale } from '../voice/quick-ask/locale';
+import type { RecognitionPlatform } from '../voice/quick-ask/recognition-policy';
 import { recognizer } from '../voice/quick-ask/recognizer';
 import { serverVoices } from '../voice/server/use-server-voices';
 import type { VoiceSetting } from '../voice/settings/voice-setting';
 import type { ClientPorts } from './client-facts';
+
+const PLATFORM: RecognitionPlatform = Platform.OS === 'android' ? 'android' : 'ios';
 
 export type ClientPortsInput = Readonly<{
   discovery: Discovery;
@@ -42,6 +49,7 @@ export function clientPorts({ discovery, client, setting }: ClientPortsInput): C
     checkPermission: permissions.check,
     recognitionPolicy: recognizer.policy,
     listeningLocale: () => listeningLocale(setting, phoneLocale()),
+    languageNote: () => languageNote(PLATFORM, setting, phoneLocale()),
     voiceSource: () => setting.source,
     serverVoices: canServerVoice(discovery)
       ? async (fresh: boolean) => (await serverVoices.get(client, fresh)) !== null

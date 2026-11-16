@@ -75,16 +75,16 @@ NOTIFICATIONS THAT MATTER
 - Choose what notifies you, and when Auto's daily digest arrives.
 
 TALK TO AUTO
-- Hold to talk: your phone turns your words into text on the device and sends them to Auto, and Auto's reply is read aloud.
+- Hold to talk: your words become text and go to Auto, and Auto's reply is read aloud. In your iPhone's own language, the iPhone recognises your speech; in another language you choose, Apple may recognise it.
 
-THREE STYLES
-- Studio, Play and HUD. Or let the app follow the theme you use in Studio.
+FIVE STYLES
+- Studio, Play, HUD, Arcade and Candy. Or let the app follow the theme you use in Studio.
 
 YOUR OWN SERVER
 - Run Automatos yourself? Connect Automatos Go to your own Automatos server with a pairing code from Studio.
 
 PRIVACY
-- Before your first message, the app shows which AI providers receive what you send.
+- Before your first message, the app tells you that what you send goes to AI providers, and names them where the server lists them.
 - Crash reports never include your chats, questions or notifications, and you can turn them off in Settings.
 
 BEFORE YOU START

@@ -51,12 +51,20 @@ export function localThemeFile(url: string | null | undefined, kind: ThemeFileKi
   }
 }
 
-function removeQuietly(entry: File): void {
+function removeQuietly(entry: File | Directory): void {
   try {
     if (entry.exists) entry.delete();
   } catch (error) {
     logger.warn('[styles] a theme file copy could not be deleted', error);
   }
+}
+
+/**
+ * Deletes every theme file on the phone, the partial folder too (every way of leaving:
+ * src/connect/user-files.ts). The next read downloads what the painted theme needs again.
+ */
+export function clearThemeFiles(): void {
+  removeQuietly(new Directory(Paths.cache, THEME_FILES_FOLDER));
 }
 
 function withDeadline<T>(work: Promise<T>, ms: number): Promise<T> {

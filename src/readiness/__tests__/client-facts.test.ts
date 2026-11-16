@@ -29,6 +29,13 @@ describe('readClientFacts', () => {
     expect(Object.isFrozen(facts)).toBe(true);
   });
 
+  it("carries I speak's note for the listening language, and none on the phone's own", async () => {
+    const note = 'Portuguese is recognised on this iPhone when … Otherwise Apple recognises it.';
+    const elsewhere = await readClientFacts(ports({ languageNote: () => note }));
+    expect(elsewhere.speech?.elsewhereNote).toBe(note);
+    expect((await readClientFacts(ports())).speech?.elsewhereNote).toBeNull();
+  });
+
   it('a read that throws is null, logged, and the others still land', async () => {
     const warn = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
     const facts = await readClientFacts(

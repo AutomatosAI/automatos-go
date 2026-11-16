@@ -25,8 +25,17 @@ const native = vi.hoisted(() => {
     constructor(...parts: unknown[]) {
       this.uri = join(parts);
     }
+    get exists() {
+      return [...sizes.keys()].some((uri) => uri.startsWith(`${this.uri}/`));
+    }
     create(options: unknown) {
       calls.push({ op: 'mkdir', uri: this.uri, options });
+    }
+    delete() {
+      calls.push({ op: 'rmdir', uri: this.uri });
+      [...sizes.keys()]
+        .filter((uri) => uri.startsWith(`${this.uri}/`))
+        .forEach((uri) => sizes.delete(uri));
     }
   }
   class FakeFile {
@@ -69,8 +78,14 @@ vi.mock('expo-file-system', () => ({
   Paths: { cache: native.cache },
 }));
 
-const { THEME_FILES_FOLDER, cacheThemeFile, cachePaintFiles, localThemeFile, paintFiles } =
-  await import('../files');
+const {
+  THEME_FILES_FOLDER,
+  cacheThemeFile,
+  cachePaintFiles,
+  clearThemeFiles,
+  localThemeFile,
+  paintFiles,
+} = await import('../files');
 const { themeFile } = await import('../file-url');
 const { themePaint } = await import('../paint');
 const { DIGEST, FONT_URL, HARBOUR_ID, answer, fileUrl } = await import('./fixtures');
@@ -190,5 +205,41 @@ describe("a painting's files", () => {
     expect(localThemeFile(FONT_URL, 'font')?.uri).toBe(COPY);
     expect(localThemeFile(`https://evil.example${FONT_URL}`, 'font')).toBeNull();
     expect(localThemeFile(null, 'font')).toBeNull();
+  });
+});
+
+// Claims audit, 16 Nov: sign-out and leaving a server delete the theme's files too
+// (src/connect/user-files.ts), and a theme painted again downloads them cleanly.
+describe('leaving deletes the theme files', () => {
+  it('deletes every copy and the partial folder, and never throws', async () => {
+    await cacheThemeFile(client, fontFile());
+    native.sizes.set(`file:///cache/${THEME_FILES_FOLDER}/.partial/left-over`, 10);
+    clearThemeFiles();
+    expect([...native.sizes.keys()]).toEqual([]);
+    expect(native.calls).toContainEqual({
+      op: 'rmdir',
+      uri: `file:///cache/${THEME_FILES_FOLDER}`,
+    });
+    expect(() => clearThemeFiles()).not.toThrow();
+  });
+
+  it('downloads a cleared file again on the next ask, into its digest path', async () => {
+    await cacheThemeFile(client, fontFile());
+    clearThemeFiles();
+    expect(localThemeFile(FONT_URL, 'font')).toBeNull();
+    native.calls.length = 0;
+    expect((await cacheThemeFile(client, fontFile()))?.uri).toBe(COPY);
+    expect(native.calls.filter((call) => call.op === 'download')).toHaveLength(1);
+    expect(localThemeFile(FONT_URL, 'font')?.uri).toBe(COPY);
+  });
+
+  it('logs a folder that will not delete, and does not throw', () => {
+    native.sizes.set(`file:///cache/${THEME_FILES_FOLDER}/x/y.ttf`, 10);
+    const spy = vi.spyOn(native.FakeDirectory.prototype, 'delete').mockImplementation(() => {
+      throw new Error('busy');
+    });
+    expect(() => clearThemeFiles()).not.toThrow();
+    expect(logger.warn).toHaveBeenCalled();
+    spy.mockRestore();
   });
 });

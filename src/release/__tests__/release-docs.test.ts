@@ -20,9 +20,15 @@ import { CONSENT_SHEET_COPY } from '../../consent/strings';
 import { aiLabelText } from '../../core/web/lib/ai-label/copy';
 import { PUSH_CATEGORY_COPY, PUSH_PHONE_COPY, PUSH_SETTINGS_COPY } from '../../push/strings';
 import { SHELL_COPY } from '../../app-state/strings';
-import { PICKER_COPY } from '../../styles/strings';
+import { BUILT_IN_STYLE_IDS } from '../../styles/registry/style-id';
+import { PICKER_COPY, STYLE_COPY } from '../../styles/strings';
 import { REPORT_COPY } from '../../ui/strings';
-import { AI_VOICE_GREETING, VOICE_CENTRE_COPY, VOICE_ENTRY_COPY } from '../../voice/strings';
+import {
+  AI_VOICE_GREETING,
+  LANGUAGE_COPY,
+  VOICE_CENTRE_COPY,
+  VOICE_ENTRY_COPY,
+} from '../../voice/strings';
 import { LEGAL_LINKS, PRIVACY_POLICY_URL, SUPPORT_URL } from '../legal-links';
 import { PRIVACY_COPY } from '../strings';
 import { BILLING, DATA_CLAIMS, MINIMUM_AGE, SIGNUP, agesIn } from './support/forbidden-copy';
@@ -99,8 +105,21 @@ const REVIEW_LABELS: readonly string[] = [
   PUSH_CATEGORY_COPY.reply,
   VOICE_ENTRY_COPY.label,
   VOICE_CENTRE_COPY.hold.talk.label,
+  LANGUAGE_COPY.section,
   AI_VOICE_GREETING,
 ];
+
+/** The built-in styles by the names the picker shows (style-id.ts, styles/strings.ts). */
+const STYLE_NAMES: readonly string[] = BUILT_IN_STYLE_IDS.map((id) => STYLE_COPY.names[id]);
+const COUNT_WORDS = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+
+/** Each 'three styles' a text states, as the number it names. */
+function styleCountsIn(text: string): number[] {
+  const pattern = new RegExp(`\\b(${COUNT_WORDS.join('|')})\\s+styles\\b`, 'gi');
+  return [...text.matchAll(pattern)].map(
+    (match) => COUNT_WORDS.indexOf((match[1] ?? '').toLowerCase()) + 1,
+  );
+}
 
 // Secret-shaped samples are joined at run time, so no file holds a whole one, not even a made-up one.
 const join = (...parts: string[]) => parts.join('');
@@ -196,6 +215,13 @@ describe('the App Store listing (R22)', () => {
     expect(fieldValue(listing, 'Subtitle')).not.toContain('Automatos');
   });
 
+  // Claims audit, 16 Nov: the listing said three styles while five shipped. It now names every
+  // built-in style the app has, and any count of styles it states is that number.
+  it('names every built-in style, and counts them as the app does', () => {
+    STYLE_NAMES.forEach((name) => expect(description, name).toContain(name));
+    expect(styleCountsIn(description)).toEqual([BUILT_IN_STYLE_IDS.length]);
+  });
+
   it('describes an AI assistant and states one age, 16', () => {
     expect(description).toContain('AI assistant');
     expect(agesIn(description)).toEqual([MINIMUM_AGE]);
@@ -232,6 +258,11 @@ describe('App Review Information (R21)', () => {
 
   it.each(REVIEW_LABELS)('names “%s” as the app shows it', (label) => {
     expect(notesBlock).toContain(label);
+  });
+
+  it('names every built-in style, and counts them as the app does', () => {
+    STYLE_NAMES.forEach((name) => expect(notesBlock, name).toContain(name));
+    expect(styleCountsIn(notesBlock)).toEqual([BUILT_IN_STYLE_IDS.length]);
   });
 
   it('describes both ways in, the own server as visibly as sign-in (Apple 2.3.1)', () => {

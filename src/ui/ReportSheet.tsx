@@ -27,6 +27,7 @@ import {
   EMPTY_REPORT_DRAFT,
   draftPayload,
   noteCounter,
+  reportIntro,
   reportSentMessage,
   sameTarget,
   withNote,
@@ -115,7 +116,7 @@ export function ReportSheet({ target, onClose, client, discovery, role }: Report
         {REPORT_COPY.titles[held.target_type]}
       </Text>
       <Text level={INTRO_LEVEL} tone="muted">
-        {REPORT_COPY.intro}
+        {reportIntro(client.server.source)}
       </Text>
       <Text level={LABEL_LEVEL} weight={LABEL_WEIGHT}>
         {REPORT_COPY.reasonLabel}

@@ -11,6 +11,7 @@ import {
   type ReportReceipt,
   type ReportTarget,
 } from '../api/reports';
+import type { ServerSource } from '../api/server';
 import type { WorkspaceRole } from '../api/workspace';
 import { roleCan } from '../auth/role';
 import { REPORT_COPY } from './strings';
@@ -54,4 +55,9 @@ export function draftPayload(target: ReportTarget, draft: ReportDraft): ReportIn
 /** The toast after a send: thanks, or that this member already reported it. */
 export function reportSentMessage(receipt: Pick<ReportReceipt, 'status'>): string {
   return receipt.status === 'already_received' ? REPORT_COPY.alreadySent : REPORT_COPY.sent;
+}
+
+/** The sheet's line on who sees the report: the hosted server's names the moderation team too. */
+export function reportIntro(source: ServerSource): string {
+  return REPORT_COPY.intro[source];
 }

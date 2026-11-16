@@ -20,6 +20,11 @@ export type SpeechFacts = Readonly<{
   verdict: PermissionVerdict;
   policy: RecognitionPolicy;
   locale: string;
+  /**
+   * I speak's note while an iPhone listens in a language that is not its own, which iOS may send
+   * to Apple to recognise (language-rows.ts languageNote); null when it is recognised on the phone.
+   */
+  elsewhereNote: string | null;
 }>;
 
 /**
@@ -43,6 +48,8 @@ export type ClientPorts = Readonly<{
   checkPermission: (purpose: PermissionPurpose) => Promise<PermissionVerdict>;
   recognitionPolicy: (locale: string) => Promise<RecognitionPolicy>;
   listeningLocale: () => string;
+  /** language-rows.ts languageNote for the listening language: null on the phone's own. */
+  languageNote: () => string | null;
   voiceSource: () => VoiceSource;
   /** null when the server lists no tts; else whether its voice list loaded (fresh: read again). */
   serverVoices: ((fresh: boolean) => Promise<boolean>) | null;
@@ -79,7 +86,7 @@ async function readSpeech(ports: ClientPorts): Promise<SpeechFacts> {
     ports.checkPermission('quick-ask'),
     ports.recognitionPolicy(locale),
   ]);
-  return Object.freeze({ verdict, policy, locale });
+  return Object.freeze({ verdict, policy, locale, elsewhereNote: ports.languageNote() });
 }
 
 async function readServerVoice(ports: ClientPorts, fresh: boolean): Promise<ServerVoiceFact> {

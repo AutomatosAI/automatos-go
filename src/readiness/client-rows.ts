@@ -92,7 +92,9 @@ export function microphoneRow(verdict: PermissionVerdict | null): RowInput {
 /**
  * Speech recognition in the language hold to talk listens in: a blocked permission first (Screen
  * Time, or off in the phone's Settings), then a recognizer that is not ready (a model to download:
- * the voice screen offers it; none on this phone), then a permission not asked yet.
+ * the voice screen offers it; none on this phone), then a permission not asked yet. Ready says
+ * 'on this phone' only where the app checked it is (recognition-policy.ts); an iPhone in another
+ * language says I speak's note instead.
  */
 export function speechRow(speech: SpeechFacts | null): RowInput {
   const label = CLIENT_ROW_COPY.speechLabel;
@@ -113,7 +115,9 @@ export function speechRow(speech: SpeechFacts | null): RowInput {
     );
   }
   if (need) return row('speech', label, need.state, need.detail, need.fix);
-  return row('speech', label, 'ready', CLIENT_ROW_COPY.speechReady(language));
+  // an iPhone listening in another language than its own may use Apple's servers: I speak's note
+  const detail = speech.elsewhereNote ?? CLIENT_ROW_COPY.speechReady(language);
+  return row('speech', label, 'ready', detail);
 }
 
 const SERVER_VOICE_ROWS: Readonly<Record<ServerVoiceFact, [ReadinessState, string]>> =
