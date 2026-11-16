@@ -19,7 +19,7 @@ import { STATUS_ROW_COPY } from '../strings';
 import { stateMark, type RowStatusView } from './row-status';
 import type { RetryControl } from './use-retry';
 
-/** The next step at Body 5 (12), muted; 6 between the line and Try again. */
+/** The next step at Body 5 (12), muted; 8 between the line and Try again (space3). */
 const NEXT_STEP = Object.freeze({ level: 5 as TextLevel, gap: 'space3' as const });
 
 /** The custom action VoiceOver offers on a card that is one button (TicketCard). */

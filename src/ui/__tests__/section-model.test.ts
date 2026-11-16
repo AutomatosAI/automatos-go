@@ -8,6 +8,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { STUDIO_SPACING } from '../../styles/tokens/studio';
 import {
   SECTION_ASIDE_GAP,
   SECTION_GAP,
@@ -19,8 +20,9 @@ import {
 const read = (file: string) => readFileSync(path.resolve(__dirname, '..', file), 'utf8');
 
 describe('a section', () => {
-  it('keeps 12 pt (space3) between its head, its card and its lines', () => {
+  it('keeps 8 pt (space3) between its head, its card and its lines', () => {
     expect(SECTION_GAP).toBe('space3');
+    expect(STUDIO_SPACING[SECTION_GAP]).toBe(8);
   });
 
   it('puts a count beside the title, space3 across and space1 down once it wraps', () => {
