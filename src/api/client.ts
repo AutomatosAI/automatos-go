@@ -39,7 +39,7 @@ import { callFailure, startDeadline, type Deadline } from './deadline';
 import { ApiError, errorFromResponse } from './errors';
 import { parseJson } from './json';
 import type { Route } from './routes';
-import { isPlainOrigin } from '../lib/host-text';
+import { isServerOrigin } from '../lib/host-text';
 import type { Server } from './server';
 import { opened } from './opened-stream';
 import { streamLimits } from './stream-limits';
@@ -334,14 +334,18 @@ function filePort(ctx: Context): FilePort {
   };
 }
 
+/** True in a development build only (Metro sets it); a release build and a test run are not one. */
+const BUILD = Object.freeze({ development: typeof __DEV__ !== 'undefined' && __DEV__ });
+
 /**
- * The one client, over `options.server`. Its address must be a plain origin (host-text.ts
- * isPlainOrigin): every request and the bearer start from it, so one built by hand, outside
- * hostedServerFrom and ownServerFrom, is refused here too, with a TypeError before anything is sent.
+ * The one client, over `options.server`. Its address must be a plain origin, and plain http only to
+ * a host pairing allows it for (host-text.ts isServerOrigin, the one rule the entry points ask):
+ * every request and the bearer start from it, so one built by hand, outside hostedServerFrom and
+ * ownServerFrom, is refused here too, with a TypeError before anything is sent.
  */
 export function createApiClient(options: ApiClientOptions): ApiClient {
-  if (!isPlainOrigin(options.server.apiUrl)) {
-    throw new TypeError('The API client needs a plain origin: a scheme, a host and a port');
+  if (!isServerOrigin(options.server.apiUrl, BUILD)) {
+    throw new TypeError('The API client needs a plain origin, and http only on a home network');
   }
   const ctx: Context = {
     server: options.server,

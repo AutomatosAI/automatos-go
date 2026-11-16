@@ -2,11 +2,16 @@ import { describe, expect, it } from 'vitest';
 
 import {
   comparableHost,
+  httpAllowedTo,
   isPlainHost,
   isPlainOrigin,
+  isServerOrigin,
   plainLabels,
   readsAsNumber,
 } from '../host-text';
+
+const RELEASE = { development: false };
+const DEVELOPMENT = { development: true };
 
 describe('plainLabels: a host written plainly, or nothing', () => {
   it('reads ASCII letters, digits and hyphens in labels of legal length, lower-cased', () => {
@@ -113,5 +118,75 @@ describe('isPlainOrigin: a scheme, a plain host and a port, and nothing more', (
   it('isPlainHost: lower-case plain labels, a strict quad when numeric, or an IPv6 literal', () => {
     expect(['a.example', '10.0.0.1', '[fd00::1]'].map(isPlainHost)).toEqual([true, true, true]);
     expect(['A.example', '10.1', '[x]'].map(isPlainHost)).toEqual([false, false, false]);
+  });
+});
+
+describe('httpAllowedTo: the one rule for plain http, wherever an address comes from', () => {
+  it('allows a home network in every build: a private quad or a name ending .local', () => {
+    for (const host of [
+      '192.168.1.20',
+      '10.0.0.2',
+      '172.31.255.1',
+      'automatos.local',
+      'NAS.local',
+    ]) {
+      expect(httpAllowedTo(host, RELEASE), host).toBe(true);
+      expect(httpAllowedTo(host, DEVELOPMENT), host).toBe(true);
+    }
+  });
+
+  it('allows the loopback a simulator reaches its computer by, in a development build only', () => {
+    for (const host of ['localhost', 'api.localhost', '127.0.0.1', '0.0.0.0', '[::1]']) {
+      expect(httpAllowedTo(host, RELEASE), host).toBe(false);
+      expect(httpAllowedTo(host, DEVELOPMENT), host).toBe(true);
+    }
+  });
+
+  it('refuses a public name, a public quad, a look-alike and any other IPv6 literal, in any build', () => {
+    for (const host of [
+      'api.automatos.app',
+      '52.95.110.1',
+      '100.64.1.1',
+      '169.254.169.254',
+      '192.168.1.20.example.test',
+      'nas.local.example.test',
+      'nas',
+      '192.168.1',
+      '0xc0.168.1.20',
+      '[fd00::1]',
+      '[2600::1]',
+      '',
+    ]) {
+      expect(httpAllowedTo(host, DEVELOPMENT), host).toBe(false);
+    }
+  });
+});
+
+describe('isServerOrigin: what the API client may be made over', () => {
+  it('takes https to any plain origin, and http where httpAllowedTo allows it', () => {
+    for (const origin of [
+      'https://api.automatos.app',
+      'https://52.95.110.1',
+      'https://[::1]:8443',
+    ]) {
+      expect(isServerOrigin(origin, RELEASE), origin).toBe(true);
+    }
+    expect(isServerOrigin('http://192.168.1.20:8000', RELEASE)).toBe(true);
+    expect(isServerOrigin('http://automatos.local', RELEASE)).toBe(true);
+    expect(isServerOrigin('http://localhost:8000', RELEASE)).toBe(false);
+    expect(isServerOrigin('http://localhost:8000', DEVELOPMENT)).toBe(true);
+  });
+
+  it('refuses http to a public host, and anything that is not a plain origin', () => {
+    for (const origin of [
+      'http://api.automatos.app',
+      'http://52.95.110.1:8000',
+      'http://192.168.1.20.example.test',
+      'http://192.168.1.20/',
+      'https://API.automatos.app',
+      'ftp://192.168.1.20',
+    ]) {
+      expect(isServerOrigin(origin, DEVELOPMENT), origin).toBe(false);
+    }
   });
 });

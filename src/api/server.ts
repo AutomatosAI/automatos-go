@@ -3,6 +3,8 @@
 // (US-006, KC4). The source says which server, not how one signs in to it: an own server's
 // discovery names its sign-in mode (a paired device today, OIDC later). Which one is CURRENT is
 // src/connect/current-server.ts's: an own server exactly when this phone holds a paired record.
+// Whoever builds a Server, the client made over it holds its address to the one http rule
+// (src/lib/host-text.ts isServerOrigin) that the build's addresses and pairing ask as well.
 
 import { env, type Env } from '../lib/env';
 import { withoutTrailingSlash } from './url';
