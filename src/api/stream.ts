@@ -3,14 +3,14 @@
 // stream, line by line with src/core/ai-sdk-stream.ts; sse.ts reads text/event-stream the same way.
 // A non-OK status before the body is the client's ApiError; a read that fails after the status is a
 // 'stream' error, and so is a stream ended by one of its limits (stream-limits.ts: silent too long,
-// too much in all, or one line too long); the caller's abort cancels the read and resolves
-// 'aborted' (the turn itself keeps running on the server: Stop is its own call,
+// open too long, too much in all, or one line too long); the caller's abort cancels the read and
+// resolves 'aborted' (the turn itself keeps running on the server: Stop is its own call,
 // POST /api/chat/{id}/cancel).
 
 import { parseLine, pushChunk, type Frame } from '../core/ai-sdk-stream';
 import { logger } from '../lib/logger';
 import type { ApiClient, StreamCallOptions } from './client';
-import { CHAT_TURN_IDLE_TIMEOUT_MS } from './config';
+import { CHAT_TURN_IDLE_TIMEOUT_MS, CHAT_TURN_MAX_MS } from './config';
 import { ApiError, isAbortError, isApiError } from './errors';
 import { checkLines } from './stream-limits';
 import type { Route } from './routes';
@@ -87,15 +87,15 @@ function turnCall(
   idleTimeoutMs: number,
 ): StreamCallOptions {
   const connect = connectTimeoutMs === undefined ? {} : { connectTimeoutMs };
-  return { body, signal, idleTimeoutMs, ...connect };
+  return { body, signal, idleTimeoutMs, maxDurationMs: CHAT_TURN_MAX_MS, ...connect };
 }
 
 /**
  * One chat turn: every line of the body as a Frame, in order, including the last line when the body
  * ends without a newline. Unknown lines arrive as {kind: 'unknown'}; parseLine never throws. The
  * status must come within `connectTimeoutMs` (the client's own when not given); the body then runs
- * as long as it keeps coming, ended as 'stream' when silent for `idleTimeoutMs` or when one line,
- * whole or still held, is over STREAM_LINE_MAX_CHARS.
+ * as long as it keeps coming, ended as 'stream' when silent for `idleTimeoutMs`, when open for
+ * CHAT_TURN_MAX_MS, or when one line, whole or still held, is over STREAM_LINE_MAX_CHARS.
  */
 export async function streamTurn(
   client: Pick<ApiClient, 'stream'>,

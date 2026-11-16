@@ -33,6 +33,7 @@ import {
   REQUEST_TIMEOUT_MS,
   STREAM_CONNECT_TIMEOUT_MS,
   STREAM_IDLE_TIMEOUT_MS,
+  STREAM_MAX_DURATION_MS,
 } from './config';
 import { callFailure, startDeadline, timedOutError, type Deadline } from './deadline';
 import { ApiError, errorFromResponse } from './errors';
@@ -75,6 +76,8 @@ export type ApiClientOptions = {
   readonly now?: () => number;
   /** No byte for this long ends an opened stream (STREAM_IDLE_TIMEOUT_MS when not given). */
   readonly streamIdleTimeoutMs?: number;
+  /** Open for this long ends an opened stream (STREAM_MAX_DURATION_MS when not given). */
+  readonly streamMaxDurationMs?: number;
 };
 
 export type CallOptions = {
@@ -95,6 +98,8 @@ export type StreamCallOptions = CallOptions & {
   readonly connectTimeoutMs?: number;
   /** No byte for this long ends the opened stream; the client's own when not given. */
   readonly idleTimeoutMs?: number;
+  /** Open for this long in all ends the opened stream; the client's own when not given. */
+  readonly maxDurationMs?: number;
 };
 
 export type BinaryCallOptions = CallOptions & {
@@ -145,6 +150,7 @@ type Context = {
   readonly timeoutMs: number;
   readonly connectTimeoutMs: number;
   readonly streamIdleTimeoutMs: number;
+  readonly streamMaxDurationMs: number;
   readonly now: () => number;
   readonly expired: (token: string | null, error: ApiError) => void;
 };
@@ -331,10 +337,8 @@ function opened(response: StreamingResponse, { deadline, ms, limits }: Opening):
     header: (name) => response.header(name),
     chunks: () => {
       deadline.settle(); // the body may now run as long as it needs, within its limits
-      return chunksThen(
-        limitedChunks(response.chunks(), limits, deadline.expire),
-        deadline.dispose,
-      );
+      const chunks = limitedChunks(response.chunks(), limits, deadline.expire);
+      return chunksThen(chunks, deadline.dispose);
     },
   };
 }
@@ -349,7 +353,8 @@ async function open(
   const deadline = startDeadline(connectTimeoutMs, call.signal);
   try {
     const response = await ctx.transport.stream({ ...request, signal: deadline.signal });
-    const limits = streamLimits(call.idleTimeoutMs ?? ctx.streamIdleTimeoutMs);
+    const idle = call.idleTimeoutMs ?? ctx.streamIdleTimeoutMs;
+    const limits = streamLimits(idle, call.maxDurationMs ?? ctx.streamMaxDurationMs);
     return opened(await checked(ctx, response, token), { deadline, ms: connectTimeoutMs, limits });
   } catch (error) {
     deadline.dispose();
@@ -378,6 +383,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     timeoutMs: options.timeoutMs ?? REQUEST_TIMEOUT_MS,
     connectTimeoutMs: options.connectTimeoutMs ?? STREAM_CONNECT_TIMEOUT_MS,
     streamIdleTimeoutMs: options.streamIdleTimeoutMs ?? STREAM_IDLE_TIMEOUT_MS,
+    streamMaxDurationMs: options.streamMaxDurationMs ?? STREAM_MAX_DURATION_MS,
     now: options.now ?? Date.now,
     expired: expiryLatch(options.onAuthExpired),
   };

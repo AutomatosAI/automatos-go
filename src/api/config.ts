@@ -35,6 +35,24 @@ export const STREAM_IDLE_TIMEOUT_MS = 90_000;
 export const CHAT_TURN_IDLE_TIMEOUT_MS = 15 * 60_000;
 
 /**
+ * A chat turn ends when it has been open this long, however steadily it sends. The server gives a
+ * turn at most chatbot.max_tool_iterations rounds (40 by default, 100 at most), each a model call
+ * and a tool, a tool of a minute or so at most (Auto's wait for a ticket is 90 s): a heavy turn
+ * runs well under 40 minutes. This is half as long again. A turn ended here is read again from the
+ * server (thread.ts readBroke): it may still be running there.
+ */
+export const CHAT_TURN_MAX_MS = 60 * 60_000;
+
+/**
+ * The live events end when they have been open this long, and reconnect at once through the path
+ * a dropped stream takes (live-connection.ts: a 'stream' error, then a new stream within a second).
+ * The new stream's first frame is a board_changed, which refetches the board; nothing else is
+ * replayed, as after any drop. Once an hour costs one reconnect, and bounds a stream that a server
+ * keeps open with a heartbeat for ever.
+ */
+export const STREAM_MAX_DURATION_MS = 60 * 60_000;
+
+/**
  * One line of a chat turn, or one event of the live events, held or whole, is at most this many
  * characters; a longer one ends the stream. The largest legitimate are a chat frame carrying a
  * round's whole text (a model's answer, at most tens of thousands of tokens, JSON-escaped) and a
