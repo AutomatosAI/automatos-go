@@ -111,17 +111,17 @@ cell says where the app is today, not where its open branches would put it.
 | 1 Tokens | Follows | Differs | Follows | Follows |
 | 2 Type | Follows | Differs | Follows | Follows |
 | 3 Primitives | Follows | Differs | Follows | Follows |
-| 4 The screen | Partly: the Header is built, the template's own screens are not on it (T26) | Differs | Partly | Partly |
+| 4 The screen | Partly: the Header is built, the template's own screens are not on it (T26). The routes are thin and only the hook goes back | Differs | Partly | Partly |
 | 5 Navigation | Follows. The Tabs shell is built and not mounted | Differs | Partly | Not built |
-| 6 States | Partly: 6.4, the out-of-date line on eight screens (T27) | Partly | Partly | Partly |
+| 6 States | Follows. The out-of-date line is on the thirteen screens and sheets that can hold older data | Partly | Partly | Partly |
 | 7 First run and asks | Partly: 7.5, the speech recognition string (T28) | Partly | Partly | Not built |
 | 8 Settings | Partly: 8.4, pictures left in the phone's picture cache (T25) | Partly | Partly | Not built |
 | 9 Meeting an AI | Follows | Partly | Follows | 9.1 only in its first release |
-| 10 Accessibility | Partly: five pairs under AA (T16), the text field (T30), a spinner and the kind squares (T31) | Partly | Follows | Follows |
+| 10 Accessibility | Partly: five pairs under AA (T16), the kind squares (T31), one list footer not announced (T33) | Partly | Follows | Follows |
 | 11 Words | Follows | Partly | Follows | Follows |
 | 12 Motion, haptics, sound | Follows | Partly | Follows | Not built |
 | 13 Code | Partly: 13.2, pictures and video (T25) and files sent (T32); 13.6, the backup (T23) | Differs | Follows | Partly |
-| 14 Release | Partly: 14.2 (T9), a plugin's order (T24) | Differs | Partly | Not built |
+| 14 Release | Partly: 14.3, a plugin's order (T24). The audits read one settings folder | Differs | Partly | Not built |
 | 15 Android | Follows. Before an Android release: T29 | Partly | Not built | Not built |
 | 16 The design handoff | Partly | Not checked | Not checked | Follows |
 
@@ -139,9 +139,9 @@ The template is held to the standard too. Each line is a rule's "Owed".
 | T6 | **Done, 15 Nov.** One contrast test over every text colour and ground, in every palette | 10.4 | Lifted from App B. It found T16, and one style whose accent text could not be read, fixed with it |
 | T7 | **Done, 15 Nov.** The network guard covers `WebSocket`, `EventSource`, `sendBeacon`, other HTTP clients, and the same modules reached by `require()` or `import()` | 13.2 | Lifted from App C |
 | T8 | **Done, 15 Nov.** Inline disabling of a lint rule is refused | 13.5 | Lifted from App C |
-| T9 | One settings file per app that the audits read | 14.2 | New |
-| T10 | A test that `TEMPLATE.md` exists, names a commit and cites only rules that exist | The app's record | New |
-| T11 | **Done, 16 Nov.** A test that walks the words for the named states, and the out-of-date line on the Command Centre's four tabs and the inbox | 6.4 | Apps A and B each have one for their own fixed words. Eight more screens and sheets owe the line: T27 |
+| T9 | **Done, 16 Nov.** One settings folder the audits read, `src/release/__tests__/settings/`: the app's identity, the folders the audits walk (one outside the repository written as `../<folder>`), the contrast test's palettes and pairs, and each audit's allowed list in a file named after it, every entry with its reason, all registered in its index | 14.2 | New. Every list moved entry for entry and no audit lost a test. Checks of the app's own files stay inside the audits (the files a scan must find, `app.json`'s plugins and fonts): a copy rewrites those as its own tests. The folder sits under `__tests__` because in the product tree the audits would scan it |
+| T10 | **Done, 16 Nov.** A test that a copy's `TEMPLATE.md` is beside `package.json`, names its commits, carries both tables and cites only rules that exist. A copy sets `role: 'copy'` in `settings/record.ts` | The app's record | New. The rule numbers travel as `support/standard-rules.json`, written by `node scripts/generate-standard-rules.mjs`. In the template the test fails while that list differs from the standard, and proves the checker on the standard's example |
+| T11 | **Done, 16 Nov.** A test that walks the words for the named states, and the out-of-date line on the Command Centre's four tabs and the inbox | 6.4 | Apps A and B each have one for their own fixed words. Eight more screens and sheets owed the line: T27 |
 | T12 | The TabBar and Header contract's phone checks, on the first app that mounts the shell: VoiceOver's reading of a tab's position, and the swipe back with a drawn header | 10.7, 5.4 | Cannot be proved in CI. They go into the phone pass with that app |
 | T13 | **Done, 16 Nov.** Settings → About → Licences, its list generated from the lockfile and the installed packages, and a test that the list matches a fresh run | 8.3 | New. The native libraries a native build fetches are not in the list |
 | T14 | **Done, 16 Nov.** A ninth error kind, `limit`: every 429, carrying when the limit lifts, from Retry-After or the body, against a clock given to the client | 6.2 | A 402 stays `server`: no route the template calls answers one for a spent allowance |
@@ -156,13 +156,14 @@ The template is held to the standard too. Each line is a rule's "Owed".
 | T23 | A native step that keeps a folder out of the phone's backup: the encrypted store's, and a downloads folder for an app that needs one | 13.6 | The store's folder is in the backup today. Its key is for this device only, so a backup restored onto another phone cannot be read. Whether a restore onto the same phone brings the key back has not been tried on a phone |
 | T24 | The config plugin that pins the background modes listed first in `app.json` | 14.3 | Native. The change a plugin registers last runs first, so a plugin that pins a list must be listed first. The resolved list is right today. Goes with the next native change |
 | T25 | Pictures and video fetched through the transfer module and drawn from the file | 13.2, 13.2c, 8.4 | The platform's own loaders fetch them today with the bearer attached: a Deliverable's pictures, a social post's pictures and videos. What was shown may stay in the phone's picture cache after leaving. A video would be downloaded before it plays: a decision for the owner |
-| T26 | The template's own screens on the Header, and the three files that write the back rule by hand moved onto `useGoBack` | 4.2 | Each screen would change visibly (most settings screens have no bar: back sits at the top of the scrolling content), so each needs a phone check. The three files are listed in `go-back.test.ts` |
-| T27 | The out-of-date line on the eight screens and sheets that `named-states.test.ts` lists | 6.4 | Found by T11 |
+| T26 | The template's own screens on the Header | 4.2 | Each screen would change visibly (most settings screens have no bar: back sits at the top of the scrolling content), so each needs a phone check. **Done, 16 Nov:** the three files that wrote the back rule by hand are on `useGoBack`, and `go-back.test.ts` refuses any other caller of the router's back |
+| T27 | **Done, 16 Nov.** The out-of-date line on every screen and sheet that can hold older data: thirteen, listed in `settings/named-states.ts`. Nothing is owed | 6.4 | Found by T11. One correction: the test had listed the notification settings as replacing what they held with the failed state on a failed refresh. No settings screen did that. Only the line was missing |
 | T28 | The speech recognition usage string corrected in `app.json` | 7.5 | Native. It says recognition happens on the iPhone, which is not always true. The corrected sentence is in `docs/release/ipa-scan.md` |
 | T29 | Before any Android release: the sign-in library keeps a native copy of its token outside the registry, which sign-out does not remove | 15.1, 8.5 | The template has no Android release yet |
-| T30 | The text field: 40 points tall with no slop, the one control under 44 | 10.1 | Found by T5 |
-| T31 | One spinner that is not Text still paints the raw accent, and some of the calendar's kind squares read under 3 to 1 as marks on dark grounds | 10.4 | Found by T18. The kind colours are the server repository's own values, as T16's are, so that fix is there |
+| T30 | **Done, 16 Nov.** The text field takes the 44-point touch. It is still drawn 40 tall, in a frame that carries the slop, and `buildControlSizes` names the field | 10.1 | Found by T5 |
+| T31 | Some of the calendar's kind squares read under 3 to 1 as marks on dark grounds | 10.4 | Found by T18. The kind colours are the server repository's own values, as T16's are, so that fix is there. **Done, 16 Nov:** the tool line's spinner and the other marks that painted the accent raw (a tab's rule, a day's dot, the busy ring, the chosen style card's ring and word) read it through `src/ui/accent.ts` |
 | T32 | A file sent without being held in memory | 13.2 | The fetch implementation reads a request body whole before it sends it, and the file system's own uploader follows a redirect with its headers, so none is built. The 50 MB limit on an attachment bounds it |
+| T33 | One list footer's live region on `useAnnounce`: Older chats' footer, where Load more's failure appears after a tap | 10.2 | Found by the announcement audit (16 Nov), which lists it in `settings/announcements.ts`. Its file changed in parallel, so only the out-of-date line went in with that change |
 
 ## Open for the owner
 
@@ -191,7 +192,7 @@ The template is held to the standard too. Each line is a rule's "Owed".
 
 | Who | What |
 |---|---|
-| Template | T9, T10, T12, T16 and T23 to T32. Record each in the standard's Changes as it lands |
+| Template | T12, T16, T23 to T26, T28, T29 and T31 to T33. Record each in the standard's Changes as it lands |
 | App A | `TEMPLATE.md` is written, with a row per rule and the three stages sized. Ship what is waiting first. Nothing from the standard goes into that work |
 | App B | `TEMPLATE.md` is written. Give T4 and T6 back. Bring back and its one short control into line (4.2, 3.2). Rebuild its scene frame on Screen when it is next touched |
 | App C | Build its screens on the Tabs shell with drawn chrome. The Header and TabBar it built to the contract are in the template (T1, T2, 16 Nov): take the template's at the next catch-up, where the pure module is `header-model.ts`. Move its lineage into `TEMPLATE.md` |

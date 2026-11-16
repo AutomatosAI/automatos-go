@@ -77,8 +77,8 @@ run it a second time.
   the matching file there in the same PR.
 - The audits in `src/release/__tests__/` and `scripts/__tests__/release-*.test.ts` are store
   requirements, read from the whole product tree. Never weaken, skip or delete one to make a change
-  pass: fix the change, or add an entry to that audit's ALLOWED list with the file, the exact text
-  and the reason.
+  pass: fix the change, or add an entry to that audit's allowed list with the file, the exact text
+  and the reason. The allowed lists live in `src/release/__tests__/settings/`, one file per audit.
 - What the audits read that differs by app lives in one folder, `src/release/__tests__/settings/`
   (rule 14.2), one file per topic: `identity.ts` (package name, app name, bundle id, site and legal
   pages, links, the EAS and App Store Connect ids), `tree.ts` (the product folders, a folder outside
@@ -86,7 +86,8 @@ run it a second time.
   allowed list in the file named after it (`a11y-audit.ts`, `text-tones.ts` with
   `text-tones-styles.ts`, `store-copy.ts`, `release-docs.ts`, `surfaces.ts`, `upload-audit.ts`,
   `secure-store-audit.ts`, `named-states.ts`, `dependency-audit.ts`, `release-licences.ts`,
-  `permissions.ts`, `app-config.ts`), and `record.ts`: `template` here; a copy sets `copy`, and
+  `permissions.ts`, `app-config.ts`, `thin-routes.ts`, `announcements.ts`), and `record.ts`:
+  `template` here; a copy sets `copy`, and
   `src/release/__tests__/app-record.test.ts` then requires its `TEMPLATE.md` (rule numbers from
   `src/release/__tests__/support/standard-rules.json`, written by
   `node scripts/generate-standard-rules.mjs` after a change to `docs/app-standard.md`'s sections or
@@ -136,6 +137,21 @@ src/ui/              primitives shared by all five layouts
 src/lib/             logger (the only console user), env (zod-parsed EXPO_PUBLIC_*)
 src/app-state/       the shell: the signed-in gate (gate.ts decides), the session (useAppSession, useApiClient), the cache roots
 src/navigation/      every app route (routes.ts) and web link → app route (web-links.ts); kits link only through them
+src/settings/        the Settings screen (SettingsScreen.tsx); app/(app)/settings/index.tsx only mounts it
+src/about/           Settings → About → Licences: licences.json (written by scripts/generate-licences.mjs) and its screens
+src/shell/           the Tabs shell (AppTabs, TabStack, tabs.ts) for an app with tabs; built, not mounted here
+src/release/         Settings → Privacy & legal (legal-links.ts, privacy-section.ts, components/); the release audits in __tests__/
+  __tests__/settings/  what the audits read that differs by app (rule 14.2; see Release (A7))
+src/approvals/       the approval sheet: an approval grant's view, Approve & run or Deny
+src/brief/           the brief card in Auto's thread, read from a brief part of a message
+src/consent/         the AI-provider consent sheet, and when it is needed again
+src/session/         the reinstall check before anything renders (InstallGate), the role refresh, the session's refusals
+src/step-up/         Face ID before approve or answer (the only importer of expo-local-authentication)
+src/storage/         the encrypted key-value store and the one keychain registry (secure-registry.ts)
+src/readiness/       Settings → What Auto depends on
+src/suggestions/     Auto's suggestions: the pinned card, the sheet, Pause suggestions
+src/observability/   crash reporting: the fixed Sentry options, the person's switch, scrubbing
+src/config/          tests only: app.json and its privacy rules, the icon and splash, eas.json and the EAS workflows, pinned
 scripts/             release-env guard, sync-core, check-routes
 .eas/workflows/      EAS Workflows: testflight.yml (push to main), pr-check.yml (PRs)
 plugins/             local config plugins: pinned background modes, Sentry upload guard, Gradle memory (docs/native-modules.md)
