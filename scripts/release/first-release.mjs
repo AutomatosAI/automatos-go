@@ -23,7 +23,7 @@ import { existsSync, realpathSync } from 'node:fs';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
-import { ascClient, deliveringGroup, readAscKey, tokenFromEnv } from './asc.mjs';
+import { ascClient, deliveringGroup, readAscKey, tokenFromEnv, unclearGroup } from './asc.mjs';
 import { APP_ROOT, DEFAULT_PROFILE, readProject } from './project.mjs';
 
 /** The name eas-cli gives the group it creates (credentials/ios/appstore/ensureTestFlightGroup). */
@@ -58,6 +58,15 @@ export function parseArgs(argv) {
   return Object.freeze(options);
 }
 
+/** Without app.json's bundle id there is no app to look for or to check eas.json's app against. */
+function requireBundleId(project) {
+  if (!project.bundleId) {
+    throw new FirstReleaseError(
+      'app.json has no expo.ios.bundleIdentifier: set the bundle id before the first release',
+    );
+  }
+}
+
 /** The lines for an app App Store Connect does not have yet: eas submit creates it, group and all. */
 function newApp(project, io) {
   io.out(
@@ -88,6 +97,12 @@ async function ensureGroup(client, project, options, io) {
     io.out(`found: internal TestFlight group "${found.name}" with automatic distribution`);
     return found;
   }
+  const unclear = unclearGroup(groups);
+  if (unclear) {
+    throw new FirstReleaseError(
+      `check automatic distribution for group "${unclear.name}" in App Store Connect (TestFlight): its API does not say whether the group has it, so no second group is made`,
+    );
+  }
   if (groups.some((group) => group.name === options.group)) {
     throw new FirstReleaseError(
       `the group "${options.group}" exists but does not show as internal with automatic distribution, which App Store Connect's API cannot switch on: turn on automatic distribution for it in App Store Connect (TestFlight), or run this with --group <another name>`,
@@ -103,7 +118,7 @@ async function ensureGroup(client, project, options, io) {
     return undefined;
   }
   const created = await client.createInternalGroup(project.ascAppId, options.group);
-  if (!created.internal || !created.allBuilds) {
+  if (!created.internal || created.allBuilds !== true) {
     throw new FirstReleaseError(
       `App Store Connect made "${created.name}" without automatic distribution`,
     );
@@ -131,6 +146,7 @@ export async function run(options = {}) {
   try {
     const args = parseArgs(options.argv ?? process.argv.slice(2));
     const project = readProject({ root: options.root ?? APP_ROOT, profile: args.profile });
+    requireBundleId(project);
     if (!project.ascAppId) return newApp(project, io);
     const env = options.env ?? process.env;
     const key = readAscKey(env);

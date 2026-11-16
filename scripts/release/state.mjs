@@ -29,7 +29,7 @@ import { existsSync, realpathSync } from 'node:fs';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
-import { ascClient, deliveringGroup, readAscKey, tokenFromEnv } from './asc.mjs';
+import { ascClient, deliveringGroup, readAscKey, tokenFromEnv, unclearGroup } from './asc.mjs';
 import {
   APP_ROOT,
   DEFAULT_PROFILE,
@@ -105,6 +105,17 @@ function buildLine(newest, betaState, group) {
 async function groupLines(client, appId) {
   const groups = await client.groups(appId);
   const group = deliveringGroup(groups);
+  const unclear = group ? undefined : unclearGroup(groups);
+  if (unclear) {
+    return [
+      line(
+        'testflight-group',
+        'FAIL',
+        `check automatic distribution for group "${unclear.name}" in App Store Connect: its API does not say whether the group has it`,
+      ),
+      ...notChecked('no group is known to deliver the builds', ASC_CHECKS.slice(1)),
+    ];
+  }
   if (!group) {
     return [
       line(

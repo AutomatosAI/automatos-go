@@ -4,7 +4,7 @@
 // internal group with automatic distribution exists, never changed or deleted, and only with
 // --apply; and no line printed holds the token, the key's id or the issuer.
 
-import { verify } from 'node:crypto';
+import { generateKeyPairSync, verify } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
 
@@ -102,6 +102,21 @@ describe('the token (ES256, team key)', () => {
     expect(() => signToken({ privateKeyPem: 'not a key', keyId: 'k', issuerId: 'i' })).toThrow(
       'the file EXPO_ASC_API_KEY_PATH names is not a private key',
     );
+  });
+
+  it('refuses a key that is not EC P-256 (an RSA key here), without quoting it', () => {
+    const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+    const rsaPem = String(privateKey.export({ type: 'pkcs8', format: 'pem' }));
+    let message = '';
+    try {
+      signToken({ privateKeyPem: rsaPem, keyId: 'k', issuerId: 'i' });
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toBe(
+      'the file EXPO_ASC_API_KEY_PATH names is not an EC P-256 key, which every App Store Connect API key is',
+    );
+    expect(message).not.toContain(rsaPem.split('\n')[1]);
   });
 
   it('reads the names eas-cli reads, and says which are unset (never a value)', () => {
@@ -229,9 +244,19 @@ describe('first-release.mjs: an app App Store Connect already has', () => {
     expect(posts(result.requests)).toEqual([]);
   });
 
-  it('takes a group whose automatic distribution Apple answers as null for one without it', async () => {
+  it('stops on an internal group whose automatic distribution Apple answers as null, making no second one', async () => {
     const unknown = { id: 'x4', name: 'Team', internal: true, allBuilds: null };
     const result = await release({ app: APP, groups: [unknown] }, ['--apply']);
+    expect(result.code).toBe(1);
+    expect(result.err.join('\n')).toMatch(
+      /^FAIL: check automatic distribution for group "Team" in App Store Connect/,
+    );
+    expect(posts(result.requests)).toEqual([]);
+  });
+
+  it('creates one beside an external group whose automatic distribution is null', async () => {
+    const external = { id: 'x5', name: 'Friends', internal: false, allBuilds: null };
+    const result = await release({ app: APP, groups: [external] }, ['--apply']);
     expect(result.code).toBe(0);
     expect(posts(result.requests)).toHaveLength(1);
   });
@@ -279,6 +304,16 @@ describe('first-release.mjs: what it needs before it asks', () => {
     expect(result.out.join('\n')).toContain(
       'let the first eas submit create the app, so its internal TestFlight group comes with it',
     );
+    expect(result.requests).toEqual([]);
+  });
+
+  it('says plainly when app.json has no bundle id, and asks nothing', async () => {
+    const root = fakeApp(scratch.dir, { bundle: false });
+    const result = await release({ app: APP, groups: [] }, [], { root });
+    expect(result.code).toBe(1);
+    expect(result.err).toEqual([
+      'FAIL: app.json has no expo.ios.bundleIdentifier: set the bundle id before the first release',
+    ]);
     expect(result.requests).toEqual([]);
   });
 

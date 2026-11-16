@@ -228,7 +228,7 @@ node scripts/release/state.mjs
 | `testflight-testers` | That group's testers | It has none |
 | `testflight-build` | The app's newest build, then its TestFlight state for internal testers (`buildBetaDetail`) | There is none, it expired or failed processing, or its state keeps testers from it (waiting for export compliance, among others) |
 | `eas-env:<name>` | `eas env:list` for that environment, both scopes, names only | A name [eas-env.json](eas-env.json) lists is missing |
-| `workflow-run` | The latest run of `.eas/workflows/testflight.yml` (`eas workflow:runs`, then `workflow:view`) | It failed to start, failed, was cancelled, waits for an approval, or there is none |
+| `workflow-run` | The latest runs of `.eas/workflows/testflight.yml` (`eas workflow:runs`, then `workflow:view` for a failed one) | It failed to start, failed, or waits for an approval, or there is none. A cancelled run is said as "cancelled (by a newer run or by hand)", never as a merge that shipped nothing, and the run before it that was not cancelled gives the verdict. A failed run whose jobs cannot be read says it is not known whether it started |
 | `build-quota` | `eas account:usage <owner> --json`: iOS builds this cycle | None is left |
 | `cicd-minutes` | The same answer's CI/CD minutes, when it has them | They are spent |
 
@@ -236,13 +236,20 @@ node scripts/release/state.mjs
   by one: the group has access to all of them, and eas-cli's own build steps skip assigning a build
   to such a group for that reason. So the check does not look for the build in the group: it reads
   the build's TestFlight state, `READY_FOR_BETA_TESTING` or `IN_BETA_TESTING` when testers can
-  install it. Apple answers `hasAccessToAllBuilds` with null for some groups; only `true` counts.
+  install it. Apple answers `hasAccessToAllBuilds` with null for some groups. Only `true` counts
+  as automatic distribution, and an internal group answered with null stops `first-release.mjs`
+  and fails `testflight-group`, naming the group to check in App Store Connect: no second group is
+  made beside it.
 - **Credentials.** The App Store Connect lines need the key in the three variables (First release,
   above). The EAS lines need eas-cli signed in: `npx eas-cli login`, or `EXPO_TOKEN`. Without them a
   line says "not checked" and why, and never passes. The script runs eas-cli 27.10.0 through
   `npx --yes`, in a folder that holds only the EAS link (Signing and capabilities, above), with its
   input closed, and prints nothing eas-cli printed but the first line of an error, and never one
-  from `env:list`.
+  from `env:list`. eas gets an allowed list of variables (the path, home, temporary folders, user,
+  shell, locale, `EXPO_TOKEN`, other `EAS_*` and `EXPO_*` settings, npm's settings, proxies and
+  certificate files, `CI`), never `EXPO_ASC_*` or `EXPO_APPLE_*`. Each eas command runs in its own
+  process group: after 120 seconds the group gets SIGTERM, then SIGKILL, and every EAS line says
+  "not checked: eas timed out".
 - **In GitHub CI** the repository holds no Expo token and no App Store Connect key (app standard,
   rule 14.4), so every line would say not checked. CI runs the scripts' tests instead.
 - **A merge can ship nothing without a red mark anywhere.** The Expo free plan has a monthly pool of

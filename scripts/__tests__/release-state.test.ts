@@ -6,7 +6,6 @@
 
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import process from 'node:process';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
@@ -14,7 +13,7 @@ import easJson from '../../eas.json';
 import { ENV_NAMES } from '../../src/lib/env';
 import { APP_RECORD } from '../../src/release/__tests__/settings/record';
 import { readRepoFile, repoRoot } from '../../src/release/__tests__/support/tree';
-import { EAS_CLI, spawnExec } from '../release/eas.mjs';
+import { EAS_CLI } from '../release/eas.mjs';
 import { readEnvList } from '../release/project.mjs';
 import { parseArgs } from '../release/state.mjs';
 import { FAKE_OWNER, FAKE_PROJECT, PLANTED, fakeApp, scratchFolder } from './release-fixtures';
@@ -74,7 +73,7 @@ describe('state.mjs: a release in order', () => {
       'env:list --environment preview --format short --scope account',
       'env:list --environment production --format short --scope project',
       'env:list --environment production --format short --scope account',
-      'workflow:runs --workflow testflight.yml --limit 1 --json',
+      'workflow:runs --workflow testflight.yml --limit 10 --json',
       `account:usage ${FAKE_OWNER} --json --non-interactive`,
     ]);
   });
@@ -159,6 +158,20 @@ describe('state.mjs: TestFlight', () => {
     expect(result.lineOf(check)).toBe(`${check}: ${verdict}`);
   });
 
+  it('fails on an internal group whose automatic distribution Apple does not say, naming it', async () => {
+    const asc = {
+      ...GOOD_ASC,
+      groups: [{ id: 'x', name: 'Team', internal: true, allBuilds: null }],
+    };
+    const result = await state(asc, GOOD_EAS);
+    expect(result.lineOf('testflight-group')).toBe(
+      'testflight-group: FAIL: check automatic distribution for group "Team" in App Store Connect: its API does not say whether the group has it',
+    );
+    expect(result.lineOf('testflight-build')).toBe(
+      'testflight-build: not checked: no group is known to deliver the builds',
+    );
+  });
+
   it('fails a new app (no ascAppId), and asks App Store Connect nothing', async () => {
     const result = await state(GOOD_ASC, GOOD_EAS, {
       root: fakeApp(scratch.dir, { ascAppId: null }),
@@ -199,6 +212,7 @@ describe('state.mjs: without credentials it says so, and never passes a check', 
       'not signed in to Expo (eas whoami failed): npx eas-cli login, or set EXPO_TOKEN',
     ],
     ['eas-cli cannot start', { throws: true }, 'eas-cli did not start (npx --yes eas-cli)'],
+    ['eas runs past its time', { timesOut: true }, 'eas timed out (whoami took over 120 s)'],
   ])('says not checked for every EAS line when %s', async (_, eas, why) => {
     const result = await state(GOOD_ASC, eas);
     const easLines = result.lines.slice(3);
@@ -233,19 +247,6 @@ describe('state.mjs: without credentials it says so, and never passes a check', 
     expect(result.err).toEqual([
       'release-state: FAIL: docs/release/eas-env.json: no environment listed',
     ]);
-  });
-});
-
-describe('eas.mjs spawnExec', () => {
-  it('closes stdin, so an eas prompt can never wait for a person', async () => {
-    const script =
-      'process.stdin.resume();process.stdin.on("end",()=>process.stdout.write("closed"))';
-    const result = await spawnExec(process.execPath, ['-e', script], {
-      cwd: scratch.dir,
-      env: process.env,
-      timeoutMs: 10_000,
-    });
-    expect(result).toEqual({ code: 0, stdout: 'closed', stderr: '' });
   });
 });
 

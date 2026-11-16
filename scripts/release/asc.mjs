@@ -61,6 +61,22 @@ export function readAscKey(env) {
 
 const base64url = (value) => Buffer.from(value).toString('base64url');
 
+/** The key as an EC P-256 private key, the only kind App Store Connect issues; never quoted. */
+function readEcKey(privateKeyPem) {
+  let key;
+  try {
+    key = createPrivateKey(privateKeyPem);
+  } catch {
+    throw new AscError(`the file ${KEY_PATH_ENV} names is not a private key`);
+  }
+  if (key.asymmetricKeyType !== 'ec' || key.asymmetricKeyDetails?.namedCurve !== 'prime256v1') {
+    throw new AscError(
+      `the file ${KEY_PATH_ENV} names is not an EC P-256 key, which every App Store Connect API key is`,
+    );
+  }
+  return key;
+}
+
 /**
  * A token for the App Store Connect API: ES256 over the key's P-256 private key, its signature
  * the raw 64 bytes JWS uses (ieee-p1363), not DER.
@@ -71,12 +87,7 @@ export function signToken({ privateKeyPem, keyId, issuerId, now = Date.now() }) 
   const header = base64url(JSON.stringify({ alg: 'ES256', kid: keyId, typ: 'JWT' }));
   const claims = { iss: issuerId, iat: issuedAt, exp: issuedAt + TOKEN_SECONDS, aud: AUDIENCE };
   const body = `${header}.${base64url(JSON.stringify(claims))}`;
-  let key;
-  try {
-    key = createPrivateKey(privateKeyPem);
-  } catch {
-    throw new AscError(`the file ${KEY_PATH_ENV} names is not a private key`);
-  }
+  const key = readEcKey(privateKeyPem);
   const signature = sign('sha256', Buffer.from(body), { key, dsaEncoding: 'ieee-p1363' });
   return `${body}.${signature.toString('base64url')}`;
 }
@@ -175,13 +186,15 @@ function query(pairs) {
     .join('&');
 }
 
-// Apple answers hasAccessToAllBuilds with null for some groups (eas-cli #4528): only true counts.
+/** true, false, or null when Apple does not say (it answers null for some groups, eas-cli #4528). */
+const allBuildsOf = (value) => (typeof value === 'boolean' ? value : null);
+
 const groupOf = (entry) =>
   Object.freeze({
     id: String(entry?.id ?? ''),
     name: String(entry?.attributes?.name ?? ''),
     internal: entry?.attributes?.isInternalGroup === true,
-    allBuilds: entry?.attributes?.hasAccessToAllBuilds === true,
+    allBuilds: allBuildsOf(entry?.attributes?.hasAccessToAllBuilds),
   });
 
 const buildOf = (entry) =>
@@ -295,4 +308,8 @@ export function ascClient({ token, transport = httpsTransport }) {
 
 /** The group that delivers every build: internal, with automatic distribution. */
 export const deliveringGroup = (groups) =>
-  groups.find((group) => group.internal && group.allBuilds);
+  groups.find((group) => group.internal && group.allBuilds === true);
+
+/** An internal group whose automatic distribution Apple does not say: a person checks it. */
+export const unclearGroup = (groups) =>
+  groups.find((group) => group.internal && group.allBuilds === null);

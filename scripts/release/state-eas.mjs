@@ -3,6 +3,7 @@
 // `<check>: FAIL: …` or `<check>: not checked: <why>`. No line ever holds a variable's value.
 
 import {
+  EasTimeout,
   easRunner,
   firstErrorLine,
   makeLinkedFolder,
@@ -12,6 +13,9 @@ import {
 
 const RUNNING = new Set(['NEW', 'IN_PROGRESS']);
 const RAN = new Set(['SUCCESS', 'FAILURE', 'IN_PROGRESS']);
+/** How many runs are read, so a cancelled latest run can be judged by the one before it. */
+const RUNS_READ = 10;
+const CANCELLED = 'cancelled (by a newer run or by hand)';
 /** Expo's words when the plan's CI/CD minutes are spent ("… 60 minute limit reached …"). */
 const MINUTES_SPENT = /minute limit|limit reached|minutes reset/i;
 const MAX_REASON = 160;
@@ -62,73 +66,103 @@ async function envLine(eas, environment, required) {
 }
 
 const errorText = (error) => plainText(`${error?.title ?? ''} ${error?.message ?? ''}`);
+const errorsOf = (holder) => (Array.isArray(holder?.errors) ? holder.errors : []).map(errorText);
 
-/** Every error the run and its jobs carry, as one line each. */
-function errorTexts(view, jobs) {
-  const runErrors = Array.isArray(view?.errors) ? view.errors : [];
-  return [...runErrors, ...jobs.flatMap((job) => job?.errors ?? [])].map(errorText);
-}
+/**
+ * The errors Expo's minutes words are looked for in: the run's own, and those of jobs that never
+ * left NEW. A job that ran and failed for a reason of its own (a rate limit, say) is not a run that
+ * failed to start.
+ */
+const startErrors = (view, jobs) => [
+  ...errorsOf(view),
+  ...jobs.filter((job) => job?.status === 'NEW').flatMap(errorsOf),
+];
 
 /** The first job that failed, named, with its first error. */
 function failedJob(jobs) {
   const job = jobs.find((each) => each?.status === 'FAILURE') ?? {};
-  const [first] = (job.errors ?? []).map(errorText);
+  const [first] = errorsOf(job);
   return `${plainText(job.name ?? 'a job')} failed${first ? ` (${first})` : ''}`;
 }
 
-/** Why a failed run failed: Expo's minutes words, no job that ran, or the first job that failed. */
+/**
+ * Why a failed run failed: `started` is false for Expo's minutes words or no job that ran, true
+ * for a job that ran and failed, and undefined when the view lists no jobs to tell by.
+ */
 export function whyRunFailed(view) {
-  const jobs = Array.isArray(view?.jobs) ? view.jobs : [];
-  const texts = errorTexts(view, jobs);
-  const spent = texts.find((text) => MINUTES_SPENT.test(text));
+  if (!Array.isArray(view?.jobs))
+    return { started: undefined, reason: 'eas workflow:view gave no jobs' };
+  const { jobs } = view;
+  const spent = startErrors(view, jobs).find((text) => MINUTES_SPENT.test(text));
   if (spent) return { started: false, reason: spent };
   if (!jobs.some((job) => RAN.has(job?.status))) {
-    return { started: false, reason: texts.find((text) => text !== '') ?? 'no job started' };
+    const all = [...errorsOf(view), ...jobs.flatMap(errorsOf)];
+    return { started: false, reason: all.find((text) => text !== '') ?? 'no job started' };
   }
   return { started: true, reason: failedJob(jobs) };
 }
 
-async function failedRunLine(eas, run) {
+/** A failed run, told apart: it failed to start, a job failed, or it is not known which. */
+async function failedRun(eas, run) {
   const viewed = await eas(['workflow:view', run.id, '--json', '--non-interactive']);
   const view = viewed.code === 0 ? parseJsonOutput(viewed.stdout) : undefined;
-  if (view === undefined) {
-    return line(
-      'workflow-run',
-      'FAIL',
-      `latest run ${run.id} is ${run.status}; whether it started is not known (eas workflow:view: ${firstErrorLine(viewed)})`,
-    );
-  }
-  const { started, reason } = whyRunFailed(view);
+  const { started, reason } =
+    view === undefined
+      ? { started: undefined, reason: `eas workflow:view: ${firstErrorLine(viewed)}` }
+      : whyRunFailed(view);
+  if (started === undefined)
+    return ['FAIL', `run ${run.id} failed; whether it started is not known (${reason})`];
   if (!started)
-    return line(
-      'workflow-run',
-      'FAIL',
-      `latest run ${run.id} failed to start (${reason}): that merge shipped nothing`,
-    );
-  return line('workflow-run', 'FAIL', `latest run ${run.id} failed: ${reason}`);
+    return ['FAIL', `run ${run.id} failed to start (${reason}): that merge shipped nothing`];
+  return ['FAIL', `run ${run.id} failed: ${reason}`];
 }
 
-/** The latest run of the delivery workflow: running or green is ok; anything else fails. */
+/** One run that was not cancelled, judged: [verdict, words]. */
+async function judgeRun(eas, run) {
+  if (run.status === 'SUCCESS') return ['ok', `run ${run.id} succeeded (${day(run.startedAt)})`];
+  if (RUNNING.has(run.status)) return ['ok', `run ${run.id} is running`];
+  if (run.status === 'FAILURE') return failedRun(eas, run);
+  if (run.status === 'ACTION_REQUIRED') return ['FAIL', `run ${run.id} waits for an approval`];
+  return ['FAIL', `run ${run.id} is ${plainText(run.status)}`];
+}
+
+/**
+ * The latest run of the delivery workflow: running or green is ok; anything else fails. A
+ * cancelled run is said as such, never as a merge that shipped nothing: the run before it that
+ * was not cancelled gives the verdict.
+ */
 async function workflowLine(eas, workflowFile) {
-  const listed = await eas(['workflow:runs', '--workflow', workflowFile, '--limit', '1', '--json']);
-  if (listed.code !== 0)
+  const args = [
+    'workflow:runs',
+    '--workflow',
+    workflowFile,
+    '--limit',
+    String(RUNS_READ),
+    '--json',
+  ];
+  const listed = await eas(args);
+  if (listed.code !== 0) {
     return line('workflow-run', 'not checked', `eas workflow:runs: ${firstErrorLine(listed)}`);
+  }
   const runs = parseJsonOutput(listed.stdout);
-  if (!Array.isArray(runs))
+  if (!Array.isArray(runs)) {
     return line('workflow-run', 'not checked', 'eas workflow:runs gave no JSON list');
-  const [run] = runs;
-  if (run === undefined)
+  }
+  if (runs.length === 0) {
     return line('workflow-run', 'FAIL', `no run of ${workflowFile} yet: no merge has shipped`);
-  if (run.status === 'SUCCESS')
-    return line('workflow-run', 'ok', `latest run ${run.id} succeeded (${day(run.startedAt)})`);
-  if (RUNNING.has(run.status)) return line('workflow-run', 'ok', `latest run ${run.id} is running`);
-  if (run.status === 'FAILURE') return failedRunLine(eas, run);
-  if (run.status === 'ACTION_REQUIRED')
-    return line('workflow-run', 'FAIL', `latest run ${run.id} waits for an approval`);
+  }
+  const [latest] = runs;
+  const judged = runs.find((run) => run?.status !== 'CANCELED');
+  if (judged === undefined) {
+    const why = `latest run ${latest.id} was ${CANCELLED}, as were the ${runs.length - 1} before it`;
+    return line('workflow-run', 'FAIL', why);
+  }
+  const [verdict, words] = await judgeRun(eas, judged);
+  if (judged === latest) return line('workflow-run', verdict, `latest ${words}`);
   return line(
     'workflow-run',
-    'FAIL',
-    `latest run ${run.id} is ${plainText(run.status)}: that merge shipped nothing`,
+    verdict,
+    `latest run ${latest.id} was ${CANCELLED}; before it, ${words}`,
   );
 }
 
@@ -186,10 +220,16 @@ async function signedIn(eas) {
     return (await eas(['whoami'])).code === 0
       ? undefined
       : 'not signed in to Expo (eas whoami failed): npx eas-cli login, or set EXPO_TOKEN';
-  } catch {
+  } catch (error) {
+    if (error instanceof EasTimeout) throw error;
     return 'eas-cli did not start (npx --yes eas-cli)';
   }
 }
+
+const whyNot = (error) =>
+  error instanceof EasTimeout
+    ? `eas timed out (${plainText(error.message)})`
+    : `eas could not be run: ${plainText(error instanceof Error ? error.message : error)}`;
 
 /**
  * The EAS lines. `exec` runs a command (a test passes a fake); `tmp` is where the linked folder goes.
@@ -214,10 +254,7 @@ export async function easLines({ project, envList, workflowFile, exec, env, tmp 
       ...(await usageLines(eas, project.owner)),
     ];
   } catch (error) {
-    return allNotChecked(
-      envList,
-      `eas could not be run: ${plainText(error instanceof Error ? error.message : error)}`,
-    );
+    return allNotChecked(envList, whyNot(error));
   } finally {
     folder.remove();
   }

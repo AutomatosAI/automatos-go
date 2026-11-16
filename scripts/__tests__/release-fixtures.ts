@@ -8,6 +8,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import os from 'node:os';
 import path from 'node:path';
 
+import { EasTimeout } from '../release/eas.mjs';
+
 export const FAKE_APP_ID = '1234567890';
 export const FAKE_BUNDLE = 'com.example.go';
 export const FAKE_OWNER = 'example-owner';
@@ -42,7 +44,7 @@ let appCount = 0;
 /** An app folder: app.json, eas.json and docs/release/eas-env.json, with made-up ids. */
 export function fakeApp(
   scratch: string,
-  options: { ascAppId?: string | null; link?: boolean; envList?: unknown } = {},
+  options: { ascAppId?: string | null; link?: boolean; bundle?: boolean; envList?: unknown } = {},
 ): string {
   appCount += 1;
   const root = path.join(scratch, `app-${appCount}`);
@@ -55,7 +57,7 @@ export function fakeApp(
     name: 'Example Go',
     slug: 'example-go',
     ...link,
-    ios: { bundleIdentifier: FAKE_BUNDLE },
+    ...(options.bundle === false ? {} : { ios: { bundleIdentifier: FAKE_BUNDLE } }),
     plugins: ['./plugins/never-loaded'],
   };
   writeFileSync(path.join(root, 'app.json'), JSON.stringify({ expo }));
@@ -216,6 +218,8 @@ export type EasSpec = {
   view?: unknown;
   usage?: unknown;
   throws?: boolean;
+  /** Every command runs past its time, as spawnExec then rejects. */
+  timesOut?: boolean;
 };
 
 const ok = (stdout: string): EasResult => ({ code: 0, stdout, stderr: '' });
@@ -266,6 +270,7 @@ export function fakeEas(spec: EasSpec) {
     const appJson = existsSync(appFile) ? JSON.parse(readFileSync(appFile, 'utf8')) : undefined;
     calls.push({ command, args, cwd: options.cwd, env: options.env, appJson });
     if (spec.throws) throw new Error('spawn npx ENOENT');
+    if (spec.timesOut) throw new EasTimeout(`${args[2]} took over 120 s`);
     return answerFor(spec, args.slice(2));
   };
   return { exec, calls };

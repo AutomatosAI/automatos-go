@@ -343,7 +343,9 @@ being a different id. The template holds no work not yet sent, so its behaviour 
 way of leaving, and a session the server ends, runs one clearing, which also deletes the person's
 files in the cache, a downloaded theme's files among them. Template: `clearUserData` in
 `src/connect/switch.ts`, `src/connect/user-files.ts`. Held by:
-`src/connect/__tests__/user-files.test.ts`. Owed: pictures the app has shown may stay in the
+`src/connect/__tests__/user-files.test.ts`, for the one clearing. The carve-out for a session the
+server ends is not pinned by a test here, because the template holds no work not yet sent: a copy
+that holds such work pins it with its own tests. Owed: pictures the app has shown may stay in the
 phone's own picture cache until the phone clears it.
 
 **8.5 A person's data is theirs to take and to remove. (Must, where the app has accounts)** Export
