@@ -158,33 +158,19 @@ describe('statusLabel', () => {
 });
 
 describe('stateMark', () => {
-  it("draws the vocabulary's word in the state's role outside HUD", () => {
-    expect(stateMark('ready', false, 'light')).toEqual({
-      glyph: '✓',
-      word: 'Ready to look at',
-      glyphToken: 'success',
-      wordTone: 'muted',
-    });
-    expect(stateMark('needs_you', false, 'light')).toMatchObject({
-      glyph: '◆',
-      glyphToken: 'warnInk',
-      wordTone: 'warning',
-    });
-    expect(stateMark('needs_you', false, 'dark').glyphToken).toBe('warning');
+  it("says the vocabulary's word in the state's tone outside HUD", () => {
+    expect(stateMark('ready', false)).toEqual({ word: 'Ready to look at', wordTone: 'muted' });
+    expect(stateMark('needs_you', false)).toEqual({ word: 'Needs you', wordTone: 'warning' });
   });
 
-  it("draws HUD's word in its glyph's role", () => {
-    expect(stateMark('failed', true, 'dark')).toEqual({
-      glyph: '✕',
-      word: 'Failed',
-      glyphToken: 'destructive',
-      wordTone: 'muted',
-    });
-    expect(stateMark('ready', true, 'dark')).toMatchObject({
-      word: 'Ready',
-      glyphToken: 'primary',
-    });
-    expect(stateMark('done', true, 'dark').glyphToken).toBe('mutedForeground');
+  it("says HUD's word, muted", () => {
+    expect(stateMark('failed', true)).toEqual({ word: 'Failed', wordTone: 'muted' });
+    expect(stateMark('ready', true)).toEqual({ word: 'Ready', wordTone: 'muted' });
+    expect(stateMark('needs_you', true).wordTone).toBe('muted');
+  });
+
+  it('carries no glyph and no colour: StateGlyph draws those from the state', () => {
+    expect(Object.keys(stateMark('done', false)).sort()).toEqual(['word', 'wordTone']);
   });
 });
 

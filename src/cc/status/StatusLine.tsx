@@ -4,8 +4,9 @@
 // kind row draw it where the board's dot would be); StatusBlock is the next step and Try again
 // under the title, with the mark first where no kind row carries it (Questions). Every layout
 // draws it: HUD its glyph role and its word in capitals (its label face), Arcade HUD's glyph and
-// word in the state's colour role, Studio, a theme and Play the state's colour role (row-status.ts
-// stateMark). What it says is row-status.ts's.
+// word in the state's colour role, Studio, a theme and Play the state's colour role (the glyph is
+// StateGlyph's, from the state alone; the word row-status.ts stateMark's). What it says is
+// row-status.ts's.
 
 import { StyleSheet, View, type AccessibilityActionEvent } from 'react-native';
 
@@ -19,16 +20,16 @@ import { STATUS_ROW_COPY } from '../strings';
 import { stateMark, type RowStatusView } from './row-status';
 import type { RetryControl } from './use-retry';
 
-/** The next step at Body 5 (12), muted; 6 between the line and Try again. */
+/** The next step at Body 5 (12), muted; 8 between the line and Try again (space3). */
 const NEXT_STEP = Object.freeze({ level: 5 as TextLevel, gap: 'space3' as const });
 
 /** The custom action VoiceOver offers on a card that is one button (TicketCard). */
 export const RETRY_ACTION_NAME = 'retry';
 
 export function StateMark({ state }: { readonly state: StatusState }) {
-  const { scheme, spacing } = useTokens();
+  const { spacing } = useTokens();
   const dress = useDress();
-  const spec = stateMark(state, dress.status === 'glyph', scheme, dress.glyphPaint);
+  const spec = stateMark(state, dress.status === 'glyph');
   return (
     <View
       style={[styles.mark, { gap: spacing.space1 }]}
@@ -36,7 +37,7 @@ export function StateMark({ state }: { readonly state: StatusState }) {
       accessibilityRole="text"
       accessibilityLabel={spec.word}
     >
-      <StateGlyph glyph={spec.glyph} role={spec.glyphToken} />
+      <StateGlyph state={state} />
       <Text variant="mono" tone={spec.wordTone}>
         {spec.word}
       </Text>

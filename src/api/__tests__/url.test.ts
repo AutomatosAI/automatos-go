@@ -1,14 +1,88 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildUrl, fillPath, queryString, withoutTrailingSlash } from '../url';
+import {
+  FILE_NAME_PARAMS,
+  buildUrl,
+  fillPath,
+  isFileNameSegment,
+  isIdSegment,
+  queryString,
+  withoutTrailingSlash,
+} from '../url';
 
 describe('fillPath', () => {
   it('fills every {name} segment, URI-encoded', () => {
     expect(
       fillPath('/api/v1/approval-grants/{grantId}/{verb}', { grantId: 42, verb: 'grant' }),
     ).toBe('/api/v1/approval-grants/42/grant');
-    expect(fillPath('/api/chat/{chatId}', { chatId: 'é/#?&' })).toBe(
-      '/api/chat/%C3%A9%2F%23%3F%26',
+    expect(fillPath('/api/chat/{chatId}', { chatId: '9b1c2a54-0000-4000-8000-0000000000d1' })).toBe(
+      '/api/chat/9b1c2a54-0000-4000-8000-0000000000d1',
+    );
+  });
+
+  it('refuses an id that could leave its segment, before any request is made', () => {
+    for (const hostile of [
+      'a/../b',
+      'a%2F..%2Fb',
+      '%2e%2e',
+      'a\\b',
+      'a\u0000b',
+      'a b',
+      'é',
+      'a?b',
+      'a#b',
+      'x'.repeat(129),
+    ]) {
+      expect(isIdSegment(hostile)).toBe(false);
+      expect(() => fillPath('/api/chat/{chatId}', { chatId: hostile })).toThrow(TypeError);
+    }
+    for (const id of ['42', 'c-1', 'AbC_9.x', 'x'.repeat(128), 'Zm9vYmFy_-']) {
+      expect(isIdSegment(id)).toBe(true);
+    }
+  });
+
+  it('holds a file name the server chose to its own, looser rule, encoded whole', () => {
+    expect(FILE_NAME_PARAMS).toEqual(new Set(['file_name', 'filename']));
+    const media = '/api/socials/posts/{post_id}/media/{file_name}';
+    expect(fillPath(media, { post_id: 'p-1', file_name: 'image-1.png' })).toBe(
+      '/api/socials/posts/p-1/media/image-1.png',
+    );
+    expect(fillPath('/api/documents/generated/{filename}', { filename: 'Q3 report (é).pdf' })).toBe(
+      `/api/documents/generated/${encodeURIComponent('Q3 report (é).pdf')}`,
+    );
+    for (const name of ['100%.pdf', 'a..b.pdf', '.hidden', 'x'.repeat(255)]) {
+      expect(isFileNameSegment(name)).toBe(true);
+    }
+  });
+
+  it('refuses a file name with a slash, a backslash, a control character or a dot segment, encoded or not', () => {
+    for (const hostile of [
+      '',
+      '.',
+      '..',
+      'a/b.pdf',
+      '../../etc/passwd',
+      'a\\b.pdf',
+      'a%2Fb.pdf',
+      'a%5cb.pdf',
+      '%2e%2e',
+      '%2E',
+      'a\u0000b',
+      'a%00b',
+      'a\u0085b',
+      'a\nb',
+      'x'.repeat(256),
+    ]) {
+      expect(isFileNameSegment(hostile)).toBe(false);
+      expect(() => fillPath('/api/documents/generated/{filename}', { filename: hostile })).toThrow(
+        TypeError,
+      );
+    }
+  });
+
+  it('names the parameter, never its value, in what it throws', () => {
+    expect(() => fillPath('/api/chat/{chatId}', { chatId: 'secret/../x' })).toThrow(
+      'Path parameter "chatId" is missing or not a usable segment',
     );
   });
 
@@ -47,5 +121,23 @@ describe('buildUrl', () => {
       'https://api.example.test/api/chat/c-1?a=1',
     );
     expect(withoutTrailingSlash('https://api.example.test///')).toBe('https://api.example.test');
+  });
+});
+
+describe('withoutTrailingSlash', () => {
+  it('drops only the slashes at the end', () => {
+    expect(withoutTrailingSlash('/a//b/')).toBe('/a//b');
+    expect(withoutTrailingSlash('///')).toBe('');
+    expect(withoutTrailingSlash('')).toBe('');
+    expect(withoutTrailingSlash('/a')).toBe('/a');
+  });
+
+  it('reads a long run of slashes that does not end the text once, not again from every slash', () => {
+    // /\/+$/ took over a second on this in node (quadratic); one read back from the end takes none
+    const hostile = `${'/'.repeat(50_000)}x`;
+    const started = performance.now();
+    expect(withoutTrailingSlash(hostile)).toBe(hostile);
+    expect(withoutTrailingSlash(`${hostile}${'/'.repeat(50_000)}`)).toBe(hostile);
+    expect(performance.now() - started).toBeLessThan(100);
   });
 });

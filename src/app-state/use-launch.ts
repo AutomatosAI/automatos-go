@@ -71,6 +71,11 @@ export function useLaunch(server: Server, clientAuth: ClientAuth): Launch {
     queryFn: ({ signal }) => launchBootstrap(client, queryClient, { store: ids, signal }),
     enabled: serverSupported(discoveryStep, server.source),
     staleTime: WORKSPACE_STALE_TIME_MS,
+    // a return is useSessionRefresh's rule (role-refresh.ts: again once the last read is older
+    // than RESUME_REFRESH_AFTER_MS), not the focus rule's (app-focus.ts), which would read it on
+    // every return because its stale time is 0. The discovery query above has no rule of its
+    // own for a return, so it stays on the focus rule.
+    refetchOnWindowFocus: false,
   });
 
   const { refetch: refetchDiscovery } = discovery;

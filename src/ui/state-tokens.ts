@@ -1,7 +1,8 @@
 // PRD-268 §6.12.2's colour roles for its states, on Studio's token names: PIP_TOKENS' companion
 // (variants.ts) for the vocabulary's states (dress/status-glyphs.ts StatusState), pure. Studio, an
-// installed theme and Play paint a state's glyph in its role's token (a mark, drawn by StateGlyph)
-// and its word in a Text tone: muted, as every status word is, except Needs you's, in warning
+// installed theme and Play paint a state's glyph in its role's token (a mark, drawn by StateGlyph
+// from stateGlyphMark, so a feature names the state and never a colour) and its word in a Text
+// tone: muted, as every status word is, except Needs you's, in warning
 // (warn-ink). HUD paints by the glyph's role instead
 // (status-glyphs.ts GLYPH_ROLE_TOKENS: the accent, text2, the error), never by these.
 //   Two roles fail 3:1 as a mark on a light ground, so there they paint in their light stand-in:
@@ -52,11 +53,16 @@ export const STATE_WORD_TONE: TextTone = 'muted';
 
 export type StatePaint = { readonly glyph: ColourName; readonly word: TextTone };
 
+/** A state's word, as a Text tone (Studio, a theme and Play; HUD and Arcade say every word muted). */
+export function stateWordTone(state: StatusState): TextTone {
+  return WORD_TONES[state] ?? STATE_WORD_TONE;
+}
+
 /** The token a state's glyph paints in on a ground of this scheme, and its word's tone. */
 export function statePaint(state: StatusState, scheme: ColourScheme): StatePaint {
   const role = STATE_TOKENS[state];
   const glyph = scheme === 'light' ? (LIGHT_STAND_INS[role] ?? role) : role;
-  return Object.freeze({ glyph, word: WORD_TONES[state] ?? STATE_WORD_TONE });
+  return Object.freeze({ glyph, word: stateWordTone(state) });
 }
 
 /**
@@ -66,4 +72,21 @@ export function statePaint(state: StatusState, scheme: ColourScheme): StatePaint
 export function glyphToken(status: string, paint: GlyphPaint): ColourName {
   if (paint === 'glyph-role') return GLYPH_ROLE_TOKENS[statusGlyph(status).role];
   return STATE_TOKENS[glyphState(status)];
+}
+
+/** How the style on screen draws a state's glyph: its dress's glyphs and paint, and its scheme. */
+export type GlyphLook = Readonly<{ glyphs: boolean; glyphPaint: GlyphPaint; scheme: ColourScheme }>;
+
+/** A state's glyph and the token it paints in: what StateGlyph draws, and all it can draw. */
+export type GlyphMark = Readonly<{ glyph: string; token: ColourName }>;
+
+/**
+ * A state's glyph and its token, from these tables only: under glyphs (HUD, Arcade) glyphToken,
+ * else the state's colour role for the ground (statePaint). The glyph is the same in every style.
+ */
+export function stateGlyphMark(state: StatusState, look: GlyphLook): GlyphMark {
+  const token = look.glyphs
+    ? glyphToken(state, look.glyphPaint)
+    : statePaint(state, look.scheme).glyph;
+  return Object.freeze({ glyph: statusGlyph(state).glyph, token });
 }

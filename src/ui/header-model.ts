@@ -1,12 +1,15 @@
 // The header's logic, pure (the app standard's rules 4.2 and 3.3): what the one bar draws, so
-// Header.tsx only wires. A bar is back, a title and at most two actions. Back is drawn on every
-// screen but a tab's root. The title is always in the bar, unless the screen has a large title at
-// the top of its scrolling content: then the bar's own title appears once that one has scrolled
-// away, so the two are never read at once. Every button is the IconButton, 36 with its slop to 44.
+// Header.tsx only wires. A bar is back, a title and at most two actions. Back is drawn wherever
+// pressing it would do something: not on a tab's root, nor where nothing is behind and the fallback
+// is this screen (src/navigation/back.ts). The title is always in the bar, unless the screen has a
+// large title at the top of its scrolling content: then the bar's own title appears once that one
+// has scrolled away, so the two are never read at once. Every button is the IconButton, 36 with
+// its slop to 44.
 // The bar's least height, its side padding and its gap are the template's (HEADER_BAR: the 44 pt
 // row of the bars home and Older chats share, D73), and headerKeepsTouch says whether such values
 // keep every button's slop inside the bar. An app sets its own here.
 
+import type { BackMove } from '../navigation/back';
 import type { ControlSizes } from '../styles/controls';
 import type { SpaceName } from '../styles/tokens';
 import { MIN_TOUCH, hitSlopFor } from './paint';
@@ -55,9 +58,13 @@ export function headerActions<Action>(
   });
 }
 
-/** Whether the bar draws the way back: on every screen but a tab's root. */
-export function showsBack(root: boolean | undefined): boolean {
-  return root !== true;
+/**
+ * Whether the bar draws the way back: only where pressing it would do something. That is back.ts's
+ * one answer (use-go-back.ts useBack's move), which is stay on a tab's root and where nothing is
+ * behind and the fallback is the screen already showing, so the bar and the press never disagree.
+ */
+export function showsBack(move: BackMove): boolean {
+  return move.kind !== 'stay';
 }
 
 /** The bar's least height: the one given, and never under the touch target. */

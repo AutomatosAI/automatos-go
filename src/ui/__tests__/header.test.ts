@@ -1,11 +1,14 @@
-// The header's logic (header-model.ts, the app standard's rule 4.2): back on every screen but a tab's
-// root, two actions at the most and each at a place of its own, a bar never under the touch
-// target, the bar's title held back while a large title is still on screen, where a large title
+// The header's logic (header-model.ts, the app standard's rule 4.2): back wherever pressing it
+// does something (back.ts's one rule), two actions at the most and each at a place of its own, a
+// bar never under the touch target, the bar's title held back while a large title is still on
+// screen, where a large title
 // ends when something sits above it, and whether a bar's sizes leave room for every button's
 // 44 pt touch, the template's own bar among them, in every style.
 
 import { describe, expect, it } from 'vitest';
 
+import { backMove, type BackPlace } from '../../navigation/back';
+import { routes } from '../../navigation/routes';
 import { STUDIO_CONTROLS } from '../../styles/controls';
 import { STYLE_IDS, tokensFor } from '../../styles/tokens';
 import { STYLE_CONTROLS } from '../../styles/tokens/controls';
@@ -33,10 +36,31 @@ const three: HeaderActions = [share, share, share];
 const two: HeaderActions = [share, share];
 
 describe('the way back', () => {
-  it("is drawn on every screen but a tab's root", () => {
-    expect(showsBack(undefined)).toBe(true);
-    expect(showsBack(false)).toBe(true);
-    expect(showsBack(true)).toBe(false);
+  const at = (place: Partial<BackPlace>) =>
+    showsBack(backMove({ canGoBack: false, fallback: routes.home, here: '/settings', ...place }));
+
+  it('is drawn wherever pressing it would do something: back, or the fallback in its place', () => {
+    expect(at({ canGoBack: true })).toBe(true);
+    expect(at({})).toBe(true);
+    expect(at({ root: false })).toBe(true);
+    expect(at({ here: routes.home, canGoBack: true })).toBe(true);
+  });
+
+  it("is not drawn on a tab's root, whatever is behind it", () => {
+    expect(at({ root: true })).toBe(false);
+    expect(at({ root: true, canGoBack: true })).toBe(false);
+  });
+
+  it('is not drawn where nothing is behind and the fallback is this screen', () => {
+    expect(at({ here: routes.home })).toBe(false);
+    expect(at({ here: routes.settings, fallback: `/(app)${routes.settings}/` })).toBe(false);
+  });
+
+  it('reads the one rule: the bar shows Back exactly when the move is not stay', () => {
+    for (const kind of ['back', 'replace', 'stay'] as const) {
+      const move = kind === 'replace' ? { kind, href: routes.home } : { kind };
+      expect(showsBack(move)).toBe(kind !== 'stay');
+    }
   });
 });
 

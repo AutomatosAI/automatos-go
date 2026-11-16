@@ -200,7 +200,6 @@ export function pillPaint(
 }
 
 export const DOT_SIZE = 7;
-export const PILL_COUNT_OPACITY = 0.75;
 
 /** cc-seg: muted track, the chosen segment on card with the hairline shadow. */
 export function segmentPaint(

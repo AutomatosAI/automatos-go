@@ -36,7 +36,7 @@ export type VoiceParams = {
   readonly chatId: string | null;
 };
 
-/** An id the voice screen can open (routes.chat's rule: not blank, not a dot segment), trimmed. */
+/** An id the voice screen can open (routes.chat's rule, isUsableId), trimmed. */
 function chatIdOf(value: string | null | undefined): string | null {
   const id = value?.trim();
   return id && isUsableId(id) ? id : null;

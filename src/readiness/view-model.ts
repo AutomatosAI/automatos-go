@@ -1,5 +1,5 @@
 // "What Auto depends on" as it is drawn (PRD-268 §6.12.3 'Readiness list', US-G07), pure: the
-// server's items with this phone's rows, each row's glyph and word and the tokens they paint in,
+// server's items with this phone's rows, each row's word and its tone (its glyph is StateGlyph's),
 // what VoiceOver says, the count, and the line under the rows (checking, a refused Check again, a
 // failed read). Every answer is a new, frozen value.
 //   Rows: the server's items in its order (the first of a repeated id wins), then the phone's. The
@@ -17,9 +17,7 @@
 
 import { isApiError, userMessage } from '../api/errors';
 import { appRouteForWebLink } from '../navigation/web-links';
-import { statusGlyph, type GlyphPaint } from '../styles/dress/status-glyphs';
-import type { ColourName, ColourScheme } from '../styles/tokens/types';
-import { STATE_WORD_TONE, glyphToken, statePaint } from '../ui/state-tokens';
+import { STATE_WORD_TONE, stateWordTone } from '../ui/state-tokens';
 import type { TextTone } from '../ui/variants';
 import { CLIENT_ROW_IDS, type AppFix, type RowInput } from './client-rows';
 import type { ReadinessFix, ReadinessItem, ReadinessState } from './schema';
@@ -98,40 +96,16 @@ export function mergeRows(
   return Object.freeze([...server, ...rest].map(drawn));
 }
 
+/** A readiness mark's word and its tone; its glyph is StateGlyph's, from the state alone. */
 export type MarkSpec = Readonly<{
-  glyph: string;
   word: string;
-  glyphToken: ColourName;
   wordTone: TextTone;
 }>;
 
-/**
- * A state's glyph, word and tokens: in glyphs, the glyph in its glyph's role (HUD) or its state's
- * (Arcade, `glyphPaint` 'state-role'); else the state's colour role for the ground.
- */
-export function readinessMark(
-  state: ReadinessState,
-  glyphs: boolean,
-  scheme: ColourScheme,
-  glyphPaint: GlyphPaint = 'glyph-role',
-): MarkSpec {
-  const glyph = statusGlyph(state);
-  const word = READINESS_WORDS[state];
-  if (glyphs) {
-    return Object.freeze({
-      glyph: glyph.glyph,
-      word,
-      glyphToken: glyphToken(state, glyphPaint),
-      wordTone: STATE_WORD_TONE,
-    });
-  }
-  const paint = statePaint(state, scheme);
-  return Object.freeze({
-    glyph: glyph.glyph,
-    word,
-    glyphToken: paint.glyph,
-    wordTone: paint.word,
-  });
+/** A state's word, the same in every layout, in its tone: muted under glyphs (HUD, Arcade). */
+export function readinessMark(state: ReadinessState, glyphs: boolean): MarkSpec {
+  const wordTone = glyphs ? STATE_WORD_TONE : stateWordTone(state);
+  return Object.freeze({ word: READINESS_WORDS[state], wordTone });
 }
 
 /** The line a refused Check again shows: the server's words for its limit, else the client's. */

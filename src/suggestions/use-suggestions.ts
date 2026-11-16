@@ -1,9 +1,13 @@
 // Auto's suggestions, wired (PRD-268 §6.5.2, US-G01; the rules are model.ts's). One query, GET
 // /api/proactive/suggestions?status=open, only where discovery lists `suggestions`: memory only
 // (query-keys.ts), refetched on a suggestion_changed live event (live-events.ts) and on the 60 s
-// poll needs-you uses. Until the person's pause is read, and while they have paused suggestions
-// (§6.9, use-pause.ts), every surface shows none and the list is not read; a pause or a resume
-// reads it again (pause.ts). Start and Hide are for the roles that may answer (owners, admins,
+// poll needs-you uses; what it shows is judged against each one's expiry at the time of each
+// render and at every turn of the minute (one clock for every surface, minute-ticker.ts), with the
+// same array kept while what is shown has not changed (model.ts createShownSelector). A suggestion
+// whose Start is out stays until the answer; a refusal whose card has gone is said in the toast.
+// Until the person's pause is read, and while they have paused suggestions (§6.9, use-pause.ts),
+// every surface shows none and the list is not read; a pause or a resume reads it again
+// (pause.ts). Start and Hide are for the roles that may answer (owners, admins,
 // editors; a viewer is 403 on both). Start: refused at once while the app is offline (one line,
 // nothing queued), else Face ID first (gated.ts), then sent; 'Started. Auto is on it.' shows for
 // 4 s, and the suggestion leaves the list at once (so no surface offers it again), and the
@@ -13,7 +17,7 @@
 // told; a Hide that fails puts it back.
 
 import { useMutation, useMutationState, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 
 import { canSuggestions } from '../api/capabilities';
 import { useLiveStatus } from '../api/live';
@@ -27,7 +31,14 @@ import { useToast } from '../ui';
 import { fetchOpenSuggestions, hideSuggestion } from './api';
 import { OPEN_KEY, putBack, takeOff } from './cache';
 import { startGated } from './gated';
-import { STARTED_FOR_MS, shownSuggestions, startRefusal, type SuggestionView } from './model';
+import { createMinuteTicker } from './minute-ticker';
+import {
+  STARTED_FOR_MS,
+  createShownSelector,
+  refusalPlace,
+  startRefusal,
+  type SuggestionView,
+} from './model';
 import { askHideReason } from './reason-menu';
 import type { HideReason, Suggestion } from './schema';
 import { SUGGESTION_COPY } from './strings';
@@ -55,12 +66,25 @@ export function useOpenSuggestions(): OpenSuggestions {
     refetchInterval: NEEDS_YOU_REFETCH_INTERVAL_MS,
     enabled: offered && paused === false,
   });
-  const data = query.data;
-  const open = useMemo(
-    () => shownSuggestions({ offered, paused, list: data, now: Date.now() }),
-    [offered, paused, data],
-  );
+  const [select] = useState(createShownSelector);
+  // one past its expiry leaves at the next turn of the minute with no change to the list, so no
+  // Start the server would refuse stays offered (rule 6.5); the one whose Start is out stays
+  const keep = useStartingId();
+  const now = useJudgingTime();
+  const open = select({ offered, paused, list: query.data, now, keep });
   return { offered, open };
+}
+
+/** One clock for every surface that shows suggestions (minute-ticker.ts). */
+const SUGGESTION_MINUTES = createMinuteTicker();
+
+/**
+ * The time suggestions are judged at: the moment of this render, so a new list is judged by the
+ * clock as it is and never by an older tick, and a render at each turn of the minute.
+ */
+function useJudgingTime(): number {
+  useSyncExternalStore(SUGGESTION_MINUTES.subscribe, SUGGESTION_MINUTES.minute);
+  return Date.now();
 }
 
 export type SuggestionActions = {
@@ -113,13 +137,32 @@ function useHide() {
   );
 }
 
+/**
+ * A refused Start: one line under its card while the card is shown; in the toast once the card has
+ * gone (it lapsed while the Start was out), so the answer is never lost with it (refusalPlace).
+ */
+function useRefusal() {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const [refusal, setRefusal] = useState<SuggestionActions['refusal']>(null);
+  const tell = useCallback(
+    (id: string, text: string) => {
+      const list = queryClient.getQueryData<readonly Suggestion[]>(OPEN_KEY);
+      if (refusalPlace(list, id, Date.now()) === 'line') setRefusal({ id, text });
+      else toast.show(text);
+    },
+    [queryClient, toast],
+  );
+  return { refusal, setRefusal, tell };
+}
+
 export function useSuggestionActions(): SuggestionActions {
   const { client, workspace } = useAppSession();
   const { guard } = useStepUp();
   const queryClient = useQueryClient();
   const live = useLiveStatus();
   const [started, setStarted] = useStartedLine();
-  const [refusal, setRefusal] = useState<SuggestionActions['refusal']>(null);
+  const { refusal, setRefusal, tell } = useRefusal();
   const mutation = useMutation({
     mutationKey: START_KEY,
     mutationFn: (view: SuggestionView) => startGated(guard, client, view.id),
@@ -129,7 +172,7 @@ export function useSuggestionActions(): SuggestionActions {
       takeOff(queryClient, view.id);
       setStarted({ id: view.id, title: view.title });
     },
-    onError: (error: unknown, view) => setRefusal({ id: view.id, text: startRefusal(error) }),
+    onError: (error: unknown, view) => tell(view.id, startRefusal(error)),
     onSettled: (sent) =>
       sent?.ran === false
         ? undefined
@@ -149,7 +192,7 @@ export function useSuggestionActions(): SuggestionActions {
       }
       mutate(view);
     },
-    [allowed, busy, live, mutate],
+    [allowed, busy, live, mutate, setRefusal],
   );
   const hide = useHide();
   return {

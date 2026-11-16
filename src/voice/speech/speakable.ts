@@ -10,6 +10,16 @@
 
 import { hasWords } from '../machine/voice-state';
 import { SPOKEN_COPY } from '../strings';
+import { IMAGE, LABELLED, LINK, replaceAngleLinks, replaceLinks } from '../../lib/inline-links';
+import {
+  isWordCharacter,
+  notSpace,
+  onTheLine,
+  replacePairs,
+  type PairRule,
+} from '../../lib/inline-pairs';
+import type { Takes } from '../../lib/text-runs';
+import { isSeparatorRow, withoutClosingHashes, withoutMarksEndingWords } from './runs';
 
 type BlockKind = 'code' | 'table' | 'text';
 
@@ -17,11 +27,11 @@ const FENCE = /^\s*(`{3,}|~{3,})/;
 const QUOTES = /^(?:\s*>\s?)+/;
 const QUOTE = /^\s*>\s?/;
 const HEADING = /^\s*#{1,6}(?:\s+|$)/;
-const HEADING_CLOSE = /\s+#+\s*$/;
 const ITEM = /^\s*(?:[-*+•]|\d{1,3}[.)])\s+(?:\[[ xX]\]\s+)?/;
 const RULE = /^\s*([-*_=])(?:\s*\1){2,}\s*$/;
 const SETEXT_UNDERLINE = /^\s*(?:={3,}|-{3,})\s*$/;
-const TABLE_SEPARATOR = /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)*\|?\s*$/;
+// A heading's closing hashes and a table's separator row are read once (runs.ts): their patterns
+// grew with the square of a long run of spaces.
 const ENDED = /[.!?…]["'”’)\]]*$/;
 const SOFT_END = /[,:;]$/;
 
@@ -32,32 +42,101 @@ const MARKS: readonly { readonly pattern: RegExp; readonly sentence: boolean }[]
   { pattern: ITEM, sentence: true },
 ];
 
+/** One inline rule: the text in, the text with that rule's marks taken out. */
+type InlineRule = (text: string) => string;
+
+const swap =
+  (pattern: RegExp, replacement: string): InlineRule =>
+  (text) =>
+    text.replace(pattern, replacement);
+
+const onePair =
+  (rule: PairRule): InlineRule =>
+  (text) =>
+    replacePairs(text, rule);
+
+/** A character that is not a word character, and not `also`. */
+const notWordNor =
+  (also: string): Takes =>
+  (char) =>
+    !isWordCharacter(char) && char !== also;
+const notSpaceNor =
+  (also: string): Takes =>
+  (char) =>
+    notSpace(char) && char !== also;
+const notWord: Takes = (char) => !isWordCharacter(char);
+
+// The pairs, links and stray runs are read in one pass (src/lib/inline-pairs.ts, inline-links.ts,
+// runs.ts), each answering as the pattern beside it did: those read on from every unclosed marker to
+// the end of the line, the square of a line of openers.
+// was /\*\*(?=\S)(.*?\S)\*\*/g → '$1'
+const STARS: PairRule = { markers: ['**'], first: notSpace, holds: onTheLine, last: notSpace };
+// was /(^|\W)__(?=\S)(.*?\S)__(?!\w)/g → '$1$2'
+const UNDERSCORES: PairRule = {
+  markers: ['__'],
+  before: notWord,
+  first: notSpace,
+  holds: onTheLine,
+  last: notSpace,
+  after: notWord,
+};
+// was /~~(?=\S)(.*?\S)~~/g → '$1'
+const TILDES: PairRule = { markers: ['~~'], first: notSpace, holds: onTheLine, last: notSpace };
+// was /(^|[^\w*])\*(?=[^\s*])(.*?[^\s*])\*(?![\w*])/g → '$1$2'
+const STAR: PairRule = {
+  markers: ['*'],
+  before: notWordNor('*'),
+  first: notSpaceNor('*'),
+  holds: onTheLine,
+  last: notSpaceNor('*'),
+  after: notWordNor('*'),
+};
+// was /(^|\W)_(?=[^\s_])(.*?[^\s_])_(?!\w)/g → '$1$2'
+const UNDERSCORE: PairRule = {
+  markers: ['_'],
+  before: notWord,
+  first: notSpaceNor('_'),
+  holds: onTheLine,
+  last: notSpaceNor('_'),
+  after: notWord,
+};
+
+/** The five pair rules, for their tests. */
+export const SPOKEN_PAIRS = Object.freeze({
+  stars: STARS,
+  underscores: UNDERSCORES,
+  tildes: TILDES,
+  star: STAR,
+  underscore: UNDERSCORE,
+});
+
 /** Inline markdown, in order: links before bare URLs, pairs before strays. */
-const INLINE: readonly (readonly [RegExp, string])[] = [
-  [/!\[([^\]]*)\]\([^)]*\)/g, '$1'],
-  [/\[([^\]]+)\]\([^)]*\)/g, '$1'],
-  [/\[([^\]]+)\]\[[^\]]*\]/g, '$1'],
-  [/<(?:https?:\/\/|mailto:)[^>\s]+>/gi, SPOKEN_COPY.link],
-  [/\b(?:https?:\/\/|www\.)[^\s<>]*[^\s<>.,;:!?'")\]]/gi, SPOKEN_COPY.link],
-  [/`([^`]+)`/g, '$1'],
-  [/\*\*(?=\S)(.*?\S)\*\*/g, '$1'],
-  [/(^|\W)__(?=\S)(.*?\S)__(?!\w)/g, '$1$2'],
-  [/~~(?=\S)(.*?\S)~~/g, '$1'],
-  [/(^|[^\w*])\*(?=[^\s*])(.*?[^\s*])\*(?![\w*])/g, '$1$2'],
-  [/(^|\W)_(?=[^\s_])(.*?[^\s_])_(?!\w)/g, '$1$2'],
+const INLINE: readonly InlineRule[] = [
+  (text) => replaceLinks(text, IMAGE),
+  (text) => replaceLinks(text, LINK),
+  (text) => replaceLinks(text, LABELLED),
+  (text) => replaceAngleLinks(text, SPOKEN_COPY.link),
+  swap(/\b(?:https?:\/\/|www\.)[^\s<>]*[^\s<>.,;:!?'")\]]/gi, SPOKEN_COPY.link),
+  swap(/`([^`]+)`/g, '$1'),
+  onePair(STARS),
+  onePair(UNDERSCORES),
+  onePair(TILDES),
+  onePair(STAR),
+  onePair(UNDERSCORE),
   // Strays: a pair still streaming, a marker with no partner.
-  [/\*{2,}|~{2,}|`+/g, ''],
-  [/(^|\s)[*_]+(?=\S)/g, '$1'],
-  [/(\S)[*_]+(?=[\s.,!?;:…]|$)/g, '$1'],
-  [/[[\]]/g, ''],
-  [/\|/g, ' '],
+  swap(/\*{2,}|~{2,}|`+/g, ''),
+  swap(/(^|\s)[*_]+(?=\S)/g, '$1'),
+  // was /(\S)[*_]+(?=[\s.,!?;:…]|$)/g → '$1'
+  withoutMarksEndingWords,
+  swap(/[[\]]/g, ''),
+  swap(/\|/g, ' '),
 ];
 
 /** Enough rounds for the marks and the inline rules to settle. */
 const MAX_ROUNDS = 4;
 
 function isTableSeparator(line: string | undefined): boolean {
-  return line !== undefined && line.includes('|') && TABLE_SEPARATOR.test(line);
+  return line !== undefined && line.includes('|') && isSeparatorRow(line);
 }
 
 /** A row of a table: a leading pipe, the separator, its header, or a pipe row after them. */
@@ -105,14 +184,15 @@ function stripMarks(line: string): { readonly text: string; readonly sentence: b
   // Each mark removes at least its marker character, so this ends.
   for (let mark = markOf(text); mark !== undefined; mark = markOf(text)) {
     text = text.replace(mark.pattern, '');
-    if (mark.pattern === HEADING) text = text.replace(HEADING_CLOSE, '');
+    if (mark.pattern === HEADING) text = withoutClosingHashes(text);
     sentence = sentence || mark.sentence;
   }
   return { text, sentence };
 }
 
-function stripInline(text: string): string {
-  return INLINE.reduce((out, [pattern, replacement]) => out.replace(pattern, replacement), text);
+/** A line's inline markdown taken out, in INLINE's order. */
+export function stripInline(text: string): string {
+  return INLINE.reduce((out, rule) => rule(out), text);
 }
 
 /** One text line in plain words, and whether it is a sentence of its own (a heading or an item). */

@@ -8,9 +8,17 @@
 import { describe, expect, it } from 'vitest';
 
 import { AA_NON_TEXT, AA_TEXT, contrastRatio } from '../../core/web/lib/look-kit/contrast';
-import { STATUS_STATES } from '../../styles/dress/status-glyphs';
+import { STATUS_STATES, statusGlyph } from '../../styles/dress/status-glyphs';
 import { PLAY_STYLES, STUDIO_STYLES } from '../../styles/dress/__tests__/fixtures';
-import { LIGHT_STAND_INS, STATE_TOKENS, STATE_WORD_TONE, statePaint } from '../state-tokens';
+import {
+  LIGHT_STAND_INS,
+  STATE_TOKENS,
+  STATE_WORD_TONE,
+  glyphToken,
+  stateGlyphMark,
+  statePaint,
+  stateWordTone,
+} from '../state-tokens';
 import { toneColour } from '../tone-colour';
 import { TEXT_TONES } from '../variants';
 
@@ -61,6 +69,37 @@ describe('the states’ colour roles', () => {
           expect(['olive', 'navy', 'accent'], `${state} ${scheme}`).not.toContain(token);
         }
       }
+    }
+  });
+});
+
+describe('the mark StateGlyph draws (stateGlyphMark), from these tables only', () => {
+  const studio = (scheme: 'light' | 'dark') =>
+    ({ glyphs: false, glyphPaint: 'state-role', scheme }) as const;
+
+  it("outside glyphs: the state's colour role for the ground, the vocabulary's glyph", () => {
+    for (const state of STATUS_STATES) {
+      for (const scheme of ['light', 'dark'] as const) {
+        expect(stateGlyphMark(state, studio(scheme)), `${state} ${scheme}`).toEqual({
+          glyph: statusGlyph(state).glyph,
+          token: statePaint(state, scheme).glyph,
+        });
+      }
+    }
+  });
+
+  it("under glyphs: glyphToken's, by the dress's paint", () => {
+    for (const state of STATUS_STATES) {
+      for (const glyphPaint of ['glyph-role', 'state-role'] as const) {
+        const look = { glyphs: true, glyphPaint, scheme: 'dark' } as const;
+        expect(stateGlyphMark(state, look).token).toBe(glyphToken(state, glyphPaint));
+      }
+    }
+  });
+
+  it("says a state's word in the tone statePaint gives it", () => {
+    for (const state of STATUS_STATES) {
+      expect(stateWordTone(state), state).toBe(statePaint(state, 'dark').word);
     }
   });
 });

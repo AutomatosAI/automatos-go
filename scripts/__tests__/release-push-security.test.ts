@@ -352,7 +352,7 @@ describe('.github/workflows/push-security.yml (KR13)', () => {
 
   it('pins checkout and setup-node as ci.yml does, Node 22, no stored git credentials', () => {
     const uses = job.steps.flatMap((step) => (step.uses ? [step.uses] : []));
-    expect(uses).toEqual(['actions/checkout@v4', 'actions/setup-node@v4']);
+    expect(uses.map((action) => action.replace(/@[0-9a-f]{40}$/, ''))).toEqual(['actions/checkout', 'actions/setup-node']);
     expect(uses.every((action) => ciUses.includes(action))).toBe(true);
     expect(job.steps[0].with).toEqual({ 'persist-credentials': false });
     expect(job.steps[1].with).toEqual({ 'node-version': 22 });
