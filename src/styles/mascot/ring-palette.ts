@@ -14,6 +14,7 @@ import { duskOf } from '../../core/web/lib/look-kit/css';
 import { entryOf } from '../../core/web/lib/look-kit/types';
 import { ringColour, ringTone, type RingTone } from '../../core/frozen/lib/mascot/ring';
 import type { MascotName } from '../../core/frozen/lib/mascot/types';
+import { accentInk } from '../../ui/accent';
 import type { HudLook } from '../hud/look-schema';
 import type { ResolvedStyle } from '../provider/resolve';
 import { HUD_LOOK_CATALOGUE } from '../tokens/hud-catalogue';
@@ -40,11 +41,14 @@ export function hudRingPalette(look: HudLook): RingPalette {
   });
 }
 
-/** Studio's ring (and a theme's): ink and orange from the Studio-keyed tokens. */
+/**
+ * Studio's ring (and a theme's): ink and orange from the Studio-keyed tokens, the orange through
+ * accent.ts (rule 10.4), so a theme whose accent is a ground rings Auto in an ink that reads.
+ */
 export function studioRingPalette(colours: Colours): RingPalette {
   return Object.freeze({
     light: colours.foreground,
-    accent: colours.accent,
+    accent: accentInk(colours),
     error: colours.destructive,
     dusk: colours.mutedForeground,
     quiet: colours.mutedForeground,

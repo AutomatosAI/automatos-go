@@ -1,7 +1,8 @@
 // A toast: the short confirmation after an action ('Answered — the agent is resuming.'). On iOS a
 // card at the top with the success tick, on Android the ink snackbar at the bottom (the handoff).
 // It takes no touches and fades in and out (Reanimated follows Reduce Motion). ToastProvider owns
-// the timing (2.4 s) and the announcement; this file only paints one (overlay.ts: TOAST_LOOKS).
+// the timing (2.4 s) and mounts one per toast, so each is announced once as it appears: TalkBack
+// through the live region, VoiceOver through useAnnounce (overlay.ts: TOAST_LOOKS).
 
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
@@ -12,6 +13,7 @@ import { useTokens } from '../styles/theme';
 import { Text } from './Text';
 import { TOAST_LOOKS, type ToastPlacement } from './overlay';
 import { ICON_STROKE } from './paint';
+import { useAnnounce } from './use-announce';
 import { BUTTON_LABEL_WEIGHT } from './variants';
 
 const ICON_SIZE = 18;
@@ -25,6 +27,7 @@ export function Toast({ message, placement }: ToastProps) {
   const { colours, radii, spacing, shadows } = useTokens();
   const insets = useSafeAreaInsets();
   const look = TOAST_LOOKS[placement];
+  useAnnounce(message);
   const edge =
     placement === 'top'
       ? { top: insets.top + spacing[look.edgeInset] }

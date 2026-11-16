@@ -38,6 +38,7 @@
 import type { LiveStatus } from '../../api/live-events';
 import type { StripCellPaint } from '../../cc/calendar/chrome';
 import { TAB_STRIP, TOP_BAR } from '../../cc/shell/chrome';
+import { markColour } from '../../ui/accent';
 import { controlLabel } from '../../ui/dressed';
 import type { Layout } from '../registry/style-id';
 import type { ResolvedStyle } from '../provider/resolve';
@@ -217,10 +218,13 @@ export function roundCorner(radius: number, radii: Pick<StyleRadii, 'full'>): nu
 
 export type ShellTabPaint = { readonly color: string; readonly rule: string };
 
-/** A tab's word and bar: the chosen one in its ink over the rule; the others muted, no bar. */
+/**
+ * A tab's word and bar: the chosen one in its ink over the rule, the rule a mark in the style's
+ * accent through accent.ts (rule 10.4); the others muted, no bar.
+ */
 export function shellTabPaint(colours: Colours, tabs: ShellTabs, selected: boolean): ShellTabPaint {
   return selected
-    ? { color: colours[tabs.active], rule: colours[tabs.rule] }
+    ? { color: colours[tabs.active], rule: markColour(colours, tabs.rule) }
     : { color: colours[tabs.rest], rule: NONE };
 }
 
@@ -257,7 +261,7 @@ export function dressedStripCell(
     backgroundColor: cell.today ? pill.rest.background : NONE,
     borderColor: cell.today ? pill.rest.border : NONE,
     color: colours.foreground,
-    dot: cell.hasItems ? colours[markToken(dress.layout)] : NONE,
+    dot: cell.hasItems ? markColour(colours, markToken(dress.layout)) : NONE,
     borderWidth: pill.borderWidth,
   };
 }

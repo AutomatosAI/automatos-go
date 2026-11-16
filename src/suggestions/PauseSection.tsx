@@ -12,7 +12,7 @@ import { View } from 'react-native';
 import { Section } from '../ui/Section';
 import { SwitchRow } from '../ui/SwitchRow';
 import { useTokens } from '../styles/theme';
-import { Card, Text } from '../ui';
+import { Card, Text, useAnnounce } from '../ui';
 import type { TextLevel } from '../ui/variants';
 import type { PauseView } from './pause';
 import { PAUSE_COPY } from './strings';
@@ -27,6 +27,8 @@ export type PauseCardProps = {
 
 export function PauseCard({ view, onChange }: PauseCardProps) {
   const { spacing } = useTokens();
+  // a refused press or a failed read is said as it appears; the first words are read in order
+  useAnnounce(view.line, true, { changesOnly: true });
   return (
     <Section title={PAUSE_COPY.section}>
       <Card>

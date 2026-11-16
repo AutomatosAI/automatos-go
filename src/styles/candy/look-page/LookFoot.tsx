@@ -7,7 +7,7 @@
 
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Text } from '../../../ui';
+import { Text, useAnnounce } from '../../../ui';
 import { MIN_TOUCH } from '../../../ui/paint';
 import { useStyle } from '../../theme';
 import { pillPaint } from '../parts/chips';
@@ -50,6 +50,7 @@ function Action({ label, onPress, primary = false, hint }: ActionProps) {
 function SaidLine({ line }: { readonly line: SweetSaid | null }) {
   const style = useStyle();
   const { vars, type } = useCandyPaint();
+  useAnnounce(line?.text);
   if (line === null) return null;
   const failedLine = line.kind === 'failed';
   return (

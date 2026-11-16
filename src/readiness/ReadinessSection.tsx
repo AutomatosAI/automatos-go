@@ -2,7 +2,7 @@
 // and how many are ready, then one Card of ListRows, each the label, the detail and the state as a
 // glyph AND a word (✓ Ready · ○ Not checked · ◆ Needs setup; never colour alone, D-A11Y), a fix
 // where the phone has the screen for it, then the line (Checking…, a refused Check again) and Check
-// again. Shown only when discovery lists readiness: an older server's Settings are unchanged. The
+// again. When a refresh fails over the items it holds, they stay, under the out-of-date line. Shown only when discovery lists readiness: an older server's Settings are unchanged. The
 // card, rows, divider and button are src/ui's, so Studio, Play and HUD dress them; text grows with
 // Dynamic Type and wraps, the mark included. VoiceOver reads each row as one element ('Calendar:
 // needs setup. Connect calendar.'); a row with a fix is that fix's button, with the detail as its
@@ -13,7 +13,17 @@ import { StyleSheet, View } from 'react-native';
 
 import { useDress } from '../styles/dress/use-dress';
 import { useTokens } from '../styles/theme';
-import { Button, Card, Divider, ListRow, Section, StateGlyph, Text } from '../ui';
+import {
+  Button,
+  Card,
+  Divider,
+  ListRow,
+  OutOfDateNote,
+  Section,
+  StateGlyph,
+  Text,
+  useAnnounce,
+} from '../ui';
 import type { TextLevel } from '../ui/variants';
 import type { ReadinessState } from './schema';
 import { READINESS_COPY } from './strings';
@@ -74,14 +84,24 @@ function ReadinessRowView({ row, onFix }: RowProps) {
 
 export type ReadinessCardProps = {
   readonly view: ReadinessView;
+  /** A refresh failed: the rows are what it last had (rule 6.4). */
+  readonly outOfDate?: boolean;
   readonly onFix: (route: string) => void;
   readonly onCheckAgain: () => void;
 };
 
-export function ReadinessCard({ view, onFix, onCheckAgain }: ReadinessCardProps) {
+export function ReadinessCard({
+  view,
+  outOfDate = false,
+  onFix,
+  onCheckAgain,
+}: ReadinessCardProps) {
   const { spacing } = useTokens();
+  // Checking…, a refusal or a failed read, said as it changes; the first line is read in order
+  useAnnounce(view.line, true, { changesOnly: true });
   return (
     <Section title={READINESS_COPY.title} aside={view.count}>
+      {outOfDate ? <OutOfDateNote words={READINESS_COPY.outOfDate} /> : null}
       <Card>
         {view.rows.map((row, index) => (
           <View key={row.id}>
@@ -116,6 +136,7 @@ export function ReadinessSection() {
   return (
     <ReadinessCard
       view={readiness.view}
+      outOfDate={readiness.isRefetchError}
       onFix={(route) => router.push(route)}
       onCheckAgain={readiness.checkAgain}
     />

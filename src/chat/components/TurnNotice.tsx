@@ -4,13 +4,13 @@
 // for a notice row that starts Auto's run), or bare under the thinking pill. The mark in its tone
 // (✕ for a failure) and the words in the muted ink, then Try again under the words where it is
 // offered. Only the newest failure the user can ask again offers Try again (the vendored retry.ts
-// rule). A failure is announced as an alert; screen readers hear the notice's word and its words,
-// never the mark.
+// rule). A failure is announced as an alert as it appears (TalkBack's live region, VoiceOver's
+// useAnnounce); screen readers hear the notice's word and its words, never the mark.
 
 import { StyleSheet, View } from 'react-native';
 
 import { useTokens } from '../../styles/theme';
-import { Button, Text } from '../../ui';
+import { Button, Text, useAnnounce } from '../../ui';
 import { CHAT_COPY } from '../strings';
 import { MARK_TONES, type Notice } from '../view-model';
 
@@ -27,6 +27,7 @@ export type TurnNoticeProps = {
 export function TurnNotice({ notice, onRetry }: TurnNoticeProps) {
   const { spacing } = useTokens();
   const alert = ALERT_KINDS.has(notice.kind);
+  useAnnounce(notice.accessibilityLabel, alert);
   return (
     <View style={{ gap: spacing.space2 }}>
       <View

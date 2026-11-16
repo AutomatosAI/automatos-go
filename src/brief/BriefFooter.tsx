@@ -10,7 +10,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { AiLabel } from '../styles/ai-label';
 import { useTokens } from '../styles/theme';
-import { Button, IconButton, Text } from '../ui';
+import { Button, IconButton, Text, useAnnounce } from '../ui';
 import type { BriefRating } from './feedback';
 import type { Brief } from './schema';
 import { BRIEF_COPY } from './strings';
@@ -61,7 +61,14 @@ function Thumbs({ feedback }: { readonly feedback: BriefFeedback }) {
   );
 }
 
+/** The thanks or the failure after a thumb, said as it appears. */
+function feedbackWords(feedback: BriefFeedback): string | null {
+  if (feedback.failed) return FEEDBACK.failed;
+  return feedback.thanked ? FEEDBACK.thanks : null;
+}
+
 function FeedbackLine({ feedback }: { readonly feedback: BriefFeedback }) {
+  useAnnounce(feedbackWords(feedback));
   if (feedback.failed)
     return (
       <Text level={5} tone="warning" accessibilityLiveRegion="polite">

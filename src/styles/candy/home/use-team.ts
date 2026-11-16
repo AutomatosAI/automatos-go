@@ -18,6 +18,8 @@ export type TeamRead = {
   readonly team: Team | null;
   /** The agents' read failed with nothing to show: its error; else null. */
   readonly error: Error | null;
+  /** Reading the agents again failed: the team shown is the one read before (rule 6.4). */
+  readonly isRefetchError: boolean;
   readonly retry: () => void;
 };
 
@@ -29,5 +31,10 @@ export function useTeam(needsYou: NeedsYouRows): TeamRead {
   const team = useMemo(() => teamOf({ agents, needsYou, board }), [agents, needsYou, board]);
   const { refetch } = read;
   const retry = useCallback(() => void refetch(), [refetch]);
-  return { team, error: agents === null ? read.error : null, retry };
+  return {
+    team,
+    error: agents === null ? read.error : null,
+    isRefetchError: read.isRefetchError,
+    retry,
+  };
 }

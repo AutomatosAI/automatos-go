@@ -2,11 +2,10 @@
 // home (above A2's composer, in ChatFrame's keyboard lift) and Play's home (between Auto's row and
 // Play's message box). The whole card while the keyboard is down, one line while it is up; nothing
 // when there is none, or where discovery does not list `suggestions`. 'Started. Auto is on it.'
-// takes its place for 4 s after a Start, said aloud to VoiceOver. It enters once per suggestion
-// (a fade with a 4 pt rise, 180 ms; a cross-fade under Reduce Motion).
+// takes its place for 4 s after a Start, said aloud to VoiceOver (StartedLine). It enters once per
+// suggestion (a fade with a 4 pt rise, 180 ms; a cross-fade under Reduce Motion).
 
-import { useEffect } from 'react';
-import { AccessibilityInfo, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, useReducedMotion } from 'react-native-reanimated';
 
 import { useTokens } from '../styles/theme';
@@ -14,7 +13,6 @@ import type { SpaceName } from '../styles/tokens';
 import { useKeyboardHeight } from '../ui/use-keyboard-height';
 import { pinnedForm, suggestionView } from './model';
 import { StartedLine, SuggestionCard, SuggestionLine } from './SuggestionCard';
-import { SUGGESTION_COPY } from './strings';
 import { useOpenSuggestions, useSuggestionActions } from './use-suggestions';
 
 /** §6.12.3 'Motion': one entrance, a fade with a 4 pt rise over 180 ms. */
@@ -37,9 +35,6 @@ export function PinnedSuggestion({ inset }: PinnedSuggestionProps) {
   const { offered, open } = useOpenSuggestions();
   const actions = useSuggestionActions();
   const { started } = actions;
-  useEffect(() => {
-    if (started) AccessibilityInfo.announceForAccessibility(SUGGESTION_COPY.started);
-  }, [started]);
   if (!offered) return null;
   const newest = open[0];
   const pad = { paddingHorizontal: inset ? spacing[inset] : 0, paddingBottom: spacing.space3 };

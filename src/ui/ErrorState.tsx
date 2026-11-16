@@ -1,18 +1,20 @@
 // A failed load: the error's kind in the taxonomy's own words (userMessage → src/api/strings.ts),
 // never a status, URL or server internals, and 'Try again' where a retry can help (not for a
-// signed-out session, a missing permission or something that is gone). An alert, announced by
-// TalkBack through its live region; iOS has no live regions, so VoiceOver reads it only when it
-// reaches it (no announcement is made on an iPhone).
+// signed-out session, a missing permission or something that is gone). An alert, announced as it
+// appears: by TalkBack through its live region, and on an iPhone (no live regions) through
+// useAnnounce, its title and its words as two sentences.
 
 import { StyleSheet, View } from 'react-native';
 import TriangleAlert from 'lucide-react-native/icons/triangle-alert';
 
 import { useTokens } from '../styles/theme';
 import { accentInk } from './accent';
+import { sentences } from './announce-model';
 import { Button } from './Button';
 import { UI_COPY } from './strings';
 import { Text } from './Text';
 import { ICON_STROKE, tint } from './paint';
+import { useAnnounce } from './use-announce';
 import { errorCopy } from './variants';
 
 const TILE_SIZE = 48;
@@ -31,6 +33,8 @@ export type ErrorStateProps = {
 export function ErrorState({ error, onRetry, title }: ErrorStateProps) {
   const { colours, radii, spacing } = useTokens();
   const copy = errorCopy(error);
+  const heading = title ?? copy.title;
+  useAnnounce(sentences(heading, copy.message));
   return (
     <View
       style={[styles.state, { padding: spacing.space9, gap: spacing.space3 }]}
@@ -47,7 +51,7 @@ export function ErrorState({ error, onRetry, title }: ErrorStateProps) {
         <TriangleAlert size={ICON_SIZE} color={accentInk(colours)} strokeWidth={ICON_STROKE} />
       </View>
       <Text variant="title" level={TITLE_LEVEL} accessibilityRole="header" style={styles.centre}>
-        {title ?? copy.title}
+        {heading}
       </Text>
       <Text level={MESSAGE_LEVEL} tone="muted" style={styles.centre}>
         {copy.message}

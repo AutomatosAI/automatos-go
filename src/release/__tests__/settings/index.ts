@@ -10,7 +10,6 @@
 import * as a11yAudit from './a11y-audit';
 import * as contrast from './contrast';
 import * as dependencyAudit from './dependency-audit';
-import * as namedStates from './named-states';
 import * as permissions from './permissions';
 import * as releaseDocs from './release-docs';
 import * as releaseLicences from './release-licences';
@@ -62,7 +61,6 @@ export const ALLOWED_LISTS: readonly AllowedList[] = frozen([
   plain('secure-store-audit', 'WRITE_OPTION_NAMES', secureStoreAudit.WRITE_OPTION_NAMES),
   each('secure-store-audit', 'FORWARDERS', secureStoreAudit.FORWARDERS),
   each('secure-store-audit', 'PORT_WRITES', secureStoreAudit.PORT_WRITES),
-  each('named-states', 'OWED', namedStates.OWED),
   each('contrast', 'KNOWN', contrast.KNOWN),
   plain('dependency-audit', 'ALLOWED_WEB_VIEW_MENTIONS', dependencyAudit.ALLOWED_WEB_VIEW_MENTIONS),
   plain('release-licences', 'LICENCE_IDS', releaseLicences.LICENCE_IDS),

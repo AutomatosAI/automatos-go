@@ -3,7 +3,7 @@
 // and not downloaded are named states with words of their own. This walks each named state the app
 // can be in: its words come from its feature's strings.ts and are read where it is shown, they are
 // not empty, they are not any loading words and not the failed words (UI_COPY's title, the error
-// kinds' own), and every screen that keeps a list after a failed refresh draws its line.
+// kinds' own), and every screen that keeps what it read after a failed refresh draws its line.
 //
 // What cannot occur here, said rather than pretended:
 // - Waiting to send, held on the phone: the app keeps no queue of what a person sends while
@@ -16,14 +16,14 @@
 // - Offline as a state the phone detects: the app reads no network state of its own. It is offline
 //   when a request cannot reach the server, and where that leaves a state on screen it is named:
 //   the Command Centre's stream, a suggestion that could not start, a server that does not answer.
-// Which states this app shows, where, and which screens draw or still owe the line, are the app's
+// Which states this app shows, where, and which screens draw the line, are the app's
 // (settings/named-states.ts).
 
 import { describe, expect, it } from 'vitest';
 
 import { API_ERROR_COPY } from '../../api/strings';
 import { UI_COPY } from '../../ui/strings';
-import { OUT_OF_DATE_LINES, OWED, SHOWN, type NamedState } from './settings/named-states';
+import { OUT_OF_DATE_LINES, SHOWN, type NamedState } from './settings/named-states';
 import { copyModules, readRepoFile } from './support/tree';
 
 /** Every loading word in every copy module: a key that names loading, checking or uploading. */
@@ -72,10 +72,5 @@ describe('data that is out of date stays on screen under a line that says so (ru
     const source = readRepoFile(file);
     expect(source).toMatch(/\.isRefetchError\b/);
     expect(source).toMatch(new RegExp(`<OutOfDateNote words=\\{${reads.replace('.', '\\.')}\\}`));
-  });
-
-  it.each(OWED)('$file is owed its line: $why', ({ file, why }) => {
-    expect(why).not.toBe('');
-    expect(readRepoFile(file)).not.toContain('<OutOfDateNote');
   });
 });

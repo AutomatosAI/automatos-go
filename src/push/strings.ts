@@ -75,6 +75,8 @@ export const PUSH_SETTINGS_COPY = Object.freeze({
   redactDetail: 'Questions then say only that one is waiting, and open the app.',
   faceIdSection: 'Approvals and answers',
   loading: 'Reading your notification settings…',
+  /** Over the settings when their last refresh failed (rule 6.4): the switches shown are kept. */
+  outOfDate: "Couldn't refresh your notification settings, so these may be out of date.",
 });
 
 const minutesWord = (minutes: number) => (minutes === 1 ? '1 minute' : `${minutes} minutes`);

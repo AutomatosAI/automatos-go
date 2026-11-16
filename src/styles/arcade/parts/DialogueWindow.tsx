@@ -4,27 +4,20 @@
 // at the look's text speed on Arcade's clock, with the ▼ cursor and Skip while it types (dialogue.ts
 // decides each). Reduce Motion and the pause control show the reply whole and hold the cursor on.
 // VoiceOver never hears the typing: the line is hidden while it types, then reads as the whole
-// reply, which is said once (iOS ignores live regions, so it is announced). A reply that was
-// already there when the chat opened shows whole and is not said again. Below the words, the home
-// places its own controls (`children`: TYPE, the composer) on the window. The line scrolls past
-// 22 % of the screen's height; when the window is too narrow for words beside a large portrait,
-// the words wrap under it. Where the home offers Report this on the reply (`onReport`, US-022g), a
-// long-press on the words opens it and the line carries it as an accessible action, as A2's thread.
+// reply, which is said once by its id (iOS ignores live regions, so it is announced: useAnnounce).
+// A reply that was already there when the chat opened shows whole and is not said again. Below the
+// words, the home places its own controls (`children`: TYPE, the composer) on the window. The line
+// scrolls past 22 % of the screen's height; when the window is too narrow for words beside a large
+// portrait, the words wrap under it. Where the home offers Report this on the reply (`onReport`,
+// US-022g), a long-press on the words opens it and the line carries it as an accessible action, as
+// A2's thread.
 
-import { useEffect, useRef, type ReactNode } from 'react';
-import {
-  AccessibilityInfo,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import { type ReactNode } from 'react';
+import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import type { ReportAccessibility } from '../../../chat/report/report';
 import type { MascotName } from '../../../core/frozen/lib/mascot/types';
-import { Text } from '../../../ui';
+import { Text, useAnnounce } from '../../../ui';
 import { ARCADE_COPY } from '../../strings';
 import { ARCADE_DIALOGUE } from '../../typeface/arcade-type';
 import { PixelSprite } from '../sprite/PixelSprite';
@@ -66,20 +59,16 @@ function Portrait({ state }: { readonly state: MascotName }) {
   );
 }
 
-/** The finished reply, said once by its id (iOS; Android hears the live region). */
-function useAnnounceOnce(id: string | null, text: string, ready: boolean) {
-  const said = useRef<string | null>(null);
-  useEffect(() => {
-    if (!ready || said.current === id) return;
-    said.current = id;
-    if (Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(text);
-  }, [id, text, ready]);
-}
+type LineProps = {
+  readonly view: DialogueView;
+  readonly reply: DialogueReply;
+  readonly report: ReportAccessibility;
+};
 
-type LineProps = { readonly view: DialogueView; readonly report: ReportAccessibility };
-
-function Line({ view, report }: LineProps) {
+function Line({ view, reply, report }: LineProps) {
   const { vars, type } = useArcadePaint();
+  // the finished reply, said once by its id (iOS; Android hears the live region)
+  useAnnounce(reply.text, view.announce, { occasion: reply.id });
   // on (and not listening to the clock) while the line types or Arcade is still
   const cursorOn = useCursorOn(view.blinking);
   const lineStyle = type.body(ARCADE_DIALOGUE.size);
@@ -129,7 +118,6 @@ export function DialogueWindow(props: DialogueWindowProps) {
     whole: reply.whole,
   });
   const view = dialogueView(reply, typed, thinking, moving);
-  useAnnounceOnce(reply.id, reply.text, view.announce);
   return (
     <ArcadeWindow title={ARCADE_COPY.dialogue.speaker} contentStyle={styles.content}>
       <View style={styles.body}>
@@ -137,7 +125,7 @@ export function DialogueWindow(props: DialogueWindowProps) {
         <View style={styles.say}>
           <ScrollView style={{ maxHeight: height * DIALOGUE.maxShare }}>
             <Pressable accessible={false} onLongPress={thinking ? undefined : onReport}>
-              <Line view={view} report={report} />
+              <Line view={view} reply={reply} report={report} />
             </Pressable>
           </ScrollView>
           {view.skip ? (

@@ -20,7 +20,7 @@ import { Markdown } from '../chat/markdown/Markdown';
 import type { WebLinkTarget } from '../navigation/web-links';
 import { useTokens } from '../styles/theme';
 import { SUGGESTION_COPY } from '../suggestions/strings';
-import { Button, Card, Text } from '../ui';
+import { Button, Card, Text, useAnnounce } from '../ui';
 import { BriefFooter } from './BriefFooter';
 import { sectionHeading, type BriefRowView, type BriefSectionView } from './model';
 import { BRIEF_ENTRANCE, briefEntrance, briefKey, createSightings } from './motion';
@@ -45,8 +45,9 @@ type RowProps = {
 /** A suggestion row's Start: Face ID first, then '✓ {done_label}' in place; a refusal is one line. */
 function StartAction({ view, card }: RowProps) {
   const label = view.row.action?.label;
-  if (!view.start || !label || !card.canStart) return null;
   const refusal = card.refusal(view);
+  useAnnounce(refusal);
+  if (!view.start || !label || !card.canStart) return null;
   return (
     <View style={{ alignSelf: 'flex-start' }}>
       <Button

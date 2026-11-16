@@ -25,6 +25,7 @@ import type {
   SchemeOption,
 } from '../registry/picker';
 import type { BuiltInStyleId, StyleChoice } from '../registry/style-id';
+import { accentInk } from '../../ui/accent';
 import { ARCADE_HOME_COPY, PICKER_COPY, PREVIEW_COPY } from '../strings';
 
 export type LookLink = {
@@ -134,7 +135,8 @@ type SelectedSource = Pick<
  * vendored studio-tokens.ts), so the chosen card reads its style's own: Play's look accent with its
  * accentText, HUD's accent (AA on its ground already), Arcade's palette accent (tuned to read on
  * its window, the card's ground), Candy's palette accent with its accentText (both read on its
- * window, the card's ground), Studio's accent (there the two are one).
+ * window, the card's ground), Studio's accent (there the two are one) through accent.ts, so a
+ * theme whose accent is a ground frames its card in an ink that reads (rule 10.4).
  */
 export function selectedPaint(style: SelectedSource): SelectedPaint {
   const { play, hud, arcade, candy } = style;
@@ -142,8 +144,8 @@ export function selectedPaint(style: SelectedSource): SelectedPaint {
   if (style.layout === 'hud' && hud) return { ring: hud.accent, word: hud.accent };
   if (style.layout === 'arcade' && arcade) return { ring: arcade.ac, word: arcade.ac };
   if (style.layout === 'candy' && candy) return { ring: candy.accent, word: candy.accentText };
-  const { accent } = style.tokens.colours;
-  return { ring: accent, word: accent };
+  const ink = accentInk(style.tokens.colours);
+  return { ring: ink, word: ink };
 }
 
 export type CardFrame = {

@@ -5,7 +5,7 @@
 import { View } from 'react-native';
 
 import { useTokens } from '../../styles/theme';
-import { Button, Card, Text } from '../../ui';
+import { Button, Card, Text, useAnnounce } from '../../ui';
 import { phoneActionLabel, type PhoneAction, type PhoneStatusView } from './view-model';
 
 const SENTENCE_LEVEL = 2;
@@ -20,6 +20,8 @@ export type PhoneStatusProps = {
 export function PhoneStatus({ view, busy, onAction }: PhoneStatusProps) {
   const { spacing } = useTokens();
   const { action } = view;
+  // the sentence the screen opens with is read in order; a change after a tap is said
+  useAnnounce(view.sentence, true, { changesOnly: true });
   return (
     <Card>
       <View style={{ gap: spacing.space4 }}>

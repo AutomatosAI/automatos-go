@@ -1,19 +1,26 @@
 // "Send today's brief now" under the digest time (shown only with digest_now): the shared Button,
 // so Studio, Play and HUD each dress it; busy while the POST is out, dimmed through the 5-minute
 // wait after a 202 with the minutes left in its VoiceOver label, and one plain line under it (the
-// wait, or the last refusal). The words and the state are digest-now.ts's (useDigestNow).
+// wait, or the last refusal). Each refusal is said to VoiceOver as it lands, once (TalkBack hears
+// the line's live region); one already there when the screen opens is read in order. The words and
+// the state are digest-now.ts's (useDigestNow).
 
 import { View } from 'react-native';
 
 import { useTokens } from '../../styles/theme';
-import { Button, Text } from '../../ui';
+import { Button, Text, useAnnounce } from '../../ui';
+import { refusalLine } from './digest-now';
 import { useDigestNow } from './use-digest-now';
 
 const LINE_LEVEL = 6;
 
 export function DigestNowButton() {
   const { spacing } = useTokens();
-  const { view, press } = useDigestNow();
+  const { view, press, refusal } = useDigestNow();
+  useAnnounce(refusal ? refusalLine(refusal) : null, refusal !== null, {
+    occasion: refusal ?? undefined,
+    changesOnly: true,
+  });
   return (
     <View style={{ gap: spacing.space2, paddingVertical: spacing.space3 }}>
       <Button

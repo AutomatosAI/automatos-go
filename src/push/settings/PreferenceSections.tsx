@@ -4,12 +4,21 @@
 // 08:00 and 09:00 in the phone's time zone — not while the digest is off or the phone has no row —
 // and, under the time where the server lists digest_now, "Send today's brief now" (DigestNowButton).
 // The rows are read with the screen and every state has its words: reading, a failure with Try
-// again, then the switches.
+// again (only while it holds no rows), then the switches; a refresh that fails keeps the switches
+// it holds, under the line that says they may be out of date (rule 6.4).
 
 import { View } from 'react-native';
 
 import { useTokens } from '../../styles/theme';
-import { Card, Divider, ErrorState, LoadingState, SegmentedControl, Text } from '../../ui';
+import {
+  Card,
+  Divider,
+  ErrorState,
+  LoadingState,
+  OutOfDateNote,
+  SegmentedControl,
+  Text,
+} from '../../ui';
 import type { Device, Preferences } from '../schemas/server';
 import { PUSH_SETTINGS_COPY } from '../strings';
 import { Section } from '../../ui/Section';
@@ -138,6 +147,7 @@ export function PreferenceSections({
   const query = usePreferences();
   const switches = usePushSwitches();
   const preferences = query.data;
+  // the failed state only while it holds no rows: a failed refresh keeps them, under the line
   if (!preferences) {
     if (query.isError)
       return <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
@@ -145,6 +155,7 @@ export function PreferenceSections({
   }
   return (
     <>
+      {query.isRefetchError ? <OutOfDateNote words={PUSH_SETTINGS_COPY.outOfDate} /> : null}
       <PushTypesSection
         preferences={preferences}
         switches={switches}
