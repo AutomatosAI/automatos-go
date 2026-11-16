@@ -64,7 +64,7 @@ describe('the home', () => {
   it('shares the pause, reads no list until it is read or while paused, and shows none', () => {
     expect(open).toContain('const paused = useSuggestionsPaused(offered);');
     expect(open).toContain('enabled: offered && paused === false,');
-    expect(open).toContain('shownSuggestions({ offered, paused, list: data, now })');
+    expect(open).toContain('select({ offered, paused, list: query.data, now, keep })');
   });
 
   it("reads the pause again on the open list's cadence, so a change elsewhere arrives", () => {

@@ -4,6 +4,7 @@
 // away, and 'active' at the front. A screen holding a query is an observer subscribed to it.
 
 import { focusManager, QueryObserver, type QueryClient } from '@tanstack/react-query';
+import type { Persister } from '@tanstack/react-query-persist-client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { readRepoFile } from '../../release/__tests__/support/tree';
@@ -11,7 +12,7 @@ import { followAppFocus, judgedFrom, returnedToFront } from '../app-focus';
 import { createApiClient } from '../client';
 import { createLiveController, isForeground } from '../live-connection';
 import { createLiveHub } from '../live-events';
-import { createQueryClient, QUERY_STALE_TIME_MS } from '../query-client';
+import { clearQueryCache, createQueryClient, QUERY_STALE_TIME_MS } from '../query-client';
 import { queryKeys } from '../query-keys';
 import { fakeAppState } from './fake-app-state';
 import { SERVER, fakeTransport, flush, hangUntilAborted } from './fake-transport';
@@ -215,6 +216,58 @@ describe('the other askers on a return join the focus refetch: one request each'
     server.release(FRESH);
     await flush();
     expect(board.asked()).toBe(1);
+  });
+});
+
+describe('a return racing a sign-out (clearQueryCache: cancel, then clear)', () => {
+  const PERSISTER: Persister = {
+    persistClient: async () => undefined,
+    restoreClient: async () => undefined,
+    removeClient: async () => undefined,
+  };
+
+  /** The Board held by a screen, old; each request's signal kept, each answer held back. */
+  function heldWithSignals(client: QueryClient) {
+    const signals: AbortSignal[] = [];
+    let release: (board: Board) => void = () => undefined;
+    client.setQueryData(KEY, HELD);
+    new QueryObserver<Board>(client, {
+      queryKey: KEY,
+      queryFn: ({ signal }) => {
+        signals.push(signal);
+        return new Promise<Board>((resolve) => {
+          release = resolve;
+        });
+      },
+    }).subscribe(() => undefined);
+    client.setQueryData(KEY, HELD, { updatedAt: Date.now() - OLD_MS });
+    return { signals, release: (board: Board) => release(board) };
+  }
+
+  it('a refetch a return started is cancelled by the clear; its answer is never written', async () => {
+    const { app, client } = wired();
+    const board = heldWithSignals(client);
+    app.go('background', 'active');
+    await flush();
+    expect(board.signals).toHaveLength(1);
+    const clearing = clearQueryCache(client, PERSISTER);
+    app.go('background', 'active'); // even a return inside the gap
+    await clearing;
+    board.release(FRESH);
+    await flush();
+    expect(board.signals.every((signal) => signal.aborted)).toBe(true);
+    expect(client.getQueryData(KEY)).toBeUndefined();
+    expect(client.getQueryCache().getAll()).toEqual([]);
+  });
+
+  it('after the clear, a return asks nothing, though the screen is still mounted', async () => {
+    const { app, client } = wired();
+    const board = heldWithSignals(client);
+    await clearQueryCache(client, PERSISTER);
+    app.go('background', 'active');
+    await flush();
+    expect(board.signals).toEqual([]);
+    expect(client.getQueryCache().getAll()).toEqual([]);
   });
 });
 

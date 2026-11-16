@@ -2,7 +2,7 @@
 // US-G01), pure. The list is the server's (GET …/suggestions?status=open), never thread cards: the
 // newest open one is pinned above the composer (Studio, Play) or on HUD's NEXT line, and the header's
 // count opens all of them. An open suggestion past its expiry is not shown (the server lapses it on
-// its next read). Each view says what Start does from proposed_action.kind, and its actions name the
+// its next read), unless its Start is out: it stays until the answer. Each view says what Start does from proposed_action.kind, and its actions name the
 // suggestion to VoiceOver. With the keyboard up the pinned card is one line. Start refused (offline,
 // expired, the day's ceiling) is one line in the app's words, and the suggestion stays put.
 
@@ -36,9 +36,19 @@ export function isShowable(suggestion: Suggestion, now: number): boolean {
   return expires === null || expires > now;
 }
 
-/** The open ones, newest first (by created_at; the server's order where a time is missing). */
-export function openSuggestions(list: readonly Suggestion[], now: number): readonly Suggestion[] {
-  const open = list.filter((each) => isShowable(each, now));
+/**
+ * The open ones, newest first (by created_at; the server's order where a time is missing). `keep`
+ * is the one whose Start is out: it stays past its expiry until the server answers, so the answer
+ * is shown where the person pressed.
+ */
+export function openSuggestions(
+  list: readonly Suggestion[],
+  now: number,
+  keep: string | null = null,
+): readonly Suggestion[] {
+  const open = list.filter(
+    (each) => isShowable(each, now) || (each.id === keep && each.status === 'open'),
+  );
   return open
     .map((each, index) => ({ each, index, at: timeOf(each.created_at) }))
     .sort((a, b) => (b.at ?? -Infinity) - (a.at ?? -Infinity) || a.index - b.index)
@@ -53,14 +63,54 @@ const NONE: readonly Suggestion[] = Object.freeze([]);
  * suggestions; core still lists the ones made before the pause) or before the list is read; else
  * the open ones, newest first.
  */
-export function shownSuggestions(input: {
+export function shownSuggestions(input: ShownInput): readonly Suggestion[] {
+  if (!input.offered || input.paused !== false || !input.list) return NONE;
+  return openSuggestions(input.list, input.now, input.keep ?? null);
+}
+
+export type ShownInput = {
   readonly offered: boolean;
   readonly paused: boolean | undefined;
   readonly list: readonly Suggestion[] | undefined;
+  /** The time it is judged at: the moment it is asked, never an older tick. */
   readonly now: number;
-}): readonly Suggestion[] {
-  if (!input.offered || input.paused !== false || !input.list) return NONE;
-  return openSuggestions(input.list, input.now);
+  /** The suggestion whose Start is out, kept past its expiry until the answer. */
+  readonly keep?: string | null;
+};
+
+/** The previous list while the new one holds the same suggestions in the same order; else the new. */
+export function keptIfSame(
+  previous: readonly Suggestion[],
+  next: readonly Suggestion[],
+): readonly Suggestion[] {
+  if (previous.length !== next.length) return next;
+  // each the same object: a suggestion the server changed (its title, say) is a new one
+  return next.every((each, index) => each === previous[index]) ? previous : next;
+}
+
+/**
+ * One surface's shown list: judged at each call's time, and the same array handed back while what
+ * is shown has not changed, so a minute that expires nothing re-runs nothing keyed on it.
+ */
+export function createShownSelector(): (input: ShownInput) => readonly Suggestion[] {
+  let previous: readonly Suggestion[] = NONE;
+  return (input) => {
+    previous = keptIfSame(previous, shownSuggestions(input));
+    return previous;
+  };
+}
+
+/**
+ * Where a refused Start is said: under its card while the card is shown, else in the toast (the
+ * suggestion lapsed while its Start was out, so its card has gone and the line would go with it).
+ */
+export function refusalPlace(
+  list: readonly Suggestion[] | undefined,
+  id: string,
+  now: number,
+): 'line' | 'toast' {
+  const suggestion = list?.find((each) => each.id === id);
+  return suggestion && isShowable(suggestion, now) ? 'line' : 'toast';
 }
 
 export function suggestionView(suggestion: Suggestion): SuggestionView {
