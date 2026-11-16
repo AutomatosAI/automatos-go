@@ -48,11 +48,30 @@ type ViewerDownload = { readonly stop: AbortController; readonly settled: Promis
 
 let latest: ViewerDownload | null = null;
 
-/** Whether `url` is a generated document's route on this server, which may redirect to storage. */
+/** A dot-dot, an escaped dot, slash or backslash, or a backslash: never in a file's own name. */
+const NOT_A_NAME = /\.\.|%2e|%2f|%5c|\\/i;
+const NAME_END = /[?#]/;
+
+/** The file name in a generated document's path: one segment, nothing that could leave it. */
+function isFileName(rest: string): boolean {
+  const end = rest.search(NAME_END);
+  const name = end < 0 ? rest : rest.slice(0, end);
+  return name !== '' && !name.includes('/') && !NOT_A_NAME.test(name);
+}
+
+/**
+ * Whether `url` is a generated document's route on this server, which may redirect to storage:
+ * its path is that route's with a plain file name. A name that could lead out of the route
+ * (`..`, an escaped dot, slash or backslash, a backslash, a further segment) is an ordinary
+ * download, which follows nothing.
+ */
 export function redirectsToStorage(apiUrl: string, url: string): boolean {
   const origin = withoutTrailingSlash(apiUrl);
   const onServer = url.slice(0, origin.length).toLowerCase() === origin.toLowerCase();
-  return onServer && url.slice(origin.length).startsWith(GENERATED_PREFIX);
+  const path = url.slice(origin.length);
+  return (
+    onServer && path.startsWith(GENERATED_PREFIX) && isFileName(path.slice(GENERATED_PREFIX.length))
+  );
 }
 
 function viewerFolder(): Directory {

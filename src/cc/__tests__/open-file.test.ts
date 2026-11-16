@@ -197,6 +197,37 @@ describe('a redirect on the way to the file', () => {
     expect(viewer.calls).toEqual([]);
   });
 
+  it('never marks a name that could lead out of the route: it is then an ordinary download', () => {
+    const route = `${SERVER.apiUrl}/api/documents/generated/`;
+    for (const name of [
+      '../x',
+      '..',
+      'a..b.pdf',
+      '%2e%2e/x',
+      '%2E%2e%2Fx',
+      'x%2fy.pdf',
+      'x%5Cy.pdf',
+      'x\\y.pdf',
+      'sub/q3.pdf',
+      '',
+      '?x=1',
+    ]) {
+      expect(redirectsToStorage(SERVER.apiUrl, `${route}${name}`), name).toBe(false);
+    }
+    expect(redirectsToStorage(SERVER.apiUrl, `${route}q3.pdf?download=1`)).toBe(true);
+    expect(redirectsToStorage(SERVER.apiUrl, `${route}Q3 plan-v2.pdf`)).toBe(true);
+  });
+
+  it('an unmarked generated path that redirects is refused, and nothing goes to the address', async () => {
+    server.answers = [() => reply(302, '', { Location: STORAGE })];
+    const odd = `${SERVER.apiUrl}/api/documents/generated/../x.pdf`;
+    await expect(openInSystemViewer(file(odd))).rejects.toMatchObject({
+      kind: 'server',
+      status: 302,
+    });
+    expect(transport.calls.map((call) => call.url)).toEqual([odd]);
+  });
+
   it('knows the generated route by its path on this server only', () => {
     expect(redirectsToStorage(SERVER.apiUrl, GENERATED_URL)).toBe(true);
     expect(redirectsToStorage(`${SERVER.apiUrl}/`, GENERATED_URL.toUpperCase())).toBe(false);
