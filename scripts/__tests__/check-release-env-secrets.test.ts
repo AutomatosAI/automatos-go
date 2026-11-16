@@ -10,7 +10,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { checkReleaseEnv, profileFrom } from '../check-release-env';
+import { checkReleaseEnv, profileFrom, PUBLIC_TOKEN_NAMES } from '../check-release-env';
 
 const SCRIPT = path.resolve(__dirname, '../check-release-env.js');
 const BODY = 'x'.repeat(24);
@@ -103,6 +103,80 @@ describe('an EXPO_PUBLIC_ value that begins like a secret', () => {
     const { errors } = checkReleaseEnv(env, 'production');
     expect(errors[0]).toContain(`EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY looks like ${SECRET_KEY}`);
     expect(errors.join('\n')).not.toContain(value);
+  });
+});
+
+const GENERIC_KEY = 'a secret API key';
+const CLOUD_API_KEY = "a cloud platform's API key";
+const HEADER_TOKEN = 'a token from an Authorization header';
+const WEB_TOKEN = 'a signed token (a JSON Web Token)';
+/** A made-up JSON Web Token: three base64url parts, the first begun as a token's header is. */
+const webToken = () =>
+  [`${'ey'}${'J'}${'h'.repeat(20)}`, 'p'.repeat(20), 's'.repeat(20)].join('.');
+/** A made-up cloud platform API key: its four letters, then 35 more. */
+const cloudApiKey = (...pieces: string[]) => `${pieces.join('')}${'X'.repeat(35)}`;
+
+// Since 16 Nov: the shapes a list of prefixes missed.
+describe('a generic key, a cloud API key, a bearer token and a JSON Web Token', () => {
+  it.each([
+    [madeUp('sk', '-'), 'sk-', GENERIC_KEY],
+    [`${'sk'}-${'a1_B-'.repeat(4)}`, 'sk-', GENERIC_KEY],
+    [cloudApiKey('AI', 'za'), 'AIza', CLOUD_API_KEY],
+    [madeUp('Bear', 'er '), 'Bearer ', HEADER_TOKEN],
+    [madeUp('bear', 'er  '), 'bearer', HEADER_TOKEN],
+    [webToken(), 'eyJ', WEB_TOKEN],
+    [`${webToken().split('.').slice(0, 2).join('.')}.`, 'eyJ', WEB_TOKEN],
+  ])('%#: fails every profile, naming the variable and the kind only', (value, prefix, kind) => {
+    for (const profile of EVERY_PROFILE) {
+      const message = oneLeak({ ...COMPLETE, [EXTRA]: value }, profile, value, prefix);
+      expect(message.startsWith(`${EXTRA} looks like ${kind}`), profile).toBe(true);
+    }
+  });
+
+  it("names a model provider's key as before, not the generic kind", () => {
+    const value = madeUp('sk-', 'ant-');
+    expect(oneLeak({ ...COMPLETE, [EXTRA]: value }, 'testflight', value, 'sk-ant-')).toContain(
+      MODEL_KEY,
+    );
+  });
+
+  it('passes what only begins the same: too short, no token, two parts', () => {
+    const env = {
+      ...COMPLETE,
+      EXPO_PUBLIC_A: `${'sk'}-${'x'.repeat(19)}`,
+      EXPO_PUBLIC_B: `${'AI'}${'za'}${'X'.repeat(34)}`,
+      EXPO_PUBLIC_C: 'Bearer',
+      EXPO_PUBLIC_D: 'bearer-of-news',
+      EXPO_PUBLIC_E: webToken().split('.').slice(0, 2).join('.'),
+      EXPO_PUBLIC_F: 'sky-blue',
+    };
+    expect(checkReleaseEnv(env, 'development').errors).toEqual([]);
+  });
+
+  it('allows a JSON Web Token only under a listed name, and lists none today', () => {
+    expect(PUBLIC_TOKEN_NAMES).toEqual([]);
+    const listed = 'EXPO_PUBLIC_ANON_TOKEN';
+    const env = { ...COMPLETE, [listed]: webToken(), [EXTRA]: webToken() };
+    const { errors } = checkReleaseEnv(env, 'testflight', [listed]);
+    expect(errors).toEqual([expect.stringContaining(`${EXTRA} looks like ${WEB_TOKEN}`)]);
+    const key = madeUp('sk_', 'live_');
+    const secretThere = checkReleaseEnv({ ...COMPLETE, [listed]: key }, 'testflight', [listed]);
+    expect(secretThere.errors).toEqual([
+      expect.stringContaining(`${listed} looks like ${SECRET_KEY}`),
+    ]);
+    const unlisted = checkReleaseEnv({ ...COMPLETE, [listed]: webToken() }, 'testflight');
+    expect(unlisted.errors).toEqual([expect.stringContaining(`${listed} looks like ${WEB_TOKEN}`)]);
+  });
+
+  it('still passes a publishable key and a DSN as they are issued', () => {
+    const env = {
+      ...COMPLETE,
+      EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: `${'pk_'}${'live_'}${'Y2xlcmsuZXhhbXBsZS5jb20k'}`,
+      EXPO_PUBLIC_SENTRY_DSN: `https://${'0f'.repeat(16)}@o4507.ingest.de.sentry.io/4508`,
+    };
+    for (const profile of EVERY_PROFILE) {
+      expect(checkReleaseEnv(env, profile).errors, profile).toEqual([]);
+    }
   });
 });
 
