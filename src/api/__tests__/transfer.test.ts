@@ -50,7 +50,7 @@ describe('a download', () => {
   it('is written to a partial file beside the target, moved into place only when whole', async () => {
     const transport = answering(() => partsReply(200, [encode('a'), encode('b')]));
     await download(clientWith(transport), FILE_URL, target(), TIMED);
-    const partial = partialOf(target(), TIMED).uri;
+    const partial = partialOf(target()).uri;
     expect(partial).toBe(`${TARGET_URI}${PARTIAL_SUFFIX}`);
     expect(memoryFs.ops).toEqual([`create ${partial}`, `mv ${partial} -> ${TARGET_URI}`]);
   });
@@ -88,7 +88,7 @@ describe('a download', () => {
     memoryFs.files.set(TARGET_URI, encode('old'));
     const transport = answering(() => partsReply(200, [encode('new')]));
     await download(clientWith(transport), FILE_URL, target(), TIMED);
-    const partial = partialOf(target(), TIMED).uri;
+    const partial = partialOf(target()).uri;
     const aside = `${TARGET_URI}${ASIDE_SUFFIX}`;
     expect(memoryFs.ops.slice(1)).toEqual([
       `mv ${TARGET_URI} -> ${aside}`,
@@ -287,9 +287,7 @@ describe('a download that is stopped', () => {
       ...TIMED,
       signal: controller.signal,
     });
-    await vi.waitFor(() =>
-      expect(memoryFs.files.get(partialOf(target(), TIMED).uri)?.byteLength).toBe(5),
-    );
+    await vi.waitFor(() => expect(memoryFs.files.get(partialOf(target()).uri)?.byteLength).toBe(5));
     controller.abort();
     const error = await failureOf(running);
     expect(error).toMatchObject({ name: 'AbortError' });

@@ -47,7 +47,7 @@ describe('a download running when the person leaves', () => {
     const client = clientWith(transport);
     const running = download(client, FILE_URL, target(), TIMED);
     await vi.waitFor(() =>
-      expect(memoryFs.files.get(partialOf(target(), TIMED).uri)?.byteLength).toBe(10),
+      expect(memoryFs.files.get(partialOf(target()).uri)?.byteLength).toBe(10),
     );
     stopDownloads();
     memoryFs.files.clear(); // the folders are deleted (user-files.ts)
@@ -74,9 +74,7 @@ describe('a download running when the person leaves', () => {
       },
     }));
     const running = download(clientWith(transport), FILE_URL, target(), TIMED);
-    await vi.waitFor(() =>
-      expect(memoryFs.files.get(partialOf(target(), TIMED).uri)?.byteLength).toBe(3),
-    );
+    await vi.waitFor(() => expect(memoryFs.files.get(partialOf(target()).uri)?.byteLength).toBe(3));
     stopDownloads();
     gate.release();
     await expect(running).rejects.toMatchObject({ name: 'AbortError' });
