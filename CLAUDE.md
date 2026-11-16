@@ -81,8 +81,10 @@ run it a second time.
 Build-time `EXPO_PUBLIC_*` values from the EAS environment of the build profile
 (no `.env.example`: the secrets hook blocks `*.env.*`, so README.md
 'Environment' and this list are the record). `scripts/check-release-env.js`
-enforces them (production fails, preview/testflight warn); `src/lib/env.ts`
-parses them with zod (blank = "not configured").
+enforces them (production fails, preview/testflight warn) and, in every profile, in the build hook
+and in `publish_update`'s `before_update` hook (`node scripts/check-release-env.js testflight`),
+refuses an `EXPO_PUBLIC_*` value that is a secret, by its name or by how it begins (it names the
+variable, never the value); `src/lib/env.ts` parses them with zod (blank = "not configured").
 
 - `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` — Clerk publishable key for hosted sign-in; `pk_live_` in production.
 - `EXPO_PUBLIC_API_URL` — base URL of the hosted Automatos API (the built-in server).

@@ -30,6 +30,7 @@ const MAX_WORKFLOW_BYTES = 16 * 1024;
 const FINGERPRINT_HASH = '${{ needs.fingerprint.outputs.ios_fingerprint_hash }}';
 const FOUND = '${{ needs.get_ios_build.outputs.build_id }}';
 const NOT_FOUND = '${{ !needs.get_ios_build.outputs.build_id }}';
+const RELEASE_CHECK = 'Check the release environment (no secret in an EXPO_PUBLIC_ value)';
 const HEAD_CHECK = 'Stop if main has moved on (its own run ships this change too)';
 // commit shas for the head check: this run's, an older one and a newer one
 const SHA = 'a'.repeat(40);
@@ -190,8 +191,18 @@ describe('.eas/workflows/testflight.yml (every push to main)', () => {
     const steps = beforeUpdateSteps(jobs.publish_update.hooks);
     const { run } = stepNamed(steps, HEAD_CHECK);
 
-    it('is the one before_update step', () => {
-      expect(steps.map((step) => step.name)).toEqual([HEAD_CHECK]);
+    // Since 15 Nov the release check runs first: an update exports EXPO_PUBLIC_* values into the
+    // bundle with no build, so no build hook ever checked them, and a secret in one shipped.
+    it('runs after the release check, the last step before the update', () => {
+      expect(steps.map((step) => step.name)).toEqual([RELEASE_CHECK, HEAD_CHECK]);
+    });
+
+    it('checks the testflight profile, whose environment is the one this job exports with', () => {
+      const check = /^node scripts\/check-release-env\.js (\w+)$/.exec(
+        stepNamed(steps, RELEASE_CHECK).run.trim(),
+      );
+      expect(check?.[1]).toBe('testflight');
+      expect(easJson.build.testflight.environment).toBe(jobs.publish_update.environment);
     });
 
     it('reads the checkout first, then the public address, never waiting on a password prompt', () => {

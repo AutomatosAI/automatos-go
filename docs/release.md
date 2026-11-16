@@ -50,7 +50,8 @@ fingerprint, which costs a native build.
    -> get_ios_build      a finished testflight-profile build with that fingerprint?
                          (waits if one with it is already building)
         found     -> publish_update      over-the-air update, channel "testflight"
-                                         (before_update hook: stop unless this is main's head)
+                                         (before_update hook: the release-env check, then
+                                          stop unless this is main's head)
         not found -> build_ios           native iOS build, profile "testflight"
                      -> submit_testflight upload to TestFlight (the submit job)
 ```
@@ -105,6 +106,30 @@ EAS build server before anything compiles. For `production`, a missing `EXPO_PUB
 (or one that is not `pk_live_`), `EXPO_PUBLIC_API_URL` or `EXPO_PUBLIC_WEB_URL` fails the build. For
 `preview` and `testflight` the same problems only warn, so a device-test build can use test keys.
 An unset `EXPO_PUBLIC_SENTRY_DSN` always only warns.
+
+**A secret in an `EXPO_PUBLIC_*` value fails every profile**, `development`, an unknown or an
+empty one too. Those values are written into the JavaScript every phone downloads. A set value is
+refused when:
+
+- its name, after `EXPO_PUBLIC_`, contains `SECRET`, `PRIVATE_KEY`, `PASSWORD` or `AUTH_TOKEN`; or
+- it begins like a secret key: `sk_live_`, `sk_test_` (a sign-in or payment provider's secret
+  key), `rk_live_`, `rk_test_` (a restricted key), `whsec_` (a webhook secret), `sk-ant-`,
+  `sk-proj-`, `sk-or-` (a model provider's key), `ghp_`, `github_pat_`, `gho_` (a code host's
+  token), `AKIA` or `ASIA` and 16 capitals or digits (a cloud access key id), `xoxb-`, `xoxp-` (a
+  chat platform's token), `ak_srv_` (the platform's server key) or `-----BEGIN` (a PEM block).
+  Spaces or quotes pasted around it change nothing.
+
+A publishable key (`pk_live_`, `pk_test_`) and a DSN pass. The message names the variable and the
+kind of thing it looks like, never the value or any part of it, and says to rotate it: it may
+already be in a bundle. A variable without `EXPO_PUBLIC_` is never written into the bundle and is
+not checked.
+
+**The check runs in the update job too.** An update exports a bundle with no build, so the build
+hook never runs there. `publish_update`'s first `before_update` step is
+`node scripts/check-release-env.js testflight`: the script takes the profile from its argument
+(an update job sets no `EAS_BUILD_PROFILE`) and falls back to `EAS_BUILD_PROFILE` in a build. The
+job runs in `testflight`'s environment, `preview`. The script uses Node's built-ins only, so the
+hook needs no install.
 
 The `EXPO_PUBLIC_*` values come from the profile's EAS environment. There is no `.env.example`; the
 names are listed in [README.md](../README.md), "Environment".

@@ -63,9 +63,12 @@ npm run format:check      # prettier --check .
 The app reads these build-time values; Expo inlines them into the bundle. Cloud
 builds take them from the EAS environment of the build profile, and there is no
 `.env.example` in this repository. `scripts/check-release-env.js` runs before
-every EAS build: a production build fails without the required ones, preview
-and TestFlight builds warn. An empty value turns the feature off with a "not
-configured" state instead of a crash (`src/lib/env.ts`).
+every EAS build and before every over-the-air update: a production build fails
+without the required ones, preview and TestFlight builds warn. Every build and
+update fails on an `EXPO_PUBLIC_*` value that is a secret, found by its name or by
+how it begins ([docs/release.md](docs/release.md), "The release-env guard"):
+everything under `EXPO_PUBLIC_` ships to every phone. An empty value turns the
+feature off with a "not configured" state instead of a crash (`src/lib/env.ts`).
 
 | Name                                | What it is                                                                      |
 | ----------------------------------- | ------------------------------------------------------------------------------- |

@@ -131,9 +131,11 @@ Who reads each environment:
   Traps). The four values above are public by design: each is inlined into the JavaScript bundle.
 - **`production`:** the `production` profile's builds. No workflow uses it yet. A secret
   (`SENTRY_AUTH_TOKEN` for source maps, OT-R1) may go here only while no pull-request job reads it.
-- **The guard runs in builds only.** `eas-build-pre-install` is an EAS Build hook. An update job is
-  not a build and never runs it. A value changed in `preview` reaches phones in the next update
-  unchecked.
+- **The guard runs in builds and in updates.** `eas-build-pre-install` is an EAS Build hook, and
+  `publish_update` runs the same script as its first `before_update` step, for the `testflight`
+  profile. In both, a value that is a secret fails (every profile; [../release.md](../release.md),
+  "The release-env guard"), and so does a hosted address the app would refuse. Anything else
+  changed in `preview` only warns there, as it does in a `testflight` build.
 - **The guard is strict for `production` only.** For `testflight` and `preview`, a missing value
   is a warning in the build log. The `pk_live_` prefix is not checked at all: a `pk_test_` key
   passes without a word. **Nothing stops a WebSummit build that signs in to Clerk's development
@@ -175,8 +177,8 @@ environment holds when it is published.
 - **The README's human step 1 changes** to say `pk_live_` for preview (US-021q, or Gerard).
 - **The guard does not check the key for `testflight`.** A later change back to a test key in
   `preview` ships without a warning. Checking the `pk_live_` prefix for the `testflight` profile
-  too is a small change to `scripts/check-release-env.js`, but it guards builds only (see the guard
-  above).
+  too is a small change to `scripts/check-release-env.js`, which runs in builds and in updates
+  (see the guard above).
 
 ### Option B: the `testflight` profile and its updates move to the `production` environment
 
