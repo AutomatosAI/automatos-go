@@ -1,11 +1,11 @@
 // ESLint flat config — eslint-config-expo (SDK 54 pairing) + prettier compat, then the app's
 // guards (PRD-001 §4.11, US-004c): no console.* outside src/lib/logger.ts; the network only
 // through src/api/ (fetch, XMLHttpRequest, WebSocket, EventSource and navigator.sendBeacon;
-// expo/fetch only in src/api/transport.ts; no other HTTP client anywhere); never
-// react-native-webview; the size limits; no colour literals outside the tokens; a pure
-// hand-written core. A guard cannot be switched off from inside a file: inline eslint comments
-// are not read (docs/app-standard.md rules 13.2 and 13.5).
-// scripts/__tests__/eslint-rules.test.ts proves each guard fires where it should.
+// expo/fetch only in src/api/transport.ts; no other HTTP client anywhere; no picture fetched by
+// address by react-native-svg); never react-native-webview; the size limits; no colour literals
+// outside the tokens; a pure hand-written core. A guard cannot be switched off from inside a
+// file: inline eslint comments are not read (docs/app-standard.md rules 13.2 and 13.5).
+// scripts/__tests__/eslint-rules*.test.ts prove each guard fires where it should.
 const { builtinRules } = require('eslint/use-at-your-own-risk');
 const expoConfig = require('eslint-config-expo/flat');
 const prettierConfig = require('eslint-config-prettier');
@@ -37,18 +37,48 @@ const NO_OTHER_CLIENT_PATHS = {
   message: ONE_WAY_IN,
 };
 
-const NO_WEBVIEW = {
-  name: 'react-native-webview',
-  message: 'No WebView (D-NO-WEBVIEW): links to Studio open the system browser.',
-};
 const NO_EXPO_FETCH = {
   name: 'expo/fetch',
   message: 'expo/fetch is imported by src/api/transport.ts only: use the API client.',
 };
-const NO_WEBVIEW_PATTERN = {
-  group: ['react-native-webview/*'],
-  message: NO_WEBVIEW.message,
+
+// A web view in any form (D-NO-WEBVIEW, rule 13.8).
+const NO_WEBVIEW_MESSAGE = 'No WebView (D-NO-WEBVIEW): links to Studio open the system browser.';
+const NO_WEB_VIEWS = [
+  { name: 'react-native-webview', message: NO_WEBVIEW_MESSAGE },
+];
+const NO_WEB_VIEW_PATTERNS = [
+  { group: ['react-native-webview/*'], message: NO_WEBVIEW_MESSAGE },
+];
+
+// What react-native-svg fetches by address itself, with the global fetch and outside the API
+// client: SvgUri, SvgFromUri and fetchText, and in react-native-svg/css SvgCssUri, SvgWithCssUri
+// and LocalSvg, WithLocalSvg and loadLocalRawResource (they fetch their source's address). The
+// package root's copies of the /css names only throw: refused all the same. A namespace import
+// carries every name, so it is refused too.
+const SVG_BY_ADDRESS = [
+  'SvgUri',
+  'SvgFromUri',
+  'fetchText',
+  'SvgCssUri',
+  'SvgWithCssUri',
+  'LocalSvg',
+  'WithLocalSvg',
+  'loadLocalRawResource',
+];
+const SVG_MESSAGE =
+  'A picture is fetched through src/api/ (D-ONE-CLIENT): fetch its text with the API client and draw it with SvgXml.';
+const NO_SVG_BY_ADDRESS = ['react-native-svg', 'react-native-svg/css'].map((name) => ({
+  name,
+  importNames: SVG_BY_ADDRESS,
+  message: SVG_MESSAGE,
+}));
+// The package's own files hold the same names, out of the guard's sight.
+const NO_SVG_FILES = {
+  group: ['react-native-svg/src', 'react-native-svg/lib'],
+  message: `Import react-native-svg, react-native-svg/css or react-native-svg/filter-image, never its own files. ${SVG_MESSAGE}`,
 };
+
 const PURE_CORE_PATTERN = {
   group: [
     'react',
@@ -66,38 +96,65 @@ const PURE_CORE_PATTERN = {
   message: 'src/core is pure TypeScript (D-PURE): no React, React Native or Expo.',
 };
 
+// Refused in every file: a second client, a web view, a picture fetched by address. Each block
+// adds what it refuses beside them.
 function restrictedImports(paths, patterns) {
   return [
     'error',
-    { paths: [...paths, ...NO_OTHER_CLIENTS], patterns: [...patterns, NO_OTHER_CLIENT_PATHS] },
+    {
+      paths: [...paths, ...NO_WEB_VIEWS, ...NO_SVG_BY_ADDRESS, ...NO_OTHER_CLIENTS],
+      patterns: [
+        ...patterns,
+        ...NO_WEB_VIEW_PATTERNS,
+        NO_SVG_FILES,
+        NO_OTHER_CLIENT_PATHS,
+      ],
+    },
   ];
 }
+const OUTSIDE_THE_CLIENT_IMPORTS = [NO_EXPO_FETCH];
 
 // The same modules reached by require() or import(), which no-restricted-imports does not see.
 // No slash in the pattern: a selector's own /.../ cannot hold one, so a dot stands for it.
-const REFUSED_MODULES = `^(react-native-webview|expo.fetch|${OTHER_CLIENTS.join('|')})($|[^a-zA-Z0-9_-])`;
+const REFUSED_MODULES = [
+  'react-native-webview',
+  'expo.fetch',
+  ...OTHER_CLIENTS,
+];
 const LOADED_ANOTHER_WAY =
   'Not by require() or import() either: see the guards at the top of eslint.config.js.';
+const SVG_LOADED_ANOTHER_WAY = `Import react-native-svg statically, so the guard reads the names. ${SVG_MESSAGE}`;
+
+function loadedBy(modules, message) {
+  const source = `/^(${modules.join('|')})($|[^a-zA-Z0-9_-])/`;
+  return [
+    { selector: `CallExpression[callee.name='require'][arguments.0.value=${source}]`, message },
+    { selector: `ImportExpression[source.value=${source}]`, message },
+  ];
+}
 const NO_OTHER_LOADERS = [
-  {
-    selector: `CallExpression[callee.name='require'][arguments.0.value=/${REFUSED_MODULES}/]`,
-    message: LOADED_ANOTHER_WAY,
-  },
-  { selector: `ImportExpression[source.value=/${REFUSED_MODULES}/]`, message: LOADED_ANOTHER_WAY },
+  ...loadedBy(REFUSED_MODULES, LOADED_ANOTHER_WAY),
+  ...loadedBy(['react-native-svg'], SVG_LOADED_ANOTHER_WAY),
 ];
 
 // #rgb, #rrggbb, #rrggbbaa and the rgb()/rgba()/hsl()/hsla() functions, anywhere in a string.
 const COLOUR =
   '(#([0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3})(?![0-9a-zA-Z_])|\\b(rgba?|hsla?)\\s*\\()';
 const COLOUR_MESSAGE = 'Colour literal (D-TOKENS): read the colour from src/styles/tokens.';
-// One rule holds both lists: a second no-restricted-syntax for the same files would replace the
-// first, not add to it.
 const NO_COLOUR_LITERALS = [
-  'error',
-  ...NO_OTHER_LOADERS,
   { selector: `Literal[value=/${COLOUR}/]`, message: COLOUR_MESSAGE },
   { selector: `TemplateElement[value.raw=/${COLOUR}/]`, message: COLOUR_MESSAGE },
 ];
+
+// One rule holds every list a file gets: a second no-restricted-syntax for the same files would
+// replace the first, not add to it.
+function restrictedSyntax({ colours }) {
+  return [
+    'error',
+    ...NO_OTHER_LOADERS,
+    ...(colours ? NO_COLOUR_LITERALS : []),
+  ];
+}
 
 // A second name for the core max-lines rule, so one file can warn at 400 and fail at 800.
 const shapePlugin = { rules: { 'target-file-lines': builtinRules.get('max-lines') } };
@@ -142,8 +199,8 @@ module.exports = [
         ),
         { object: 'navigator', property: 'sendBeacon', message: ONE_WAY_IN },
       ],
-      'no-restricted-syntax': ['error', ...NO_OTHER_LOADERS],
-      'no-restricted-imports': restrictedImports([NO_WEBVIEW, NO_EXPO_FETCH], [NO_WEBVIEW_PATTERN]),
+      'no-restricted-syntax': restrictedSyntax({ colours: false }),
+      'no-restricted-imports': restrictedImports(OUTSIDE_THE_CLIENT_IMPORTS, []),
       'max-lines': ['error', { max: MAX_FILE_LINES }],
       'shape/target-file-lines': ['warn', { max: TARGET_FILE_LINES }],
       'max-lines-per-function': functionLines(MAX_FUNCTION_LINES),
@@ -161,26 +218,23 @@ module.exports = [
     rules: { 'max-lines-per-function': 'off', 'max-depth': 'off' },
   },
   {
-    files: ['src/api/**'],
-    rules: { 'no-restricted-globals': 'off', 'no-restricted-properties': 'off' },
-  },
-  {
-    files: ['src/api/transport.ts'],
-    rules: { 'no-restricted-imports': restrictedImports([NO_WEBVIEW], [NO_WEBVIEW_PATTERN]) },
-  },
-  {
     files: HAND_WRITTEN_CORE,
     rules: {
-      'no-restricted-imports': restrictedImports(
-        [NO_WEBVIEW, NO_EXPO_FETCH],
-        [NO_WEBVIEW_PATTERN, PURE_CORE_PATTERN],
-      ),
+      'no-restricted-imports': restrictedImports(OUTSIDE_THE_CLIENT_IMPORTS, [PURE_CORE_PATTERN]),
     },
   },
   {
     files: APP_CODE,
     ignores: TOKEN_FILES,
-    rules: { 'no-restricted-syntax': NO_COLOUR_LITERALS },
+    rules: { 'no-restricted-syntax': restrictedSyntax({ colours: true }) },
+  },
+  {
+    files: ['src/api/**'],
+    rules: { 'no-restricted-globals': 'off', 'no-restricted-properties': 'off' },
+  },
+  {
+    files: ['src/api/transport.ts'],
+    rules: { 'no-restricted-imports': restrictedImports([], []) },
   },
   {
     files: ['src/lib/logger.ts'],
