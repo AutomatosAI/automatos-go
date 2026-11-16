@@ -246,9 +246,12 @@ How the phone reads a refusal:
 
 ### 6. The phone saves the pairing and switches
 
-[src/connect/switch.ts](../src/connect/switch.ts) clears the last server first: the query cache and
-its saved copy, the stored workspace id, the active provider and the consent memory. Then it saves
-the paired record to the keychain, and only then moves the current server. `AuthRoot` remounts on
+[src/connect/switch.ts](../src/connect/switch.ts) clears the last server first, with the one
+`clearUserData` every way out runs: the query cache and its saved copy, the stored workspace id, the
+active provider, the consent memory, the encrypted store but Light / Dark and the style, the
+person's files in the cache and their keychain items (the full list:
+[docs/release/privacy-facts.md](release/privacy-facts.md), "On the phone"). Then it saves the paired
+record to the keychain, and only then moves the current server. `AuthRoot` remounts on
 the device session with no `ClerkProvider`, and the gate opens the workspace (see "The gate" in
 [architecture.md](architecture.md)).
 
@@ -275,9 +278,11 @@ connecting: pair it again, with the https address.
 
 **The token.** `amd_` plus `token_urlsafe(32)`. The server stores only its hash. On the phone it
 lives in one keychain item, `automatos.paired-server.v1`, with
-`AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY`: never in a backup, never on another phone, readable after
-the first unlock. It is never in MMKV, the query cache, a log or Sentry
-([src/connect/device-store.ts](../src/connect/device-store.ts)). The record is written to the
+`AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY`: readable after the first unlock, never in iCloud Keychain
+and never readable on another phone. An encrypted backup of the iPhone holds it, and restoring that
+backup onto the same iPhone brings it back; on another phone it cannot be read. On Android,
+`allowBackup` is false in app.json, so no backup carries it. It is never in MMKV, the query cache,
+a log or Sentry ([src/connect/device-store.ts](../src/connect/device-store.ts)). The record is written to the
 keychain before the token is used.
 
 **What a paired phone may do.** On the server an `amd_` bearer is resolved before Clerk
@@ -288,15 +293,20 @@ workspace is 403. A removed member or a deactivated user gets a plain 401 (`core
 SaaS refuses every `amd_` bearer.
 
 **The install id.** 16 random bytes in its own keychain item, `automatos.install-id.v1`, kept
-outside the key registry so sign-out and the reinstall wipe leave it
-([src/connect/install-id.ts](../src/connect/install-id.ts)). Pairing again with the same person and
-install id keeps the same row in Studio: a new token, the old tokens dead.
+outside the key registry on purpose, so sign-out and the reinstall wipe leave it: on an iPhone it
+survives deleting and reinstalling the app ([src/connect/install-id.ts](../src/connect/install-id.ts)).
+It is sent at pairing (`install_id` in `POST /api/v1/mobile/pair`,
+[src/connect/api.ts](../src/connect/api.ts)) and at every push registration
+([src/push/api.ts](../src/push/api.ts)). Pairing again with the same person and install id keeps
+the same row in Studio: a new token, the old tokens dead.
 
 **The reinstall wipe.** iOS keeps keychain items after the app is deleted. A fresh install finds
 no marker in its own small MMKV file and deletes every keychain item in the registry, and the paired
 record once more by name, before anything reads the keychain
 ([src/connect/install-marker.ts](../src/connect/install-marker.ts),
-[src/session/InstallGate.tsx](../src/session/InstallGate.tsx)).
+[src/session/InstallGate.tsx](../src/session/InstallGate.tsx)). So a reinstalled app starts signed
+out and unpaired, but not wholly new: the install id stays (above), and the next pairing or push
+registration sends the same one.
 
 ### Token rotation
 
