@@ -455,8 +455,10 @@ encrypted store. The template keeps every file it fetches in the cache folder, w
 the phone's backup and which the phone may empty, because each can be fetched again. The
 encrypted store's folder is in the phone's backup. Its key is in the keychain for this device
 only, so a backup restored onto another phone cannot be read and the store starts clean there. A
-backup restored onto the same phone after the app was deleted brings the data and its key back
-together. On Android `allowBackup` is false, so no backup carries either. An app whose downloads
+backup restored onto the same phone after the app was deleted may bring the data and its key back
+together. That is read from the platform's documents, which do not agree for a computer backup
+that is not encrypted, and has not been tried on a phone: an app's words assume it can happen. On
+Android `allowBackup` is false, so no backup carries either. An app whose downloads
 must stay keeps them under documents. Template: `src/storage/`, `src/session/InstallGate.tsx`,
 `src/connect/install-id.ts`. Held by: `src/release/__tests__/secure-store-audit.test.ts` and
 `user-data.test.ts`. Owed: a native step that keeps a folder out of the phone's backup, for the
