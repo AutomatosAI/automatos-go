@@ -132,9 +132,14 @@ screens in encrypted storage. It never stores chat text or question text unencry
 or uninstalling removes them. [CHECK: iOS keeps Keychain items after an app is deleted. The app
 must clear its secure storage on the first launch after a reinstall, or this sentence is wrong.]"
 
-**Answer:** The sentence is right except for the install ID, which the app keeps on purpose.
-Signing out deletes the tokens, the notification key and the cache at once. Uninstalling deletes
-the app's files. On an iPhone the Keychain items stay after the app is deleted. If the app is
+**Answer:** The sentence is right except for the install ID, which the app keeps on purpose, and
+the phone's own picture cache, which the app cannot empty. Signing out, and an own server's
+"Remove this phone and forget this server", delete at once the tokens, the notification key, the
+cache of recent screens, the app's settings but Light / Dark and the style, and the files the app
+downloaded for the person (Deliverables opened in the system viewer, the workspace theme's fonts
+and mascot files). Pictures the app has shown may stay in the phone's picture cache until the
+phone clears it. On hosted Studio, "Remove this phone" is not a sign-out: it stops notifications
+and the person stays signed in. Uninstalling deletes the app's files. On an iPhone the Keychain items stay after the app is deleted. If the app is
 installed again, its first launch deletes them before anything reads one. The install ID is the
 only item kept through both. The list also misses one item: the key that encrypts the app's
 storage. Sign-out keeps it, because it is the phone's key and not the person's. A reinstall
@@ -159,10 +164,12 @@ deletes it.
   key names: its token cache (`src/auth/token-cache.ts`) writes through the key registry
   (`src/lib/secure-keys.ts`), which records each name in the index item before the item is
   written. That way every item can be listed and deleted.
-- **One clearing for every way out.** Sign out (hosted Studio), Forget this server and Remove this
-  phone all run `clearUserData` (`src/connect/switch.ts`; wired in
-  `src/app-state/use-sign-out.ts` and `src/connect/use-server-switch.ts`). So does a session the
-  server ends: an expired hosted session, or this phone removed in Studio. In that case it runs
+- **One clearing for every way out.** Sign out (hosted Studio) and "Remove this phone and forget
+  this server" (an own server's one button: the server is asked to remove this phone, then the
+  phone forgets it, `src/connect/remove-device.ts`) both run `clearUserData`
+  (`src/connect/switch.ts`; wired in `src/app-state/use-sign-out.ts` and
+  `src/connect/use-server-switch.ts`). So does a session the server ends: an expired hosted
+  session, or this phone removed in Studio. In that case it runs
   every step but the first, because push leaves on its own (`onSessionExpired`). The steps, in
   order:
   1. Push leaves. Registration stops, the hosted server is asked to delete this phone's row, and
@@ -171,11 +178,14 @@ deletes it.
   3. The stored workspace is cleared.
   4. The provider signs out. Clerk does this first, while its token is still there.
   5. The consent records go.
-  6. Every entry of the encrypted store goes except Light / Dark / System and the style (Studio,
-     Play, HUD or Same as Studio). This includes the consent records, Play's and HUD's looks, the
-     workspace's theme, the "Face ID before approving" setting (back to its default, on) and
+  6. Every entry of the encrypted store goes except Light / Dark / System and the style (one of
+     the five styles, or Same as Studio). This includes the consent records, each style's looks,
+     the workspace's theme, the "Face ID before approving" setting (back to its default, on) and
      push's notes.
-  7. Any copy of a Deliverable the system viewer left in the app's cache is deleted.
+  7. The person's files in the app's cache go (`src/connect/user-files.ts`): any copy of a
+     Deliverable the system viewer left, and the workspace theme's downloaded fonts and mascot
+     files (`src/styles/themes/files.ts`, `clearThemeFiles`). A theme painted again downloads its
+     files afresh.
   8. Every keychain item that is the person's goes.
 
   If Clerk cannot be reached, sign-out stops and says so. The person stays signed in, and only
@@ -190,6 +200,16 @@ deletes it.
   - A store kept in memory was emptied, so it fails the sign-out only if its key will not delete.
   - A keychain item that cannot be deleted also fails the sign-out, after every other step has
     run. It stays in the index, so the next try deletes it.
+- **Remove this phone on hosted Studio is not a way out.** Settings → Account → "Remove this
+  phone" removes this phone from the workspace's devices, then clears push on the phone: the push
+  record, the badge, the delivered notifications and push's notes (`src/push/bind/remove-phone.ts`,
+  `src/push/teardown.ts`). The person stays signed in, and nothing else is deleted. The app says
+  so before it runs: "Notifications stop here until you turn them on again. You stay signed in."
+  (`src/push/strings.ts`).
+- **What leaving cannot delete:** pictures the app has shown (a Deliverable's image, a social
+  post's picture) are drawn by React Native's `Image`, which may keep a copy in the phone's own
+  image cache. The app cannot empty that cache. The copy stays until the phone clears it, and
+  uninstalling the app deletes it.
 - **Two small files of their own:** the install marker (one word, `checked`) and the crash-report
   switch (on or off). Sign-out keeps both; uninstalling deletes them.
 - **The first launch after a reinstall** (`src/connect/install-marker.ts`). The marker is in a file
@@ -227,7 +247,10 @@ deletes it.
   - **Sign-out:** push leaves first, Clerk signs out with its item still there, and afterwards
     the keychain holds only the store's key, the empty index and the install ID. The store holds
     only the phone's choices, and the marker is untouched.
-  - **Forget this server:** the same, and the paired record goes too.
+  - **Remove this phone and forget this server:** the same, and the paired record goes too.
+    Both wire the person's files through `clearUserFiles` (the viewer's copies and the theme's
+    files); `src/connect/__tests__/user-files.test.ts` and
+    `src/styles/themes/__tests__/files.test.ts` ("leaving deletes the theme files").
   - **Clerk offline:** a refused sign-out deletes nothing but the cache.
   - **A session the server ended:** the same clearing, without push's leave.
   - **A store that was not emptied:** the store's key is deleted too. An entry that will not
@@ -241,9 +264,12 @@ deletes it.
 
 - Section 07, add to the list: "the key that encrypts the app's storage on your phone."
 - Section 07, in place of "Signing out or uninstalling removes them." and its `[CHECK]`:
-  "When you sign out, forget your own server or remove this phone, the app deletes your sign-in
-  or pairing token, the notification key, the cache and your settings in the app from the phone,
-  except light or dark mode and the style. If you uninstall the app, its storage goes with it.
+  "When you sign out, or remove this phone and forget your own server, the app deletes from the
+  phone your sign-in or pairing token, the notification key, the cache of recent screens, the
+  files it downloaded for you and your settings in the app, except light or dark mode and the
+  style. Pictures the app has shown may stay in your phone's image cache until the phone clears
+  it. On our hosted service, Remove this phone stops notifications on this phone only, and you
+  stay signed in. If you uninstall the app, its storage goes with it.
   On an iPhone, a reinstalled app deletes anything left in the Keychain the first time it opens,
   before it reads any of it. The install ID stays on the phone through sign-out and reinstalling,
   so that pairing again reuses this phone's entry in Studio. It is a random number and contains

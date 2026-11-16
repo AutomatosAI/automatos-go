@@ -9,10 +9,11 @@
 // step's memory, the session's other memory (sessionMemory: today's brief's wait) and the left own
 // server's consent records, every entry of the encrypted store but
 // the phone's own choices (PHONE_CHOICES: Light / Dark / System and the style), the person's files
-// in the app's cache (the Deliverable viewer's copies), then every keychain item that is the
-// person's (src/storage/secure-registry.ts clearUserKeys: Clerk's, the paired record, the push
-// record). The install id, the encrypted store's key and the install marker (a file of its own)
-// stay; the store's key goes too when the store was not emptied (an entry that would not delete,
+// in the app's cache (user-files.ts: the Deliverable viewer's copies and the theme's downloaded
+// fonts and mascot files), then every keychain item that is the person's
+// (src/storage/secure-registry.ts clearUserKeys: Clerk's, the paired record, the push record).
+// The install id, the encrypted store's key and the install marker (a file of its own) stay; the
+// store's key goes too when the store was not emptied (an entry that would not delete,
 // which still fails the leaving, or a launch whose store fell back to memory and never opened the
 // file): without it the next launch cannot read what is left and starts a new file.
 //
@@ -77,7 +78,7 @@ export type ClearUserDataDeps = {
   readonly storage: () => Pick<ListableStorage, 'keys' | 'removeItem'>;
   /** false when this launch's store fell back to memory: the file was never opened or cleared. */
   readonly storagePersistent: () => boolean;
-  /** Deletes the person's files in the app's cache (src/cc/deliverables/open-file.ts). */
+  /** Deletes the person's files in the app's cache (user-files.ts clearUserFiles). */
   readonly files: () => void;
 };
 

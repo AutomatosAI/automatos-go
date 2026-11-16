@@ -296,7 +296,7 @@ describe('(b) leaving: one clearUserData', () => {
     expect(leftovers(phone).keychain).toEqual(KEPT_KEYCHAIN);
   });
 
-  it('every way out runs it: Sign out, Forget this server, Remove this phone and an ended session', () => {
+  it('every way out runs it: Sign out, Remove this phone and forget this server, and an ended session', () => {
     const signOut = read('src/app-state/use-sign-out.ts');
     expect(signOut).toContain('const leaving = own ? forgetServer() : leaveHosted();');
     expect(signOut).toContain('endSession().catch(');
@@ -305,7 +305,11 @@ describe('(b) leaving: one clearUserData', () => {
     expect(wiring).toContain('forget: serverSwitch.forgetServer,');
     expect(wiring).toContain('keys: secureKeys,');
     expect(wiring).toContain('storage: appStorage,');
-    expect(wiring).toContain('files: clearViewerFiles,');
+    // claims audit, 16 Nov: the theme's downloaded files go too, beside the viewer's copies
+    expect(wiring).toContain('files: clearUserFiles,');
+    const files = read('src/connect/user-files.ts');
+    expect(files).toContain('clearViewerFiles,');
+    expect(files).toContain('clearThemeFiles,');
     expect(wiring).toContain('sessionMemory: digestNow.reset,');
   });
 });

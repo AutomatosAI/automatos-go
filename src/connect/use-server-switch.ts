@@ -1,9 +1,9 @@
 // The switch (switch.ts) wired to the app: its one query cache and persister, the per-server
 // workspace ids, the session's active provider, the session's memory (today's brief's wait), the
-// keychain's paired record and key registry, the encrypted store, the Deliverable viewer's files and
-// the current server. Screens and hooks only
-// call signOut() (the hosted Sign out), forgetServer(), connectTo(record) and endSession() (the
-// expiry listener). Forget this server is
+// keychain's paired record and key registry, the encrypted store, the person's files in the cache
+// (user-files.ts: the Deliverable viewer's copies and the theme's files) and the current server.
+// Screens and hooks only call signOut() (the hosted Sign out), forgetServer(), connectTo(record)
+// and endSession() (the expiry listener). Forget this server is
 // Remove this phone first (remove-device.ts, US-006i): the server revokes this phone's row, then
 // the switch forgets it here; when the server couldn't be told, a toast says Studio may still list
 // the phone.
@@ -13,7 +13,6 @@ import { useMemo } from 'react';
 import { expoTransport } from '../api/transport';
 import { appPersister, appQueryClient } from '../app-state/query-root';
 import { useAuthSession } from '../auth/AuthRoot';
-import { clearViewerFiles } from '../cc/deliverables/open-file';
 import { consentMemory } from '../consent/app-store';
 import { digestNow } from '../push/settings/digest-now-store';
 import { secureKeys } from '../lib/secure-store';
@@ -25,6 +24,7 @@ import { deviceStore } from './device-store';
 import { removeThisPhone } from './remove-device';
 import { REMOVE_DEVICE_COPY } from './strings';
 import { createServerSwitch, type ConsentPort, type ServerSwitch } from './switch';
+import { clearUserFiles } from './user-files';
 
 /**
  * The consent step's memory is dropped, and the consent records of a server left behind go with it,
@@ -49,7 +49,7 @@ export function useServerSwitch(): ServerSwitch {
       keys: secureKeys,
       storage: appStorage,
       storagePersistent: isStoragePersistent,
-      files: clearViewerFiles,
+      files: clearUserFiles,
       deviceStore,
       servers: currentServers,
     });
