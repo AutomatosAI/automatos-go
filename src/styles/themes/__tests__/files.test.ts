@@ -216,7 +216,10 @@ describe('leaving deletes the theme files', () => {
     native.sizes.set(`file:///cache/${THEME_FILES_FOLDER}/.partial/left-over`, 10);
     clearThemeFiles();
     expect([...native.sizes.keys()]).toEqual([]);
-    expect(native.calls).toContainEqual({ op: 'rmdir', uri: `file:///cache/${THEME_FILES_FOLDER}` });
+    expect(native.calls).toContainEqual({
+      op: 'rmdir',
+      uri: `file:///cache/${THEME_FILES_FOLDER}`,
+    });
     expect(() => clearThemeFiles()).not.toThrow();
   });
 

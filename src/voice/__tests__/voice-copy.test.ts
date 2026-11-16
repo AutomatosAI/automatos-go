@@ -8,7 +8,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { pickVoice, type SpeechVoice } from '../speech/voice-pick';
 import { VOICE_SETTINGS_COPY } from '../strings';
-import { PHONE_VOICE_COPY as IOS } from '../voice-copy';
 import { PHONE_VOICE_COPY as ANDROID } from '../voice-copy.android';
 
 const NETWORK_ONLY: readonly SpeechVoice[] = [
@@ -27,10 +26,10 @@ afterEach(() => {
 
 describe("Settings → Voice's line on the phone's voice", () => {
   it('on the iPhone says it uses the voices on this phone, as before', () => {
-    expect(IOS.lede).toBe(
+    // node reads voice-copy.ts, the iPhone's (Metro takes the .android twin on Android only)
+    expect(VOICE_SETTINGS_COPY.lede).toBe(
       'How Auto sounds when it answers you out loud. It uses the voices on this phone.',
     );
-    expect(VOICE_SETTINGS_COPY.lede).toBe(IOS.lede);
   });
 
   it("on Android names the engine's default voice, because none on the phone may be found", async () => {
