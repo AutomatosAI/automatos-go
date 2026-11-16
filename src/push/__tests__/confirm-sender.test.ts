@@ -86,8 +86,8 @@ describe('a named agent’s question: read first, then posted', () => {
     },
   );
 
-  it('the words on the server with their markdown marks still match', async () => {
-    const marked = grant({ question_md: '**Ship** the _Lisbon_\n\n deck?' });
+  it('the words on the server as markdown (a link, emphasis): rendered as the server does, they match', async () => {
+    const marked = grant({ question_md: '**Ship** the [_Lisbon_](https://example.test) deck?' });
     const { deps } = overRoute({ [LIST]: listing(marked) });
     expect(await handleResponse(reply(AGENT_TITLE), deps)).toMatchObject({
       toast: 'Answered #0419.',
@@ -117,7 +117,7 @@ describe('nothing is posted unless the server confirms it all', () => {
 
   it.each([
     ['other words', 'Delete the production branch?'],
-    ['the same words behind a link', '[Ship](https://example.test) the Lisbon deck?'],
+    ['the question cut short', 'Ship the Lisbon deck'],
   ])('%s on the server', async (_name, words) => {
     const { deps, paths } = overRoute({ [LIST]: listing(grant({ question_md: words })) });
     expect(await handleResponse(reply(AGENT_TITLE), deps)).toEqual(
@@ -227,9 +227,30 @@ describe('the once-only key is used only by a Reply that posts', () => {
   });
 });
 
+describe('the signed id is matched as text', () => {
+  it('a row id the JSON number cannot hold exactly matches nothing; a longer id is not read', async () => {
+    const big = signed({
+      ...QUESTION_FIELDS,
+      grant_id: '9007199254740993',
+      link_id: '9007199254740993',
+    });
+    const { deps, paths } = overRoute({ [LIST]: listing(grant({ id: 9007199254740992 })) });
+    const push = response(big, 'reply', { userText: REPLY_TEXT, body: WORDS, title: AGENT_TITLE });
+    expect(await handleResponse(push, deps)).toEqual(inTheApp(PUSH_ACTION_COPY.notSent));
+    expect(paths()).toEqual([]);
+  });
+
+  it('a safe id is matched by its whole text, never by one that starts with it', async () => {
+    const { deps } = overRoute({ [LIST]: listing(grant({ id: 420 }), grant({ id: 4200 })) });
+    expect(await handleResponse(reply(AGENT_TITLE), deps)).toEqual(
+      inTheApp(PUSH_LINK_COPY.questionGone),
+    );
+  });
+});
+
 describe('the pure checks', () => {
-  it('sameWords: marks and spaces aside; never empty, a link or a cut question', () => {
-    expect(sameWords('# Ship  the\n- `Lisbon` ~~deck~~?', 'Ship the Lisbon deck?')).toBe(true);
+  it('sameWords: as written, or as the server renders the markdown; never a cut or empty one', () => {
+    expect(sameWords('**Ship** the `Lisbon` ~~deck~~?', 'Ship the Lisbon deck?')).toBe(true);
     expect(sameWords('Ship the Lisbon deck?', 'Ship the Lisbon deck…')).toBe(false);
     expect(sameWords('', '')).toBe(false);
   });

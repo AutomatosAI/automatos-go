@@ -56,6 +56,18 @@ export const PUSH_TITLE_SENDER = 'Auto';
 export const PUSH_TITLE_SEPARATOR = ' · ';
 export const PUSH_AI_BADGES: readonly string[] = Object.freeze(['AI', 'IA', 'KI']);
 
+/**
+ * How the server cuts a question's words for a push (inbound/question-text.ts): at most this many
+ * characters, ending with the ellipsis when cut, read from at most the first scan's characters of
+ * its markdown.
+ */
+export const PUSH_QUESTION_MAX_CHARS = 500;
+export const PUSH_QUESTION_SCAN_MAX_CHARS = 8 * PUSH_QUESTION_MAX_CHARS;
+export const PUSH_ELLIPSIS = '\u2026';
+
+/** A grant id matched as text: a row id of at most this many digits (every one a safe integer). */
+export const ROW_ID_MAX_DIGITS = 15;
+
 /** The link_type of a question push: its grant_id is what a reply answers (W2 US-011a). */
 export const QUESTION_LINK_TYPE = 'question';
 

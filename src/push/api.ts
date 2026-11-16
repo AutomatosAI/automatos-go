@@ -8,7 +8,13 @@
 import type { ApiClient } from '../api/client';
 import { routes } from '../api/routes';
 import { isTaskId, isUsableId } from '../navigation/routes';
-import { PENDING_STATUS, QUESTION_KIND, ROW_ID_PATTERN, UUID_PATTERN } from './config';
+import {
+  PENDING_STATUS,
+  QUESTION_KIND,
+  ROW_ID_MAX_DIGITS,
+  ROW_ID_PATTERN,
+  UUID_PATTERN,
+} from './config';
 import { PUSH_ROUTES } from './routes';
 import {
   answerSchema,
@@ -90,6 +96,7 @@ function checked(value: string, valid: (text: string) => boolean, what: string):
 
 const isUuid = (value: string) => UUID_PATTERN.test(value);
 const isRowId = (value: string) => ROW_ID_PATTERN.test(value);
+const isMatchableRowId = (value: string) => value.length <= ROW_ID_MAX_DIGITS && isRowId(value);
 
 export function registerDevice(
   client: ApiClient,
@@ -205,13 +212,14 @@ export async function askedQuestion(
   grantId: string,
   signal?: AbortSignal,
 ): Promise<AskedQuestion | null> {
-  const id = Number(checked(grantId, isRowId, 'A question id'));
+  const id = checked(grantId, isMatchableRowId, 'A question id');
   const answer = await client.request(PUSH_ROUTES.questions.list, {
     query: { status: PENDING_STATUS, kind: QUESTION_KIND },
     schema: askedQuestionsSchema,
     signal,
   });
-  const grant = answer.grants.find((row) => row.id === id);
+  // as text: a row id the JSON number could not hold exactly matches nothing
+  const grant = answer.grants.find((row) => Number.isSafeInteger(row.id) && String(row.id) === id);
   if (!grant) return null;
   return Object.freeze({
     open: grant.status === PENDING_STATUS,

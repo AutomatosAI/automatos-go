@@ -5,16 +5,15 @@
 // only when the server still has the question open, its words are the signed question's, and the
 // title is exactly "{the agent the server says asked} · AI", "· IA" or "· KI": then the sender
 // shown is the one the server names. Nothing from the notification's text chooses what is read.
-// The words are compared with the marks a question's markdown may hold (emphasis, code, strike,
-// headings, quotes, list dashes) and the spaces left out on both sides, since the server sends a
-// question's plain text; a question with a link, a picture or more than 500 characters does not
-// match, and is answered in the app. A read that fails (no network, no answer in time, a refusal)
-// posts nothing. Pure over its port; never throws. Logs carry kinds only.
+// The words are compared as written, then as the server makes a push's words from the question's
+// markdown (question-text.ts), never loosened further. A read that fails (no network, no answer in
+// time, a refusal) posts nothing. Pure over its port; never throws. Logs carry kinds only.
 
 import { logger } from '../../lib/logger';
 import type { AskedQuestion } from '../api';
 import { STALE_CHECK_TIMEOUT_MS } from '../config';
 import { probe, type StaleChecks } from '../links/stale';
+import { questionWords } from './question-text';
 import { titlesOf } from './shown';
 
 /** What a Reply's title and question must be confirmed against. */
@@ -24,18 +23,10 @@ export type SenderToConfirm = Readonly<{ title: string; question: string }>;
 export type SenderCheck =
   'confirmed' | 'question_closed' | 'words_differ' | 'sender_unchecked' | 'read_failed';
 
-const MARKS = /[*_`~#>]/g;
-const LIST_DASH = /^[ \t]*[-+][ \t]+/gm;
-const SPACES = /\s+/g;
-
-function wordsOf(text: string): string {
-  return text.replace(LIST_DASH, '').replace(MARKS, '').replace(SPACES, ' ').trim();
-}
-
-/** The server's question and the signed one say the same words, marks and spaces aside. */
+/** The signed words are the server's question: as written, or as the server renders its markdown. */
 export function sameWords(asked: string, signed: string): boolean {
-  const words = wordsOf(signed);
-  return words !== '' && wordsOf(asked) === words;
+  if (!signed) return false;
+  return asked === signed || questionWords(asked) === signed;
 }
 
 /** The title is "{asker} · {badge}" for the agent the server says asked. */

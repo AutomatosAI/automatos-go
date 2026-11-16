@@ -284,18 +284,20 @@ and the question opens in the app, where the server's own text is shown:
 - A title that is absent or one of Auto's three posts at once.
 - Any other title (an agent's name) is confirmed first. The phone reads the open questions the
   Questions screen lists (`GET /api/v1/approval-grants?status=pending&kind=question`, the
-  person's own sign-in) and takes the one whose id is the signed `grant_id`; nothing the
-  notification shows chooses it. For one question the route returns its `id`, `status`,
+  person's own sign-in) and takes the one whose id is the signed `grant_id`, compared as text (a
+  signed id over 15 digits is not read); nothing the notification shows chooses it. For one question the route returns its `id`, `status`,
   `question_md` (its words, as markdown), `options` and `owner.agent.name` (the agent that asked).
-  The Reply posts only if that question is still open, its words are the signed `question`'s (the
-  marks a question's markdown may hold, such as `**`, `_`, `#`, `>` and list dashes, and the spaces,
-  left out on both sides), and the title is exactly "{that agent's name} · AI", "· IA" or "· KI".
+  The Reply posts only if that question is still open, its words are the signed `question`, as
+  written or as the server makes a push's words from a question's markdown (the same rules,
+  mirrored on the phone in `src/push/inbound/question-text.ts`, and never looser: a character
+  inside a word or a mark the rendering keeps is never dropped), and the title is exactly "{that
+  agent's name} · AI", "· IA" or "· KI".
   Then the sender shown is the one the server names. Otherwise:
 
   | The server says | The line |
   |---|---|
   | The question is not open (answered, closed, or not listed) | "That question was already answered or closed." |
-  | Other words (also: a link or picture in the question, or one over 500 characters, which the push shortens) | "This notification's words couldn't be matched to the question, so nothing was sent. Answer it here." |
+  | Other words | "This notification's words couldn't be matched to the question, so nothing was sent. Answer it here." |
   | Another agent asked, or it names no agent | "The sender on this notification couldn't be matched to who asked, so nothing was sent. Answer it here." |
   | Nothing: no network, a refusal (a 403 for a person who may not list questions, a 404), an answer that is not the list, or no answer in 4 s | "Not sent. Open the question to answer it." |
 
@@ -311,8 +313,10 @@ and the question opens in the app, where the server's own text is shown:
   replied to this notification, so nothing was sent again."
 
 What a person sees: a Reply to a question Auto asked, or one a named agent asked whose name the
-server confirms, posts and says "Answered". A question whose words carry a link or a picture, or
-run past 500 characters, is answered in the app.
+server confirms, posts and says "Answered". An agent renamed between asking and the Reply is not
+the name on the notification any more, so that Reply opens the question in the app: the title's
+name and `owner.agent.name` are the same field (the agent's name), read when it asked and when
+the list is read.
 
 [src/push/\_\_tests\_\_/reply-binding.test.ts](../../src/push/__tests__/reply-binding.test.ts),
 [confirm-sender.test.ts](../../src/push/__tests__/confirm-sender.test.ts) and
