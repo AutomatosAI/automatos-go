@@ -42,6 +42,23 @@ export function shouldRetryQuery(failureCount: number, error: unknown): boolean 
   return failureCount < QUERY_MAX_RETRIES && isRetryable(error);
 }
 
+/** A limit that named no time is not asked again for this long after it came. */
+export const LIMIT_UNKNOWN_WAIT_MS = 60_000;
+
+/**
+ * Whether a query's last error is a limit that has not lifted yet: until its retryAt, or for
+ * LIMIT_UNKNOWN_WAIT_MS after it came when it named no time. `now` is the phone's clock, the one
+ * the client read retryAt against.
+ */
+export function limitHolds(query: Pick<Query, 'state'>, now: number = Date.now()): boolean {
+  const { status, error, errorUpdatedAt } = query.state;
+  if (status !== 'error' || !isApiError(error) || error.kind !== 'limit') return false;
+  return now < (error.retryAt ?? errorUpdatedAt + LIMIT_UNKNOWN_WAIT_MS);
+}
+
+/** Asked again by a mount, a return to the front or a reconnect only once a limit has lifted. */
+const unlessLimited = (query: Query) => !limitHolds(query);
+
 export function createQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
@@ -49,6 +66,12 @@ export function createQueryClient(): QueryClient {
         staleTime: QUERY_STALE_TIME_MS,
         gcTime: QUERY_GC_TIME_MS,
         retry: shouldRetryQuery,
+        // a 429 is not asked again by a remount, a return or a reconnect until it lifts: the
+        // library would otherwise ask again on every mount of a query in error with no data
+        retryOnMount: unlessLimited,
+        refetchOnMount: unlessLimited,
+        refetchOnWindowFocus: unlessLimited,
+        refetchOnReconnect: unlessLimited,
       },
       // 'always': sent at once whatever the connection, never paused to replay later; no retry
       mutations: { networkMode: 'always', retry: false },
