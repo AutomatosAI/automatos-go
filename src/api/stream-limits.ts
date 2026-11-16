@@ -109,7 +109,11 @@ export function streamLimits(idleMs: number, maxMs: number): StreamLimits {
  * 'stream' ApiError, thrown from the reader's own loop so that the body is cancelled behind it.
  */
 export function checkLines(pieces: readonly string[], maxChars = STREAM_LINE_MAX_CHARS): void {
-  if (!pieces.some((piece) => piece.length > maxChars)) return;
+  if (pieces.some((piece) => piece.length > maxChars)) throw lineTooLong(maxChars);
+}
+
+/** What a line or event over its cap ends the stream with: the kind 'stream'. */
+export function lineTooLong(maxChars: number): ApiError {
   const cause = new StreamLimitError('line', `a line over ${maxChars} characters`);
-  throw new ApiError('stream', { cause });
+  return new ApiError('stream', { cause });
 }

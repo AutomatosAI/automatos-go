@@ -12,9 +12,12 @@ import { logger } from '../lib/logger';
 import type { ApiClient, StreamCallOptions } from './client';
 import { CHAT_TURN_IDLE_TIMEOUT_MS, CHAT_TURN_MAX_MS } from './config';
 import { ApiError, isAbortError, isApiError } from './errors';
-import { checkLines } from './stream-limits';
+import { heldText } from './held-text';
 import type { Route } from './routes';
+import { checkLines } from './stream-limits';
 import type { StreamingResponse } from './transport-types';
+
+const NEWLINE = '\n';
 
 export type StreamOutcome = 'complete' | 'aborted';
 
@@ -79,6 +82,29 @@ export async function readChunks(
   }
 }
 
+/**
+ * A turn's body as Frames, a chunk at a time: a line still coming is held (held-text.ts) and
+ * split only when a chunk ends one, so a long line in small chunks costs its length once. end()
+ * gives the last line when the body ended without a newline.
+ */
+export function turnLines(onFrame: (frame: Frame) => void) {
+  const held = heldText(NEWLINE);
+  return Object.freeze({
+    push: (chunk: string) => {
+      const text = held.take(chunk);
+      if (text === null) return; // no line ends in it: held, its length counted
+      const { lines, rest } = pushChunk('', text);
+      checkLines([...lines, rest]);
+      held.keep(rest);
+      lines.forEach((line) => onFrame(parseLine(line)));
+    },
+    end: () => {
+      const last = held.text();
+      if (last.trim() !== '') onFrame(parseLine(last));
+    },
+  });
+}
+
 /** A turn's call: its body and signal, with the connect and idle timeouts when given. */
 function turnCall(
   body: unknown,
@@ -109,17 +135,8 @@ export async function streamTurn(
   const call = turnCall(body, signal, connectTimeoutMs, idleTimeoutMs);
   const response = await openStream(client, route, call);
   if (!response) return 'aborted';
-  let buffer = '';
-  const outcome = await readChunks(
-    response,
-    (chunk) => {
-      const { lines, rest } = pushChunk(buffer, chunk);
-      checkLines([...lines, rest]);
-      buffer = rest;
-      lines.forEach((line) => onFrame(parseLine(line)));
-    },
-    signal,
-  );
-  if (outcome === 'complete' && buffer.trim() !== '') onFrame(parseLine(buffer));
+  const lines = turnLines(onFrame);
+  const outcome = await readChunks(response, lines.push, signal);
+  if (outcome === 'complete') lines.end();
   return outcome;
 }
