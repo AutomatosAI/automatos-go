@@ -402,8 +402,10 @@ that server's: the edition rule above is PRD-266's, not the app's.
 - **What it sends:** `POST /api/v1/reports` with `target_type` (`message` or `deliverable`),
   `target_id`, one reason (harmful, offensive, inaccurate, privacy or other) and an optional note
   of up to 500 characters, and no other field (`src/api/reports.ts`). It goes through the app's one
-  API client to the server the phone is signed in to or paired with. The sheet says "Your
-  workspace owner will see this report." The toast says "Thanks. Your report was sent.", or "You
+  API client to the server the phone is signed in to or paired with. The sheet says, on hosted
+  Studio, "Your workspace owner and the Automatos moderation team will see this report.", and on
+  an own server "Your workspace owner will see this report." (`reportIntro` in `src/ui/report.ts`,
+  from the client's server). The toast says "Thanks. Your report was sent.", or "You
   already reported this. Thanks."
 - **Where it goes, per edition** (the server's routing, PRD-266 US-016; D15):
   - **Hosted Studio:** the workspace owner, as a notification in Automatos, and Automatos AI's
@@ -411,8 +413,8 @@ that server's: the edition rule above is PRD-266's, not the app's.
   - **Your own server:** its operator only.
   - A crash report the phone sends later can carry the request's method, route and status (`POST
     /api/v1/reports 201`, KR7), never its reason, note or target.
-  - The sheet's line names the workspace owner only. On hosted Studio, Automatos AI's moderation
-    inbox sees the report too: the policy says so (section 12).
+  - On hosted Studio the sheet's line names the moderation team beside the workspace owner, and the
+    policy says so too (section 12).
 
 **Evidence:**
 

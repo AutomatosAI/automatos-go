@@ -2,6 +2,7 @@
 // shows come from src/api/strings.ts through userMessage(); these are the frames around them.
 
 import type { ReportReason, ReportTargetType } from '../api/reports';
+import type { ServerSource } from '../api/server';
 
 export const UI_COPY = Object.freeze({
   loading: 'Loading…',
@@ -41,7 +42,15 @@ export const REPORT_COPY = Object.freeze({
     message: 'Report this message',
     deliverable: 'Report this Deliverable',
   } satisfies Record<ReportTargetType, string>),
-  intro: 'Your workspace owner will see this report.',
+  /**
+   * Who sees the report, by the server it goes to (report.ts reportIntro, from the client's
+   * server): on the hosted server Automatos's moderation team too (docs/release/privacy-facts.md
+   * 'Report this').
+   */
+  intro: Object.freeze({
+    hosted: 'Your workspace owner and the Automatos moderation team will see this report.',
+    own: 'Your workspace owner will see this report.',
+  } satisfies Record<ServerSource, string>),
   reasonLabel: 'What is wrong with it?',
   noteLabel: 'Anything else (optional)',
   notePlaceholder: 'Add a short note',
