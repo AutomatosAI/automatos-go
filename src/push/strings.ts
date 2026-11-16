@@ -75,8 +75,6 @@ export const PUSH_SETTINGS_COPY = Object.freeze({
   redactDetail: 'Questions then say only that one is waiting, and open the app.',
   faceIdSection: 'Approvals and answers',
   loading: 'Reading your notification settings…',
-  on: 'On',
-  off: 'Off',
 });
 
 const minutesWord = (minutes: number) => (minutes === 1 ? '1 minute' : `${minutes} minutes`);

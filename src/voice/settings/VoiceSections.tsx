@@ -6,12 +6,11 @@
 // the server voice) and Reset to default. The primitives carry the style's dress (Studio, Play,
 // HUD); the rows and words are view-model.ts's and server-view-model.ts's.
 
-import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Check from 'lucide-react-native/icons/check';
 
 import { useTokens } from '../../styles/theme';
-import { Button, Card, Divider, ListRow, Slider, Text } from '../../ui';
+import { Button, Card, Divider, ListRow, Section, SectionNote, Slider, Text } from '../../ui';
 import { ICON_STROKE } from '../../ui/paint';
 import type { LanguageRow } from '../language/language-rows';
 import { LANGUAGE_COPY, VOICE_SETTINGS_COPY } from '../strings';
@@ -23,18 +22,6 @@ const COPY = VOICE_SETTINGS_COPY;
 const MARK_SIZE = 18;
 const NOTE_LEVEL = 6;
 const SLIDER_LABEL_LEVEL = 4;
-
-function Titled({ title, children }: { readonly title: string; readonly children: ReactNode }) {
-  const { spacing } = useTokens();
-  return (
-    <View style={{ gap: spacing.space3 }}>
-      <Text variant="eyebrow" accessibilityRole="header">
-        {title}
-      </Text>
-      {children}
-    </View>
-  );
-}
 
 /** The chosen row's check; the same room on the others, so no row shows a chevron. */
 function Mark({ selected }: { readonly selected: boolean }) {
@@ -70,16 +57,6 @@ function Rows<R extends ChoiceRow>(props: {
   );
 }
 
-/** A muted line under a section's rows; nothing without words. */
-function Note({ text }: { readonly text: string | null | undefined }) {
-  if (!text) return null;
-  return (
-    <Text level={NOTE_LEVEL} tone="muted">
-      {text}
-    </Text>
-  );
-}
-
 export type LanguageListProps = {
   readonly rows: readonly LanguageRow[];
   readonly note?: string | null;
@@ -89,10 +66,10 @@ export type LanguageListProps = {
 /** "I speak": Automatic, English and Portuguese (Brazil), one chosen. */
 export function LanguageList({ rows, note, onChoose }: LanguageListProps) {
   return (
-    <Titled title={LANGUAGE_COPY.section}>
+    <Section title={LANGUAGE_COPY.section}>
       <Rows rows={rows} hint={LANGUAGE_COPY.rowHint} onPress={(row) => onChoose(row.key)} />
-      <Note text={note} />
-    </Titled>
+      <SectionNote>{note}</SectionNote>
+    </Section>
   );
 }
 
@@ -104,9 +81,9 @@ export type ServerVoiceListProps = {
 /** "Auto's voice" with the server voice: the server's voices, then this phone's. */
 export function ServerVoiceList({ rows, onChoose }: ServerVoiceListProps) {
   return (
-    <Titled title={COPY.voiceSection}>
+    <Section title={COPY.voiceSection}>
       <Rows rows={rows} onPress={(row) => onChoose(row.choice)} />
-    </Titled>
+    </Section>
   );
 }
 
@@ -119,12 +96,10 @@ export type VoiceListProps = {
 
 export function VoiceList({ title, rows, help, onChoose }: VoiceListProps) {
   return (
-    <Titled title={title}>
+    <Section title={title}>
       <Rows rows={rows} onPress={(row) => onChoose(row.voice)} />
-      <Text level={NOTE_LEVEL} tone="muted">
-        {help}
-      </Text>
-    </Titled>
+      <SectionNote>{help}</SectionNote>
+    </Section>
   );
 }
 
@@ -172,7 +147,7 @@ export type SoundSectionProps = SoundProps & {
 export function SoundSection({ sound, resetHint, onSlide, onRelease, onReset }: SoundSectionProps) {
   const { spacing } = useTokens();
   return (
-    <Titled title={sound.title}>
+    <Section title={sound.title}>
       <Card>
         <View style={{ gap: spacing.space5 }}>
           {sound.sliders.map((slider) => (
@@ -191,7 +166,7 @@ export function SoundSection({ sound, resetHint, onSlide, onRelease, onReset }: 
         onPress={onReset}
         accessibilityHint={resetHint}
       />
-    </Titled>
+    </Section>
   );
 }
 

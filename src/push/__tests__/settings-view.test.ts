@@ -9,6 +9,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { Capability } from '../../api/discovery';
 import { STEP_UP_SETTING_COPY } from '../../step-up/strings';
+import { switchWord } from '../../ui/switch-model';
 import type { RegistrationOutcome } from '../registration/register';
 import { pushStatus, type OffReason, type PushStatus } from '../registration/state';
 import { deviceSchema, preferencesSchema, type Device } from '../schemas/server';
@@ -22,7 +23,6 @@ import {
   redactView,
   screenHead,
   sectionsShown,
-  switchWord,
   thisPhoneRow,
   type PhoneContext,
 } from '../settings/view-model';

@@ -17,6 +17,8 @@ export { LoadingState, type LoadingStateProps } from './LoadingState';
 export { Pill, type PillProps } from './Pill';
 export { ReportSheet, type ReportSheetProps } from './ReportSheet';
 export { Screen, type ScreenProps } from './Screen';
+export { Section, type SectionProps } from './Section';
+export { SectionNote, type SectionNoteProps } from './SectionNote';
 export { Sheet, type SheetProps } from './Sheet';
 export {
   SegmentedControl,
@@ -25,6 +27,8 @@ export {
 } from './SegmentedControl';
 export { Slider, type SliderProps } from './Slider';
 export { StatusPip, type StatusPipProps } from './StatusPip';
+export { Switch, type SwitchProps } from './Switch';
+export { SwitchRow, type SwitchRowProps } from './SwitchRow';
 export { Text, type TextProps } from './Text';
 export { TextField, type TextFieldProps } from './TextField';
 export { Toast, type ToastProps } from './Toast';

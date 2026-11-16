@@ -1,9 +1,8 @@
 // Settings → Privacy & legal (US-021d; R03, R04): the privacy policy, the Terms and support in the
 // system browser, the 'Send crash reports' switch (src/observability, KR7), the test report while
 // it is on (confirmed in a toast) and the version with the code the app runs. The rows are
-// privacy-section.ts's; the row, card and divider are src/ui's, so every style dresses them. src/ui
-// has no switch primitive: the switch row is the one Settings → Notifications built (src/push), so
-// the app has one. Nothing deletes an account or a workspace (D63); nothing commercial (D8).
+// privacy-section.ts's; the row, card, divider, section and switch row are src/ui's, so every style
+// dresses them. Nothing deletes an account or a workspace (D63); nothing commercial (D8).
 
 import Constants from 'expo-constants';
 import * as Updates from 'expo-updates';
@@ -13,8 +12,8 @@ import ExternalLink from 'lucide-react-native/icons/external-link';
 
 import { logger } from '../../lib/logger';
 import { crashReportsEnabled, sendTestReport, setCrashReportsEnabled } from '../../observability';
-import { Section } from '../../push/settings/components/Section';
-import { SwitchRow } from '../../push/settings/components/Switch';
+import { Section } from '../../ui/Section';
+import { SwitchRow } from '../../ui/SwitchRow';
 import { useTokens } from '../../styles/theme';
 import { Button, Card, Divider, ListRow, useToast } from '../../ui';
 import { ICON_STROKE } from '../../ui/paint';

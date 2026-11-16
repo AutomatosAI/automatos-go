@@ -14,7 +14,7 @@ import { useGoBack } from '../../navigation/use-go-back';
 import { useTokens } from '../../styles/theme';
 import { IconButton, Screen, Text } from '../../ui';
 import { PUSH_SETTINGS_COPY } from '../strings';
-import { Section } from './components/Section';
+import { Section } from '../../ui/Section';
 import { PhoneStatus } from './PhoneStatus';
 import { PreferenceSections } from './PreferenceSections';
 import { FaceIdSection, QuestionTextSection } from './PrivacySections';

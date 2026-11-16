@@ -46,7 +46,7 @@ describe('the capability', () => {
 
 describe('the switch', () => {
   it('is the Settings switch row, named "Pause suggestions" with its line as the hint', () => {
-    expect(section).toContain("import { SwitchRow } from '../push/settings/components/Switch';");
+    expect(section).toContain("import { SwitchRow } from '../ui/SwitchRow';");
     expect(section).toMatch(/title=\{PAUSE_COPY\.title\}\s+detail=\{PAUSE_COPY\.detail\}/);
   });
 
