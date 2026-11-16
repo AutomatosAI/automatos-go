@@ -74,7 +74,10 @@ export const QUESTION_LINK_TYPE = 'question';
 /** A reply from the notification is trimmed and cut to this many characters (code points). */
 export const ANSWER_MAX_CHARS = 4000;
 
-/** The handled responses remembered across launches: keys only, the oldest dropped first. */
+/**
+ * The handled responses remembered across launches: keys and their signed times, the oldest dropped
+ * first; the newest signed time dropped stays as the floor (inbound/dedupe.ts).
+ */
 export const HANDLED_KEYS_MAX = 50;
 
 /** The link types a push opens a record for (W2 US-011a's producers; the web's linkFor). */
@@ -162,7 +165,7 @@ export const ACTIVE_DEVICE_STATUS = 'active';
  */
 export const SIGN_OUT_DELETE_TIMEOUT_MS = 4000;
 
-/** The MMKV item of the handled response keys (dedupe.ts's stored form: keys only, never a payload). */
+/** The MMKV item of the handled responses (dedupe.ts's stored form: keys, signed times, floor). */
 export const HANDLED_KEYS_ITEM = 'push.handled-responses.v1';
 
 /** The answer route recorded the answer (the grant's status after pending, approval_grants.py). */

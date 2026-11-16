@@ -162,7 +162,8 @@ first (`GET /api/v1/approval-grants?status=pending&kind=question`, within 4 s)
 ([release/push-security.md](release/push-security.md), "What a verified push proves").
 
 Each response is handled once, and each signed question replied to once: the last 50 handled keys
-are kept across launches.
+are kept across launches, with the newest signed time dropped from them, so a push signed at or
+before it counts as handled once its key is gone.
 
 **Open or tap** (`A4:src/push/links/targets.ts`, `stale.ts`). `link_type` picks the screen:
 

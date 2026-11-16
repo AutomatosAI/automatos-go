@@ -314,10 +314,16 @@ and the question opens in the app, where the server's own text is shown:
   the client's own 30 s limit.
 - A signed payload is replied to once. After every check has passed, in the same step as the
   send, its workspace, grant and notification ids and its `iat` are claimed in the store of
-  responses handled (ids only, never words; the last 50 keys; kept across launches; cleared by
-  sign-out). A Reply that is not posted (a read that failed, a copy under a wrong title) never uses
-  it up. The same payload sent again after a Reply was posted opens the question with "You already
-  replied to this notification, so nothing was sent again."
+  responses handled (ids and signed times only, never words; the last 50 keys; kept across
+  launches; cleared by sign-out). A Reply that is not posted (a read that failed, a copy under a
+  wrong title) never uses it up. The same payload sent again after a Reply was posted opens the
+  question with "You already replied to this notification, so nothing was sent again."
+- The store keeps 50 keys but a payload is accepted for 7 days, so beside the keys it keeps a
+  floor: the newest `iat` of any key it has dropped. A push signed at or before the floor whose
+  key is no longer kept counts as handled, so a payload sent again after its keys fell off posts
+  nothing and opens nothing (a Reply or an Open is not acted on twice). The cost: a notification
+  left behind 50 newer handled keys, signed before one of them, counts as handled too. The floor is
+  stored and cleared with the keys; a stored floor that cannot be read counts as none.
 
 What a person sees: a Reply to a question Auto asked, or one a named agent asked whose name the
 server confirms, posts and says "Answered". An agent renamed between asking and the Reply is not

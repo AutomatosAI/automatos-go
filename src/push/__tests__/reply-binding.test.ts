@@ -3,13 +3,18 @@
 // it. So a Reply posts only when the body is the signed question, nothing else is shown, and the
 // title is absent, Auto's own, or names the agent the server says asked (confirm-sender.test.ts);
 // and a signed payload is replied to once: the same payload sent again under a new identifier posts
-// nothing. Open and a tap still act on the signed link alone. Over the real handled store, signed
-// with node:crypto.
+// nothing, nor once its keys have fallen off the list (the floor, dedupe.ts). Open and a tap still
+// act on the signed link alone. Over the real handled store, signed with node:crypto.
 
 import { describe, expect, it } from 'vitest';
 
 import { routes } from '../../navigation/routes';
-import { DEFAULT_ACTION_ID, HANDLED_KEYS_ITEM, PUSH_TITLE_SEPARATOR as SEP } from '../config';
+import {
+  DEFAULT_ACTION_ID,
+  HANDLED_KEYS_ITEM,
+  HANDLED_KEYS_MAX,
+  PUSH_TITLE_SEPARATOR as SEP,
+} from '../config';
 import { handleResponse } from '../inbound/handler';
 import { tapLogOver } from '../inbound/tap-log';
 import { PUSH_ACTION_COPY } from '../strings';
@@ -36,6 +41,13 @@ const NOT_SENT_HERE = { route: routes.cc.questions, toast: PUSH_ACTION_COPY.word
 
 const reply = (body: string, identifier = 'first') =>
   response(QUESTION, 'reply', { userText: REPLY_TEXT, body, identifier });
+
+/** A list's worth of newer responses handled since, signed after QUESTION: its keys fall off. */
+function handledSince(run: ReturnType<typeof world>): void {
+  Array.from({ length: HANDLED_KEYS_MAX }, (_, n) =>
+    run.deps.handled.claim(`newer-${n}:open`, NOW_S + 10),
+  );
+}
 
 describe('a Reply posts only to the words the notification showed', () => {
   it.each([
@@ -109,6 +121,32 @@ describe('a signed payload is replied to once', () => {
       toast: PUSH_ACTION_COPY.repliedBefore,
     });
     expect(again.requests()).toEqual([]);
+  });
+
+  it('sent again once its keys fell off the list: nothing posts; a push signed later still does', async () => {
+    const storage = memoryStorage();
+    const run = world({ script: ANSWERED, storage });
+    await handleResponse(reply(words, 'first'), run.deps);
+    handledSince(run);
+    const later = world({ script: ANSWERED, storage });
+    expect(await handleResponse(reply(words, 'again'), later.deps)).toBeNull();
+    expect(later.requests()).toEqual([]);
+    const newer = response(signed({ ...QUESTION_FIELDS, iat: NOW_S + 60 }), 'reply', {
+      userText: REPLY_TEXT,
+      identifier: 'newer',
+    });
+    expect(await handleResponse(newer, later.deps)).toMatchObject({ toast: 'Answered #0419.' });
+  });
+
+  it('an Open sent again once its key fell off the list is not acted on twice', async () => {
+    const run = world();
+    const tap = (identifier: string) =>
+      response(QUESTION, DEFAULT_ACTION_ID, { body: words, identifier });
+    expect(await handleResponse(tap('first'), run.deps)).toEqual({ route: routes.cc.questions });
+    handledSince(run);
+    expect(await handleResponse(tap('first'), run.deps)).toBeNull();
+    expect(await handleResponse(tap('again'), run.deps)).toBeNull();
+    expect(run.requests().map((call) => call.path)).toEqual([READ_PATH]);
   });
 
   it('a newer signed payload for the same question is its own; the store keeps ids, never words', async () => {

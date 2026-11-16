@@ -6,7 +6,8 @@
 // (shown.ts, intent.ts), its title is Auto's own or names the agent the server says asked
 // (confirm-sender.ts, read first), and its signed payload was never replied to before (dedupe.ts
 // signedReplyKey, claimed in the same store just before the send, so a reply that is not posted
-// never uses it up); otherwise it opens the question with nothing sent.
+// never uses it up); otherwise it opens the question with nothing sent. Each claim keeps the time
+// its push was signed, so one signed before the newest dropped from the list counts as handled.
 // Open and a tap open the link's screen after its stale check (links/stale.ts), acting on the
 // signed payload only, never the words shown;
 // anything else opens the notifications inbox (the push's own row first), or the question, with
@@ -37,7 +38,7 @@ import type { Sha256 } from '../signature/hmac';
 import { checkPushSignature, type SignatureCheck } from '../signature/verify';
 import { sendAnswer, settlesQuestion } from './answer';
 import { confirmSender } from './confirm-sender';
-import { responseKey } from './dedupe';
+import { responseKey, signedTimeOf } from './dedupe';
 import type { HandledStore } from './handled-store';
 import { intentFor, type PushIntent } from './intent';
 import {
@@ -145,9 +146,9 @@ function record(deps: HandlerDeps, handled: Handled | null, repeat: TapReport | 
 }
 
 /** Marked once now; false when it was handled before. A store that throws lets it through. */
-function firstTime(handled: HandlerDeps['handled'], key: string): boolean {
+function firstTime(handled: HandlerDeps['handled'], key: string, signedAt: number | null): boolean {
   try {
-    return handled.claim(key);
+    return handled.claim(key, signedAt);
   } catch {
     logger.warn('[push] could not check whether a notification was handled');
     return true;
@@ -313,7 +314,10 @@ async function answerConfirmed(
   }
   // claimed now, in the same turn as the send: a reply that is not posted never uses it up, and
   // the same signed payload sent again under a new identifier posts nothing more
-  if (!firstTime(deps.handled, intent.once)) return neutralShown(deps, REPLIED_BEFORE, seen);
+  const signedAt = seen.payload?.iat ?? null;
+  if (!firstTime(deps.handled, intent.once, signedAt)) {
+    return neutralShown(deps, REPLIED_BEFORE, seen);
+  }
   return answer(intent, seen.event, deps);
 }
 
@@ -352,6 +356,21 @@ async function handle(event: ReturnType<typeof fromResponse>, deps: HandlerDeps)
   return act(event, deps);
 }
 
+/** The time the response's claim keeps (dedupe.ts signedTimeOf); null when the clock fails. */
+function signedTimeFor(event: ReadableEvent, deps: HandlerDeps): number | null {
+  try {
+    return signedTimeOf(parsePushData(event.data), deps.nowSeconds());
+  } catch {
+    logger.warn("[push] could not read the phone's clock for a notification");
+    return null;
+  }
+}
+
+/** Claimed now, with the time its push was signed; false when it was handled before. */
+function firstResponse(event: ReadableEvent, deps: HandlerDeps): boolean {
+  return firstTime(deps.handled, responseKey(event), signedTimeFor(event, deps));
+}
+
 /** One response (a tap or an action on a notification) → its one outcome; null when seen before. */
 export async function handleResponse(
   response: unknown,
@@ -359,7 +378,7 @@ export async function handleResponse(
 ): Promise<HandledOutcome | null> {
   // read and claimed before the first await: a second delivery of it, however soon, finds the claim
   const event = fromResponse(response);
-  if (event.kind === 'readable' && !firstTime(deps.handled, responseKey(event))) {
+  if (event.kind === 'readable' && !firstResponse(event, deps)) {
     record(deps, null, { kind: 'unhandled', reason: 'repeat' });
     return null;
   }
