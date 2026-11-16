@@ -1,8 +1,7 @@
 // The named-state audit's lists (named-states.test.ts, rule 6.4): each named state this app can be
-// in, with its words and the file that shows them, and every screen and sheet that keeps what it
-// read after a failed refresh and draws the out-of-date line. None is owed the line, so there is no
-// list of owed screens: a screen that keeps what it read is in OUT_OF_DATE_LINES, or the audit is
-// wrong about it.
+// in, with its words and the file that shows them, every screen and sheet that keeps what it read
+// after a failed refresh and draws the out-of-date line, and those still owed the line, each with
+// its reason. A screen that can hold older data is in one of the last two lists, never both.
 
 import { APP_ERROR_COPY } from '../../../api/strings';
 import { AUTH_COPY } from '../../../auth/strings';
@@ -168,8 +167,8 @@ export const SHOWN: readonly Shown[] = frozen([
 
 /**
  * Every screen and sheet that keeps what it read after a failed refresh, and the line it draws
- * over it. None is owed: the eight T27 named (the conversations in Studio and Play, what Auto
- * depends on, a Deliverable, a ticket, a post, Candy's team, the notification settings) draw it.
+ * over it. The eight T27 named (the conversations in Studio and Play, what Auto depends on, a
+ * Deliverable, a ticket, a post, Candy's team, the notification settings) draw it.
  */
 export const OUT_OF_DATE_LINES: readonly Pick<Shown, 'file' | 'reads'>[] = frozen([
   { file: 'src/cc/board/BoardTab.tsx', reads: 'SHELL_COPY.outOfDate' },
@@ -186,3 +185,13 @@ export const OUT_OF_DATE_LINES: readonly Pick<Shown, 'file' | 'reads'>[] = froze
   { file: 'src/styles/candy/home/TeamView.tsx', reads: 'CANDY_TEAM_COPY.outOfDate' },
   { file: 'src/push/settings/PreferenceSections.tsx', reads: 'PUSH_SETTINGS_COPY.outOfDate' },
 ]);
+
+/** A screen or sheet that can hold older data and does not draw the line yet, and why it waits. */
+export type Owed = Readonly<{ file: string; reason: string }>;
+
+/**
+ * The screens and sheets still owed the out-of-date line. None here: every one this app has draws
+ * it. An app lists each of its own until it draws the line, and then moves it to
+ * OUT_OF_DATE_LINES, or the audit fails.
+ */
+export const OWED: readonly Owed[] = frozen([]);
