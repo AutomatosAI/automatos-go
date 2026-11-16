@@ -33,6 +33,14 @@ describe('the storage hop refuses a host the platform could read another way', (
     refusedFromEither(['https://b\u00fccher.example/x', 'https://xn--bcher-kva.example\u00e9/x']);
   });
 
+  it('a letter mapped to ASCII by its case: the Kelvin sign lower-cases to k', () => {
+    const kelvin = String.fromCharCode(0x212a);
+    refusedFromEither([
+      `https://bucket.${kelvin}ey.example.test/x`,
+      `https://${kelvin}.example.test/x`,
+    ]);
+  });
+
   it('a full-width character: full-width digits and dots normalise to an address', () => {
     refusedFromEither([
       'https://\uff11\uff12\uff17.\uff10.\uff10.\uff11/x',

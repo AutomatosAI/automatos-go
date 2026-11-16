@@ -32,6 +32,18 @@ describe('plainLabels: a host written plainly, or nothing', () => {
       expect(plainLabels(host), host).toBeNull();
     }
   });
+  it('tests the text as written, before any case mapping: a letter whose lower case is ASCII', () => {
+    // the Kelvin sign lower-cases to k, the dotted capital I to i and a combining dot, and the
+    // long s stays itself: the network is handed the text, so each is refused as written
+    for (const host of [
+      'bucKet.example.test'.replace('K', String.fromCharCode(0x212a)),
+      'Iinfo.example.test'.replace('I', String.fromCharCode(0x130)),
+      'sstore.example.test'.replace('s', String.fromCharCode(0x17f)),
+    ]) {
+      expect(plainLabels(host), JSON.stringify(host)).toBeNull();
+    }
+    expect(String.fromCharCode(0x212a).toLowerCase()).toBe('k');
+  });
 });
 
 describe('readsAsNumber: what a URL parser takes for an IP address', () => {

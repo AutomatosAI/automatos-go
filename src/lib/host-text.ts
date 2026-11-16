@@ -6,15 +6,22 @@
 // number (digits, or 0x hex) is an IP address to a URL parser in every form it takes (octal, hex,
 // one integer, fewer than four parts), so it is numeric, never a name. Pure.
 
+/** The text as written: ASCII letters, digits, hyphens and dots, tested BEFORE any case mapping. */
+const ASCII_HOST = /^[A-Za-z0-9.-]+$/;
 const LABEL = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 const NAME_MAX_LENGTH = 253;
 /** A URL parser reads a host whose last label is a number as IPv4 (WHATWG "ends in a number"). */
 const NUMBER_LABEL = /^(?:\d+|0x[0-9a-f]*)$/;
 
-/** The host's labels, lower-cased, when it is written plainly; null for anything else. */
+/**
+ * The host's labels, lower-cased, when it is written plainly; null for anything else. The text is
+ * tested as written first: lower-casing maps some non-ASCII letters to ASCII (the Kelvin sign
+ * U+212A to `k`), and the network is handed the text, not its lower case.
+ */
 export function plainLabels(host: string): readonly string[] | null {
+  if (!ASCII_HOST.test(host)) return null;
   const name = host.toLowerCase();
-  if (name.length === 0 || name.length > NAME_MAX_LENGTH) return null;
+  if (name.length > NAME_MAX_LENGTH) return null;
   const labels = name.split('.');
   return labels.every((label) => LABEL.test(label)) ? Object.freeze(labels) : null;
 }
