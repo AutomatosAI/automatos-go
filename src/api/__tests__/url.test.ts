@@ -49,3 +49,21 @@ describe('buildUrl', () => {
     expect(withoutTrailingSlash('https://api.example.test///')).toBe('https://api.example.test');
   });
 });
+
+describe('withoutTrailingSlash', () => {
+  it('drops only the slashes at the end', () => {
+    expect(withoutTrailingSlash('/a//b/')).toBe('/a//b');
+    expect(withoutTrailingSlash('///')).toBe('');
+    expect(withoutTrailingSlash('')).toBe('');
+    expect(withoutTrailingSlash('/a')).toBe('/a');
+  });
+
+  it('reads a long run of slashes that does not end the text once, not again from every slash', () => {
+    // /\/+$/ took over a second on this in node (quadratic); one read back from the end takes none
+    const hostile = `${'/'.repeat(50_000)}x`;
+    const started = performance.now();
+    expect(withoutTrailingSlash(hostile)).toBe(hostile);
+    expect(withoutTrailingSlash(`${hostile}${'/'.repeat(50_000)}`)).toBe(hostile);
+    expect(performance.now() - started).toBeLessThan(100);
+  });
+});

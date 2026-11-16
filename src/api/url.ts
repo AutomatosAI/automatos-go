@@ -8,10 +8,16 @@ export type QueryParams = Readonly<Record<string, QueryValue>>;
 const PATH_PARAM = /\{([A-Za-z_][A-Za-z0-9_]*)\}/g;
 /** Segments a URL resolver would collapse, re-aiming the request at another path. */
 const DOT_SEGMENTS: ReadonlySet<string> = new Set(['.', '..']);
-const TRAILING_SLASHES = /\/+$/;
+const SLASH = '/';
 
+/**
+ * The text without the slashes it ends with, read back from the end once. Not a pattern: /\/+$/
+ * starts again at every slash of a long run that does not end the text, which is quadratic.
+ */
 export function withoutTrailingSlash(url: string): string {
-  return url.replace(TRAILING_SLASHES, '');
+  let end = url.length;
+  while (end > 0 && url[end - 1] === SLASH) end -= 1;
+  return url.slice(0, end);
 }
 
 function paramValue(params: PathParams, name: string): string {

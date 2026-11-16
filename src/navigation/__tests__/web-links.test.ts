@@ -14,7 +14,7 @@ import {
 import { RECORD } from '../../connect/__tests__/paired-record';
 import { currentServers } from '../../connect/current-server';
 import { chatWithTicket, routes } from '../routes';
-import { appRouteForWebLink, parseQuery, studioUrl } from '../web-links';
+import { LINK_MAX_LENGTH, appRouteForWebLink, parseQuery, studioUrl } from '../web-links';
 
 const WEB = 'https://ui.example.test';
 const DELIVERABLE_ID = '9b1c2a54-0000-4000-8000-0000000000d1';
@@ -127,8 +127,31 @@ describe('appRouteForWebLink: only internal paths are followed', () => {
     expect(open('/command-center/?tab=calendar#today')).toEqual({ app: routes.cc.calendar });
   });
 
-  it('decodes an id and encodes it again into the app route', () => {
-    expect(open('/deliverables?deliverable=a%2Fb')).toEqual({ app: '/cc/deliverables/a%2Fb' });
+  it('takes no id with a slash, a percent sign or a control character into an app route', () => {
+    for (const id of ['a%2Fb', '..%2F..%2Fsettings', 'a%252Fb', 'a%00b', 'a%5Cb', 'a%3Bb']) {
+      expect(open(`/deliverables?deliverable=${id}`)).toEqual({ app: routes.cc.deliverables });
+      expect(open(`/chat?chatId=${id}`)).toEqual({ app: routes.home });
+    }
+    expect(open('/deliverables?deliverable=d-1.v2_x')).toEqual({
+      app: '/cc/deliverables/d-1.v2_x',
+    });
+  });
+
+  it(`follows nothing longer than ${LINK_MAX_LENGTH} characters, and reads it not at all`, () => {
+    const base = '/agents?pad=';
+    const longest = `${base}${'a'.repeat(LINK_MAX_LENGTH - base.length)}`;
+    expect(open(longest)).toEqual({ external: `${WEB}${longest}` });
+    expect(open(`${longest}a`)).toBeNull();
+    const started = performance.now();
+    expect(open(`/chat${'/'.repeat(500_000)}x`)).toBeNull();
+    expect(performance.now() - started).toBeLessThan(100);
+  });
+
+  it("leaves the app's root and the pairing link to Studio: an answer never pairs the phone", () => {
+    expect(open('/')).toEqual({ external: `${WEB}/` });
+    expect(open('/go/pair?api=https%3A%2F%2Fapi.example&code=ABCD-EFGH')).toEqual({
+      external: `${WEB}/go/pair?api=https%3A%2F%2Fapi.example&code=ABCD-EFGH`,
+    });
   });
 
   it('never throws on a malformed escape or a dot-segment id', () => {

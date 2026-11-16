@@ -1,5 +1,5 @@
-// The voice screen's app path (US-019j, KV17): voiceRoute builds '/voice' or '/voice?chat=<id>' with
-// the id URI-encoded (spaces and slashes included), parseVoiceParams reads it back the way
+// The voice screen's app path (US-019j, KV17): voiceRoute builds '/voice' or '/voice?chat=<id>' for
+// an id routes.ts's isUsableId takes (never a space or a slash), parseVoiceParams reads it back the way
 // expo-router hands it over (decoded, possibly an array), and LOOK's destination is the style's
 // look page. src/navigation/routes.ts is not this kit's; nothing here edits it.
 
@@ -39,10 +39,11 @@ describe('voiceRoute', () => {
     expect(VOICE_CHAT_PARAM).toBe('chat');
   });
 
-  it('URI-encodes ids with spaces, slashes and the query’s own characters', () => {
-    expect(voiceRoute('a b/c')).toBe('/voice?chat=a%20b%2Fc');
-    expect(voiceRoute('x&y=z?#')).toBe('/voice?chat=x%26y%3Dz%3F%23');
-    expect(voiceRoute('é/ü')).toBe(`/voice?chat=${encodeURIComponent('é/ü')}`);
+  it('names no conversation by an id with spaces, slashes or the query’s own characters', () => {
+    // the id goes on into a request path (routes.ts isUsableId): the home thread instead
+    ['a b/c', 'x&y=z?#', 'é/ü', 'a%2Fb', '../c-1'].forEach((id) =>
+      expect(voiceRoute(id)).toBe('/voice'),
+    );
   });
 
   it('trims the id it is given', () => {
@@ -64,9 +65,15 @@ describe('parseVoiceParams', () => {
     expect(parseVoiceParams({ chat: 'c-123' })).toEqual({ chatId: 'c-123' });
   });
 
-  it('round-trips ids with spaces and slashes through the built route', () => {
-    ['a b/c', 'one two', 'x/y/z', 'x&y=z?#', 'é/ü'].forEach((id) =>
+  it('round-trips a conversation id through the built route', () => {
+    ['c-123', '9b1c2a54-0000-4000-8000-0000000000d1', 'chat_1.v2'].forEach((id) =>
       expect(parseVoiceParams(paramsOf(voiceRoute(id)))).toEqual({ chatId: id }),
+    );
+  });
+
+  it('reads no id with spaces, slashes or the query’s own characters from untrusted params', () => {
+    ['a b/c', 'one two', 'x/y/z', 'x&y=z?#', 'é/ü'].forEach((chat) =>
+      expect(parseVoiceParams({ chat })).toEqual({ chatId: null }),
     );
   });
 
