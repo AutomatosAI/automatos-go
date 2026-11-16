@@ -1,14 +1,27 @@
 // docs/app-standard.md rule 10.4, for what the app paints "in the accent" as a foreground: text,
 // a glyph, a rule, a dot. In every built-in palette it reads on the page and on a card, in Studio
 // it is still the accent itself, and in a palette whose `accent` is a ground (Candy's chip) it is
-// the palette's strong ink. Each shared place that paints it is checked through its own function.
+// the palette's strong ink. Each shared place that paints it is checked through its own function,
+// the marks that are not text among them: the tool line's spinner, a tab's rule, a day's dot, the
+// ring under Auto and the chosen style card's ring.
 
 import { describe, expect, it } from 'vitest';
 
 import { stripCellPaint } from '../../cc/calendar/chrome';
 import { tabPaint } from '../../cc/shell/chrome';
 import { spanStyle } from '../../chat/markdown/look';
+import { toolMarkColour } from '../../chat/view-model';
 import { contrastRatio } from '../../core/web/lib/look-kit/contrast';
+import {
+  markToken,
+  dressedStripCell,
+  shellTabPaint,
+  type ShellTabs,
+} from '../../styles/dress/cc-dress';
+import { dressOf } from '../../styles/dress/dress';
+import { STUDIO_LIGHT } from '../../styles/dress/__tests__/fixtures';
+import { studioRingPalette } from '../../styles/mascot/ring-palette';
+import { selectedPaint } from '../../styles/picker/cards';
 import { STYLE_IDS, tokensFor, type Colours, type Tokens } from '../../styles/tokens';
 import { STUDIO_COLOURS } from '../../styles/tokens/studio';
 import { MARK_CONTRAST, accentInk, accentToken, markColour, markOn } from '../accent';
@@ -22,6 +35,18 @@ const PALETTES: readonly Tokens[] = [
 const nameOf = (tokens: Tokens) => `${tokens.style} ${tokens.scheme}`;
 const CANDY = tokensFor('candy', 'light');
 const STUDIO = tokensFor('studio', 'light');
+/** Studio's tabs and its dress, which mark the chosen tab and a day with items in the accent. */
+const STUDIO_TABS: ShellTabs = Object.freeze({
+  face: null,
+  active: 'foreground',
+  rest: 'mutedForeground',
+  rule: markToken('studio'),
+  gap: 0,
+  tabPaddingX: 0,
+  stripPaddingX: 0,
+});
+const STUDIO_DRESS = dressOf(STUDIO_LIGHT);
+const DAY_WITH_ITEMS = Object.freeze({ selected: false, today: false, hasItems: true });
 
 describe('the accent as a foreground', () => {
   it.each(PALETTES.map((tokens) => [nameOf(tokens), tokens] as const))(
@@ -97,7 +122,14 @@ describe('each shared place that paints the accent reads it there', () => {
     selectedTabRule: tabPaint(colours, true).rule,
     reasonChip: tonePaint(colours, 'accent').color,
     blockedDot: markColour(colours, statusPip('blocked').tokenKey),
-    dayWithItems: stripCellPaint(colours, { selected: false, today: false, hasItems: true }).dot,
+    dayWithItems: stripCellPaint(colours, DAY_WITH_ITEMS).dot,
+    runningToolSpinner: toolMarkColour(colours, 'running'),
+    waitingToolMark: toolMarkColour(colours, 'waiting'),
+    dressedTabRule: shellTabPaint(colours, STUDIO_TABS, true).rule,
+    dressedDayDot: dressedStripCell(STUDIO_DRESS, colours, DAY_WITH_ITEMS).dot,
+    ringWhileBusy: studioRingPalette(colours).accent,
+    chosenStyleRing: selectedPaint({ ...STUDIO_LIGHT, tokens: { ...STUDIO_LIGHT.tokens, colours } })
+      .ring,
   });
 
   it('in Candy, none of them is the chip', () => {
@@ -129,6 +161,32 @@ describe('each shared place that paints the accent reads it there', () => {
     expect(tabPaint(CANDY.colours, false).rule).toBe('transparent');
     const chosen = stripCellPaint(CANDY.colours, { selected: true, today: false, hasItems: true });
     expect(chosen.dot).toBe(CANDY.colours.card);
+  });
+});
+
+describe('the tool line’s spinner, a mark that is not text', () => {
+  it.each(PALETTES.map((tokens) => [nameOf(tokens), tokens] as const))(
+    '%s: reads at 3 to 1 on the page and on a card while the call runs',
+    (_name, tokens) => {
+      const spinner = toolMarkColour(tokens.colours, 'running');
+      expect(contrastRatio(spinner, tokens.colours.background)).toBeGreaterThanOrEqual(
+        MARK_CONTRAST,
+      );
+      expect(contrastRatio(spinner, tokens.colours.card)).toBeGreaterThanOrEqual(MARK_CONTRAST);
+    },
+  );
+
+  it("is no longer Candy's chip, which read about 1 to 1 on its page", () => {
+    expect(contrastRatio(CANDY.colours.accent, CANDY.colours.background)).toBeLessThan(
+      MARK_CONTRAST,
+    );
+    expect(toolMarkColour(CANDY.colours, 'running')).toBe(CANDY.colours.primary);
+  });
+
+  it('keeps every other mark in its own token', () => {
+    expect(toolMarkColour(CANDY.colours, 'done')).toBe(CANDY.colours.olive);
+    expect(toolMarkColour(CANDY.colours, 'failed')).toBe(CANDY.colours.destructive);
+    expect(toolMarkColour(CANDY.colours, 'muted')).toBe(CANDY.colours.mutedForeground);
   });
 });
 

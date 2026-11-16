@@ -21,7 +21,8 @@ import {
 } from '../core/web/lib/chat/receipts';
 import type { Receipt, ToolCall } from '../core/web/types';
 import { appRouteForWebLink, type WebLinkTarget } from '../navigation/web-links';
-import type { ColourName } from '../styles/tokens';
+import type { ColourName, Colours } from '../styles/tokens';
+import { markColour } from '../ui/accent';
 import { joinLabel } from '../ui/paint';
 import type { TextTone } from '../ui/variants';
 import { RECEIPT_BADGES, RECEIPT_STATUS_WORDS, TOOL_STATUS_WORDS } from './strings';
@@ -68,8 +69,17 @@ export const MARK_COLOURS: Readonly<Record<LineTone, ColourName>> = Object.freez
 });
 
 /**
+ * The colour of a mark that is not text, the running line's spinner: MARK_COLOURS' token, the
+ * accent through accent.ts (rule 10.4), so it reads at 3 to 1 where the palette's accent is a
+ * ground (Candy's chip), as the text marks' tones do.
+ */
+export function toolMarkColour(colours: Colours, tone: LineTone): string {
+  return markColour(colours, MARK_COLOURS[tone]);
+}
+
+/**
  * A mark drawn as text (✓ ✕ ○), as the Text tone that reads MARK_COLOURS' token: the accent through
- * accent.ts, so it can be read where the palette's accent is a ground. The spinner keeps the token.
+ * accent.ts, so it can be read where the palette's accent is a ground; the spinner, toolMarkColour.
  */
 export const MARK_TONES: Readonly<Record<LineTone, TextTone>> = Object.freeze({
   running: 'accent',

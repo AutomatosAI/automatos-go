@@ -57,6 +57,7 @@ export {
   receiptBadge,
   receiptsView,
   toolLineRows,
+  toolMarkColour,
   type ReceiptRow,
   type ReceiptsView,
   type ToolLineRow,

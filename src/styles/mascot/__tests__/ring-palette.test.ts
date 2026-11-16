@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { mixHex } from '../../../core/web/lib/look-kit/contrast';
+import { contrastRatio, mixHex } from '../../../core/web/lib/look-kit/contrast';
 import { DUSK_TOWARD_BG } from '../../../core/web/lib/look-kit/css';
 import { ACCENTS, ERROR_COLOUR, GROUNDS, LIGHTS } from '../../../core/frozen/lib/looks/catalogue';
 import { duskOf } from '../../../core/frozen/lib/looks/engine';
@@ -16,6 +16,7 @@ import { builtinChoice, type StyleChoice } from '../../registry/style-id';
 import { HUD_ACCENTS, HUD_FIXED, HUD_GROUNDS } from '../../tokens/hud-catalogue';
 import { studioTokens } from '../../tokens/studio';
 import type { Colours } from '../../tokens/types';
+import { MARK_CONTRAST, accentInk } from '../../../ui/accent';
 import { hudRingPalette, ringColourOf, studioRingPalette, type RingStyle } from '../ring-palette';
 
 function style(choice: StyleChoice, overrides: Partial<StyleInput> = {}): RingStyle {
@@ -98,7 +99,7 @@ describe('Studio and themes', () => {
     },
   );
 
-  it('a theme paints with its own Studio-keyed colours', () => {
+  it('a theme paints with its own Studio-keyed colours, its accent through accent.ts', () => {
     const base = studioTokens('light');
     // any two colours other than Studio's stand for the theme's (no literal outside the tokens)
     const ink = HUD_FIXED.text;
@@ -106,7 +107,13 @@ describe('Studio and themes', () => {
     const colours: Colours = { ...base.colours, foreground: ink, accent };
     const themed: RingStyle = { layout: 'studio', tokens: { ...base, colours } };
     expect(ringColourOf('idle', themed)).toBe(ink);
-    expect(ringColourOf('searching', themed)).toBe(accent);
+    // this orange reads under 3 to 1 on the light page, so the busy ring takes the theme's strong
+    // ink (rule 10.4); an accent that reads is the ring's own
+    expect(contrastRatio(accent, base.colours.background)).toBeLessThan(MARK_CONTRAST);
+    expect(ringColourOf('searching', themed)).toBe(accentInk(colours));
+    expect(ringColourOf('searching', themed)).toBe(colours.primary);
+    const readable: RingStyle = { layout: 'studio', tokens: base };
+    expect(ringColourOf('searching', readable)).toBe(base.colours.accent);
     expect(studioRingPalette(colours).error).toBe(base.colours.destructive);
   });
 
