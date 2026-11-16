@@ -9,7 +9,7 @@ import { API_ERROR_COPY, LIMIT_COPY } from '../../api/strings';
 import { TURN_ERROR_CODES } from '../../core/turn-reducer';
 import type { StoredMessage } from '../schemas';
 import { CHAT_COPY, RECEIPT_STATUS_WORDS, TURN_ERROR_COPY } from '../strings';
-import { receiptsView, threadRows } from '../view-model';
+import { failureCopy, receiptsView, threadRows } from '../view-model';
 import { AT, afterTurn, saved } from './thread-fixtures';
 import {
   allText,
@@ -214,6 +214,15 @@ describe('notices', () => {
       text: API_ERROR_COPY.limit,
       retry: true,
     });
+  });
+
+  it('never words a wait past a day, however the failure came by it', () => {
+    expect(failureCopy({ kind: 'limit', code: null, retryAfterSeconds: 1e12 }).text).toBe(
+      API_ERROR_COPY.limit,
+    );
+    expect(failureCopy({ kind: 'limit', code: null, retryAfterSeconds: 90 }).text).toBe(
+      LIMIT_COPY.inMinutes(2),
+    );
   });
 
   it('says a stop, and a stop that did not reach the server', () => {

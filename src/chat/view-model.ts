@@ -18,6 +18,7 @@
 // these rows.
 
 import { ApiError } from '../api/errors';
+import { boundedRetryAfterSeconds } from '../api/retry-after';
 import {
   STOPPED_TURN_CODE,
   TURN_ERROR_CODES,
@@ -173,11 +174,12 @@ export function failureCopy(failure: ThreadFailure): FailureCopy {
   if (failure.kind === 'turn') return TURN_ERROR_COPY[failure.code];
   if (failure.code !== null && KNOWN_TURN_CODES.has(failure.code))
     return TURN_ERROR_COPY[failure.code as TurnErrorCode];
-  // never the server's words: the error carries the kind, the code and a limit's wait only
+  // never the server's words: the error carries the kind, the code and a limit's wait only,
+  // bounded as every limit's wait is (src/api/retry-after.ts)
   const code = failure.code ? { code: failure.code } : {};
-  const wait = failure.retryAfterSeconds;
+  const wait = boundedRetryAfterSeconds(failure.retryAfterSeconds);
   const copy = errorCopy(
-    new ApiError(failure.kind, wait === undefined ? code : { ...code, retryAfterSeconds: wait }),
+    new ApiError(failure.kind, wait === null ? code : { ...code, retryAfterSeconds: wait }),
   );
   return { text: copy.message, canRetry: copy.canRetry };
 }

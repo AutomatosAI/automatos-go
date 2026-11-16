@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import { RETRY_AFTER_MAX_MS } from '../config';
-import { headerWaitMs, httpDateMs, limitWaitMs, saneWaitMs } from '../retry-after';
+import {
+  boundedRetryAfterSeconds,
+  headerWaitMs,
+  httpDateMs,
+  limitWaitMs,
+  saneWaitMs,
+} from '../retry-after';
 
 const NOW = Date.UTC(2026, 10, 15, 12, 0, 0);
 const MINUTE = 60_000;
@@ -79,5 +85,20 @@ describe('limitWaitMs', () => {
     expect(
       [-1, RETRY_AFTER_MAX_MS + 1, Number.NaN, Infinity, null, undefined].map(saneWaitMs),
     ).toEqual([null, null, null, null, null, null]);
+  });
+});
+
+describe('boundedRetryAfterSeconds', () => {
+  it('keeps a wait from now up to a day, and nothing else', () => {
+    expect([0, 12.5, RETRY_AFTER_MAX_MS / 1000].map(boundedRetryAfterSeconds)).toEqual([
+      0,
+      12.5,
+      RETRY_AFTER_MAX_MS / 1000,
+    ]);
+    expect(
+      [RETRY_AFTER_MAX_MS / 1000 + 1, 1e12, -1, Number.NaN, Infinity, null, undefined].map(
+        boundedRetryAfterSeconds,
+      ),
+    ).toEqual([null, null, null, null, null, null, null]);
   });
 });

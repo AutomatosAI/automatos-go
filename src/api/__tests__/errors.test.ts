@@ -177,6 +177,19 @@ describe('ApiError', () => {
     expect(absurd.retryAfterSeconds).toBeUndefined();
   });
 
+  it("keeps no body's wait as it came: an absurd one is dropped, for a limit and any other", () => {
+    const absurd = JSON.stringify({ retry_after_seconds: 1e9 });
+    const now = Date.UTC(2026, 10, 15, 12, 0, 0);
+    const limited = errorFromResponse(429, absurd, null, { retryAfter: null, now });
+    expect(limited).toMatchObject({ kind: 'limit', retryAt: null });
+    expect(limited.retryAfterSeconds).toBeUndefined();
+    expect(userMessage(limited)).toBe(API_ERROR_COPY.limit);
+    expect(errorFromResponse(503, absurd).retryAfterSeconds).toBeUndefined();
+    expect(errorFromResponse(503, JSON.stringify({ retry_after_seconds: 30 }))).toMatchObject({
+      retryAfterSeconds: 30,
+    });
+  });
+
   it('leaves a 402 as server: no route the app calls answers one for a limit', () => {
     const body = JSON.stringify({ detail: { code: 'credits_exhausted', message: 'x' } });
     expect(errorFromResponse(402, body)).toMatchObject({ kind: 'server', retryAt: null });

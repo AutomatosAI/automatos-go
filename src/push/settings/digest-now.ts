@@ -9,6 +9,7 @@
 
 import { canDigestNow, type GateInput } from '../../api/capabilities';
 import { isApiError, userMessage } from '../../api/errors';
+import { boundedRetryAfterSeconds } from '../../api/retry-after';
 import {
   DIGEST_NOW_WAIT_MS,
   DIGEST_UNAVAILABLE_CODE,
@@ -34,12 +35,15 @@ export type DigestNowOutcome = Readonly<{ kind: 'queued' }> | DigestNowRefusal;
 const QUEUED: DigestNowOutcome = Object.freeze({ kind: 'queued' });
 const UNAVAILABLE: DigestNowRefusal = Object.freeze({ kind: 'unavailable' });
 
-/** A failed POST in the button's terms: any 429 is a wait, its seconds when the body gives them. */
+/**
+ * A failed POST in the button's terms: any 429 is a wait, its seconds when the answer gives them,
+ * bounded as a limit's wait is (src/api/retry-after.ts): a wait past a day is no number at all.
+ */
 export function outcomeOfError(error: unknown): DigestNowRefusal {
   if (isApiError(error) && error.status === TOO_MANY_REQUESTS_STATUS) {
     return Object.freeze({
       kind: 'rate_limited',
-      retryAfterSeconds: error.retryAfterSeconds ?? null,
+      retryAfterSeconds: boundedRetryAfterSeconds(error.retryAfterSeconds),
     });
   }
   if (isApiError(error) && error.code === DIGEST_UNAVAILABLE_CODE) return UNAVAILABLE;
