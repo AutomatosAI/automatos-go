@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { codeOf } from '../../release/__tests__/support/code';
-import { productFiles } from '../../release/__tests__/support/tree';
+import { productFiles, readRepoFile } from '../../release/__tests__/support/tree';
 import { backMove } from '../back';
 import { routes } from '../routes';
 
@@ -57,8 +57,11 @@ describe('the one back hook (rule 4.2)', () => {
   });
 
   it('is the only place that calls the router back, but where listed', () => {
+    // the raw text first: only a file that names the call at all is parsed for its code, so the
+    // walk over every product file stays quick
     const callers = productFiles().filter(
-      (file) => file !== HOOK && ROUTER_BACK.test(codeOf(file)),
+      (file) =>
+        file !== HOOK && ROUTER_BACK.test(readRepoFile(file)) && ROUTER_BACK.test(codeOf(file)),
     );
     expect(callers).toEqual([...WRITTEN_BY_HAND].sort());
   });
