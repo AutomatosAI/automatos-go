@@ -14,7 +14,7 @@ import {
 import { RECORD } from '../../connect/__tests__/paired-record';
 import { currentServers } from '../../connect/current-server';
 import { chatWithTicket, routes } from '../routes';
-import { LINK_MAX_LENGTH, appRouteForWebLink, parseQuery, studioUrl } from '../web-links';
+import { LINK_MAX_LENGTH, appRouteForWebLink, readQuery, studioUrl } from '../web-links';
 
 const WEB = 'https://ui.example.test';
 const DELIVERABLE_ID = '9b1c2a54-0000-4000-8000-0000000000d1';
@@ -163,13 +163,18 @@ describe('appRouteForWebLink: only internal paths are followed', () => {
   });
 });
 
-describe('parseQuery', () => {
-  it('keeps the first value of a repeated name and reads + as a space', () => {
-    const query = parseQuery('tab=board&tab=questions&q=a+b&flag');
-    expect(query.get('tab')).toBe('board');
-    expect(query.get('q')).toBe('a b');
-    expect(query.get('flag')).toBe('');
-    expect(parseQuery('').size).toBe(0);
+describe('readQuery', () => {
+  it('reads only the names it is given, + as a space, a bare name as empty', () => {
+    const query = readQuery('tab=a+b&flag&q=1', ['tab', 'flag']);
+    expect(query?.get('tab')).toBe('a b');
+    expect(query?.get('flag')).toBe('');
+    expect(query?.has('q')).toBe(false);
+    expect(readQuery('', ['tab'])?.size).toBe(0);
+  });
+
+  it('refuses the link when a name it reads comes twice; another name may', () => {
+    expect(readQuery('tab=board&tab=questions', ['tab'])).toBeNull();
+    expect(readQuery('q=1&q=2&tab=board', ['tab'])?.get('tab')).toBe('board');
   });
 });
 
