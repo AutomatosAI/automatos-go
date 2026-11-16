@@ -5,18 +5,24 @@
 // contrast.ts). KNOWN is the list of pairs that read under AA today, each with what it measures and
 // why it stands: a pair that gets worse, a new one, and one that was fixed but is still listed all
 // fail. The switch's marks (its thumb on each track, each track on the page and on a card) are held
-// at 3 to 1 in every palette too, with no known list.
+// at 3 to 1 in every palette too, with no known list, and a filter pill's count, idle and selected,
+// at AA on the ground its pill shows in every style's dress, every look of each.
 
 import { describe, expect, it } from 'vitest';
 
+import { contrastRatio, mixHex } from '../../core/web/lib/look-kit/contrast';
+import { rgba } from '../../core/web/lib/look-kit/css';
 import { CONTRAST_PALETTES, KNOWN, TEXT_ON } from '../../release/__tests__/settings/contrast';
 import { MARK_CONTRAST } from '../../ui/accent';
+import { pillCount } from '../../ui/pill-count';
 import { switchTokens } from '../../ui/switch-model';
 import { toneColour } from '../../ui/tone-colour';
 import { TEXT_TONES, type TextTone } from '../../ui/variants';
 import { AA_TEXT, contrastFailures, solidOver, textOnFor, type TextOnGrounds } from '../contrast';
 import { STYLE_IDS, tokensFor, type ColourName, type Colours, type Tokens } from '../tokens';
 import { STUDIO_COLOURS } from '../tokens/studio';
+import { dressOf } from '../dress/dress';
+import { ALL_STYLES } from '../dress/__tests__/fixtures';
 
 const DECIMALS = 100;
 const floor2 = (ratio: number) => Math.floor(ratio * DECIMALS) / DECIMALS;
@@ -98,6 +104,28 @@ describe("the switch's marks, in every palette (rule 10.4: 3 to 1)", () => {
   });
 });
 
+describe("a filter pill's count, in every style's dress (rule 10.5: AA)", () => {
+  const counts = ALL_STYLES.flatMap((style, index) => {
+    const dress = dressOf(style);
+    const page = style.tokens.colours.background;
+    const states = [
+      ['idle', { selected: false }],
+      ['pressed', { selected: false, pressed: true }],
+      ['selected', { selected: true }],
+    ] as const;
+    return states.flatMap(([state, pill]) => {
+      const { colour, ground } = pillCount(dress, pill, page);
+      const ratio = contrastRatio(colour, ground);
+      const name = `${style.tokens.style} ${style.tokens.scheme} #${index}`;
+      return ratio >= AA_TEXT ? [] : [`${name} ${state} ${floor2(ratio)}`];
+    });
+  });
+
+  it('idle, pressed and selected, each on the ground its pill shows', () => {
+    expect(counts).toEqual([]);
+  });
+});
+
 describe('a tone a palette reads from another token', () => {
   const candy = tokensFor('candy', 'light').colours;
   const studio = tokensFor('studio', 'light').colours;
@@ -157,6 +185,13 @@ describe('contrastFailures', () => {
       { text: 'foreground', ground: 'card', ratio: 1 },
     ]);
     expect(contrastFailures(palette({ card: noCard }), pairs)).toEqual([]);
+  });
+
+  it("reads a style's own see-through colours (the vendored rgba), and no paint as the ground", () => {
+    expect(solidOver('transparent', WHITE)).toBe(WHITE);
+    expect(solidOver(rgba(INK, 1), WHITE)).toBe(INK);
+    expect(solidOver(rgba(INK, 0), WHITE)).toBe(WHITE);
+    expect(solidOver(rgba(INK, 0.5), WHITE)).toBe(mixHex(WHITE, INK, 0.5));
   });
 
   it('refuses to blend over a ground that is not solid, and a page that is not', () => {
