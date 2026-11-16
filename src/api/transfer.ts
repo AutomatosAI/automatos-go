@@ -98,37 +98,77 @@ function callOf({ signal, timeoutMs, redirectsToStorage }: DownloadOptions): Fil
   return { signal, timeoutMs, redirectsToStorage };
 }
 
-/**
- * `url` on the client's server written to `target`, through a partial file; the target once it is
- * whole. Throws the client's ApiError (a refusal, the network, a body over its cap as
- * invalid_response), the caller's AbortError, or the file system's own error; the partial file is
- * gone whichever it is.
- */
-export async function download(
+/** The body written into the partial file, a part at a time; the handle closed however it ends. */
+async function writeInto(
+  client: Pick<ApiClient, 'file'>,
+  url: string,
+  partial: File,
+  options: DownloadOptions,
+): Promise<void> {
+  const handle = openPartial(partial);
+  let failed = false;
+  try {
+    const body = await client.file(url, callOf(options));
+    for await (const part of body.parts(options.maxBytes ?? DOWNLOAD_MAX_BYTES)) {
+      handle.writeBytes(part);
+    }
+  } catch (error) {
+    failed = true;
+    throw error;
+  } finally {
+    closeHandle(handle, failed);
+  }
+}
+
+async function fetchInto(
   client: Pick<ApiClient, 'file'>,
   url: string,
   target: File,
-  options: DownloadOptions = {},
+  options: DownloadOptions,
 ): Promise<File> {
   const partial = partialOf(target);
   try {
-    const handle = openPartial(partial);
-    let failed = false;
-    try {
-      const body = await client.file(url, callOf(options));
-      for await (const part of body.parts(options.maxBytes ?? DOWNLOAD_MAX_BYTES)) {
-        handle.writeBytes(part);
-      }
-    } catch (error) {
-      failed = true;
-      throw error;
-    } finally {
-      closeHandle(handle, failed);
-    }
+    await writeInto(client, url, partial, options);
     placeInto(partial, target);
     return target;
   } catch (error) {
     removeQuietly(partial);
     throw error;
   }
+}
+
+type Running = { readonly url: string; readonly done: Promise<File> };
+
+/** Downloads running, by target: a target is only ever written by one of them at a time. */
+const running = new Map<string, Running>();
+
+/**
+ * `url` on the client's server written to `target`, through a partial file; the target once it is
+ * whole. Throws the client's ApiError (a refusal, the network, a body over its cap as
+ * invalid_response), the caller's AbortError, or the file system's own error; the partial file is
+ * gone whichever it is. Two asks for one target and one address share one download (the first
+ * ask's options hold); an ask for the same target from another address waits for the running one
+ * to settle before it starts, so two writers never share a partial file.
+ */
+export function download(
+  client: Pick<ApiClient, 'file'>,
+  url: string,
+  target: File,
+  options: DownloadOptions = {},
+): Promise<File> {
+  const key = target.uri;
+  const current = running.get(key);
+  if (current?.url === url) return current.done;
+  const earlier = current?.done.then(
+    () => undefined,
+    () => undefined,
+  );
+  const done: Promise<File> = (async () => {
+    await earlier;
+    return fetchInto(client, url, target, options);
+  })().finally(() => {
+    if (running.get(key)?.done === done) running.delete(key);
+  });
+  running.set(key, { url, done });
+  return done;
 }

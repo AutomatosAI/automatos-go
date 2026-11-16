@@ -1,70 +1,29 @@
-// The one transfer module (docs/app-standard.md rules 13.2 and 13.2c), over the fake transport and
+// The one transfer module (docs/app-standard.md rule 13.2), over the fake transport and
 // expo-file-system in memory: a file is fetched through the client (its bearer, its policy, its
 // own server only), written a part at a time to a partial file and moved into place only when
-// whole; a redirect is followed at most once, only when the request is marked as a storage
-// redirect, only to https and with nothing of the session; a cap exceeded, an abort or a failure
-// leaves no partial file.
+// whole; one target is written by one download at a time; a cap exceeded, an abort or a failure
+// leaves no partial file and keeps the earlier copy. Redirects: transfer-redirect.test.ts.
 
-import { File } from 'expo-file-system';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createApiClient, type ApiClientOptions } from '../client';
-import { ApiError } from '../errors';
+import { memoryFs, textOf } from './fake-file-system';
+import { SERVER, partsReply, reply, type FakeResponse } from './fake-transport';
+import {
+  FILE_URL,
+  TARGET_URI,
+  TOKEN,
+  answering,
+  clientWith,
+  encode,
+  failureOf,
+  nothingLeft,
+  target,
+} from './transfer-harness';
 import type { TransportRequest } from '../transport-types';
-import { SERVER, fakeTransport, partsReply, reply, type FakeTransport } from './fake-transport';
-import { CACHE_URI, memoryFs, textOf } from './fake-file-system';
 
 vi.mock('expo-file-system', async () => (await import('./fake-file-system')).fakeExpoFileSystem);
 
 const { ASIDE_SUFFIX, PARTIAL_SUFFIX, download, partialOf } = await import('../transfer');
-const { storageAddress, assertOnServer } = await import('../transfer-request');
-
-const TOKEN = 'jwt.token.value';
-const FILE_URL = `${SERVER.apiUrl}/api/documents/generated/q3.pdf`;
-const STORAGE = 'https://bucket.storage.example.test/q3.pdf?X-Amz-Signature=abc';
-const TARGET_URI = `${CACHE_URI}/viewer/q3.pdf`;
-const encode = (text: string) => new TextEncoder().encode(text);
-
-function clientWith(transport: FakeTransport, overrides: Partial<ApiClientOptions> = {}) {
-  return createApiClient({
-    server: SERVER,
-    getToken: async () => TOKEN,
-    getWorkspaceId: () => 'ws-1',
-    getLanguage: () => 'pt-BR',
-    transport,
-    ...overrides,
-  });
-}
-
-/** The target, as the app makes it: expo-file-system's File (the fake, in memory, here). */
-function target(): File {
-  return new File(TARGET_URI);
-}
-
-/** Answers each request in turn with the next of `answers`. */
-function answering(...answers: ((request: TransportRequest) => ReturnType<typeof reply>)[]) {
-  let next = 0;
-  return fakeTransport((request) => {
-    const answer = answers[next];
-    next += 1;
-    if (!answer) throw new Error('an unexpected request');
-    return answer(request);
-  });
-}
-
-async function failureOf(promise: Promise<unknown>): Promise<unknown> {
-  return promise.then(
-    () => {
-      throw new Error('expected the download to fail');
-    },
-    (caught: unknown) => caught,
-  );
-}
-
-function nothingLeft(): void {
-  expect([...memoryFs.files.keys()].filter((uri) => uri.endsWith(PARTIAL_SUFFIX))).toEqual([]);
-  expect(memoryFs.openHandles).toBe(0);
-}
 
 beforeEach(() => memoryFs.reset());
 
@@ -169,6 +128,56 @@ describe('a download', () => {
   });
 });
 
+describe('two asks for one target', () => {
+  it('from one address share one download', async () => {
+    const gate: { release: () => void } = { release: () => undefined };
+    const transport = answering(
+      () =>
+        new Promise<FakeResponse>((resolve) => {
+          gate.release = () => resolve(partsReply(200, [encode('one')]));
+        }),
+    );
+    const client = clientWith(transport);
+    const first = download(client, FILE_URL, target());
+    const second = download(client, FILE_URL, target());
+    expect(second).toBe(first);
+    await vi.waitFor(() => expect(transport.calls).toHaveLength(1));
+    gate.release();
+    await first;
+    expect(textOf(TARGET_URI)).toBe('one');
+    expect(transport.calls).toHaveLength(1);
+  });
+
+  it('from another address wait for the running one, so no two writers share the partial', async () => {
+    const other = `${SERVER.apiUrl}/api/workspaces/w/files/raw?path=q3.pdf`;
+    const transport = answering(
+      () => partsReply(200, [encode('first')]),
+      () => partsReply(200, [encode('second')]),
+    );
+    const client = clientWith(transport);
+    const first = download(client, FILE_URL, target());
+    const second = download(client, other, target());
+    await first;
+    expect(textOf(TARGET_URI)).toBe('first');
+    await second;
+    expect(textOf(TARGET_URI)).toBe('second');
+    expect(transport.calls.map((call) => call.url)).toEqual([FILE_URL, other]);
+    nothingLeft();
+  });
+
+  it('a later ask after the first has settled downloads afresh', async () => {
+    const transport = answering(
+      () => partsReply(200, [encode('a')]),
+      () => partsReply(200, [encode('b')]),
+    );
+    const client = clientWith(transport);
+    await download(client, FILE_URL, target());
+    await download(client, FILE_URL, target());
+    expect(transport.calls).toHaveLength(2);
+    expect(textOf(TARGET_URI)).toBe('b');
+  });
+});
+
 describe('a download under its cap', () => {
   it('over its cap is refused, read no further, and the partial file is removed', async () => {
     const transport = answering(() => partsReply(200, [encode('12345'), encode('67890')]));
@@ -261,112 +270,5 @@ describe('a download that is stopped', () => {
     expect(error).toMatchObject({ kind: 'network' });
     expect(transport.calls[0]?.signal.aborted).toBe(true);
     nothingLeft();
-  });
-});
-
-describe('a redirect', () => {
-  const redirect =
-    (to: string, status = 302) =>
-    () =>
-      reply(status, '', { Location: to });
-
-  it('is not followed when the request is not marked: the redirect error, one request', async () => {
-    const transport = answering(redirect(STORAGE));
-    const error = await failureOf(download(clientWith(transport), FILE_URL, target()));
-    expect(error).toBeInstanceOf(ApiError);
-    expect(error).toMatchObject({ kind: 'server', status: 302, redirectTo: STORAGE });
-    expect(transport.calls).toHaveLength(1);
-    expect(memoryFs.files.size).toBe(0);
-  });
-
-  it('is followed once when marked, with no bearer, no workspace and no other header', async () => {
-    const transport = answering(redirect(STORAGE), () => partsReply(200, [encode('%PDF')]));
-    await download(clientWith(transport), FILE_URL, target(), { redirectsToStorage: true });
-    expect(textOf(TARGET_URI)).toBe('%PDF');
-    expect(transport.calls.map((call) => call.url)).toEqual([FILE_URL, STORAGE]);
-    expect(transport.calls[1]?.headers).toEqual({});
-    expect(transport.calls[1]?.method).toBe('GET');
-    expect(transport.calls[1]?.body).toBeUndefined();
-    nothingLeft();
-  });
-
-  it('a second hop is refused: the redirect error, and nothing goes to its address', async () => {
-    const again = 'https://elsewhere.example.test/next';
-    const transport = answering(redirect(STORAGE), redirect(again, 307));
-    const error = await failureOf(
-      download(clientWith(transport), FILE_URL, target(), { redirectsToStorage: true }),
-    );
-    expect(error).toMatchObject({ kind: 'server', status: 307, redirectTo: again });
-    expect(transport.calls).toHaveLength(2);
-    nothingLeft();
-  });
-
-  it('to an http address is refused: one request, the redirect error', async () => {
-    const plain = 'http://bucket.storage.example.test/q3.pdf';
-    const transport = answering(redirect(plain));
-    const error = await failureOf(
-      download(clientWith(transport), FILE_URL, target(), { redirectsToStorage: true }),
-    );
-    expect(error).toMatchObject({ kind: 'server', status: 302, redirectTo: plain });
-    expect(transport.calls).toHaveLength(1);
-  });
-
-  it("storage's refusal is its kind and signs no one out", async () => {
-    const onAuthExpired = vi.fn();
-    const transport = answering(redirect(STORAGE), () => reply(401, '<Error/>'));
-    const error = await failureOf(
-      download(clientWith(transport, { onAuthExpired }), FILE_URL, target(), {
-        redirectsToStorage: true,
-      }),
-    );
-    expect(error).toMatchObject({ kind: 'auth', status: 401 });
-    expect(onAuthExpired).not.toHaveBeenCalled();
-  });
-
-  it("storage's body is under the same cap", async () => {
-    const transport = answering(redirect(STORAGE), () => partsReply(200, [encode('123456789')]));
-    const error = await failureOf(
-      download(clientWith(transport), FILE_URL, target(), {
-        redirectsToStorage: true,
-        maxBytes: 8,
-      }),
-    );
-    expect(error).toMatchObject({ kind: 'invalid_response' });
-    nothingLeft();
-  });
-});
-
-describe('storageAddress', () => {
-  it('takes an https address with a host', () => {
-    expect(storageAddress(STORAGE)).toBe(STORAGE);
-    expect(storageAddress('HTTPS://bucket.example.test')).toBe('HTTPS://bucket.example.test');
-    expect(storageAddress('https://bucket.example.test:9443/k?x=1')).not.toBeNull();
-  });
-
-  it('refuses http, a relative address, a user name, no host, a stray character or a huge one', () => {
-    for (const location of [
-      null,
-      '',
-      'http://bucket.example.test/q3.pdf',
-      '/api/documents/generated/q3.pdf',
-      '//bucket.example.test/q3.pdf',
-      'https://user:secret@bucket.example.test/q3.pdf',
-      'https:///q3.pdf',
-      'https://bucket.example.test/q 3.pdf',
-      'https://bucket.example.test\\@evil.example.test/',
-      'javascript:alert(1)',
-      `https://bucket.example.test/${'a'.repeat(8192)}`,
-    ]) {
-      expect(storageAddress(location), String(location)).toBeNull();
-    }
-  });
-});
-
-describe('assertOnServer', () => {
-  it("takes an address on the client's server, in any case, and nothing else", () => {
-    expect(() => assertOnServer(SERVER.apiUrl, FILE_URL)).not.toThrow();
-    expect(() => assertOnServer(`${SERVER.apiUrl}/`, FILE_URL.toUpperCase())).not.toThrow();
-    expect(() => assertOnServer(SERVER.apiUrl, SERVER.apiUrl)).toThrow(TypeError);
-    expect(() => assertOnServer(SERVER.apiUrl, `${SERVER.apiUrl}:444/x`)).toThrow(TypeError);
   });
 });
