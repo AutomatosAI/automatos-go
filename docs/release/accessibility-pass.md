@@ -97,6 +97,8 @@ row 26, shoot row 06 again while holding HOLD TO TALK, as `a11y-hud-06-home-talk
 | 31 | `edge-not-running` | `src/styles/edges/NotRunning.tsx` | Paired to the VPS with the VPS stopped (or the phone's Wi-Fi off) | |
 | 32 | `edge-something-wrong` | `src/styles/edges/SomethingWrong.tsx` | Only when the server answers with an error; skip it if it cannot be made to happen, and say so | |
 | 33 | `edge-lost` | `app/+not-found.tsx` (`src/styles/edges/Lost.tsx`) | Type `automatos://nowhere` in Safari's address bar and open it in the app | |
+| 34 | `licences` | `app/(app)/settings/licences.tsx` | Settings → About → Licences; shoot the top, then scroll a long way down and shoot again | |
+| 35 | `licence-text` | `src/about/LicenceSheet.tsx` | Licences → a package with a long text (for example `@livekit/components-core`), scrolled; then one that ships no licence file (for example `expo`) | |
 
 On each screen, scroll to the bottom and shoot again when it is longer than the phone: add `-2`,
 `-3` to the name.

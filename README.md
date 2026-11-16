@@ -56,6 +56,7 @@ npm run check:bundle      # expo export --platform ios: compiles the JS bundle, 
 npm run check:bundle:android  # the same for Android (each *.android.ts twin compiles there only)
 npm run check:doctor      # expo-doctor
 npm run format:check      # prettier --check .
+node scripts/generate-licences.mjs  # after a dependency change: the licence list in Settings
 ```
 
 ## Environment
@@ -180,6 +181,30 @@ These need a person with the accounts; nothing in this repository does them.
 5. **Clerk.** On the production instance: Native API on, the iOS and Android
    apps registered (so Clerk serves the `webcredentials` association), passkeys
    enabled, the `mobile` JWT template, 30-day sessions.
+
+## The licences the app shows
+
+Settings → About → Licences lists every package the app is built from, with its version, the
+licence it declares and the text of its licence file ([docs/app-standard.md](docs/app-standard.md)
+rule 8.3). The list is `src/about/licences.json`, written by `scripts/generate-licences.mjs` from
+`package-lock.json` and the installed `node_modules`. After any change to the dependencies (an
+install, an update, a removal), regenerate it and commit it with the lockfile:
+
+```bash
+npm ci --ignore-scripts
+node scripts/generate-licences.mjs
+```
+
+`scripts/__tests__/release-licences.test.ts` fails CI while the committed file differs from what
+the script would write, and names the packages that differ. It also fails when a package declares
+no licence or `UNLICENSED` (unless `NO_LICENCE_ALLOWED` names it with its reason), and when a kind
+of licence arrives that `LICENCE_IDS` does not list: read that licence, decide whether the app may
+ship it and what it would owe beyond showing its text, then add it.
+
+Not listed: dev dependencies, and optional packages that name an `os` or a `cpu` (native binaries
+for the computer that builds, such as `@sentry/cli-*` and `lightningcss-*`; the package that pulls
+each one in is listed). The CocoaPods and Gradle libraries a native build fetches are not in
+`node_modules`, so they are not in the list either.
 
 ## Licence
 
