@@ -12,6 +12,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import easJson from '../../eas.json';
 import { ENV_NAMES } from '../../src/lib/env';
+import { APP_RECORD } from '../../src/release/__tests__/settings/record';
 import { readRepoFile, repoRoot } from '../../src/release/__tests__/support/tree';
 import { EAS_CLI, spawnExec } from '../release/eas.mjs';
 import { readEnvList } from '../release/project.mjs';
@@ -30,7 +31,7 @@ describe('state.mjs: a release in order', () => {
     expect(result.lines).toEqual([
       'testflight-group: ok: "Team" is internal, with automatic distribution',
       'testflight-testers: ok: "Team" has 2 tester(s)',
-      'testflight-build: ok: newest build 12 (VALID) is in "Team"',
+      'testflight-build: ok: newest build 12 is ready for testers (READY_FOR_BETA_TESTING): "Team" takes every build',
       'eas-env:preview: ok: EAS environment preview holds the 2 names docs/release/eas-env.json lists',
       'eas-env:production: ok: EAS environment production holds the 2 names docs/release/eas-env.json lists',
       'workflow-run: ok: latest run run-1 succeeded (2026-11-16)',
@@ -118,16 +119,28 @@ describe('state.mjs: TestFlight', () => {
       'FAIL: App Store Connect has no build of the app',
     ],
     [
-      'a build not in the group',
-      { inGroup: { g1: [] } },
+      'a build waiting for its export compliance answer',
+      { builds: [{ id: 'b2', version: '12', state: 'VALID', beta: 'MISSING_EXPORT_COMPLIANCE' }] },
       'testflight-build',
-      'FAIL: newest build 12 (VALID) is not in "Team": it reaches no tester',
+      'FAIL: newest build 12 waits for its export compliance answer in App Store Connect (MISSING_EXPORT_COMPLIANCE): testers cannot install it',
+    ],
+    [
+      'a build in a TestFlight state the check does not know',
+      { builds: [{ id: 'b2', version: '12', state: 'VALID', beta: 'SOMETHING_NEW' }] },
+      'testflight-build',
+      'FAIL: newest build 12 is SOMETHING_NEW for TestFlight (SOMETHING_NEW): testers cannot install it',
+    ],
+    [
+      'a build already in testing',
+      { builds: [{ id: 'b2', version: '12', state: 'VALID', beta: 'IN_BETA_TESTING' }] },
+      'testflight-build',
+      'ok: newest build 12 is in testing (IN_BETA_TESTING): "Team" takes every build',
     ],
     [
       'a build that expired',
       { builds: [{ id: 'b2', version: '12', state: 'VALID', expired: true }] },
       'testflight-build',
-      'FAIL: newest build 12 (VALID) has expired: testers cannot install it',
+      'FAIL: newest build 12 has expired: testers cannot install it',
     ],
     [
       'a build that failed',
@@ -139,7 +152,7 @@ describe('state.mjs: TestFlight', () => {
       'a build still processing',
       { builds: [{ id: 'b3', version: '13', state: 'PROCESSING' }] },
       'testflight-build',
-      'ok: newest build 13 (PROCESSING) is still processing',
+      'ok: newest build 13 is still processing',
     ],
   ])('reads %s', async (_, change, check, verdict) => {
     const result = await state({ ...GOOD_ASC, ...change }, GOOD_EAS);
@@ -236,44 +249,60 @@ describe('eas.mjs spawnExec', () => {
   });
 });
 
-// docs/app-standard.md 14.7: the release steps come from the template's files, copied.
-describe('the template release files (rule 14.7)', () => {
+// docs/app-standard.md 14.7: the release steps come from the template's files, copied. A copy keeps
+// these checks as they are; only the template, which has docs/app-standard.md, also holds the rule's
+// own words to the files (APP_RECORD's role, as app-record.test.ts reads it).
+const RELEASE_FILES: readonly string[] = [
+  'scripts/release/first-release.mjs',
+  'scripts/release/state.mjs',
+  'scripts/release/state-eas.mjs',
+  'scripts/release/asc.mjs',
+  'scripts/release/eas.mjs',
+  'scripts/release/project.mjs',
+  'docs/release/eas-env.json',
+  '.eas/workflows/testflight.yml',
+  '.eas/workflows/pr-check.yml',
+  'scripts/__tests__/release-first-release.test.ts',
+  'scripts/__tests__/release-state.test.ts',
+  'scripts/__tests__/release-state-eas.test.ts',
+  'scripts/__tests__/release-state-harness.ts',
+  'scripts/__tests__/release-fixtures.ts',
+];
+const README_SECTIONS = [
+  'First release',
+  'Signing and capabilities',
+  'EAS environment',
+  'State check',
+];
+
+describe('the release files (rule 14.7)', () => {
   const list = readEnvList({ root: repoRoot() });
 
   it("lists, for each EAS environment the app's builds read, exactly the names src/lib/env.ts reads", () => {
     const names = [...Object.values(ENV_NAMES)].sort();
-    expect(Object.keys(list).sort()).toEqual(['preview', 'production']);
-    expect(Object.keys(list)).toContain(easJson.build.testflight.environment);
-    expect(Object.keys(list)).toContain(easJson.build.production.environment);
+    const read = new Set([
+      easJson.build.testflight.environment,
+      easJson.build.production.environment,
+    ]);
+    expect(Object.keys(list).sort()).toEqual([...read].sort());
     Object.values(list).forEach((each) => expect([...each].sort()).toEqual(names));
   });
 
   it('keeps every file a copy takes, and the README sections they are run from', () => {
-    const files = [
-      'scripts/release/first-release.mjs',
-      'scripts/release/state.mjs',
-      'scripts/release/state-eas.mjs',
-      'scripts/release/asc.mjs',
-      'scripts/release/eas.mjs',
-      'scripts/release/project.mjs',
-      'docs/release/eas-env.json',
-      '.eas/workflows/testflight.yml',
-      '.eas/workflows/pr-check.yml',
-    ];
-    files.forEach((file) => expect(existsSync(path.join(repoRoot(), file)), file).toBe(true));
-    const readme = readRepoFile('docs/release/README.md');
-    [
-      '## First release',
-      '## Signing and capabilities',
-      '## EAS environment',
-      '## State check',
-    ].forEach((heading) => expect(readme.split('\n')).toContain(heading));
+    RELEASE_FILES.forEach((file) =>
+      expect(existsSync(path.join(repoRoot(), file)), file).toBe(true),
+    );
+    const headings = readRepoFile('docs/release/README.md').split('\n');
+    README_SECTIONS.forEach((section) => expect(headings).toContain(`## ${section}`));
+  });
+
+  it.runIf(APP_RECORD.role === 'template')('names every one of them in the rule itself', () => {
     const page = readRepoFile('docs/app-standard.md');
     const start = page.indexOf('**14.7 ');
     const rule = start === -1 ? '' : page.slice(start, page.indexOf('\n\n', start));
     expect(rule).toContain('(Must)');
-    files.forEach((file) => expect(rule, file).toContain(path.basename(file)));
-    ['First release', 'Signing', 'EAS environment', 'State check'].forEach((section) =>
+    RELEASE_FILES.forEach((file) => expect(rule, file).toContain(path.basename(file)));
+    README_SECTIONS.forEach((section) =>
       expect(rule.replace(/\s+/g, ' '), section).toContain(section),
     );
   });

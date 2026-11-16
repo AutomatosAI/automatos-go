@@ -23,7 +23,6 @@ export const GOOD_ASC: AscState = {
   groups: [{ id: 'g1', name: 'Team', internal: true, allBuilds: true }],
   testers: { g1: 2 },
   builds: [{ id: 'b2', version: '12', state: 'VALID' }],
-  inGroup: { g1: ['b2'] },
 };
 export const BOTH = { project: ENV_NAMES_FOR_TEST };
 export const GOOD_RUN = { id: 'run-1', status: 'SUCCESS', startedAt: '2026-11-16T10:00:00.000Z' };

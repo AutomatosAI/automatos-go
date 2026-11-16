@@ -175,6 +175,7 @@ function query(pairs) {
     .join('&');
 }
 
+// Apple answers hasAccessToAllBuilds with null for some groups (eas-cli #4528): only true counts.
 const groupOf = (entry) =>
   Object.freeze({
     id: String(entry?.id ?? ''),
@@ -225,13 +226,12 @@ async function readApp(call, appId) {
   });
 }
 
+/** The app's TestFlight groups, as eas-cli's build steps list them (GET /v1/betaGroups). */
 async function listGroups(call, appId) {
-  const fields = {
-    'fields[betaGroups]': 'name,isInternalGroup,hasAccessToAllBuilds',
-    limit: '200',
-  };
-  const route = appRoute(appId, `/betaGroups?${query(fields)}`);
+  const route = `/v1/betaGroups?${query({ 'filter[app]': appId, limit: '200' })}`;
   const body = await call('list the TestFlight groups', 'GET', route);
+  // a second page would hide a group, and --apply could then make a second one
+  if (body?.links?.next) throw new AscError('list the TestFlight groups: over 200 groups');
   return Object.freeze((Array.isArray(body?.data) ? body.data : []).map(groupOf));
 }
 
@@ -245,19 +245,28 @@ async function createInternalGroup(call, appId, name) {
   return groupOf(body?.data);
 }
 
-/** The newest build uploaded for the app, or the newest one in a group when `groupId` is given. */
-async function newestBuild(call, appId, groupId) {
+/** The newest build uploaded for the app, or undefined when it has none. */
+async function newestBuild(call, appId) {
   const pairs = {
     'filter[app]': appId,
-    ...(groupId === undefined ? {} : { 'filter[betaGroups]': groupId }),
     sort: '-uploadedDate',
     limit: '1',
     'fields[builds]': 'version,processingState,expired',
   };
-  const name =
-    groupId === undefined ? "read the app's newest build" : "read the group's newest build";
-  const body = await call(name, 'GET', `/v1/builds?${query(pairs)}`);
+  const body = await call("read the app's newest build", 'GET', `/v1/builds?${query(pairs)}`);
   return buildOf(Array.isArray(body?.data) ? body.data[0] : undefined);
+}
+
+/**
+ * A build's TestFlight state for internal testers (buildBetaDetail.internalBuildState, which
+ * eas-cli's build steps read too): READY_FOR_BETA_TESTING or IN_BETA_TESTING when they can
+ * install it; PROCESSING, PROCESSING_EXCEPTION, MISSING_EXPORT_COMPLIANCE,
+ * IN_EXPORT_COMPLIANCE_REVIEW or EXPIRED when they cannot.
+ */
+async function internalState(call, buildId) {
+  const route = `/v1/builds/${encodeURIComponent(buildId)}/buildBetaDetail`;
+  const body = await call("read the build's TestFlight state", 'GET', route);
+  return String(body?.data?.attributes?.internalBuildState ?? 'UNKNOWN');
 }
 
 async function testerCount(call, groupId) {
@@ -278,7 +287,8 @@ export function ascClient({ token, transport = httpsTransport }) {
     app: (appId) => readApp(call, appId),
     groups: (appId) => listGroups(call, appId),
     createInternalGroup: (appId, name) => createInternalGroup(call, appId, name),
-    newestBuild: (appId, groupId) => newestBuild(call, appId, groupId),
+    newestBuild: (appId) => newestBuild(call, appId),
+    internalState: (buildId) => internalState(call, buildId),
     testerCount: (groupId) => testerCount(call, groupId),
   });
 }

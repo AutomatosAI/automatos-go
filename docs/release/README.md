@@ -57,7 +57,7 @@ wording the privacy policy and the Terms can use, is in [privacy-facts.md](priva
 | R21 | Reviewer access: a demo account without MFA in a Business workspace, a long-lived review pairing code, review notes | Apple 2.1, 2.3.1; Play App access; D13 | Test: [src/release/\_\_tests\_\_/release-docs.test.ts](../../src/release/__tests__/release-docs.test.ts) (US-021p): the Notes block of [app-review-notes.md](app-review-notes.md) is within App Store Connect's 4,000 characters, describes both ways in, and names every app label it sends a reviewer to, each imported from its strings module, so a renamed button fails until the notes follow; the demo account, the review server and the code are placeholders 'in App Store Connect only' (or 'in Play Console only' in [play-app-access.md](play-app-access.md)). The long-lived review code exists on automatos-ai `main` since PRD-266 W1/W2: `scripts/mint_pairing_code.py --review --ttl-hours N` (1 to 336 hours, one phone, once, audited). OWNER OT-R12 |
 | R22 | Store listing, age-rating answers, export compliance | App Store Connect; Play IARC; ITSAppUsesNonExemptEncryption | Test: [src/release/\_\_tests\_\_/release-docs.test.ts](../../src/release/__tests__/release-docs.test.ts) (US-021p): [store-listing.md](store-listing.md)'s fields are within their limits (name 30, and it is `app.json`'s; subtitle 30; promotional text 170; description 4,000, saying "AI assistant"; keywords 100, comma-separated, no spaces or repeats); its support and privacy policy URLs are `legal-links.ts`'s; no pasted block of the listing, the review notes or Play's App access uses a SIGNUP, BILLING or DATA_CLAIMS phrase (US-021k's lists) or a word the app's terms rule out; across `docs/release`, every privacy, terms or support address is `legal-links.ts`'s and no file holds a secret-shaped string (pk\_/sk\_ keys, `amd_` tokens, Expo push tokens, private-key blocks, JWTs, Sentry DSNs), a password value or a person's email address; [export-compliance.md](export-compliance.md) states `app.json`'s `ITSAppUsesNonExemptEncryption` false. Answers: [age-rating.md](age-rating.md) (Apple and IARC, each with its reason), [export-compliance.md](export-compliance.md) (every use of cryptography in the app). OWNER OT-R13 |
 | R23 | The WebSummit checklist run on Gerard's phone | US-021 AC4; PRD §10 | The checklist: [websummit-checklist.md](websummit-checklist.md) (US-021q): the demo (sign in, pair with the VPS, answer from a notification, flip styles, change a look, quick-ask), the store-duty spot checks and the iOS App Privacy Report domain check, with a results table and a sign-off line; gate check "US-021q" (the checklist and privacy-facts.md exist, CLAUDE.md has its Release (A7) section). The run: OWNER OT-R14 |
-| R24 | Every build reaches its testers: an internal TestFlight group with automatic distribution and testers, the EAS environment's names set, and a delivery that started | App standard 14.7; an app's first build that reached no tester (16 Nov) | Tests: [scripts/\_\_tests\_\_/release-first-release.test.ts](../../scripts/__tests__/release-first-release.test.ts) (the group is created only when none delivers every build, never changed or deleted, only with `--apply`; the token signed with a key made for the test; nothing of the key printed) and [release-state.test.ts](../../scripts/__tests__/release-state.test.ts) (each check's ok, FAIL and not-checked lines over fake answers; no value from `eas env:list` ever printed; [eas-env.json](eas-env.json) holds exactly the names `src/lib/env.ts` reads). The run: OWNER OT-R17 |
+| R24 | Every build reaches its testers: an internal TestFlight group with automatic distribution and testers, the EAS environment's names set, and a delivery that started | App standard 14.7; an app's first build that reached no tester (16 Nov) | Tests: [scripts/\_\_tests\_\_/release-first-release.test.ts](../../scripts/__tests__/release-first-release.test.ts) (the group is created only when none delivers every build, never changed or deleted, only with `--apply`; the token signed with a key made for the test; nothing of the key printed) [release-state.test.ts](../../scripts/__tests__/release-state.test.ts) and [release-state-eas.test.ts](../../scripts/__tests__/release-state-eas.test.ts), over the fakes in `release-state-harness.ts` and `release-fixtures.ts` (each check's ok, FAIL and not-checked lines over fake answers; no value from `eas env:list` ever printed; [eas-env.json](eas-env.json) holds exactly the names `src/lib/env.ts` reads). The run: OWNER OT-R17 |
 
 ### What R11's test checks
 
@@ -114,7 +114,8 @@ What eas-cli does about the group (read in eas-cli 27.10.0, `submit/ios/AppProdu
   Store Connect, signed in as the Apple ID on its prompt, then creates the group "Team (Expo)",
   internal, with automatic distribution, and invites the team's Admin users to it.
 - **An app App Store Connect already has.** With an `ascAppId`, `eas submit` tries the same group
-  (since eas-cli 22.0.0; on by default, `--no-auto-testflight-setup` turns it off). It gives up,
+  (on by default; `--no-auto-testflight-setup` turns it off). eas-cli 22.0.0 added this for an
+  interactive submit, and 27.10.0's code runs it in a non-interactive one too. It gives up,
   printing "skipping TestFlight setup" or "Skipping TestFlight group setup", and the upload goes on
   when:
   - it cannot sign in to App Store Connect. With any `EXPO_ASC_*` variable set, it needs
@@ -225,12 +226,17 @@ node scripts/release/state.mjs
 |---|---|---|
 | `testflight-group` | App Store Connect: the app's TestFlight groups | No internal group with automatic distribution, or no `ascAppId` in `eas.json` |
 | `testflight-testers` | That group's testers | It has none |
-| `testflight-build` | The app's newest build | There is none, it expired or failed processing, or it is processed and not in the group |
+| `testflight-build` | The app's newest build, then its TestFlight state for internal testers (`buildBetaDetail`) | There is none, it expired or failed processing, or its state keeps testers from it (waiting for export compliance, among others) |
 | `eas-env:<name>` | `eas env:list` for that environment, both scopes, names only | A name [eas-env.json](eas-env.json) lists is missing |
 | `workflow-run` | The latest run of `.eas/workflows/testflight.yml` (`eas workflow:runs`, then `workflow:view`) | It failed to start, failed, was cancelled, waits for an approval, or there is none |
 | `build-quota` | `eas account:usage <owner> --json`: iOS builds this cycle | None is left |
 | `cicd-minutes` | The same answer's CI/CD minutes, when it has them | They are spent |
 
+- **The group takes every build.** A build is not added to a group with automatic distribution one
+  by one: the group has access to all of them, and eas-cli's own build steps skip assigning a build
+  to such a group for that reason. So the check does not look for the build in the group: it reads
+  the build's TestFlight state, `READY_FOR_BETA_TESTING` or `IN_BETA_TESTING` when testers can
+  install it. Apple answers `hasAccessToAllBuilds` with null for some groups; only `true` counts.
 - **Credentials.** The App Store Connect lines need the key in the three variables (First release,
   above). The EAS lines need eas-cli signed in: `npx eas-cli login`, or `EXPO_TOKEN`. Without them a
   line says "not checked" and why, and never passes. The script runs eas-cli 27.10.0 through

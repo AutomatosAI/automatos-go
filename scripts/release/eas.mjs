@@ -2,7 +2,9 @@
 // config before every project command and evaluates app.json's plugins while it does, so in an app
 // folder without node_modules every eas command fails. The project commands here need only the
 // link (owner, slug, project id), so they run in a folder made for the run that holds just that:
-// an app.json with the link and no plugins, and a package.json. It is deleted afterwards.
+// an app.json with the link and no plugins, and a package.json with no `expo` dependency, so
+// eas-cli reads app.json itself instead of running `expo config` (project/expoConfig in eas-cli
+// 27.10.0; it needs `name` and `slug`). The folder is deleted afterwards.
 //
 // The readers below take what they need from eas's output and drop the rest. `env:list` prints
 // each variable as NAME=value, a plain value in the clear, so only the name before '=' is kept and

@@ -11,7 +11,8 @@
 //   testflight-group    App Store Connect has an internal TestFlight group with automatic
 //                       distribution for the app (eas.json's ascAppId)
 //   testflight-testers  that group has testers
-//   testflight-build    the app's newest build is processed, not expired, and in that group
+//   testflight-build    the app's newest build is processed and ready for internal testers
+//                       (its TestFlight state), so the group, which takes every build, has it
 //   eas-env:<name>      each EAS environment holds every name docs/release/eas-env.json lists
 //                       (names only: eas env:list's values are never printed)
 //   workflow-run        the delivery workflow's latest run did not fail, or fail to start
@@ -67,17 +68,38 @@ export function parseArgs(argv) {
 const notChecked = (why, checks = ASC_CHECKS) =>
   checks.map((check) => line(check, 'not checked', why));
 
-function buildLine(newest, inGroup, group) {
+/** What each internal TestFlight state means for the newest build: [verdict, words]. */
+const BETA_STATES = Object.freeze({
+  READY_FOR_BETA_TESTING: ['ok', 'is ready for testers'],
+  IN_BETA_TESTING: ['ok', 'is in testing'],
+  PROCESSING: ['ok', 'is still processing for TestFlight'],
+  MISSING_EXPORT_COMPLIANCE: [
+    'FAIL',
+    'waits for its export compliance answer in App Store Connect',
+  ],
+  IN_EXPORT_COMPLIANCE_REVIEW: ['FAIL', "waits for Apple's export compliance review"],
+  PROCESSING_EXCEPTION: ['FAIL', 'did not process for TestFlight'],
+  EXPIRED: ['FAIL', 'has expired'],
+});
+
+/** The newest build, by its processing and then its TestFlight state for internal testers. */
+function buildLine(newest, betaState, group) {
   const check = 'testflight-build';
   if (newest === undefined) return line(check, 'FAIL', 'App Store Connect has no build of the app');
-  const name = `newest build ${newest.version} (${newest.state})`;
+  const name = `newest build ${newest.version}`;
   if (newest.expired) return line(check, 'FAIL', `${name} has expired: testers cannot install it`);
   if (newest.state === 'PROCESSING') return line(check, 'ok', `${name} is still processing`);
-  if (newest.state !== 'VALID')
-    return line(check, 'FAIL', `${name} did not process: testers cannot install it`);
-  if (inGroup?.id !== newest.id)
-    return line(check, 'FAIL', `${name} is not in "${group.name}": it reaches no tester`);
-  return line(check, 'ok', `${name} is in "${group.name}"`);
+  if (newest.state !== 'VALID') {
+    return line(
+      check,
+      'FAIL',
+      `${name} (${newest.state}) did not process: testers cannot install it`,
+    );
+  }
+  const [verdict, words] = BETA_STATES[betaState] ?? ['FAIL', `is ${betaState} for TestFlight`];
+  const reach =
+    verdict === 'ok' ? `"${group.name}" takes every build` : 'testers cannot install it';
+  return line(check, verdict, `${name} ${words} (${betaState}): ${reach}`);
 }
 
 async function groupLines(client, appId) {
@@ -95,8 +117,7 @@ async function groupLines(client, appId) {
   }
   const testers = await client.testerCount(group.id);
   const newest = await client.newestBuild(appId);
-  const inGroup =
-    newest && newest.state === 'VALID' ? await client.newestBuild(appId, group.id) : undefined;
+  const betaState = newest?.state === 'VALID' ? await client.internalState(newest.id) : undefined;
   return [
     line('testflight-group', 'ok', `"${group.name}" is internal, with automatic distribution`),
     testers > 0
@@ -106,7 +127,7 @@ async function groupLines(client, appId) {
           'FAIL',
           `"${group.name}" has no testers: add the team's App Store Connect users to it`,
         ),
-    buildLine(newest, inGroup, group),
+    buildLine(newest, betaState, group),
   ];
 }
 

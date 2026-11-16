@@ -87,8 +87,15 @@ export const readKeyFrom = (pem: string) => (file: string) => {
   return pem;
 };
 
-export type FakeGroup = { id: string; name: string; internal: boolean; allBuilds: boolean };
-export type FakeBuild = { id: string; version: string; state: string; expired?: boolean };
+export type FakeGroup = { id: string; name: string; internal: boolean; allBuilds: boolean | null };
+export type FakeBuild = {
+  id: string;
+  version: string;
+  state: string;
+  expired?: boolean;
+  /** Its internal TestFlight state (buildBetaDetail); READY_FOR_BETA_TESTING when unset. */
+  beta?: string;
+};
 export type AscRequest = {
   method: string;
   url: string;
@@ -101,8 +108,8 @@ export type AscState = {
   testers?: Record<string, number>;
   /** Newest first. */
   builds?: FakeBuild[];
-  /** Build ids in each group. */
-  inGroup?: Record<string, string[]>;
+  /** A second page of groups, as Apple answers past its limit. */
+  morePages?: boolean;
   /** Every answer this status, with Apple's error body. */
   failWith?: { status: number; title: string };
 };
@@ -128,12 +135,25 @@ const buildBody = (build: FakeBuild) => ({
 });
 
 function builds(state: AscState, url: URL) {
-  const groupId = url.searchParams.get('filter[betaGroups]');
+  if (url.searchParams.get('filter[app]') !== FAKE_APP_ID) return answer(400, { errors: [] });
   const all = state.builds ?? [];
-  const chosen =
-    groupId === null ? all : all.filter((b) => (state.inGroup?.[groupId] ?? []).includes(b.id));
   return answer(200, {
-    data: chosen.slice(0, Number(url.searchParams.get('limit') ?? 50)).map(buildBody),
+    data: all.slice(0, Number(url.searchParams.get('limit') ?? 50)).map(buildBody),
+  });
+}
+
+function groups(state: AscState, url: URL) {
+  if (url.searchParams.get('filter[app]') !== FAKE_APP_ID) return answer(400, { errors: [] });
+  const links = state.morePages ? { next: 'https://api.appstoreconnect.apple.com/next' } : {};
+  return answer(200, { data: state.groups.map(groupBody), links });
+}
+
+function betaDetail(state: AscState, buildId: string) {
+  const build = (state.builds ?? []).find((each) => each.id === buildId);
+  if (!build) return answer(404, { errors: [{ code: 'NOT_FOUND', title: 'no build' }] });
+  const internalBuildState = build.beta ?? 'READY_FOR_BETA_TESTING';
+  return answer(200, {
+    data: { type: 'buildBetaDetails', id: buildId, attributes: { internalBuildState } },
   });
 }
 
@@ -162,10 +182,11 @@ export function fakeAsc(state: AscState) {
     const route = `${request.method} ${url.pathname}`;
     if (route === `GET /v1/apps/${FAKE_APP_ID}`)
       return answer(200, { data: { id: FAKE_APP_ID, attributes: state.app } });
-    if (route === `GET /v1/apps/${FAKE_APP_ID}/betaGroups`)
-      return answer(200, { data: state.groups.map(groupBody) });
+    if (route === 'GET /v1/betaGroups') return groups(state, url);
     if (route === 'POST /v1/betaGroups') return createGroup(state, request);
     if (route === 'GET /v1/builds') return builds(state, url);
+    const detail = /^GET \/v1\/builds\/([^/]+)\/buildBetaDetail$/.exec(route);
+    if (detail) return betaDetail(state, detail[1]);
     const testers = /^GET \/v1\/betaGroups\/([^/]+)\/relationships\/betaTesters$/.exec(route);
     if (testers) {
       const total = state.testers?.[testers[1]] ?? 0;

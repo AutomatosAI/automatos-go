@@ -90,7 +90,7 @@ async function ensureGroup(client, project, options, io) {
   }
   if (groups.some((group) => group.name === options.group)) {
     throw new FirstReleaseError(
-      `the group "${options.group}" exists but is not internal with automatic distribution, which App Store Connect's API cannot switch on: turn on automatic distribution for it in App Store Connect (TestFlight), or run this with --group <another name>`,
+      `the group "${options.group}" exists but does not show as internal with automatic distribution, which App Store Connect's API cannot switch on: turn on automatic distribution for it in App Store Connect (TestFlight), or run this with --group <another name>`,
     );
   }
   io.out(

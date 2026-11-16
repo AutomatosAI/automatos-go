@@ -224,8 +224,22 @@ describe('first-release.mjs: an app App Store Connect already has', () => {
     const result = await release({ app: APP, groups: [same] }, ['--apply']);
     expect(result.code).toBe(1);
     expect(result.err.join('\n')).toContain(
-      'the group "Team (Expo)" exists but is not internal with automatic distribution',
+      'the group "Team (Expo)" exists but does not show as internal with automatic distribution',
     );
+    expect(posts(result.requests)).toEqual([]);
+  });
+
+  it('takes a group whose automatic distribution Apple answers as null for one without it', async () => {
+    const unknown = { id: 'x4', name: 'Team', internal: true, allBuilds: null };
+    const result = await release({ app: APP, groups: [unknown] }, ['--apply']);
+    expect(result.code).toBe(0);
+    expect(posts(result.requests)).toHaveLength(1);
+  });
+
+  it('stops when the groups run past one page, rather than make a second group', async () => {
+    const result = await release({ app: APP, groups: [], morePages: true }, ['--apply']);
+    expect(result.code).toBe(1);
+    expect(result.err).toEqual(['FAIL: list the TestFlight groups: over 200 groups']);
     expect(posts(result.requests)).toEqual([]);
   });
 
