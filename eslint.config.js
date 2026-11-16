@@ -42,6 +42,11 @@ const NO_EXPO_FETCH = {
   name: 'expo/fetch',
   message: 'expo/fetch is imported by src/api/transport.ts only: use the API client.',
 };
+// expo's own file behind expo/fetch: refused everywhere, src/api/transport.ts included.
+const NO_EXPO_FETCH_FILES = {
+  group: ['expo/src/winter/fetch'],
+  message: 'Import expo/fetch by that name, in src/api/transport.ts only: use the API client.',
+};
 
 // A web view in any form (D-NO-WEBVIEW, rule 13.8). A DOM component ('use dom', expo/dom) is a
 // web view too: @expo/dom-webview or react-native-webview draws it.
@@ -104,8 +109,8 @@ const PURE_CORE_PATTERN = {
   message: 'src/core is pure TypeScript (D-PURE): no React, React Native or Expo.',
 };
 
-// Refused in every file: a second client, a web view, a picture fetched by address. Each block
-// adds what it refuses beside them.
+// Refused in every file: a second client, a web view, a picture fetched by address, expo's file
+// behind expo/fetch. Each block adds what it refuses beside them.
 function restrictedImports(paths, patterns) {
   return [
     'error',
@@ -115,6 +120,7 @@ function restrictedImports(paths, patterns) {
         ...patterns,
         ...NO_WEB_VIEW_PATTERNS,
         NO_SVG_FILES,
+        NO_EXPO_FETCH_FILES,
         NO_OTHER_CLIENT_PATHS,
       ],
     },
@@ -130,6 +136,7 @@ const REFUSED_MODULES = [
   '@expo.dom-webview',
   'expo.src.dom',
   'expo.fetch',
+  'expo.src.winter.fetch',
   ...OTHER_CLIENTS,
 ];
 const LOADED_ANOTHER_WAY =
