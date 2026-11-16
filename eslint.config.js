@@ -186,13 +186,46 @@ const NO_OTHER_LOADERS = [
   ...loadedBy(['react-native-svg'], SVG_LOADED_ANOTHER_WAY),
 ];
 
-// #rgb, #rrggbb, #rrggbbaa and the rgb()/rgba()/hsl()/hsla() functions, anywhere in a string.
+// The colours React Native reads from a string, anywhere in it: #rgb, #rrggbb, #rrggbbaa, #rgba
+// with a letter in it, and the rgb(), rgba(), hsl(), hsla() and hwb() functions. Four decimal
+// digits read as the board's ticket number (#0422), so that #rgba is refused where a colour goes.
 const COLOUR =
-  '(#([0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3})(?![0-9a-zA-Z_])|\\b(rgba?|hsla?)\\s*\\()';
+  '(#([0-9a-fA-F]{8}|[0-9a-fA-F]{6}|(?=[0-9]{0,3}[a-fA-F])[0-9a-fA-F]{4}|[0-9a-fA-F]{3})(?![0-9a-zA-Z_])|\\b(rgba?|hsla?|hwb)\\s*\\()';
 const COLOUR_MESSAGE = 'Colour literal (D-TOKENS): read the colour from src/styles/tokens.';
+// Where a colour goes: a key React Native reads as one (color, backgroundColor, tintColor…) and
+// a component's colour prop (those, colors, fill and stroke). There, a whole string of four
+// decimal digits or a colour's name is a colour. Elsewhere a name may be a token's ('olive',
+// 'navy') or a word. React Native's own list of names; 'transparent' is no colour and stays.
+const NAMED_COLOURS = `aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond
+  blue blueviolet brown burlywood burntsienna cadetblue chartreuse chocolate coral cornflowerblue
+  cornsilk crimson cyan darkblue darkcyan darkgoldenrod darkgray darkgreen darkgrey darkkhaki
+  darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen darkslateblue
+  darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue dimgray dimgrey
+  dodgerblue firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite gold goldenrod gray green
+  greenyellow grey honeydew hotpink indianred indigo ivory khaki lavender lavenderblush lawngreen
+  lemonchiffon lightblue lightcoral lightcyan lightgoldenrodyellow lightgray lightgreen lightgrey
+  lightpink lightsalmon lightseagreen lightskyblue lightslategray lightslategrey lightsteelblue
+  lightyellow lime limegreen linen magenta maroon mediumaquamarine mediumblue mediumorchid
+  mediumpurple mediumseagreen mediumslateblue mediumspringgreen mediumturquoise mediumvioletred
+  midnightblue mintcream mistyrose moccasin navajowhite navy oldlace olive olivedrab orange orangered
+  orchid palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum
+  powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown seagreen
+  seashell sienna silver skyblue slateblue slategray slategrey snow springgreen steelblue tan teal
+  thistle tomato turquoise violet wheat white whitesmoke yellow yellowgreen`.split(/\s+/);
+const COLOUR_KEY = '/^(color|[a-zA-Z_]+Color)$/';
+const COLOUR_PROP = '/^(color|colors|fill|stroke|[a-zA-Z_]+Color)$/';
+const COLOUR_IN_ITS_PLACE = `/^(#[0-9]{4}|${NAMED_COLOURS.join('|')})$/`;
 const NO_COLOUR_LITERALS = [
   { selector: `Literal[value=/${COLOUR}/]`, message: COLOUR_MESSAGE },
   { selector: `TemplateElement[value.raw=/${COLOUR}/]`, message: COLOUR_MESSAGE },
+  {
+    selector: `Property[key.name=${COLOUR_KEY}] Literal[value=${COLOUR_IN_ITS_PLACE}]`,
+    message: COLOUR_MESSAGE,
+  },
+  {
+    selector: `JSXAttribute[name.name=${COLOUR_PROP}] Literal[value=${COLOUR_IN_ITS_PLACE}]`,
+    message: COLOUR_MESSAGE,
+  },
 ];
 
 // One rule holds every list a file gets: a second no-restricted-syntax for the same files would
