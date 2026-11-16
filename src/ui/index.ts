@@ -14,6 +14,7 @@ export { IconButton, type IconButtonProps } from './IconButton';
 export { KeyboardLift, type KeyboardLiftProps } from './KeyboardLift';
 export { ListRow, type ListRowProps } from './ListRow';
 export { LoadingState, type LoadingStateProps } from './LoadingState';
+export { OutOfDateNote, type OutOfDateNoteProps } from './OutOfDateNote';
 export { Pill, type PillProps } from './Pill';
 export { ReportSheet, type ReportSheetProps } from './ReportSheet';
 export { Screen, type ScreenProps } from './Screen';
