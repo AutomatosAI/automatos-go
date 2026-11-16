@@ -204,9 +204,12 @@ describe('(b) Report this', () => {
     const page = 'src/cc/deliverables/use-deliverable.ts';
     expect(definingFile(page, 'reportTarget')).toBe('src/cc/deliverables/detail.ts');
     expect(codeOf('src/cc/deliverables/detail.ts')).toContain("target_type: 'deliverable'");
-    const route = 'src/styles/homes/PlaySwitch.tsx';
-    expect(rendersFrom(route, 'src/cc/deliverables/DeliverableDetail.tsx')).toBe(true);
-    expect(rendersFrom(route, 'src/styles/homes/PlayDeliverable.tsx')).toBe(true);
+    // the route mounts the style switch, and the switch draws the page in every style
+    const route = 'app/(app)/cc/deliverables/[id].tsx';
+    const styleSwitch = 'src/styles/homes/PlaySwitch.tsx';
+    expect(rendersFrom(route, styleSwitch)).toBe(true);
+    expect(rendersFrom(styleSwitch, 'src/cc/deliverables/DeliverableDetail.tsx')).toBe(true);
+    expect(rendersFrom(styleSwitch, 'src/styles/homes/PlayDeliverable.tsx')).toBe(true);
   });
 
   it("says, for every surface that can show Auto's messages, what Report this is there", () => {
