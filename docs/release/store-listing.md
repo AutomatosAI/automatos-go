@@ -84,7 +84,7 @@ YOUR OWN SERVER
 - Run Automatos yourself? Connect Automatos Go to your own Automatos server with a pairing code from Studio.
 
 PRIVACY
-- Before your first message, the app shows which AI providers receive what you send.
+- Before your first message, the app tells you that what you send goes to AI providers, and names them where the server lists them.
 - Crash reports never include your chats, questions or notifications, and you can turn them off in Settings.
 
 BEFORE YOU START

@@ -164,9 +164,10 @@ deletes it.
   key names: its token cache (`src/auth/token-cache.ts`) writes through the key registry
   (`src/lib/secure-keys.ts`), which records each name in the index item before the item is
   written. That way every item can be listed and deleted.
-- **One clearing for every way out.** Sign out (hosted Studio) and "Remove this phone and forget
-  this server" (an own server's one button: the server is asked to remove this phone, then the
-  phone forgets it, `src/connect/remove-device.ts`) both run `clearUserData`
+- **One clearing for every way out.** Sign out (hosted Studio) and an own server's way out, "Remove
+  this phone and forget this server" in Settings (labelled "Forget this server" where Sign out
+  would be: the server is asked to remove this phone, then the phone forgets it,
+  `src/connect/remove-device.ts`), both run `clearUserData`
   (`src/connect/switch.ts`; wired in `src/app-state/use-sign-out.ts` and
   `src/connect/use-server-switch.ts`). So does a session the server ends: an expired hosted
   session, or this phone removed in Studio. In that case it runs
