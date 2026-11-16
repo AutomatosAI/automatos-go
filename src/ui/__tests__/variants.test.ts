@@ -375,7 +375,7 @@ describe('error states', () => {
   it('offers a retry only where one can help (not auth, forbidden or not found)', () => {
     const retryable = KINDS.filter((kind) => errorCopy(new ApiError(kind)).canRetry);
     expect(retryable.sort()).toEqual(
-      ['conflict', 'invalid_response', 'network', 'server', 'stream'].sort(),
+      ['conflict', 'invalid_response', 'limit', 'network', 'server', 'stream'].sort(),
     );
   });
 
