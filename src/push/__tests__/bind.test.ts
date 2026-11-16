@@ -330,7 +330,7 @@ describe('the shell (seam edits, read as source)', () => {
   });
 
   it('Account: the Notifications row and Remove this phone come after the rows already there', () => {
-    const account = read('settings/index.tsx');
+    const account = read('../../src/settings/SettingsScreen.tsx');
     const server = account.indexOf('<ServerSection');
     const rows = account.indexOf('<InfoRow row={row} />');
     const notifications = account.indexOf('router.push(pushScreens.notifications)');

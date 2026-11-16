@@ -233,8 +233,8 @@ the phone's rows from `client-rows.ts` (push, microphone, speech recognition, se
 the phone's row replace a server row with the same id. A fix is followed only to an app screen
 (`appRouteForWebLink`); `isAppPath` rejects other hosts in the schema. Marks use `readinessMark`
 with `dress.status` and `dress.glyphPaint`, the same split as the status vocabulary. The readiness
-query keys are not persisted, so each launch reads fresh. Mounted at
-`app/(app)/settings/index.tsx`.
+query keys are not persisted, so each launch reads fresh. Mounted on the Settings screen,
+`src/settings/SettingsScreen.tsx`.
 
 ## Tests that pin each
 

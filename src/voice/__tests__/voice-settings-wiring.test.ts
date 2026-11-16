@@ -97,7 +97,7 @@ describe('the quick-ask hook (source)', () => {
 });
 
 describe('Settings → Voice (source)', () => {
-  const settings = read('app/(app)/settings/index.tsx');
+  const settings = read('src/settings/SettingsScreen.tsx');
 
   it('shows the Voice row directly under Notifications, before Remove this phone', () => {
     const notifications = settings.indexOf('router.push(pushScreens.notifications)');
