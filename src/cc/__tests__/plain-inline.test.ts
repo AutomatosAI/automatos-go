@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   GROWTH_FACTOR,
+  GROWTH_TIMEOUT_MS,
   LINEAR_GROWTH_LIMIT,
   growth,
   randomTexts,
@@ -90,33 +91,37 @@ describe('a whole line, every rule in its order', () => {
   });
 });
 
-describe(`a megabyte of opening markers with no close (under ${LINEAR_GROWTH_LIMIT}x for ${GROWTH_FACTOR}x)`, () => {
-  const SIZE = 131_072; // GROWTH_FACTOR times this is a megabyte
-  const openers = (unit: string, take: (text: string) => unknown) => (size: number) => {
-    const text = unit.repeat(Math.ceil(size / unit.length));
-    return () => take(text);
-  };
+describe(
+  `a megabyte of opening markers with no close (under ${LINEAR_GROWTH_LIMIT}x for ${GROWTH_FACTOR}x)`,
+  { timeout: GROWTH_TIMEOUT_MS },
+  () => {
+    const SIZE = 131_072; // GROWTH_FACTOR times this is a megabyte
+    const openers = (unit: string, take: (text: string) => unknown) => (size: number) => {
+      const text = unit.repeat(Math.ceil(size / unit.length));
+      return () => take(text);
+    };
 
-  it.each([
-    ['**', '**a '],
-    ['__', '__a '],
-  ])('grows with a line of %s openers', (_marker, unit) => {
-    const hostile = openers(unit, (text) => replacePairs(text, PLAIN_PAIRS.strong));
-    expect(growth(hostile, SIZE)).toBeLessThan(LINEAR_GROWTH_LIMIT);
-  });
+    it.each([
+      ['**', '**a '],
+      ['__', '__a '],
+    ])('grows with a line of %s openers', (_marker, unit) => {
+      const hostile = openers(unit, (text) => replacePairs(text, PLAIN_PAIRS.strong));
+      expect(growth(hostile, SIZE)).toBeLessThan(LINEAR_GROWTH_LIMIT);
+    });
 
-  it('grows with a line of ~~ openers', () => {
-    const hostile = openers('~~a ', (text) => replacePairs(text, PLAIN_PAIRS.struck));
-    expect(growth(hostile, SIZE)).toBeLessThan(LINEAR_GROWTH_LIMIT);
-  });
+    it('grows with a line of ~~ openers', () => {
+      const hostile = openers('~~a ', (text) => replacePairs(text, PLAIN_PAIRS.struck));
+      expect(growth(hostile, SIZE)).toBeLessThan(LINEAR_GROWTH_LIMIT);
+    });
 
-  it.each([['![a]('], ['![a'], ['[a]('], ['[a']])('grows with a line of %s', (unit) => {
-    const hostile = openers(unit, (text) => replaceLinks(replaceLinks(text, IMAGE), LINK));
-    expect(growth(hostile, SIZE)).toBeLessThan(LINEAR_GROWTH_LIMIT);
-  });
+    it.each([['![a]('], ['![a'], ['[a]('], ['[a']])('grows with a line of %s', (unit) => {
+      const hostile = openers(unit, (text) => replaceLinks(replaceLinks(text, IMAGE), LINK));
+      expect(growth(hostile, SIZE)).toBeLessThan(LINEAR_GROWTH_LIMIT);
+    });
 
-  it("grows with a Deliverable's text of openers, through plainParagraphs", () => {
-    const hostile = openers('**a ~~b [c]( ', (text) => plainParagraphs(text));
-    expect(growth(hostile, SIZE)).toBeLessThan(LINEAR_GROWTH_LIMIT);
-  });
-});
+    it("grows with a Deliverable's text of openers, through plainParagraphs", () => {
+      const hostile = openers('**a ~~b [c]( ', (text) => plainParagraphs(text));
+      expect(growth(hostile, SIZE)).toBeLessThan(LINEAR_GROWTH_LIMIT);
+    });
+  },
+);

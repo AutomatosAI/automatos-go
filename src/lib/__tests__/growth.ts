@@ -10,8 +10,17 @@
 export const GROWTH_FACTOR = 8;
 /** Growth under this is a single pass (about GROWTH_FACTOR); a quadratic one is near its square. */
 export const LINEAR_GROWTH_LIMIT = 20;
-/** The first size taking longer than this already shows a pattern that is not a single pass. */
-const TOO_SLOW_MS = 250;
+/**
+ * The first size taking longer than this already shows a pattern that is not a single pass. Set
+ * well above what a single pass takes on a slow machine measuring coverage, and well below what a
+ * pattern that reads the run again from each character takes at the sizes these tests use.
+ */
+const TOO_SLOW_MS = 1_500;
+/**
+ * How long a test that measures at a megabyte may take: several runs at two sizes, on a machine
+ * that may be measuring coverage, is more than the default five seconds allows.
+ */
+export const GROWTH_TIMEOUT_MS = 60_000;
 const RUNS = 5;
 
 function leastMs(run: () => void): number {

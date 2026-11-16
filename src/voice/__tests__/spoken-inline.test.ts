@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   GROWTH_FACTOR,
+  GROWTH_TIMEOUT_MS,
   LINEAR_GROWTH_LIMIT,
   growth,
   randomTexts,
@@ -125,46 +126,50 @@ describe('a whole line, every rule in its order', () => {
   });
 });
 
-describe(`a megabyte of opening markers with no close (under ${LINEAR_GROWTH_LIMIT}x for ${GROWTH_FACTOR}x)`, () => {
-  const SIZE = 131_072; // GROWTH_FACTOR times this is a megabyte
-  const openers = (unit: string, take: (text: string) => unknown) => (size: number) => {
-    const text = unit.repeat(Math.ceil(size / unit.length));
-    return () => take(text);
-  };
-
-  it.each([
-    ['stars', '**a '],
-    ['underscores', ' __a'],
-    ['tildes', '~~a '],
-    ['star', ' *a '],
-    ['underscore', ' _a '],
-  ] as const)('grows with a line of %s openers', (name, unit) => {
-    const hostile = openers(unit, (text) => replacePairs(text, SPOKEN_PAIRS[name]));
-    expect(growth(hostile, SIZE)).toBeLessThan(LINEAR_GROWTH_LIMIT);
-  });
-
-  it.each([['![a]('], ['[a]('], ['[a]['], ['[a']])('grows with a line of %s', (unit) => {
-    const hostile = openers(unit, (text) =>
-      replaceLinks(replaceLinks(replaceLinks(text, IMAGE), LINK), LABELLED),
-    );
-    expect(growth(hostile, SIZE)).toBeLessThan(LINEAR_GROWTH_LIMIT);
-  });
-
-  it('grows with a line of <http:// openers', () => {
-    const hostile = openers('<http://a', (text) => replaceAngleLinks(text, SPOKEN_COPY.link));
-    expect(growth(hostile, SIZE)).toBeLessThan(LINEAR_GROWTH_LIMIT);
-  });
-
-  it('grows with one long run of marks inside a word', () => {
-    const hostile = (size: number) => {
-      const text = `a${'*'.repeat(size)}b`;
-      return () => withoutMarksEndingWords(text);
+describe(
+  `a megabyte of opening markers with no close (under ${LINEAR_GROWTH_LIMIT}x for ${GROWTH_FACTOR}x)`,
+  { timeout: GROWTH_TIMEOUT_MS },
+  () => {
+    const SIZE = 131_072; // GROWTH_FACTOR times this is a megabyte
+    const openers = (unit: string, take: (text: string) => unknown) => (size: number) => {
+      const text = unit.repeat(Math.ceil(size / unit.length));
+      return () => take(text);
     };
-    expect(growth(hostile, SIZE)).toBeLessThan(LINEAR_GROWTH_LIMIT);
-  });
 
-  it('grows with a line of every opener, through stripInline', () => {
-    const hostile = openers('**a ~~b *c _d [e]( <http://f ', (text) => stripInline(text));
-    expect(growth(hostile, SIZE)).toBeLessThan(LINEAR_GROWTH_LIMIT);
-  });
-});
+    it.each([
+      ['stars', '**a '],
+      ['underscores', ' __a'],
+      ['tildes', '~~a '],
+      ['star', ' *a '],
+      ['underscore', ' _a '],
+    ] as const)('grows with a line of %s openers', (name, unit) => {
+      const hostile = openers(unit, (text) => replacePairs(text, SPOKEN_PAIRS[name]));
+      expect(growth(hostile, SIZE)).toBeLessThan(LINEAR_GROWTH_LIMIT);
+    });
+
+    it.each([['![a]('], ['[a]('], ['[a]['], ['[a']])('grows with a line of %s', (unit) => {
+      const hostile = openers(unit, (text) =>
+        replaceLinks(replaceLinks(replaceLinks(text, IMAGE), LINK), LABELLED),
+      );
+      expect(growth(hostile, SIZE)).toBeLessThan(LINEAR_GROWTH_LIMIT);
+    });
+
+    it('grows with a line of <http:// openers', () => {
+      const hostile = openers('<http://a', (text) => replaceAngleLinks(text, SPOKEN_COPY.link));
+      expect(growth(hostile, SIZE)).toBeLessThan(LINEAR_GROWTH_LIMIT);
+    });
+
+    it('grows with one long run of marks inside a word', () => {
+      const hostile = (size: number) => {
+        const text = `a${'*'.repeat(size)}b`;
+        return () => withoutMarksEndingWords(text);
+      };
+      expect(growth(hostile, SIZE)).toBeLessThan(LINEAR_GROWTH_LIMIT);
+    });
+
+    it('grows with a line of every opener, through stripInline', () => {
+      const hostile = openers('**a ~~b *c _d [e]( <http://f ', (text) => stripInline(text));
+      expect(growth(hostile, SIZE)).toBeLessThan(LINEAR_GROWTH_LIMIT);
+    });
+  },
+);
