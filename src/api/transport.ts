@@ -3,13 +3,15 @@
 // expo/fetch (D-ONE-CLIENT); tests inject a fake Transport and never import this module. Every
 // whole body is read as bytes under the caller's cap (body.ts readBytes), with a Content-Length
 // over the cap refused before a byte is read: nothing here reads a body whole without one. binary
-// keeps the headers too: Auto's server voice, one MP3.
+// keeps the headers too: Auto's server voice, one MP3. file gives the body as bytes as they arrive,
+// under the caller's cap, for transfer.ts to write to a file without holding it in memory.
 
 import { fetch as expoFetch } from 'expo/fetch';
 
-import { decodeChunks, readBytes } from './body';
+import { decodeChunks, readBytes, readParts } from './body';
 import type {
   BinaryResponse,
+  FileResponse,
   StreamingResponse,
   Transport,
   TransportRequest,
@@ -57,8 +59,21 @@ async function sendBinary(request: TransportRequest): Promise<BinaryResponse> {
   };
 }
 
+/** A file's body as bytes as they arrive, under the caller's cap (transfer.ts). */
+async function sendFile(request: TransportRequest): Promise<FileResponse> {
+  const response = await open(request);
+  const length = () => response.headers.get(CONTENT_LENGTH);
+  return {
+    status: response.status,
+    bytes: (maxBytes) => readBytes(response.body, maxBytes, length()),
+    header: (name) => response.headers.get(name),
+    parts: (maxBytes) => readParts(response.body, maxBytes, length()),
+  };
+}
+
 export const expoTransport: Transport = Object.freeze({
   request: send,
   stream: send,
   binary: sendBinary,
+  file: sendFile,
 });

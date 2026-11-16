@@ -6,6 +6,7 @@ import {
   MAX_EMPTY_READS,
   decodeChunks,
   readBytes,
+  readParts,
 } from '../body';
 
 function bytes(parts: readonly Uint8Array[], onCancel?: () => void): ReadableStream<Uint8Array> {
@@ -228,5 +229,75 @@ describe('readBytes when a read fails', () => {
     await expect(readBytes(body, 10)).rejects.toBeInstanceOf(BodyTooLargeError);
     expect(cancelled).toBe(true);
     expect(body.locked).toBe(false);
+  });
+});
+
+describe('readParts', () => {
+  async function collect(parts: AsyncIterable<Uint8Array>): Promise<number[][]> {
+    const out: number[][] = [];
+    for await (const part of parts) out.push([...part]);
+    return out;
+  }
+
+  it('hands each read on as it comes, skipping empty ones, and releases the lock at the end', async () => {
+    const body = bytes([new Uint8Array([1, 2]), new Uint8Array(0), new Uint8Array([3])]);
+    expect(await collect(readParts(body, 3))).toEqual([[1, 2], [3]]);
+    expect(body.locked).toBe(false);
+  });
+
+  it('gives nothing for no body, and refuses a Content-Length over the cap unread', async () => {
+    expect(await collect(readParts(null, 3))).toEqual([]);
+    let pulled = false;
+    const body = new ReadableStream<Uint8Array>(
+      {
+        pull() {
+          pulled = true;
+        },
+      },
+      { highWaterMark: 0 },
+    );
+    await expect(collect(readParts(body, 10, '11'))).rejects.toBeInstanceOf(BodyTooLargeError);
+    expect(pulled).toBe(false);
+  });
+
+  it('cancels at the read that crosses the cap, after handing on what was under it', async () => {
+    let cancelled = false;
+    const seen: number[] = [];
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.enqueue(new Uint8Array(6));
+      },
+      cancel: () => {
+        cancelled = true;
+      },
+    });
+    const read = async () => {
+      for await (const part of readParts(body, 10)) seen.push(part.byteLength);
+    };
+    await expect(read()).rejects.toBeInstanceOf(BodyTooLargeError);
+    expect(seen).toEqual([6]);
+    expect(cancelled).toBe(true);
+    expect(body.locked).toBe(false);
+  });
+
+  it('cancels the body when the loop is left early', async () => {
+    let cancelled = false;
+    const body = bytes([new Uint8Array([1]), new Uint8Array([2])], () => {
+      cancelled = true;
+    });
+    for await (const part of readParts(body, 10)) {
+      expect([...part]).toEqual([1]);
+      break;
+    }
+    expect(cancelled).toBe(true);
+  });
+
+  it('gives up on a body that only sends empty reads', async () => {
+    const endless = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.enqueue(new Uint8Array(0));
+      },
+    });
+    await expect(collect(readParts(endless, 1024))).rejects.toBeInstanceOf(BodyStalledError);
   });
 });

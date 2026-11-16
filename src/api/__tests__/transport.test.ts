@@ -75,7 +75,7 @@ describe('the real transport', () => {
     });
   });
 
-  it.each(['request', 'stream', 'binary'] as const)(
+  it.each(['request', 'stream', 'binary', 'file'] as const)(
     '%s keeps the status and reads the body whole, as bytes under the cap it is given',
     async (call) => {
       answerWith({}, 201);
@@ -85,7 +85,7 @@ describe('the real transport', () => {
     },
   );
 
-  it.each(['request', 'stream', 'binary'] as const)(
+  it.each(['request', 'stream', 'binary', 'file'] as const)(
     '%s refuses a body one byte over its cap',
     async (call) => {
       const response = await expoTransport[call](request());
@@ -93,7 +93,7 @@ describe('the real transport', () => {
     },
   );
 
-  it.each(['request', 'stream', 'binary'] as const)(
+  it.each(['request', 'stream', 'binary', 'file'] as const)(
     "%s hands the response's Content-Length to the cap, so an oversized answer is refused unread",
     async (call) => {
       answerWith({ 'Content-Length': String(ROOM + 1) });
@@ -107,9 +107,27 @@ describe('the real transport', () => {
     expect(Object.keys(response).sort()).toEqual(['bytes', 'chunks', 'header', 'status']);
     const binary = await expoTransport.binary(request());
     expect(Object.keys(binary).sort()).toEqual(['bytes', 'header', 'status']);
+    const file = await expoTransport.file(request());
+    expect(Object.keys(file).sort()).toEqual(['bytes', 'header', 'parts', 'status']);
   });
 
-  it.each(['request', 'stream', 'binary'] as const)(
+  it("file gives the body's bytes as they arrive, under the cap, its Content-Length too", async () => {
+    const response = await expoTransport.file(request());
+    const parts: Uint8Array[] = [];
+    for await (const part of response.parts(ROOM)) parts.push(part);
+    expect(new TextDecoder().decode(parts[0])).toBe(BODY);
+    answerWith();
+    const tooShort = await expoTransport.file(request());
+    const first = tooShort.parts(BYTES.byteLength - 1)[Symbol.asyncIterator]().next();
+    await expect(first).rejects.toBeInstanceOf(BodyTooLargeError);
+    answerWith({ 'Content-Length': String(ROOM + 1) });
+    const declared = await expoTransport.file(request());
+    await expect(declared.parts(ROOM)[Symbol.asyncIterator]().next()).rejects.toBeInstanceOf(
+      BodyTooLargeError,
+    );
+  });
+
+  it.each(['request', 'stream', 'binary', 'file'] as const)(
     '%s never follows a redirect and carries no cookie',
     async (call) => {
       await expoTransport[call](request());
@@ -117,7 +135,7 @@ describe('the real transport', () => {
     },
   );
 
-  it.each(['request', 'stream', 'binary'] as const)(
+  it.each(['request', 'stream', 'binary', 'file'] as const)(
     '%s hands a redirect back as it is, with where it pointed, for the client to refuse',
     async (call) => {
       answerWith({ Location: 'https://elsewhere.example.test/x' }, 302);

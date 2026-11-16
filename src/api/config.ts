@@ -69,6 +69,20 @@ export const ERROR_BODY_MAX_BYTES = 64 * 1024;
 /** A redirect's Location longer than this is dropped: no real address of a server is. */
 export const REDIRECT_TARGET_MAX_CHARS = 2048;
 
+/**
+ * A storage redirect (transfer-request.ts) to an address longer than this is not followed. A
+ * presigned address carries its signature, and with temporary keys a session token, in its query:
+ * a few KB at most.
+ */
+export const STORAGE_REDIRECT_MAX_CHARS = 8192;
+
+/**
+ * A file written to the phone (transfer.ts) larger than this is refused unless the caller sets
+ * its own cap (a theme's fonts and mascot files do). A Deliverable's file for the system viewer is
+ * a PDF, DOCX or XLSX: this is twice the largest file the app may send (an attachment, 50 MB).
+ */
+export const DOWNLOAD_MAX_BYTES = 100 * 1024 * 1024;
+
 /** A server message (a 409's detail.message) longer than this is cut before anyone sees it. */
 export const SERVER_MESSAGE_MAX_CHARS = 500;
 

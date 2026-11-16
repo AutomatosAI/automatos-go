@@ -65,5 +65,10 @@ export const CC_ROUTES = Object.freeze({
     detail: { method: 'GET', path: '/api/deliverables/{deliverable_id}' },
     /** ?path=: a workspace file's bytes, for the system viewer after an authenticated download. */
     rawFile: { method: 'GET', path: '/api/workspaces/{workspace_id}/files/raw' },
+    /**
+     * A generated document's bytes, or a 302 to a presigned storage address when the server keeps
+     * it in storage: the one route whose download follows a redirect (src/api/transfer-request.ts).
+     */
+    generatedFile: { method: 'GET', path: '/api/documents/generated/{filename}' },
   }),
 } as const satisfies Record<string, Record<string, Route>>);

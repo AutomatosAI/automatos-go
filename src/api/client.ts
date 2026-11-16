@@ -4,7 +4,8 @@
 // failure to the taxonomy (errors.ts) and parses every JSON response with the caller's zod schema:
 // without a schema the body is discarded, so no unparsed data ever leaves the client. binary() is
 // the one exception, for a body that is not JSON (Auto's server voice: an MP3): it hands back the
-// bytes and the response's headers, for the caller to check. Every body is read under a cap
+// bytes and the response's headers, for the caller to check. file() is a file on this server, by
+// its address, as bytes as they arrive, for transfer.ts to write to a file (transfer-request.ts). Every body is read under a cap
 // (config.ts): a JSON body or a binary one over its cap is an invalid_response, read no further,
 // and an error body over its cap gives no detail, so the status alone names the kind. A redirect
 // is never followed: it is an error of its status's kind that keeps where it pointed, and a 429 is
@@ -33,12 +34,13 @@ import {
   STREAM_CONNECT_TIMEOUT_MS,
   STREAM_IDLE_TIMEOUT_MS,
 } from './config';
-import { startDeadline, type Deadline } from './deadline';
-import { abortError, ApiError, errorFromResponse, isAbortError, isApiError } from './errors';
+import { callFailure, startDeadline, timedOutError, type Deadline } from './deadline';
+import { ApiError, errorFromResponse } from './errors';
 import { parseJson } from './json';
 import type { Route } from './routes';
 import type { Server } from './server';
 import { limitedChunks, streamLimits, type StreamLimits } from './stream-limits';
+import { openFile, type FileBody, type FileCallOptions, type FilePort } from './transfer-request';
 import type {
   StreamingResponse,
   Transport,
@@ -122,6 +124,11 @@ export interface ApiClient {
   stream(route: Route, options?: StreamCallOptions): Promise<StreamingResponse>;
   /** A body read whole as bytes, with its headers; a non-OK status throws first. */
   binary(route: Route, options?: BinaryCallOptions): Promise<BinaryBody>;
+  /**
+   * A file on this server, by its address, as its bytes as they arrive (transfer.ts writes them to
+   * a file); a non-OK status throws first (transfer-request.ts).
+   */
+  file(url: string, options?: FileCallOptions): Promise<FileBody>;
   /** The bearer and workspace headers, for native loads outside the client (auth-headers.ts). */
   authHeaders(): Promise<AuthHeaders>;
 }
@@ -168,16 +175,22 @@ function encodeBody(body: unknown): { body?: string | FormData; headers: Record<
   return { body: JSON.stringify(body), headers: { [CONTENT_TYPE_HEADER]: JSON_CONTENT_TYPE } };
 }
 
+/** The headers every call to the client's own server carries, and the token in them. */
+async function signed(ctx: Context) {
+  const token = await resolveToken(ctx.getToken);
+  const headers = {
+    ...acceptLanguageHeaders(readLanguage(ctx.getLanguage)),
+    ...buildAuthHeaders(token, ctx.getWorkspaceId()),
+  };
+  return { token, headers };
+}
+
 /** URL, body and headers; a bad path parameter throws here, before anything is sent. */
 async function prepare(ctx: Context, route: Route, call: CallOptions): Promise<Prepared> {
   const url = buildUrl(ctx.server.apiUrl, route.path, call.params, call.query);
   const encoded = encodeBody(call.body);
-  const token = await resolveToken(ctx.getToken);
-  const headers = {
-    ...encoded.headers,
-    ...acceptLanguageHeaders(readLanguage(ctx.getLanguage)),
-    ...buildAuthHeaders(token, ctx.getWorkspaceId()),
-  };
+  const { token, headers: own } = await signed(ctx);
+  const headers = { ...encoded.headers, ...own };
   const body = encoded.body === undefined ? {} : { body: encoded.body };
   return { token, request: { url, method: route.method, headers, ...body } };
 }
@@ -214,15 +227,8 @@ async function checked<R extends TransportResponse>(
   throw error;
 }
 
-function noAnswer(timeoutMs: number): Error {
-  return new Error(`no answer within ${timeoutMs} ms`);
-}
-
 function failure(error: unknown, deadline: Deadline, call: CallOptions, timeoutMs: number) {
-  if (isApiError(error)) return error;
-  if (call.signal?.aborted) return isAbortError(error) ? error : abortError();
-  const cause = deadline.timedOut() ? noAnswer(timeoutMs) : error;
-  return new ApiError('network', { cause });
+  return callFailure(error, deadline, call.signal, timeoutMs);
 }
 
 function issueSummary(error: z.ZodError): string {
@@ -314,7 +320,7 @@ function opened(response: StreamingResponse, { deadline, ms, limits }: Opening):
       try {
         return await response.bytes(maxBytes);
       } catch (error) {
-        throw deadline.timedOut() ? new ApiError('network', { cause: noAnswer(ms) }) : error;
+        throw deadline.timedOut() ? timedOutError(ms) : error;
       } finally {
         deadline.dispose();
       }
@@ -348,6 +354,18 @@ async function open(
   }
 }
 
+/** What a file's request borrows from the client (transfer-request.ts). */
+function filePort(ctx: Context): FilePort {
+  return {
+    server: ctx.server,
+    transport: ctx.transport,
+    timeoutMs: ctx.timeoutMs,
+    signed: () => signed(ctx),
+    checked: (response, token) => checked(ctx, response, token),
+    now: ctx.now,
+  };
+}
+
 export function createApiClient(options: ApiClientOptions): ApiClient {
   const ctx: Context = {
     server: options.server,
@@ -367,6 +385,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       send(ctx, route, call)) as ApiClient['request'],
     stream: (route: Route, call: StreamCallOptions = {}) => open(ctx, route, call),
     binary: (route: Route, call: BinaryCallOptions = {}) => fetchBinary(ctx, route, call),
+    file: (url: string, call: FileCallOptions = {}) => openFile(filePort(ctx), url, call),
     authHeaders: createAuthHeaders(ctx.getToken, ctx.getWorkspaceId),
   });
 }

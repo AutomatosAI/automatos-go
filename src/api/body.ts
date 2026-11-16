@@ -2,7 +2,8 @@
 // are split across reads is held back by the streaming decoder until the rest arrives. Leaving the
 // loop early cancels the read, so an aborted turn stops pulling bytes off the socket. readBytes is
 // the transport's bytes(): a whole body as bytes under a cap, so a server cannot fill the phone's
-// memory before the caller's size check (the server voice's MP3s).
+// memory before the caller's size check (the server voice's MP3s). readParts is a file's parts():
+// the bytes as they arrive, counted against a cap, for transfer.ts to write to a file.
 
 import { logger } from '../lib/logger';
 
@@ -113,6 +114,49 @@ export async function readBytes(
     reader.cancel().catch(logCancelFailure);
     throw error;
   } finally {
+    reader.releaseLock();
+  }
+}
+
+/** The reads of `reader`, empty ones skipped, refused past the cap or a run of empty reads. */
+async function* counted(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  maxBytes: number,
+): AsyncGenerator<Uint8Array> {
+  let size = 0;
+  let emptyReads = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) return;
+    emptyReads = value.byteLength === 0 ? emptyReads + 1 : 0;
+    if (emptyReads >= MAX_EMPTY_READS) throw new BodyStalledError();
+    size += value.byteLength;
+    if (size > maxBytes) throw new BodyTooLargeError(maxBytes);
+    if (value.byteLength > 0) yield value;
+  }
+}
+
+/**
+ * A body as its bytes as they arrive, never more than `maxBytes` in all: a Content-Length over it
+ * is refused before any byte is read, a body that grows past it is cancelled at that read, and so
+ * is a run of empty reads. Leaving the loop early, or a read that fails, cancels the body too; the
+ * reader's lock is released however it ends. Nothing is kept: each part is handed on as it comes.
+ */
+export async function* readParts(
+  body: ReadableStream<Uint8Array> | null,
+  maxBytes: number,
+  contentLength: string | null = null,
+): AsyncGenerator<Uint8Array> {
+  refuseByLength(body, maxBytes, contentLength);
+  if (!body) return;
+  const reader = body.getReader();
+  let finished = false;
+  try {
+    yield* counted(reader, maxBytes);
+    finished = true;
+  } finally {
+    // after the end this is not needed; after a refusal, a failure or an early exit it stops the body
+    if (!finished) reader.cancel().catch(logCancelFailure);
     reader.releaseLock();
   }
 }
