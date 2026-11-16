@@ -2,9 +2,10 @@
 // guards (PRD-001 §4.11, US-004c): no console.* outside src/lib/logger.ts; the network only
 // through src/api/ (fetch, XMLHttpRequest, WebSocket, EventSource and navigator.sendBeacon;
 // expo/fetch only in src/api/transport.ts; no other HTTP client anywhere; no picture fetched by
-// address by react-native-svg); never react-native-webview; the size limits; no colour literals
-// outside the tokens; a pure hand-written core. A guard cannot be switched off from inside a
-// file: inline eslint comments are not read (docs/app-standard.md rules 13.2 and 13.5).
+// address by react-native-svg); never a web view (react-native-webview, DOM components and
+// their 'use dom' directive); the size limits; no colour literals outside the tokens; a pure
+// hand-written core. A guard cannot be switched off from inside a file: inline eslint comments
+// are not read (docs/app-standard.md rules 13.2, 13.5 and 13.8).
 // scripts/__tests__/eslint-rules*.test.ts prove each guard fires where it should.
 const { builtinRules } = require('eslint/use-at-your-own-risk');
 const expoConfig = require('eslint-config-expo/flat');
@@ -42,14 +43,21 @@ const NO_EXPO_FETCH = {
   message: 'expo/fetch is imported by src/api/transport.ts only: use the API client.',
 };
 
-// A web view in any form (D-NO-WEBVIEW, rule 13.8).
+// A web view in any form (D-NO-WEBVIEW, rule 13.8). A DOM component ('use dom', expo/dom) is a
+// web view too: @expo/dom-webview or react-native-webview draws it.
 const NO_WEBVIEW_MESSAGE = 'No WebView (D-NO-WEBVIEW): links to Studio open the system browser.';
+const DOM_MESSAGE =
+  "No DOM components (D-NO-WEBVIEW): a 'use dom' component runs in a web view. Draw it with React Native.";
 const NO_WEB_VIEWS = [
   { name: 'react-native-webview', message: NO_WEBVIEW_MESSAGE },
+  { name: 'expo/dom', message: DOM_MESSAGE },
+  { name: '@expo/dom-webview', message: DOM_MESSAGE },
 ];
 const NO_WEB_VIEW_PATTERNS = [
   { group: ['react-native-webview/*'], message: NO_WEBVIEW_MESSAGE },
+  { group: ['expo/dom/*', '@expo/dom-webview/*', 'expo/src/dom'], message: DOM_MESSAGE },
 ];
+const NO_DOM_DIRECTIVE = { selector: "ExpressionStatement[directive='use dom']", message: DOM_MESSAGE };
 
 // What react-native-svg fetches by address itself, with the global fetch and outside the API
 // client: SvgUri, SvgFromUri and fetchText, and in react-native-svg/css SvgCssUri, SvgWithCssUri
@@ -118,6 +126,9 @@ const OUTSIDE_THE_CLIENT_IMPORTS = [NO_EXPO_FETCH];
 // No slash in the pattern: a selector's own /.../ cannot hold one, so a dot stands for it.
 const REFUSED_MODULES = [
   'react-native-webview',
+  'expo.dom',
+  '@expo.dom-webview',
+  'expo.src.dom',
   'expo.fetch',
   ...OTHER_CLIENTS,
 ];
@@ -152,6 +163,7 @@ function restrictedSyntax({ colours }) {
   return [
     'error',
     ...NO_OTHER_LOADERS,
+    NO_DOM_DIRECTIVE,
     ...(colours ? NO_COLOUR_LITERALS : []),
   ];
 }
