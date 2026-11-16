@@ -4,6 +4,7 @@
 // scrolls; the first part of an over-long file says so and offers Studio. An image, a viewer file or
 // Studio sits under the head (DeliverableBody). 'Report this' opens the foundation's ReportSheet
 // where its gate says so. No review state and no decision: a Deliverable is read, opened or reported.
+// When a refresh fails, the Deliverable stays open under the line that says it may be out of date.
 
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import Flag from 'lucide-react-native/icons/flag';
@@ -15,8 +16,16 @@ import type { ReportTarget } from '../../api/reports';
 import { routes } from '../../navigation/routes';
 import { useGoBack } from '../../navigation/use-go-back';
 import { useTokens } from '../../styles/theme';
-import { Button, ErrorState, LoadingState, REPORT_COPY, ReportSheet, Text } from '../../ui';
-import { DELIVERABLE_COPY } from '../strings';
+import {
+  Button,
+  ErrorState,
+  LoadingState,
+  OutOfDateNote,
+  REPORT_COPY,
+  ReportSheet,
+  Text,
+} from '../../ui';
+import { DELIVERABLE_COPY, SHELL_COPY } from '../strings';
 import { usePullRefresh } from '../use-pull-refresh';
 import { DELIVERABLE_PAGE } from './chrome';
 import { DeliverableBody, Note, StudioLink } from './DeliverableBody';
@@ -53,12 +62,19 @@ function usePageStyle() {
   };
 }
 
-function Head({ view }: { readonly view: DeliverableDetailView }) {
+type HeadProps = {
+  readonly view: DeliverableDetailView;
+  /** Its last refresh failed: what it shows is what it last had (rule 6.4). */
+  readonly outOfDate: boolean;
+};
+
+function Head({ view, outOfDate }: HeadProps) {
   const { spacing } = useTokens();
   const gap = spacing[DELIVERABLE_PAGE.gap];
   return (
     <View style={{ gap, marginBottom: gap }}>
       <BackButton />
+      {outOfDate ? <OutOfDateNote words={SHELL_COPY.outOfDate} /> : null}
       <View style={{ gap: spacing[DELIVERABLE_PAGE.headGap] }}>
         <TypeRow view={view} />
         <Text variant="title" level={DELIVERABLE_PAGE.titleLevel} accessibilityRole="header">
@@ -152,7 +168,7 @@ function Page({ id }: { readonly id: string }) {
         keyExtractor={(_, index) => String(index)}
         renderItem={renderParagraph}
         ItemSeparatorComponent={ParagraphGap}
-        ListHeaderComponent={<Head view={view} />}
+        ListHeaderComponent={<Head view={view} outOfDate={query.isRefetchError} />}
         ListFooterComponent={
           <Foot view={view} onReport={report ? () => setReporting(report) : null} />
         }

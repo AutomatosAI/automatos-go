@@ -265,6 +265,8 @@ export const HISTORY_COPY = Object.freeze({
   loadMoreFailed: "More conversations didn't load.",
   emptyTitle: 'No conversations yet',
   emptyMessage: 'Say hello to Auto and your first one starts.',
+  /** Over the list when its last refresh failed (rule 6.4): the conversations shown are kept. */
+  outOfDate: "Couldn't refresh, so this list may be out of date. Open it again to try again.",
   /** The word on a chat Auto started unprompted (the web's 'Auto' badge, PRD-205 S7). */
   autoMarker: 'Auto',
   autoMarkerLabel: 'Started by Auto',

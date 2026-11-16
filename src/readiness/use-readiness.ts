@@ -118,6 +118,8 @@ export type ReadinessState = Readonly<{
   /** Discovery lists readiness: an older server shows Settings as it was. */
   shown: boolean;
   view: ReadinessView;
+  /** A refresh failed while the server's items are held: they stay, under the line (rule 6.4). */
+  isRefetchError: boolean;
   checkAgain: () => void;
 }>;
 
@@ -140,8 +142,9 @@ export function useReadiness(): ReadinessState {
     items: query.data?.items ?? null,
     client: clientRows(facts, context),
     checking: check.state.sending || query.isLoading,
-    readError: query.error,
+    // a failed refresh over items it holds is the out-of-date line's to say, not the failed words
+    readError: query.isRefetchError ? null : query.error,
     refusal: check.state.refusal,
   });
-  return { shown, view, checkAgain: check.run };
+  return { shown, view, isRefetchError: query.isRefetchError, checkAgain: check.run };
 }

@@ -3,14 +3,15 @@
 // notification: approvals open the app, D18). The post as it will publish, then who decides it or
 // why nothing waits on anyone, then Request changes and Approve for a role that may approve, then
 // Open in Studio for everything the phone does not do (add a channel, reject, history). A route id
-// that is not a post id reads as not found; a load that fails says why, with Try again.
+// that is not a post id reads as not found; a load that fails says why, with Try again; a refresh
+// that fails keeps the post under the line that says it may be out of date (rule 6.4).
 
 import ExternalLink from 'lucide-react-native/icons/external-link';
 import { useState } from 'react';
 
 import { ApiError } from '../../api/errors';
 import { routes } from '../../navigation/routes';
-import { Button, ErrorState, LoadingState, Sheet, Text } from '../../ui';
+import { Button, ErrorState, LoadingState, OutOfDateNote, Sheet, Text } from '../../ui';
 import { openInBrowser } from '../open-studio';
 import { SOCIAL_COPY } from '../strings';
 import { useSheetRoute, type SheetRoute } from '../use-sheet-route';
@@ -66,6 +67,7 @@ function PostContent({ postId, route }: { readonly postId: string; readonly rout
   const reload = () => post.refetch().then((reloaded) => reloaded.data);
   return (
     <>
+      {post.isRefetchError ? <OutOfDateNote words={SOCIAL_COPY.outOfDate} /> : null}
       <SocialPostPreview postId={data.id} view={view} />
       <Note text={settledNote(data) ?? readOnlyNote(data, role) ?? noChannelNote(data, role)} />
       <SocialVerdict

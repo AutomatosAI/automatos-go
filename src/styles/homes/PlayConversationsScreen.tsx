@@ -3,7 +3,8 @@
 // cursor the server ignored), with A2's own Load more under the rows. While there are no rows the
 // list shows the wait, the failure with Try again, or the first chat's nudge with New chat, under
 // Play's header and over its bottom bar. New chat opens a draft (routes.chat('new')), a row its
-// chat, as A2's list does. The times are read on the phone's calendar, again each minute.
+// chat, as A2's list does. The times are read on the phone's calendar, again each minute. When
+// asking again fails, the rows stay under the line that says they may be out of date (rule 6.4).
 
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, type ReactElement } from 'react';
@@ -14,7 +15,7 @@ import { NEW_CHAT_ID } from '../../chat/screens/chat-route';
 import { HISTORY_COPY } from '../../chat/strings';
 import { useMinuteClock, usePhoneTimeZone } from '../../cc/shell/use-shell';
 import { routes } from '../../navigation/routes';
-import { EmptyState, ErrorState, LoadingState } from '../../ui';
+import { EmptyState, ErrorState, LoadingState, OutOfDateNote } from '../../ui';
 import { PlayConversations } from '../play/companion';
 import { chatsPlaceholder, playConversationsOf } from './play-chats';
 
@@ -57,6 +58,7 @@ export function PlayConversationsScreen() {
       onNewChat={newChat}
       onOpen={open}
       footer={rows?.length ? <ListFooter footer={footer} onLoadMore={loadMore} /> : null}
+      note={history.isRefetchError ? <OutOfDateNote words={HISTORY_COPY.outOfDate} /> : null}
       empty={<Placeholder history={history} onNewChat={newChat} />}
     />
   );
