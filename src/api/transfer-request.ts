@@ -6,15 +6,17 @@
 //
 // A redirect is never followed, with one exception the caller names: a route that answers with a
 // redirect to storage (GET /api/documents/generated/{filename}: a presigned address). Then the one
-// redirect is followed, and only to an https address with a host and nothing before it: the
-// second request carries no header at all, so no bearer, no workspace and no cookie goes with
-// it, and what it answers is checked without signing anyone out: any refusal from storage is
-// 'server' with its status. A second redirect, an http address, or a redirect on a request not
-// so named is the redirect error every call gives.
+// redirect is followed, and only to an https address with a host and nothing before it, never
+// into a private network from a public server (private-host.ts): the second request carries no
+// header at all, so no bearer, no workspace and no cookie goes with it, and what it answers is
+// checked without signing anyone out: any refusal from storage is 'server' with its status. A
+// second redirect, an http address, a private host or a redirect on a request not so named is
+// the redirect error every call gives.
 
 import { ERROR_BODY_MAX_BYTES, STORAGE_REDIRECT_MAX_CHARS } from './config';
 import { callFailure, startDeadline, type Deadline } from './deadline';
 import { ApiError, isRedirectStatus } from './errors';
+import { hostOfAddress, storageHostAllowed } from './private-host';
 import { BodyTooLargeError } from './body';
 import type { Server } from './server';
 import type { FileResponse, Transport, TransportResponse } from './transport-types';
@@ -69,12 +71,18 @@ export function assertOnServer(apiUrl: string, url: string): void {
   }
 }
 
-/** Where a storage redirect may lead: an https address with a host; anything else is null. */
-export function storageAddress(location: string | null): string | null {
+/**
+ * Where a storage redirect may lead: an https address with a host, and, when the app's own server
+ * is not on a private network, a host that is not on one either (private-host.ts); anything else
+ * is null. A server on a home or office network may point to storage on that same network.
+ */
+export function storageAddress(location: string | null, apiUrl: string): string | null {
   if (!location || location.length > STORAGE_REDIRECT_MAX_CHARS || UNSAFE.test(location)) {
     return null;
   }
-  return STORAGE_ADDRESS.test(location) ? location : null;
+  if (!STORAGE_ADDRESS.test(location)) return null;
+  const host = hostOfAddress(location);
+  return host !== null && storageHostAllowed(host, apiUrl) ? location : null;
 }
 
 /** A body not wanted (a redirect's): read no further than an error body's cap, then let go. */
@@ -101,7 +109,7 @@ async function answered(
   options: { readonly deadline: Deadline; readonly call: FileCallOptions },
 ): Promise<FileResponse> {
   const marked = options.call.redirectsToStorage === true && isRedirectStatus(first.status);
-  const target = marked ? storageAddress(first.header(LOCATION_HEADER)) : null;
+  const target = marked ? storageAddress(first.header(LOCATION_HEADER), port.server.apiUrl) : null;
   if (target === null) return port.checked(first, token);
   await discard(first);
   const signal = options.deadline.signal;

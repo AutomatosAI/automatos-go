@@ -107,10 +107,15 @@ describe('a redirect', () => {
 });
 
 describe('storageAddress', () => {
+  const PUBLIC_SERVER = SERVER.apiUrl;
+  const HOME_SERVER = 'http://192.168.1.20:8000';
+
   it('takes an https address with a host', () => {
-    expect(storageAddress(STORAGE)).toBe(STORAGE);
-    expect(storageAddress('HTTPS://bucket.example.test')).toBe('HTTPS://bucket.example.test');
-    expect(storageAddress('https://bucket.example.test:9443/k?x=1')).not.toBeNull();
+    expect(storageAddress(STORAGE, PUBLIC_SERVER)).toBe(STORAGE);
+    expect(storageAddress('HTTPS://bucket.example.test', PUBLIC_SERVER)).toBe(
+      'HTTPS://bucket.example.test',
+    );
+    expect(storageAddress('https://bucket.example.test:9443/k?x=1', PUBLIC_SERVER)).not.toBeNull();
   });
 
   it('refuses http, a relative address, a user name, no host, a stray character or a huge one', () => {
@@ -127,8 +132,70 @@ describe('storageAddress', () => {
       'javascript:alert(1)',
       `https://bucket.example.test/${'a'.repeat(8192)}`,
     ]) {
-      expect(storageAddress(location), String(location)).toBeNull();
+      expect(storageAddress(location, PUBLIC_SERVER), String(location)).toBeNull();
     }
+  });
+
+  const PRIVATE_STORAGE = [
+    'https://10.0.0.5/q3.pdf',
+    'https://172.20.1.1:9000/q3.pdf',
+    'https://192.168.1.30/q3.pdf',
+    'https://127.0.0.1/q3.pdf',
+    'https://169.254.169.254/latest/meta-data',
+    'https://0x7f.1/q3.pdf',
+    'https://2130706433/q3.pdf',
+    'https://[::1]/q3.pdf',
+    'https://[fd00::5]/q3.pdf',
+    'https://[fe80::1]/q3.pdf',
+    'https://[::ffff:10.0.0.5]/q3.pdf',
+    'https://localhost/q3.pdf',
+    'https://minio.localhost/q3.pdf',
+    'https://nas.local/q3.pdf',
+    'https://minio.internal/q3.pdf',
+    'https://files.lan/q3.pdf',
+    'https://box.home.arpa/q3.pdf',
+    'https://NAS.LOCAL./q3.pdf',
+    'https://minio:9000/q3.pdf',
+  ];
+
+  it.each(PRIVATE_STORAGE)('refuses %s when the server is public', (location) => {
+    expect(storageAddress(location, PUBLIC_SERVER)).toBeNull();
+  });
+
+  it.each(PRIVATE_STORAGE)('allows %s when the server is on a private network too', (location) => {
+    expect(storageAddress(location, HOME_SERVER)).toBe(location);
+    expect(storageAddress(location, 'https://nas.local')).toBe(location);
+  });
+
+  it('takes a public IP literal and public names from either server', () => {
+    for (const location of ['https://52.95.110.1/q3.pdf', 'https://[2600:1f18::1]/q3.pdf']) {
+      expect(storageAddress(location, PUBLIC_SERVER)).toBe(location);
+      expect(storageAddress(location, HOME_SERVER)).toBe(location);
+    }
+  });
+
+  it('follows the hop into a private network only for a server on one', async () => {
+    const privateStorage = 'https://minio.internal/q3.pdf?X-Amz-Signature=abc';
+    const refused = answering(() => reply(302, '', { Location: privateStorage }));
+    const error = await failureOf(
+      download(clientWith(refused), FILE_URL, target(), { redirectsToStorage: true }),
+    );
+    expect(error).toMatchObject({ kind: 'server', status: 302 });
+    expect(refused.calls).toHaveLength(1);
+    const home = { apiUrl: HOME_SERVER, webUrl: HOME_SERVER, source: 'own' } as const;
+    const followed = answering(
+      () => reply(302, '', { Location: privateStorage }),
+      () => partsReply(200, [encode('%PDF')]),
+    );
+    const own = clientWith(followed, { server: home });
+    await download(own, `${HOME_SERVER}/api/documents/generated/q3.pdf`, target(), {
+      redirectsToStorage: true,
+    });
+    expect(followed.calls.map((call) => call.url)).toEqual([
+      `${HOME_SERVER}/api/documents/generated/q3.pdf`,
+      privateStorage,
+    ]);
+    expect(textOf(TARGET_URI)).toBe('%PDF');
   });
 });
 
