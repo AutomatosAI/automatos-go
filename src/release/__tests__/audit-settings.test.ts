@@ -81,6 +81,8 @@ const MOVED_NAMES: readonly string[] = [
   'LINKED_TYPES',
   'NOT_LINKED_TYPES',
   'NEVER_DECLARED',
+  'NOT_THIN',
+  'PRESENT_FROM_START',
 ];
 
 /** A declaration of `name` given a value of its own: a literal, a list, an object or a set. */

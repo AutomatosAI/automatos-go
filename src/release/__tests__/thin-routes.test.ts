@@ -7,13 +7,15 @@
 // Stack, and what the Stack is wrapped in (the providers, the gate, the Command Centre's frame),
 // from that file. It is held only to declaring its Stack. app/+native-intent.tsx is expo-router's
 // hook for links the system hands over, not a screen (src/navigation's system-links.test.ts holds
-// that it only delegates). Any other file that cannot be thin is listed below with its reason.
+// that it only delegates). Any other file that cannot be thin is listed, with its reason, in the
+// app's settings (settings/thin-routes.ts).
 
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { NOT_THIN } from './settings/thin-routes';
 import { codeOf } from './support/code';
 import { mountedFrom, routeFaults } from './support/route-files';
 import { readRepoFile, repoRoot, walkFiles } from './support/tree';
@@ -21,12 +23,6 @@ import { readRepoFile, repoRoot, walkFiles } from './support/tree';
 const LAYOUT = /(^|\/)_layout\.tsx$/;
 const NATIVE_INTENT = 'app/+native-intent.tsx';
 const SOURCE = /\.tsx?$/;
-
-/** Route files that cannot be thin, each with its reason. */
-const NOT_THIN: Readonly<Record<string, string>> = {
-  'app/(app)/chat/index.tsx':
-    "an alias: routes.chatWithTicket is /chat?ticket=<row id>, which no [id] segment matches, so the file re-exports the [id] route's default and holds nothing of its own",
-};
 
 const routeFiles = walkFiles('app').filter((file) => SOURCE.test(file));
 const screens = routeFiles.filter(

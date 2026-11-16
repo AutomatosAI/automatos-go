@@ -5,9 +5,11 @@
 // every live region that speaks (polite or assertive) sits in a component that calls useAnnounce,
 // or is on a short list with its reason: present from the start (VoiceOver reads it in order), or
 // owed. A listed region that is gone, or that now uses the hook, fails too, so the lists stay true.
+// Both lists, each entry with its reason, are the app's (settings/announcements.ts).
 
 import { describe, expect, it } from 'vitest';
 
+import { OWED, PRESENT_FROM_START } from './settings/announcements';
 import { productFiles, readRepoFile } from './support/tree';
 
 const HOOK_FILE = 'src/ui/use-announce.ts';
@@ -21,29 +23,6 @@ const USES_HOOK = /\buseAnnounce\(/;
 const WHOLE_TREE_MS = 30_000;
 
 type Region = Readonly<{ id: string; line: number; usesHook: boolean }>;
-type Listed = Readonly<{ id: string; why: string }>;
-
-/** Regions on screen from the moment their view opens, read by VoiceOver in order. */
-const PRESENT_FROM_START: readonly Listed[] = [
-  {
-    id: 'src/styles/arcade/home/QuestsView.tsx#Unread',
-    why: 'the loading words the view opens with, until the quests replace them',
-  },
-  {
-    id: 'src/styles/arcade/home/InventoryView.tsx#Unread',
-    why: 'the loading words the view opens with, until the Deliverables replace them',
-  },
-];
-
-/** Regions that should announce and do not yet, each with why it waits. */
-const OWED: readonly Listed[] = [
-  {
-    id: 'src/chat/history/ChatsScreen.tsx#ListFooter',
-    why:
-      "Load more's failure appears after a tap; the file changed in parallel, so only the " +
-      'out-of-date line went in with this change',
-  },
-];
 
 function lineAt(source: string, index: number): number {
   return source.slice(0, index).split('\n').length;

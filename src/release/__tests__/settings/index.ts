@@ -8,6 +8,7 @@
 // Each audit imports the topic file it needs, not this index, so an audit loads only its own.
 
 import * as a11yAudit from './a11y-audit';
+import * as announcements from './announcements';
 import * as contrast from './contrast';
 import * as dependencyAudit from './dependency-audit';
 import * as permissions from './permissions';
@@ -17,6 +18,7 @@ import * as secureStoreAudit from './secure-store-audit';
 import * as storeCopy from './store-copy';
 import * as surfaces from './surfaces';
 import * as textTones from './text-tones';
+import * as thinRoutes from './thin-routes';
 import { frozen, type Reasoned } from './types';
 import * as uploadAudit from './upload-audit';
 
@@ -66,4 +68,11 @@ export const ALLOWED_LISTS: readonly AllowedList[] = frozen([
   plain('release-licences', 'LICENCE_IDS', releaseLicences.LICENCE_IDS),
   each('release-licences', 'NO_LICENCE_ALLOWED', releaseLicences.NO_LICENCE_ALLOWED),
   plain('permissions', 'PICKER_CALLERS', permissions.PICKER_CALLERS),
+  each(
+    'thin-routes',
+    'NOT_THIN',
+    Object.entries(thinRoutes.NOT_THIN).map(([file, reason]) => ({ file, reason })),
+  ),
+  each('announcements', 'PRESENT_FROM_START', announcements.PRESENT_FROM_START),
+  each('announcements', 'OWED', announcements.OWED),
 ]);
