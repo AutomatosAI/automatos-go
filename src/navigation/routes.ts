@@ -44,24 +44,25 @@ export function isTaskId(value: string): boolean {
 }
 
 function taskId(value: string | number): string {
-  const text = String(value).trim();
+  const text = String(value);
   if (!isTaskId(text)) throw new TypeError('A ticket id is the board row id: digits only');
   return text;
 }
 
 /**
- * An id that can be a path segment, trimmed: letters, digits, '.', '_' and '-', ID_MAX_LENGTH at
- * most, and not a dot segment a resolver would collapse. Never a slash, encoded or not ('%2F'
- * decoded is one, and a server decodes it into its own path), a space or a control character.
+ * An id that can be a path segment, exactly as given: letters, digits, '.', '_' and '-',
+ * ID_MAX_LENGTH at most, and not a dot segment a resolver would collapse. Never a slash, encoded or
+ * not ('%2F' decoded is one, and a server decodes it into its own path), a space or a control
+ * character. Never trimmed first: an id that arrives padded came from neither this app nor its
+ * server, so it is refused, not mended.
  */
 export function isUsableId(value: string): boolean {
-  const text = value.trim();
-  return text.length <= ID_MAX_LENGTH && ID_CHARACTERS.test(text) && !DOT_SEGMENTS.has(text);
+  return value.length <= ID_MAX_LENGTH && ID_CHARACTERS.test(value) && !DOT_SEGMENTS.has(value);
 }
 
 function segment(value: string, what: string): string {
   if (!isUsableId(value)) throw new TypeError(`${what} is missing`);
-  return encodeURIComponent(value.trim());
+  return encodeURIComponent(value);
 }
 
 function firstParam(params: RouteParams, name: string): string | undefined {
@@ -79,13 +80,13 @@ export function chatWithTicket(id: string | number): string {
 
 /** The ticket a new conversation was opened about, or null (none, or not a row id). */
 export function ticketFromChatParams(params: RouteParams): string | null {
-  const value = firstParam(params, TICKET_PARAM)?.trim();
+  const value = firstParam(params, TICKET_PARAM);
   return value && isTaskId(value) ? value : null;
 }
 
 /** The question a ticket was opened at, or null (none, or not an id). */
 export function questionFromTicketParams(params: RouteParams): string | null {
-  const value = firstParam(params, QUESTION_PARAM)?.trim();
+  const value = firstParam(params, QUESTION_PARAM);
   return value && isUsableId(value) ? value : null;
 }
 
@@ -96,14 +97,19 @@ export function chatAt(chatId: string, messageId: string): string {
 
 /** The message a conversation was opened at, or null (none, or not an id). */
 export function focusFromChatParams(params: RouteParams): string | null {
-  const value = firstParam(params, FOCUS_PARAM)?.trim();
+  const value = firstParam(params, FOCUS_PARAM);
   return value && isUsableId(value) ? value : null;
 }
 
 /** What Connect opens with: the server's address and the pairing code, each as typed or scanned. */
 export type ConnectPrefill = { readonly origin?: string; readonly code?: string };
 
-/** A prefill value worth carrying: trimmed, not blank, not longer than any real one. */
+/**
+ * A prefill value worth carrying: trimmed, not blank, not longer than any real one. Trimmed, unlike
+ * an id: it is a server's address or a pairing code a person typed, pasted or scanned (a space is
+ * theirs to leave), Connect reads both again itself, and a link from outside reaches here only
+ * through the table's pairing entry.
+ */
 function prefillValue(value: string | undefined, maxLength: number): string | undefined {
   const text = value?.trim();
   return text && text.length <= maxLength ? text : undefined;

@@ -162,7 +162,8 @@ describe('the route', () => {
   it('discusses the ticket of a draft only (routes.chatWithTicket, or /chat/new?ticket=…)', () => {
     expect(routeTicketId({ ticket: '419' })).toBe('419');
     expect(routeTicketId({ id: 'new', ticket: '419' })).toBe('419');
-    expect(routeTicketId({ id: 'new', ticket: ' 419 ' })).toBe('419');
+    // a padded ticket came from neither this app nor its server: refused, not trimmed (routes.ts)
+    expect(routeTicketId({ id: 'new', ticket: ' 419 ' })).toBeNull();
     expect(chatWithTicket(419)).toBe('/chat?ticket=419');
   });
 
