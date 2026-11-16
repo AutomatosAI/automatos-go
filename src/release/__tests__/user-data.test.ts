@@ -21,7 +21,7 @@ import { createExpirySignal } from '../../auth/providers/expiry';
 import { createTokenCache } from '../../auth/token-cache';
 import { RECORD } from '../../connect/__tests__/paired-record';
 import { INSTALL_MARKER_KEY, INSTALL_MARKER_VALUE } from '../../connect/config';
-import { createCurrentServerStore } from '../../connect/current-server';
+import { createCurrentServerStore, ownServerOf } from '../../connect/current-server';
 import { createDeviceStore, type PairedRecord } from '../../connect/device-store';
 import { checkInstall } from '../../connect/install-marker';
 import { createServerSwitch, type ServerSwitchDeps } from '../../connect/switch';
@@ -221,6 +221,23 @@ describe('(b) leaving: one clearUserData', () => {
     expect(native.order).toEqual(['push', 'files']);
     expect(leftovers(phone)).toEqual(SIGNED_OUT);
     expect(servers.getSnapshot()).toEqual({ status: 'ready', own: null, ended: null });
+  });
+
+  // Clerk's own cache clears its item only when the publishable key changes (createClerkInstance's
+  // hasConfigChanged), so leaving the hosted server for a paired one must take it here
+  it("a new pairing from the hosted server: Clerk with its item, then Clerk's items go, then the record", async () => {
+    const phone = await usedPhone();
+    const { serverSwitch, servers } = await switchOver(phone, hostedProvider(phone), null);
+    await serverSwitch.connectTo(RECORD);
+    expect(native.order).toEqual(['push', 'clerk (item there: true)', 'files']);
+    expect(phone.secure.items.has(CLERK_CLIENT_ITEM)).toBe(false);
+    expect(phone.secure.items.has(CLERK_INDEXED_ITEM)).toBe(false);
+    expect(leftovers(phone).keychain).toEqual([...KEPT_KEYCHAIN, PAIRED_RECORD_ITEM].sort());
+    expect(servers.getSnapshot()).toEqual({
+      status: 'ready',
+      own: ownServerOf(RECORD),
+      ended: null,
+    });
   });
 
   it("writes every item this phone only, and never deletes the install id or the store's key", async () => {
