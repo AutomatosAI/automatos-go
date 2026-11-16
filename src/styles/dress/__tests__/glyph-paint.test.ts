@@ -2,14 +2,15 @@
 // each glyph by its state's role token (the dress's glyphPaint 'state-role', state-tokens.ts
 // glyphToken), never the accent; HUD keeps its glyph roles exactly; Studio and Play keep their dots.
 // Covers every place a glyph status is painted: StatusPip (the Command Centre's board and LIVE),
-// StateMark (row-status.ts stateMark: the board, the ticket sheet, Questions, the brief's rows), the
-// readiness list (readinessMark), and Arcade's own party strip and quest map.
+// StateGlyph (state-tokens.ts stateGlyphMark: in StateMark on the board, the ticket sheet,
+// Questions and the brief's rows, and in the readiness list), and Arcade's own party strip and
+// quest map.
 
 import { describe, expect, it } from 'vitest';
 
 import { stateMark } from '../../../cc/status/row-status';
 import { readinessMark } from '../../../readiness/view-model';
-import { STATE_TOKENS, glyphToken } from '../../../ui/state-tokens';
+import { STATE_TOKENS, glyphToken, stateGlyphMark } from '../../../ui/state-tokens';
 import { PARTY_TONES } from '../../arcade/home/party';
 import { QUEST_TONES } from '../../arcade/home/quests';
 import { STATUS_WORDS } from '../../strings';
@@ -79,25 +80,28 @@ describe('glyphToken', () => {
 });
 
 describe('the marks that draw a state', () => {
-  it('StateMark: HUD’s exactly as before; Arcade’s glyph and word HUD’s, its glyph in the state’s role', () => {
+  const HUD = { glyphs: true, glyphPaint: 'glyph-role', scheme: 'dark' } as const;
+  const ARCADE = { glyphs: true, glyphPaint: 'state-role', scheme: 'dark' } as const;
+
+  it('StateGlyph: HUD’s exactly as before; Arcade’s glyph HUD’s, painted in the state’s role', () => {
     for (const state of STATUS_STATES) {
-      const hud = stateMark(state, true, 'dark');
-      expect(hud.glyphToken).toBe(GLYPH_ROLE_TOKENS[statusGlyph(state).role]);
-      const arcade = stateMark(state, true, 'dark', 'state-role');
-      expect(arcade).toEqual({ ...hud, glyphToken: STATE_TOKENS[state] });
+      const hud = stateGlyphMark(state, HUD);
+      expect(hud).toEqual({
+        glyph: statusGlyph(state).glyph,
+        token: GLYPH_ROLE_TOKENS[statusGlyph(state).role],
+      });
+      expect(stateGlyphMark(state, ARCADE)).toEqual({ ...hud, token: STATE_TOKENS[state] });
       // the light ground's stand-ins are Studio's; Arcade's roles hold on Handheld as they are
-      expect(stateMark(state, true, 'light', 'state-role').glyphToken).toBe(STATE_TOKENS[state]);
+      expect(stateGlyphMark(state, { ...ARCADE, scheme: 'light' }).token).toBe(STATE_TOKENS[state]);
     }
   });
 
-  it('the readiness list: the same, for ready, needs setup and not checked', () => {
+  it('StateMark and the readiness list say HUD’s and Arcade’s words the same, muted', () => {
+    for (const state of STATUS_STATES) {
+      expect(stateMark(state, true)).toEqual({ word: statusGlyph(state).word, wordTone: 'muted' });
+    }
     for (const state of ['ready', 'needs_setup', 'not_checked'] as const) {
-      const hud = readinessMark(state, true, 'dark');
-      expect(hud.glyphToken).toBe(GLYPH_ROLE_TOKENS[statusGlyph(state).role]);
-      expect(readinessMark(state, true, 'dark', 'state-role')).toEqual({
-        ...hud,
-        glyphToken: STATE_TOKENS[state],
-      });
+      expect(readinessMark(state, true).wordTone).toBe('muted');
     }
   });
 });
