@@ -38,7 +38,8 @@ nowhere); no second HTTP client anywhere; never react-native-svg's address loade
 `loadLocalRawResource`), a namespace import of it or a `require()` / `import()` of it: fetch the
 text through the client and draw it with `SvgXml`; the file system's own transfers
 (`File.downloadFileAsync`; `downloadAsync`, `uploadAsync`, `createDownloadResumable`,
-`createUploadTask`, `DownloadResumable`, `UploadTask`) only in `src/api/**`, through
+`createUploadTask`, `DownloadResumable`, `UploadTask`, by name or written as text) and a
+`require()` / `import()` of `expo-file-system` only in `src/api/**`, through
 `src/api/transfer.ts`; never `react-native-webview`, `expo/dom`, `@expo/dom-webview` or the
 `'use dom'` directive; files warn over 400 lines and fail over 800; functions 50 lines (`.tsx`
 150; test callbacks exempt, as on the web), depth 4, complexity 10; no colour literals in

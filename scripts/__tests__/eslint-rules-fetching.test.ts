@@ -9,6 +9,7 @@ const SVG_MESSAGE =
   'A picture is fetched through src/api/ (D-ONE-CLIENT): fetch its text with the API client and draw it with SvgXml.';
 const TRANSFER_MESSAGE =
   'Fetch or send a file through src/api/transfer.ts (rule 13.2): the file system never fetches or sends by address on its own.';
+const FILE_SYSTEM_LOADED = `Import expo-file-system statically (File, Paths, Directory), so the guard reads the names. ${TRANSFER_MESSAGE}`;
 
 beforeAll(warm, WARM_TIMEOUT);
 
@@ -91,6 +92,11 @@ describe("the file system's own transfers only in src/api (rule 13.2)", () => {
     ['a resumable, resumed', 'export const r = (task: { downloadAsync(): void }) => task.downloadAsync();'],
     ['a computed member', "export const d = () => File['downloadFileAsync'];"],
     ['a destructured name', 'export const { uploadAsync } = FileSystem;'],
+    // since 16 Nov: the name written as text
+    ['a string key in a destructuring', "export const { 'downloadAsync': d } = FileSystem;"],
+    ['a computed string key', "export const { ['uploadAsync']: u } = FileSystem;"],
+    ['a template member', 'export const d = () => File[`downloadFileAsync`];'],
+    ['a template key', 'export const { [`createUploadTask`]: c } = FileSystem;'],
   ])('refuses %s outside src/api and allows it inside', async (_name, line) => {
     const code = `declare const File: any;\ndeclare const FileSystem: any;\n${line}\n`;
     for (const file of ['src/styles/themes/files.ts', 'app/(app)/index.tsx', 'scripts/x.ts']) {
@@ -122,6 +128,19 @@ describe("the file system's own transfers only in src/api (rule 13.2)", () => {
     );
   });
 
+  // since 16 Nov: the package's members cannot be followed from a require() or an import()
+  it.each([
+    ["require('expo-file-system')", "export const fs = require('expo-file-system');\n"],
+    ["require('expo-file-system/legacy')", "export const fs = require('expo-file-system/legacy');\n"],
+    ["import('expo-file-system')", "export const fs = () => import('expo-file-system');\n"],
+    ["import('expo-file-system/next')", "export const fs = () => import('expo-file-system/next');\n"],
+  ])('refuses %s outside src/api and allows it inside', async (_name, code) => {
+    for (const file of ['src/voice/server/speech-files.ts', 'app/(app)/index.tsx', 'scripts/x.ts']) {
+      expect(await said(code, file, 'no-restricted-syntax')).toEqual([FILE_SYSTEM_LOADED]);
+    }
+    expect(await rules(code, 'src/api/transfer.ts')).not.toContain('no-restricted-syntax');
+  });
+
   it('refuses a namespace import of the file system outside src/api, as it carries them all', async () => {
     const code = "import * as FileSystem from 'expo-file-system/legacy';\nexport const f = FileSystem;\n";
     expect(await rules(code, 'src/voice/server/speech-files.ts')).toContain('no-restricted-imports');
@@ -136,6 +155,12 @@ describe("the file system's own transfers only in src/api (rule 13.2)", () => {
       'export const old = [readAsStringAsync, deleteAsync];',
     ].join('\n');
     expect(await rules(`${local}\n`, 'src/voice/server/speech-files.ts')).toEqual([]);
+    const lookAlike = "export const x = () => import('expo-file-systems');\n";
+    expect(await rules(lookAlike, 'src/voice/server/speech-files.ts')).not.toContain(
+      'no-restricted-syntax',
+    );
+    const otherKeys = "declare const FileSystem: any;\nexport const { 'readAsStringAsync': r } = FileSystem;\n";
+    expect(await rules(otherKeys, 'src/voice/server/speech-files.ts')).toEqual([]);
     const fake = 'export class FakeFile {\n  static async downloadFileAsync() {\n    return 1;\n  }\n}\n';
     expect(await rules(fake, 'src/cc/__tests__/open-file.test.ts')).toEqual([]);
   });
