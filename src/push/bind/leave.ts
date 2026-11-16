@@ -5,7 +5,11 @@
 // pairing runs it from the provider's onExpired (PushRoot). In order: the session's one registrar is
 // closed (the run under way ends and none starts after it, so a resume or a new token never
 // registers the phone again); on the hosted server only, DELETE /api/v1/mobile/devices/{device_id}
-// for the row the push record names, with the still-valid Clerk token, best effort within
+// for the row the push record names (or a Remove this phone the server has not confirmed:
+// removal-owed.ts) — or, with no record, the row the registrar last heard the
+// server answer (a registration whose answer came while the registrar was closing, or a row with no
+// key), else the row learned for a registration whose answer was lost (registration/attempts.ts) —
+// with the still-valid Clerk token, best effort: learning the row and the DELETE together within
 // SIGN_OUT_DELETE_TIMEOUT_MS (a row already gone counts); then teardownLocal, even when the DELETE
 // failed. An own server's row is the connect kit's to revoke (remove-device.ts, with the device's own
 // token), so push never DELETEs there: Forget this server sends ONE DELETE. A row whose DELETE
@@ -21,9 +25,11 @@
 
 import { logger } from '../../lib/logger';
 import { SIGN_OUT_DELETE_TIMEOUT_MS } from '../config';
+import type { RegistrationAttempts } from '../registration/attempts';
 import type { PushKeyStore } from '../registration/key-store';
 import type { RecordScope } from '../registration/record';
 import type { Registrar } from '../registration/registrar';
+import type { RemovalOwed } from '../registration/removal-owed';
 import type { PushSource } from '../registration/state';
 import { clearShown, teardownLocal, type TeardownDeps, type TeardownStep } from '../teardown';
 import { goneAlready, recordedDeviceId } from './remove-phone';
@@ -32,11 +38,17 @@ export type LeaveDeps = Readonly<{
   source: PushSource;
   /** This session's server and workspace: the push record's row is read in it. */
   scope: RecordScope;
-  /** The session's one registrar. */
-  registrar: Pick<Registrar, 'close'>;
+  /** The session's one registrar: closed first; latest() names the row the server last answered. */
+  registrar: Pick<Registrar, 'close' | 'latest'>;
   store: Pick<PushKeyStore, 'load'>;
   /** DELETE /api/v1/mobile/devices/{device_id} through the session's client (api.ts). */
   revoke: (deviceId: string, signal: AbortSignal) => Promise<void>;
+  /** The row of a registration whose answer was lost (attempts.ts learnRowId); null: none. */
+  learn?: (signal: AbortSignal) => Promise<string | null>;
+  /** That note, cleared once a DELETE in this scope is confirmed (and kept when it is not). */
+  attempts?: Pick<RegistrationAttempts, 'clear'>;
+  /** A Remove this phone the server has not confirmed: its row is revoked here too. */
+  owed?: Pick<RemovalOwed, 'owed' | 'settle'>;
   teardown: TeardownDeps;
   timeoutMs?: number;
 }>;
@@ -71,20 +83,28 @@ async function withinTime<T>(
   }
 }
 
-/** The DELETE within its time; false on a refusal, no network or no answer in time. */
-function revokedInTime(
+/** The DELETE's answer: true, or a row already gone; false on a refusal or no network. */
+function revokedOrGone(
   revoke: LeaveDeps['revoke'],
   deviceId: string,
-  timeoutMs: number,
+  signal: AbortSignal,
 ): Promise<boolean> {
-  const answered = (signal: AbortSignal) =>
-    Promise.resolve()
-      .then(() => revoke(deviceId, signal))
-      .then(() => true, goneAlready);
-  return withinTime(answered, timeoutMs, () => {
-    logger.warn('[push] the server did not answer the sign-out in time');
-    return false;
-  });
+  return Promise.resolve()
+    .then(() => revoke(deviceId, signal))
+    .then(() => true, goneAlready);
+}
+
+/** The learned row, or null; a learn that fails is none. */
+function learned(learn: LeaveDeps['learn'], signal: AbortSignal): Promise<string | null> {
+  if (!learn) return Promise.resolve(null);
+  return Promise.resolve()
+    .then(() => learn(signal))
+    .catch(() => null);
+}
+
+function lateSignOut(): boolean {
+  logger.warn('[push] the server did not answer the sign-out in time');
+  return false;
 }
 
 /**
@@ -101,13 +121,37 @@ function closed(registrar: LeaveDeps['registrar'], timeoutMs: number): Promise<v
   );
 }
 
+/** The row the registrar last heard the server answer for this phone; null before any answer. */
+function answeredRow(registrar: LeaveDeps['registrar']): string | null {
+  return registrar.latest()?.facts.serverRow?.deviceId ?? null;
+}
+
 export function pushLeaveFor(deps: LeaveDeps): PushLeave {
   const timeoutMs = deps.timeoutMs ?? SIGN_OUT_DELETE_TIMEOUT_MS;
+  let tried = false;
   let unrevoked: string | null = null;
+  // the record's row; with none, on the first leave the row the server answered or the one learned,
+  // and on a later one the row whose DELETE failed
+  const rowToRevoke = async (signal: AbortSignal): Promise<string | null> => {
+    const recorded =
+      (await recordedDeviceId(deps.store, deps.scope)) ?? deps.owed?.owed(deps.scope) ?? null;
+    if (recorded) return recorded;
+    if (tried) return unrevoked;
+    return answeredRow(deps.registrar) ?? (await learned(deps.learn, signal));
+  };
   const signOut = async (): Promise<boolean> => {
-    const deviceId = (await recordedDeviceId(deps.store, deps.scope)) ?? unrevoked;
-    const revoked = deviceId !== null && (await revokedInTime(deps.revoke, deviceId, timeoutMs));
-    unrevoked = revoked ? null : deviceId;
+    const found: { deviceId: string | null } = { deviceId: null };
+    const attempt = async (signal: AbortSignal) => {
+      found.deviceId = await rowToRevoke(signal);
+      return found.deviceId !== null && revokedOrGone(deps.revoke, found.deviceId, signal);
+    };
+    const revoked = await withinTime(attempt, timeoutMs, lateSignOut);
+    tried = true;
+    unrevoked = revoked ? null : found.deviceId;
+    if (revoked) {
+      deps.attempts?.clear(deps.scope);
+      deps.owed?.settle(deps.scope);
+    }
     return revoked;
   };
   return async () => {

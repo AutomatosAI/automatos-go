@@ -37,6 +37,7 @@ function checks(overrides: Partial<StaleChecks> = {}): StaleChecks {
     getChat: vi.fn(async () => ({ id: CHAT_ID })),
     grantPlaces: vi.fn(async () => []),
     missionPlace: vi.fn(async (id: string) => ({ id, config: null })),
+    askedQuestion: vi.fn(async () => null),
     ...overrides,
   };
 }

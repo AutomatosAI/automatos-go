@@ -9,7 +9,9 @@
 // Remove this phone and the session's leave (sign-out, Forget this server, a new pairing: US-014i)
 // to the phone link. It listens to the provider's onExpired: an own server that ended the pairing
 // leaves push, a hosted session that expired clears the badge and the delivered notifications.
-// Unmount takes every listener, the handler and the link away and closes the registrar. It renders
+// A Remove this phone the server had not confirmed is sent again at mount, before the first run
+// (bind/remove-phone.ts finishRemoval). Unmount takes every listener, the handler and the link away
+// and closes the registrar. It renders
 // only the in-context ask, never while the person's Remove this phone holds (promptStatusOf), and the
 // approval sheet a tap on an approval's push opens (PRD-268 US-G08: where discovery lists
 // approval_view and the role may approve; src/approvals/PushApprovalSheet.tsx). Push is wired again
@@ -130,6 +132,7 @@ function useRegistration(wiring: PushWiring): void {
     const { port } = NATIVES;
     void setupNotificationPlatform(port, Platform.OS)
       .then(clearLeftover)
+      .then(() => removal.finish())
       .then(() => registrar.run());
     const resume = AppState.addEventListener('change', (state) => {
       if (state === 'active') void registrar.run();

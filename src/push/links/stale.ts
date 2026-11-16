@@ -21,7 +21,14 @@ import type { ApiClient } from '../../api/client';
 import { isApiError } from '../../api/errors';
 import { logger } from '../../lib/logger';
 import { isTaskId, routes } from '../../navigation/routes';
-import { getChat, getSocialPost, getTicket, pendingQuestionIds } from '../api';
+import {
+  askedQuestion,
+  getChat,
+  getSocialPost,
+  getTicket,
+  pendingQuestionIds,
+  type AskedQuestion,
+} from '../api';
 import {
   BOARD_TASK_SUBJECT,
   MISSION_AWAITING_APPROVAL,
@@ -45,6 +52,8 @@ export type StaleChecks = Readonly<{
   grantPlaces: (signal: AbortSignal) => Promise<readonly GrantPlace[]>;
   /** A Mission and the chat it was launched from. */
   missionPlace: (missionId: string, signal: AbortSignal) => Promise<MissionPlace>;
+  /** The question a notification Reply answers, by its signed id (inbound/confirm-sender.ts). */
+  askedQuestion: (grantId: string, signal: AbortSignal) => Promise<AskedQuestion | null>;
 }>;
 
 /**
@@ -56,7 +65,7 @@ export type ResolvedLink = Readonly<{ route: string | null; notice?: string; she
 
 type Failure = 'not_found' | 'forbidden' | 'unknown';
 
-type Probe<T> = Readonly<{ found: T }> | Readonly<{ failed: Failure }>;
+export type Probe<T> = Readonly<{ found: T }> | Readonly<{ failed: Failure }>;
 
 type Checker = <T>(run: (signal: AbortSignal) => Promise<T>) => Promise<Probe<T>>;
 
@@ -72,7 +81,7 @@ function failureOf(error: unknown): Failure {
 }
 
 /** The check's answer, or 'unknown' when it fails otherwise or does not answer in time. */
-async function probe<T>(
+export async function probe<T>(
   run: (signal: AbortSignal) => Promise<T>,
   timeoutMs: number,
 ): Promise<Probe<T>> {
@@ -221,5 +230,6 @@ export function staleChecksFor(client: ApiClient): StaleChecks {
     grantPlaces: (signal: AbortSignal) => pendingGrantPlaces(client, signal),
     missionPlace: (missionId: string, signal: AbortSignal) =>
       getMissionPlace(client, missionId, signal),
+    askedQuestion: (grantId: string, signal: AbortSignal) => askedQuestion(client, grantId, signal),
   });
 }

@@ -155,3 +155,194 @@ To run the check from a laptop (a person with a token, never the build loop):
 ```sh
 EXPO_TOKEN=<the token> node scripts/release/check-push-security.mjs
 ```
+
+## What the phone does about a push (rule 14.5)
+
+The rest of this page is the phone's own side: what it registers, what it keeps when the person
+changes their mind, and what a push that verifies does and does not prove. The full path of a push
+is [../push.md](../push.md).
+
+### The person's last choice wins
+
+The session's one registrar
+([src/push/registration/registrar.ts](../../src/push/registration/registrar.ts)) runs one
+registration at a time. A choice the person makes while a call is out is read by the run after
+it; nothing a run read at its start is written back over it:
+
+- **Notifications off in the phone's Settings during a registration.** The registration's record
+  is kept, then the next run sends `PATCH …/devices/{id} {push_enabled: false}`. On again during
+  that PATCH: the next run registers again.
+- **Remove this phone.** The hold is set first. The row is then read, DELETEd and the phone cleared
+  as one task in the registrar's queue, after the run under way. A **Turn on** tapped before the
+  removal, still waiting behind a run, reads the removal's hold when its turn comes and sends
+  nothing. One tapped during the removal registers after it, from a cleared phone.
+- **Sign out, Forget this server or a new pairing during a registration.** The registrar closes,
+  the late answer's key is not kept, and with no push record the leave DELETEs the row that answer
+  named.
+
+Each case holds the call open, changes the choice and releases it:
+[src/push/\_\_tests\_\_/registration-races.test.ts](../../src/push/__tests__/registration-races.test.ts).
+
+### A registration whose answer was lost
+
+A registration can reach the server while its answer never reaches the phone: a timeout after the
+request left, a network that dropped, the app killed while the request was out. The server then
+holds an active row that sends to this phone, and the phone holds no record of it, so no id and no
+key. What the phone does
+([src/push/registration/attempts.ts](../../src/push/registration/attempts.ts)):
+
+- **Before each registration goes,** it notes that one is out for this server and workspace, in
+  the encrypted store (scopes only). The note is cleared only when that is settled: a push record
+  kept, a DELETE the server confirmed (or answered "already gone") in that scope, by Sign out or by
+  Remove this phone, or a learning registration the server refused with a 409. The encrypted store
+  is the signed-in session's: every way of leaving empties it, or makes it unreadable, once the
+  provider has signed out, so a note is only ever read in the session that wrote it.
+- **The next registration repairs it.** With no record, the next launch or resume registers again.
+  The server answers the same row (one per install, person and workspace) with no key, because it
+  hands out a key once. A hosted phone then revokes that row and registers once more for a new key
+  (at most once a day). An own server cannot do that without ending the pairing, so the phone says
+  "This phone can't check its notifications. Pair it again to turn them on."
+- **Sign out (hosted)** DELETEs the record's row. With no record it DELETEs the row the server last
+  answered, and with neither, where a registration is noted, it learns the row by registering
+  again without the push token (the server answers the caller's own row for this install, and a
+  registration with no token leaves the row's push as it was), then DELETEs it. Learning and the
+  DELETE share the 4 s. Nothing is learned where nothing was sent, or where the person removed this
+  phone. If the original registration never arrived, this registers a row only to revoke it, and
+  Studio then lists one removed phone.
+- **When the DELETE does not go through** (no network, a refusal, the 4 s over, a learning
+  registration still out when they end), the note stays and the next chance finishes the job: a
+  second Sign out in this launch (Clerk refuses a sign-out offline) revokes the row it learned; after
+  a relaunch, still signed in, the next registration keeps a record (the row is the person's own
+  again) or the next Sign out learns the row again and revokes it. A learning registration that
+  reaches the server after the 4 s changes nothing on a row that already exists; where none did, it
+  makes one with no push token, so nothing can be sent to it, and the next Sign out removes it. Once
+  the sign-out completes, the note goes with the session's store: from then on the next
+  registration on this phone, by anyone, moves the push token off that row.
+- **Notifications off in the phone's Settings** has no row id to tell the server. The phone's own
+  setting stops every notification from showing, the screen says the setting is off, and turning it
+  on again registers.
+- **Remove this phone** is offered only with a push record, which names the one row the server keeps
+  for this install, or while a removal is owed (below). "Removed" is shown only when the server
+  answered the DELETE (or said the row was already gone).
+- **A removal the server has not confirmed** (no network, a refusal, no answer) still clears the
+  phone, and says "This phone couldn't be removed from your workspace's devices. Studio may still
+  list this phone." The row's id is kept as owed (`src/push/registration/removal-owed.ts`, the
+  encrypted store, ids only), so the button stays offered, and the next tap, the next launch (while
+  the person's hold stands) or the next Sign out sends the DELETE again; a confirmed one, or a 404,
+  settles it. Turned on again since, the person owes nothing, and it is settled unsent. The yes
+  never leaves the button busy: a removal that fails on its way says the same line.
+
+[src/push/\_\_tests\_\_/lost-registration.test.ts](../../src/push/__tests__/lost-registration.test.ts)
+proves each of these.
+
+### What a verified push proves
+
+**What is signed.** `sig` is HMAC-SHA256, keyed with this phone's own push key, over
+`["v2", type, workspace_id, notification_id, grant_id, link_type, link_id, ticket_number, question, options, iat]`
+([src/push/signature/canonical.ts](../../src/push/signature/canonical.ts)). Nothing else in a push
+is signed: not the title, the body, the sound, the priority, the category (which chooses the
+buttons), the Android channel, or the unsigned `message_id` a brief's push carries.
+
+**What the server sends a person to read.** Each push it sends a phone is `to`, `title`, `body`,
+`data` (the signed payload), `priority`, `categoryId`, `channelId` and `sound`: no subtitle, no
+picture, no badge count, nothing else a person reads.
+
+| Field | What the server puts there | Can the phone check it? |
+|---|---|---|
+| `title` | "{sender} · {badge}": the sender is the agent that asked, or "Auto" when no agent is named; the badge is the fixed AI term of the language the phone registered: AI, IA (Portuguese, Spanish, French, Italian) or KI (German) | "Auto · AI", "Auto · IA" and "Auto · KI" by itself. An agent's name is not in the signed payload, so any other title only once the server says that agent asked (below). |
+| `body` | A question's own `question`, exactly as signed. A push with no `question` (any other event, or a question hidden by the workspace's "Hide question text in notifications") shows a fixed line, such as "A question needs your answer", that no signed field names | Yes, for a question: it must be the signed `question`. |
+| subtitle, pictures | Never sent | They must be absent. |
+
+A question asked by a named agent, the usual case, arrives under a title the phone cannot check by
+itself.
+
+**What each action trusts.**
+
+| Action | What it acts on |
+|---|---|
+| A tap, or **Open** | The signed payload only. The screen is the signed link's, read again from the server with the person's own sign-in before it opens, so the real question is what the app shows. The bell row marked read is the signed `notification_id`. An approval's sheet is the signed `grant_id`'s and shows the server's own record; with "Face ID before approve or answer" on (the default) it asks for Face ID before Approve. The title, body and subtitle change nothing, so a tap stays as it was. |
+| **Reply**, with typed words | Where the answer goes: the signed `grant_id` of a signed `link_type` `question`. What the answer says: what the person typed, in answer to everything the notification showed. |
+| A push while the app is open | Shown only when it verifies within 2 s, with its own title and body. |
+
+**The worst case, before this change.** Anyone who holds this phone's Expo push token and one
+signed question payload less than 7 days old, for a question still open in the workspace the app
+is in, could send it again with words of their own (in its body, its title or a subtitle) and a
+Reply button. What the person typed in answer to those words was then posted as their answer to
+the real question, once.
+
+**What already bounds it.** The age limit (7 days old, 5 minutes ahead); the workspace check (a push
+of another workspace acts on nothing); the role check (a viewer cannot answer); the server takes one
+answer per question (a second gets "That question was already answered."); iOS asks for an unlocked
+phone before the reply field opens. Not a bound: the record of responses handled
+(`identifier:action`), because a push sent again arrives under a new identifier; and Face ID is not
+asked for a notification Reply.
+
+**What the phone does now**
+([src/push/inbound/shown.ts](../../src/push/inbound/shown.ts),
+[confirm-sender.ts](../../src/push/inbound/confirm-sender.ts),
+[intent.ts](../../src/push/inbound/intent.ts), [handler.ts](../../src/push/inbound/handler.ts),
+[dedupe.ts](../../src/push/inbound/dedupe.ts)). A Reply is posted only when everything the
+notification showed is the signed question or confirmed by the server; otherwise nothing is sent
+and the question opens in the app, where the server's own text is shown:
+
+- The body must be the signed `question`, word for word (spaces at either end aside), and there
+  must be no subtitle and no picture. Otherwise: "This notification's words couldn't be matched to
+  the question, so nothing was sent. Answer it here."
+- A title that is absent or one of Auto's three posts at once.
+- Any other title (an agent's name) is confirmed first. The phone reads the open questions the
+  Questions screen lists (`GET /api/v1/approval-grants?status=pending&kind=question`, the
+  person's own sign-in) and takes the one whose id is the signed `grant_id`, compared as text (a
+  signed id over 15 digits is not read); nothing the notification shows chooses it. For one question the route returns its `id`, `status`,
+  `question_md` (its words, as markdown), `options` and `owner.agent.name` (the agent that asked).
+  The Reply posts only if that question is still open, its words are the signed `question`, as
+  written or as the server makes a push's words from a question's markdown (the same rules,
+  mirrored on the phone in `src/push/inbound/question-text.ts`, and never looser: a character
+  inside a word or a mark the rendering keeps is never dropped), and the title is exactly "{that
+  agent's name} · AI", "· IA" or "· KI".
+  Then the sender shown is the one the server names. Otherwise:
+
+  | The server says | The line |
+  |---|---|
+  | The question is not open (answered, closed, or not listed) | "That question was already answered or closed." |
+  | Other words | "This notification's words couldn't be matched to the question, so nothing was sent. Answer it here." |
+  | Another agent asked, or it names no agent | "The sender on this notification couldn't be matched to who asked, so nothing was sent. Answer it here." |
+  | Nothing: no network, a refusal (a 403 for a person who may not list questions, a 404), an answer that is not the list, or no answer in 4 s | "Not sent. Open the question to answer it." |
+
+- **The time it has.** Reply opens the app to the foreground (and iOS asks for an unlocked phone
+  first), so it does not run in the time iOS gives a background notification action. The read
+  waits at most 4 s (`STALE_CHECK_TIMEOUT_MS`, the same as Open's check); the answer's POST keeps
+  the client's own 30 s limit.
+- A signed payload is replied to once. After every check has passed, in the same step as the
+  send, its workspace, grant and notification ids and its `iat` are claimed in the store of
+  responses handled (ids and signed times only, never words; the last 50 keys; kept across
+  launches; cleared by sign-out). A Reply that is not posted (a read that failed, a copy under a
+  wrong title) never uses it up. The same payload sent again after a Reply was posted opens the
+  question with "You already replied to this notification, so nothing was sent again."
+- The store keeps 50 keys but a payload is accepted for 7 days, so beside the keys it keeps a
+  floor: the newest `iat` of any key it has dropped. A push signed at or before the floor whose
+  key is no longer kept counts as handled, so a payload sent again after its keys fell off posts
+  nothing and opens nothing (a Reply or an Open is not acted on twice). The cost: a notification
+  left behind 50 newer handled keys, signed before one of them, counts as handled too. The floor is
+  stored and cleared with the keys; a stored floor that cannot be read counts as none.
+
+What a person sees: a Reply to a question Auto asked, or one a named agent asked whose name the
+server confirms, posts and says "Answered". An agent renamed between asking and the Reply is not
+the name on the notification any more, so that Reply opens the question in the app: the title's
+name and `owner.agent.name` are the same field (the agent's name), read when it asked and when
+the list is read.
+
+[src/push/\_\_tests\_\_/reply-binding.test.ts](../../src/push/__tests__/reply-binding.test.ts),
+[confirm-sender.test.ts](../../src/push/__tests__/confirm-sender.test.ts) and
+[inbound.test.ts](../../src/push/__tests__/inbound.test.ts) prove each branch, for a Reply and for a
+plain tap.
+
+**What the server could sign instead.** With the sender's name as a signed field (the phone then
+rebuilds "{sender} · {badge}"), or the title itself (or its SHA-256), under a new payload version,
+the phone would need no read before an agent's Reply, and would post one offline. To check a push
+that is not a question, the body's fixed line too.
+
+**What a verified push still does not prove.** The words on the lock screen. A notification that
+arrives while the app is closed is drawn by iOS or Android without any of the app's code, so a push
+with genuine signed data and words of its own is shown as it was sent. Checking it before it is
+shown needs a notification service extension, which is native code this app does not have. Android
+also draws a large picture from an image link without telling the app; the server never sends one.

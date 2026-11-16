@@ -1,6 +1,7 @@
 // Shared fixtures of the registration tests: the facts, a session, a fake phone (DeviceSource), a
 // fake permission port, the real key store over a fake key registry and a fake SecureStore, a fake
-// MMKV for the recovery log, and a client over the foundation's fake transport that answers each
+// MMKV for the recovery log, the removal hold and the registration attempts, and a client over the
+// foundation's fake transport that answers each
 // device route from a script. A test file that imports this mocks expo-secure-store first.
 
 import type { StreamingResponse, TransportRequest } from '../../api/transport-types';
@@ -8,6 +9,7 @@ import { jsonReply, reply } from '../../api/__tests__/fake-transport';
 import { fakeSecureStore, KEYCHAIN_OPTIONS } from '../../lib/__tests__/fake-secure-store';
 import { createSecureKeyRegistry } from '../../lib/secure-keys';
 import { PUSH_RECORD_ITEM } from '../config';
+import { registrationAttemptsOver } from '../registration/attempts';
 import type { DeviceFacts, DeviceSource } from '../registration/device-facts';
 import { createPushKeyStore } from '../registration/key-store';
 import type { PushRecord } from '../registration/record';
@@ -217,6 +219,7 @@ export function setup(options: Setup = {}) {
     device: device.source,
     store: keys.store,
     recoveries: recoveryLogOver(storage),
+    attempts: registrationAttemptsOver(storage),
     hold: removalHoldOver(storage),
     now: () => clock.now,
   };

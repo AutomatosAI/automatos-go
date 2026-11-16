@@ -192,6 +192,9 @@ standard's Changes.
 | The redirect to storage judged a host from its text, so a host written with a percent-escape, a non-ASCII or full-width character, or in brackets could be judged public while the phone connected somewhere else | 13.2c | App A's security review of its copy of the template's file |
 | The check at launch on the phone accepted a build address with a non-ASCII, full-width or capital host that the build's check refused: the two run on different URL parsers | 13.2b | The template's own pass, from the same finding |
 | The out-of-date test had no list for screens still owed the line, so a copy that had not drawn it everywhere could not take the test as it was | 6.4 | App A |
+| A registration call that was out could undo the person's later choice: a tap queued behind it, then a removal, registered the phone again; a sign-out during a first registration left its row sending | 8.4 | App C's review of its own push code; the template had three of its nine cases |
+| A sign-out whose registration's answer had been lost sent no removal, so the server kept sending to a signed-out phone | 8.4 | App C |
+| A Reply typed on a notification went to the question the signed payload named, while the words the person was answering were not signed and not checked | 5.2 | App C. The template's case was sharper: it has the Reply |
 
 ## Open for the owner
 

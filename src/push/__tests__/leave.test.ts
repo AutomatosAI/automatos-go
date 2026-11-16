@@ -60,7 +60,7 @@ describe('the hosted DELETE: best effort, SIGN_OUT_DELETE_TIMEOUT_MS', () => {
   it('a run under way that never ends: leaving goes on after 4000 ms, the DELETE still sent', async () => {
     vi.useFakeTimers();
     const phone = await leavingPhone({ script: { revoke: [ok] } });
-    const stuck = { close: () => new Promise<void>(() => undefined) };
+    const stuck = { close: () => new Promise<void>(() => undefined), latest: () => null };
     const leave = pushLeaveFor({ ...phone.deps, registrar: stuck });
     let outcome: unknown = null;
     void leave().then((done) => (outcome = done));

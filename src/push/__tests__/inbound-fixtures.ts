@@ -18,7 +18,7 @@ export function deepFreeze<T>(value: T): T {
 
 export function iosContent(data: unknown = FULL): Record<string, unknown> {
   return {
-    title: 'Auto needs an answer',
+    title: 'Auto · AI',
     subtitle: null,
     body: 'Ship the Lisbon deck?',
     data,
@@ -57,7 +57,7 @@ export function androidResponse(actionIdentifier: string, userText?: string): un
       request: {
         identifier: ANDROID_ID,
         content: {
-          title: 'Auto needs an answer',
+          title: 'Auto · AI',
           subtitle: null,
           body: 'Ship the Lisbon deck?',
           dataString: JSON.stringify(FULL),

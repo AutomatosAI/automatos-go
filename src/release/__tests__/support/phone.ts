@@ -18,7 +18,12 @@ import { INSTALL_MARKER_KEY, INSTALL_MARKER_VALUE } from '../../../connect/confi
 import { consentKeyFor } from '../../../consent/store';
 import { fakeSecureStore, KEYCHAIN_OPTIONS } from '../../../lib/__tests__/fake-secure-store';
 import { createSecureKeyRegistry } from '../../../lib/secure-keys';
-import { HANDLED_KEYS_ITEM, REMOVED_SCOPES_ITEM } from '../../../push/config';
+import {
+  HANDLED_KEYS_ITEM,
+  REGISTRATION_ATTEMPTS_ITEM,
+  REMOVALS_OWED_ITEM,
+  REMOVED_SCOPES_ITEM,
+} from '../../../push/config';
 import { memoryStorage } from '../../../storage/encrypted-storage';
 import {
   CLERK_CLIENT_ITEM,
@@ -42,6 +47,8 @@ export const PERSON_ENTRIES: readonly string[] = Object.freeze([
   consentKeyFor(HOSTED_ORIGIN),
   HANDLED_KEYS_ITEM,
   REMOVED_SCOPES_ITEM,
+  REGISTRATION_ATTEMPTS_ITEM,
+  REMOVALS_OWED_ITEM,
 ]);
 
 /** The phone's own choices: Light / Dark / System and the style. */

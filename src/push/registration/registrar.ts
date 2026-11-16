@@ -2,11 +2,16 @@
 // permission change and when the OS hands over a new token. Runs never overlap — two at once could
 // both find no key and revoke the row twice — and the triggers that arrive while one runs share ONE
 // run after it, so a token that changed mid-run is still sent. A person's tap (force) always gets a
-// run of its own. Each outcome's row and 409 are kept for this launch only: the next launch starts
+// run of its own, and it releases Remove this phone's hold when the tap is made, not when its run
+// starts: a removal made after the tap is the person's last word, and the run reads that hold
+// (KP16). exclusive() runs Remove this phone's DELETE and clearing in the same queue, after the run
+// under way and before any run asked for while it waits, so no run reads or writes the record in
+// the middle of it. Each outcome's row and 409 are kept for this launch only: the next launch starts
 // fresh, so an admin who adds the phone back is seen then. close() ends it for the session (sign-out,
 // Forget this server, US-014i, before the push record is wiped): no run starts after it, a run under
 // way sends nothing more and keeps no record, and it resolves once that run has ended — so a late
-// answer never writes a key back after the wipe.
+// answer never writes a key back after the wipe; the row that answer named stays in latest(), for
+// the leave to revoke.
 
 import type { ListenerHandle } from '../platform/port';
 import type { NotificationsPort } from '../platform/expo';
@@ -26,6 +31,8 @@ export type Registrar = Readonly<{
   latest: () => RegistrationOutcome | null;
   /** Ends the registrar; resolves once the run under way has ended. */
   close: () => Promise<void>;
+  /** Runs a task between runs: after the run under way, before any run asked for while it waits. */
+  exclusive: <T>(task: () => Promise<T>) => Promise<T>;
 }>;
 
 /** Runs tasks one at a time, each after the last has settled. */
@@ -59,7 +66,11 @@ export function createRegistrar(deps: RegisterDeps): Registrar {
 
   return Object.freeze({
     run: (options: RegisterOptions = {}) => {
-      if (options.force) return serial(() => once(options));
+      if (options.force) {
+        // the person's tap turns notifications back on after Remove this phone, as it is made
+        if (!closed) deps.hold.release(deps.session);
+        return serial(() => once(options));
+      }
       queued ??= serial(() => {
         queued = null; // a trigger from now on is after this run's reads: it queues the next one
         return once(options);
@@ -71,6 +82,7 @@ export function createRegistrar(deps: RegisterDeps): Registrar {
       closed = true;
       return serial(async () => undefined);
     },
+    exclusive: <T>(task: () => Promise<T>) => serial(task),
   });
 }
 

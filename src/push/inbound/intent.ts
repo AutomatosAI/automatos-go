@@ -5,8 +5,14 @@
 // link — and a verified one is acted on only in the current workspace. Only 'reply', 'open' and
 // the tap exist (no Approve, no option buttons: D-LOCK-SCREEN); any other identifier is 'unknown'.
 // The category is unsigned and never decides anything: a reply answers only a signed question
-// (link_type 'question' with a grant_id). An Open or a tap on an approval's push carries its signed
-// grant_id, for the approval sheet (PRD-268 US-G08). A signed field sent as '' reads as absent.
+// (link_type 'question' with a grant_id), and only when the notification showed that signed
+// question and nothing else (shown.ts): the title, the body, the sound and the buttons are set
+// outside the signature, so an old signed payload sent again with words of its own still verifies,
+// and its Reply opens the question in the app instead of posting what the person typed to other
+// words. A title naming an agent travels with the answer (`confirm`): the handler posts it only
+// once the server says that agent asked (confirm-sender.ts).
+// An Open or a tap on an approval's push carries its signed grant_id, for the approval sheet
+// (PRD-268 US-G08). A signed field sent as '' reads as absent.
 
 import type { WorkspaceRole } from '../../api/workspace';
 import { roleCan } from '../../auth/role';
@@ -20,19 +26,35 @@ import {
   ROW_ID_PATTERN,
 } from '../config';
 import type { PushPayload } from '../schemas/payload';
+import { signedReplyKey } from './dedupe';
 import type { InboundEvent } from './parse';
+import type { SenderToConfirm } from './confirm-sender';
+import { titleToConfirm, wordsUnbound } from './shown';
 
 /** A push's signed link (link_type, link_id); an absent field is left out. */
 export type PushLink = Readonly<{ link_type?: string; link_id?: string }>;
 
 export type NeutralReason =
-  'unverified' | 'other_workspace' | 'cannot_answer' | 'blank_reply' | 'unknown';
+  | 'unverified'
+  | 'other_workspace'
+  | 'cannot_answer'
+  | 'blank_reply'
+  | 'words_differ'
+  | 'sender_unchecked'
+  | 'question_closed'
+  | 'read_failed'
+  | 'replayed'
+  | 'unknown';
 
 export type PushIntent =
   | Readonly<{
       kind: 'answer';
       grantId: string;
       answerText: string;
+      /** The signed payload's key (dedupe.ts signedReplyKey): claimed once before posting. */
+      once: string;
+      /** A title the server must confirm first: the agent it names asked this question. */
+      confirm?: SenderToConfirm;
       notificationId?: string;
       ticketNumber?: string;
     }>
@@ -41,7 +63,7 @@ export type PushIntent =
   | Readonly<{ kind: 'neutral'; reason: NeutralReason; link?: PushLink }>;
 
 export type IntentInput = Readonly<{
-  event: Pick<InboundEvent, 'action' | 'userText'>;
+  event: Pick<InboundEvent, 'action' | 'userText' | 'shown'>;
   /** verifyPushSignature's answer for this payload. */
   verified: boolean;
   /** parsePushData's output for event.data; null when it is not a v2 payload. */
@@ -92,19 +114,30 @@ function openIntent(payload: PushPayload): PushIntent {
   });
 }
 
+/** A title the server must confirm before the reply posts, with the signed question; null: none. */
+function confirmOf(input: IntentInput, payload: PushPayload): SenderToConfirm | null {
+  const title = titleToConfirm(input.event.shown.title);
+  return title ? Object.freeze({ title, question: payload.question ?? '' }) : null;
+}
+
 function replyIntent(input: IntentInput, payload: PushPayload): PushIntent {
   const grantId = present(payload.grant_id);
   if (payload.link_type !== QUESTION_LINK_TYPE || !grantId) return neutral('unknown');
   const question = linkOf(payload);
+  // what was shown, held to what the server signed (shown.ts)
+  if (wordsUnbound(input.event.shown, payload.question)) return neutral('words_differ', question);
   if (!roleCan(input.role, 'answer')) return neutral('cannot_answer', question);
   const answerText = answerTextOf(input.event.userText);
   if (!answerText) return neutral('blank_reply', question);
   const notificationId = present(payload.notification_id);
   const ticketNumber = present(payload.ticket_number);
+  const confirm = confirmOf(input, payload);
   return Object.freeze({
     kind: 'answer',
     grantId,
     answerText,
+    once: signedReplyKey(payload),
+    ...(confirm && { confirm }),
     ...(notificationId && { notificationId }),
     ...(ticketNumber && { ticketNumber }),
   });

@@ -149,8 +149,21 @@ route answers compare-and-swap, so "Answered" needs the grant granted with this 
 | Someone answered first, or the question closed | "That question was already answered." |
 | Network failure | "Not sent. Open the question to answer it." |
 | Signature did not verify | "This notification couldn't be checked, so nothing was sent." |
+| The body was not the signed question, a subtitle or picture was shown, or (an agent's title) the server's words differ | "This notification's words couldn't be matched to the question, so nothing was sent. Answer it here." |
+| An agent's title: the server, read first, says another agent asked, or names none | "The sender on this notification couldn't be matched to who asked, so nothing was sent. Answer it here." |
+| An agent's title: the server says the question is no longer open | "That question was already answered or closed." |
+| An agent's title: the question could not be read (offline, refused, no answer in 4 s) | "Not sent. Open the question to answer it." |
+| This phone already replied to that signed question | "You already replied to this notification, so nothing was sent again." |
 
-Each response is handled once: the last 50 handled keys are kept across launches.
+The last five open the question. The signature covers the data, not the words a notification
+shows, so a Reply is posted only when everything shown is the signed question, Auto's own title, or
+an agent's title the server confirms: for that one the phone reads the question by its signed id
+first (`GET /api/v1/approval-grants?status=pending&kind=question`, within 4 s)
+([release/push-security.md](release/push-security.md), "What a verified push proves").
+
+Each response is handled once, and each signed question replied to once: the last 50 handled keys
+are kept across launches, with the newest signed time dropped from them, so a push signed at or
+before it counts as handled once its key is gone.
 
 **Open or tap** (`A4:src/push/links/targets.ts`, `stale.ts`). `link_type` picks the screen:
 
@@ -211,8 +224,11 @@ So the phone sends every row it read for those events, with only the `push` rows
 
 `A4:src/push/bind/leave.ts`. Push is cleared before the sign-in provider is.
 
-1. The registrar closes, so nothing registers the phone again.
-2. Hosted only: `DELETE /api/v1/mobile/devices/{device_id}` with the still-valid Clerk token,
+1. The registrar closes, so nothing registers the phone again. A registration under way ends first;
+   its key is not kept.
+2. Hosted only: `DELETE /api/v1/mobile/devices/{device_id}` for the push record's row (with no
+   record, the row the server last answered, or the row learned for a registration whose answer was
+   lost: [release/push-security.md](release/push-security.md)), with the still-valid Clerk token,
    waiting at most 4 s. An own server's row is removed by Forget this server instead, with the
    device token, so that path sends one DELETE ([connecting.md](connecting.md)).
 3. The push record, the badge and the delivered notifications are cleared, even if the DELETE
@@ -220,7 +236,11 @@ So the phone sends every row it read for those events, with only the `push` rows
 
 **Remove this phone** (hosted only): "Remove this phone from your workspace's devices?
 Notifications stop here until you turn them on again. You stay signed in." It removes the device row
-and nothing else. Registration then waits until the person turns notifications on again.
+and nothing else. Registration then waits until the person turns notifications on again. The
+DELETE and the clearing run between registrations, never in the middle of one, so a **Turn on**
+tapped meanwhile registers after them. A DELETE the server does not confirm leaves the removal owed:
+the button stays, and the next tap, the next launch or the next Sign out sends it again
+([release/push-security.md](release/push-security.md)).
 
 ## Operator side (self-hosted, W2)
 

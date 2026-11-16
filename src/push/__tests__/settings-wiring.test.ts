@@ -78,6 +78,7 @@ describe('the phone link: PushRoot attaches the registrar, the screen reads it',
       removal: {
         deviceId: async () => null,
         remove: async () => ({ removed: true, status: { kind: 'ask' } }),
+        finish: async () => false,
       },
       leave: async () => ({ revoked: false, failed: [] }),
     };

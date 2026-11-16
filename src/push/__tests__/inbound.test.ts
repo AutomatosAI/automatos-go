@@ -1,23 +1,22 @@
 // Reading a notification (US-015b): what expo-notifications hands over on iOS and Android → one
 // event or 'unreadable' (never a throw); the event, the verify answer and the session → one intent,
 // where an unverified payload does nothing for every action and only 'reply', 'open' and the tap
-// exist; each response's key remembered once, keys only, at most HANDLED_KEYS_MAX.
+// exist. The list of handled responses and its floor: dedupe.test.ts.
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { ANSWER_MAX_CHARS, DEFAULT_ACTION_ID, HANDLED_KEYS_MAX } from '../config';
-import {
-  handledKeysFrom,
-  responseKey,
-  storedHandledKeys,
-  wasHandled,
-  withHandled,
-} from '../inbound/dedupe';
+import { ANSWER_MAX_CHARS, DEFAULT_ACTION_ID } from '../config';
+import { NO_HANDLED_KEYS, responseKey, withHandled } from '../inbound/dedupe';
 import { answerTextOf, intentFor, type IntentInput } from '../inbound/intent';
-import { fromNotification, fromResponse, type InboundEvent } from '../inbound/parse';
+import {
+  fromNotification,
+  fromResponse,
+  type InboundEvent,
+  type ShownText,
+} from '../inbound/parse';
 import { parsePushData, type PushPayload } from '../schemas/payload';
 import { FULL, MINIMAL, WS } from './data-fixtures';
 import {
@@ -39,12 +38,24 @@ function readable(raw: unknown, read: (value: unknown) => ReturnType<typeof from
 const QUESTION = parsePushData(FULL) as PushPayload;
 const QUESTION_LINK = { link_type: 'question', link_id: '42' };
 
+/** What the server's own question push shows: Auto's title and the signed question. */
+const SHOWN: ShownText = Object.freeze({
+  title: 'Auto · AI',
+  subtitle: null,
+  body: FULL.question,
+  attachments: 0,
+});
+
 function input(
-  overrides: Partial<IntentInput> & { action?: string | null; userText?: string | null },
+  overrides: Partial<IntentInput> & {
+    action?: string | null;
+    userText?: string | null;
+    shown?: Partial<ShownText>;
+  },
 ) {
-  const { action = 'reply', userText = 'Yes, ship it', ...rest } = overrides;
+  const { action = 'reply', userText = 'Yes, ship it', shown = {}, ...rest } = overrides;
   return {
-    event: { action, userText },
+    event: { action, userText, shown: { ...SHOWN, ...shown } },
     verified: true,
     payload: QUESTION,
     currentWorkspaceId: WS,
@@ -61,11 +72,30 @@ describe('fromResponse / fromNotification', () => {
       id: IOS_ID,
       category: 'automatos.question.3',
       data: FULL,
+      shown: SHOWN,
       action: 'reply',
       userText: '  Yes, ship it  ',
     });
     expect(Object.isFrozen(event)).toBe(true);
     expect(Object.isFrozen(event.data)).toBe(true);
+  });
+
+  it('reads what the notification showed; text that is not text is none, and it stays readable', () => {
+    expect(readable(androidResponse(DEFAULT_ACTION_ID), fromResponse).shown).toEqual(SHOWN);
+    for (const odd of [undefined, null, 42]) {
+      const content = { ...iosContent(), title: odd, subtitle: odd, body: odd };
+      const event = readable(responseWithContent(content), fromResponse);
+      expect([event.shown, event.data]).toEqual([
+        { title: null, subtitle: null, body: null, attachments: 0 },
+        FULL,
+      ]);
+    }
+    const shownWith = (attachments: unknown) =>
+      readable(responseWithContent({ ...iosContent(), attachments }), fromResponse).shown;
+    expect([shownWith([{ id: 'a' }, { id: 'b' }]), shownWith('odd')]).toMatchObject([
+      { attachments: 2 },
+      { attachments: 1 },
+    ]);
   });
 
   it('reads an Android-shaped response: the Expo body still as dataString', () => {
@@ -144,9 +174,41 @@ describe('intentFor', () => {
       kind: 'answer',
       grantId: '42',
       answerText: 'Yes, ship it',
+      once: `signed:${WS}:42:1001:${FULL.iat}`,
       notificationId: '1001',
       ticketNumber: '0419',
     });
+  });
+
+  it("a reply whose notification did not show the signed question's words → words_differ", () => {
+    const differ = { kind: 'neutral', reason: 'words_differ', link: QUESTION_LINK };
+    for (const body of ['Reply YES to keep your account', 'Ship the Lisbon deck', '', null]) {
+      expect(intentFor(input({ shown: { body } }))).toEqual(differ);
+    }
+    const { question: _redacted, ...rest } = QUESTION;
+    const generic = { body: 'A question needs your answer' };
+    expect(intentFor(input({ payload: rest, shown: generic }))).toEqual(differ);
+    expect(intentFor(input({ shown: { subtitle: 'Approve the payment?' } }))).toEqual(differ);
+    expect(intentFor(input({ shown: { attachments: 1 } }))).toEqual(differ);
+    expect(intentFor(input({ shown: { body: `  ${FULL.question}\n` } })).kind).toBe('answer');
+    // Open and a tap act on the signed link only: the words shown never change where they go
+    expect(intentFor(input({ action: 'open', shown: { body: 'Something else' } })).kind).toBe(
+      'open',
+    );
+  });
+
+  it('a reply under a title the phone cannot check carries it, for the server to confirm', () => {
+    for (const title of ['Approve the payment?', 'Ops Agent · AI', 'Auto · AI!', 'Auto']) {
+      expect(intentFor(input({ shown: { title } }))).toMatchObject({
+        kind: 'answer',
+        confirm: { title, question: FULL.question },
+      });
+    }
+    for (const title of ['Auto · AI', 'Auto · IA', 'Auto · KI', ' Auto · AI ', '', null]) {
+      const intent = intentFor(input({ shown: { title } }));
+      expect([intent.kind, 'confirm' in intent]).toEqual(['answer', false]);
+    }
+    expect(intentFor(input({ action: 'open', shown: { title: 'Approve it' } })).kind).toBe('open');
   });
 
   it.each(['owner', 'admin', 'editor'] as const)('%s may answer', (role) => {
@@ -221,6 +283,7 @@ describe('intentFor', () => {
       kind: 'answer',
       grantId: '42',
       answerText: 'Yes, ship it',
+      once: `signed:${WS}:42::${FULL.iat}`,
     });
     expect(intentFor(input({ payload, action: 'open' }))).toEqual({
       kind: 'open',
@@ -238,59 +301,6 @@ describe('intentFor', () => {
   });
 });
 
-describe('dedupe', () => {
-  it('a response key is `${identifier}:${actionIdentifier}`', () => {
-    const event = readable(iosResponse('reply', 'the reply'), fromResponse);
-    expect(responseKey(event)).toBe(`${IOS_ID}:reply`);
-    expect(responseKey({ id: IOS_ID, action: null })).toBe(`${IOS_ID}:`);
-  });
-
-  it(`is bounded at HANDLED_KEYS_MAX (${HANDLED_KEYS_MAX}), the oldest dropped, a new array each time`, () => {
-    const keys = Array.from({ length: HANDLED_KEYS_MAX + 5 }, (_, n) => `id-${n}:open`).reduce(
-      (list: readonly string[], key) => {
-        const next = withHandled(list, key);
-        expect(next).not.toBe(list);
-        return next;
-      },
-      [],
-    );
-    expect(keys).toHaveLength(HANDLED_KEYS_MAX);
-    expect(keys[0]).toBe('id-5:open');
-    expect(wasHandled(keys, 'id-4:open')).toBe(false);
-    expect(wasHandled(keys, `id-${HANDLED_KEYS_MAX + 4}:open`)).toBe(true);
-  });
-
-  it('a key handled again moves to the end, once', () => {
-    expect(withHandled(['a:open', 'b:open'], 'a:open')).toEqual(['b:open', 'a:open']);
-  });
-
-  it('the stored form holds the keys and nothing else, and reads back', () => {
-    const event = readable(iosResponse('reply', 'my secret reply'), fromResponse);
-    const stored = storedHandledKeys(withHandled([], responseKey(event)));
-    expect(JSON.parse(stored)).toEqual([`${IOS_ID}:reply`]);
-    for (const text of ['my secret reply', 'Ship the Lisbon deck?', FULL.sig, 'Later']) {
-      expect(stored).not.toContain(text);
-    }
-    expect(handledKeysFrom(stored)).toEqual([`${IOS_ID}:reply`]);
-  });
-
-  it.each([[null], [undefined], [''], ['{bad'], ['{"a":1}'], ['"key"']])(
-    'stored %j reads as no keys',
-    (stored) => {
-      expect(handledKeysFrom(stored)).toEqual([]);
-    },
-  );
-
-  it('reads back strings only, at most HANDLED_KEYS_MAX', () => {
-    const many = Array.from({ length: HANDLED_KEYS_MAX + 3 }, (_, n) => `k${n}:open`);
-    expect(handledKeysFrom(JSON.stringify(['a:open', 1, null, 'b:open']))).toEqual([
-      'a:open',
-      'b:open',
-    ]);
-    expect(handledKeysFrom(JSON.stringify(many))).toEqual(many.slice(-HANDLED_KEYS_MAX));
-  });
-});
-
 describe('purity', () => {
   it('deep-frozen inputs are read, never changed', () => {
     const response = deepFreeze(androidResponse('reply', ' ok '));
@@ -299,11 +309,11 @@ describe('purity', () => {
     const event = readable(response, fromResponse) as InboundEvent;
     readable(ios, fromResponse);
     const payload = deepFreeze(parsePushData(event.data));
-    const keys = deepFreeze(['x:open']);
+    const keys = deepFreeze(withHandled(NO_HANDLED_KEYS, 'x:open', 1));
     intentFor(deepFreeze({ ...input({ userText: event.userText }), payload }));
-    withHandled(keys, responseKey(event));
+    withHandled(keys, responseKey(event), 2);
     expect([response, ios]).toEqual(snapshot);
-    expect(keys).toEqual(['x:open']);
+    expect(keys).toEqual({ entries: [{ key: 'x:open', signedAt: 1 }], floor: null });
   });
 
   it("DEFAULT_ACTION_ID is the installed expo-notifications' DEFAULT_ACTION_IDENTIFIER", () => {
