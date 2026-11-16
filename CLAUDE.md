@@ -86,7 +86,11 @@ run it a second time.
   allowed list in the file named after it (`a11y-audit.ts`, `text-tones.ts` with
   `text-tones-styles.ts`, `store-copy.ts`, `release-docs.ts`, `surfaces.ts`, `upload-audit.ts`,
   `secure-store-audit.ts`, `named-states.ts`, `dependency-audit.ts`, `release-licences.ts`,
-  `permissions.ts`, `app-config.ts`). Add an entry there, never in the audit.
+  `permissions.ts`, `app-config.ts`), and `record.ts`: `template` here; a copy sets `copy`, and
+  `src/release/__tests__/app-record.test.ts` then requires its `TEMPLATE.md` (rule numbers from
+  `src/release/__tests__/support/standard-rules.json`, written by
+  `node scripts/generate-standard-rules.mjs` after a change to `docs/app-standard.md`'s sections or
+  rules). Add an entry there, never in the audit.
   `src/release/__tests__/audit-settings.test.ts` holds the folder: every allowed entry has its reason,
   and no audit keeps a copy of a value that moved.
 - Before the first submit of every native build, download its IPA and run

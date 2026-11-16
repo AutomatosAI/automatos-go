@@ -22,6 +22,7 @@ import { frozen, type Reasoned } from './types';
 import * as uploadAudit from './upload-audit';
 
 export { APP_IDENTITY } from './identity';
+export { APP_RECORD, type AppRole } from './record';
 export { AUDIT_TREE, type AuditTree } from './tree';
 
 /** One allowed list: the audit that reads it, its name, and its entries or its one reason. */
