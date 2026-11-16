@@ -166,6 +166,8 @@ export const CALENDAR_COPY = Object.freeze({
 /** The ticket sheet (handoff §2 'ticket sheet', D-BOARD, D31). */
 export const TICKET_COPY = Object.freeze({
   loading: 'Loading the ticket…',
+  /** Over the ticket when its last refresh failed (rule 6.4): what it shows is kept. */
+  outOfDate: "Couldn't refresh this ticket, so it may be out of date.",
   /** 'Ledger · updated 08:06'. */
   updated: 'updated',
   yesterday: 'Yesterday',
@@ -297,6 +299,8 @@ export const QUESTIONS_COPY = Object.freeze({
 /** A social post awaiting approval (D-SOCIAL, D45): the words the web's approval view uses. */
 export const SOCIAL_COPY = Object.freeze({
   loading: 'Loading the post…',
+  /** Over the post when its last refresh failed (rule 6.4): what it shows is kept. */
+  outOfDate: "Couldn't refresh this post, so it may be out of date.",
   untitled: 'Untitled post',
   /** modules/socials SOCIAL_POST_STATUSES, as the web's socials-status.ts names them. */
   status: Object.freeze({

@@ -4,12 +4,13 @@
 // src/styles/__tests__/contrast.test.ts), and a state's glyph is StateGlyph's. The scan reads a
 // `color` prop, and a `color` in a Text's style: written in place, in a style object the file
 // declares, or in an entry of its StyleSheet. A true negative is an ALLOWED entry in
-// support/text-tones-allowed.ts, with the file, the exact colours and the reason.
+// settings/text-tones.ts (a style's own chrome in settings/text-tones-styles.ts), with the file,
+// the exact colours and the reason.
 
 import { describe, expect, it } from 'vitest';
 
+import { ALLOWED } from './settings/text-tones';
 import { textColoursOf, type FoundColour } from './support/text-colour';
-import { ALLOWED } from './support/text-tones-allowed';
 import { productFiles, readRepoFile } from './support/tree';
 
 /** The one home of a colour handed to Text: the primitives, which read it from a lookup. */

@@ -16,7 +16,7 @@ const OWN = sources(MODULE).filter(
 );
 
 describe('Settings', () => {
-  const settings = readRepoFile('app/(app)/settings/index.tsx');
+  const settings = readRepoFile('src/settings/SettingsScreen.tsx');
 
   it('places the section after Voice and before Privacy & legal', () => {
     const voice = settings.indexOf('VOICE_SCREENS.settings');

@@ -8,7 +8,7 @@
 
 import { userMessage, isApiError, type ApiErrorKind } from '../api/errors';
 import { STATUS_CONFIG, type BoardStatus } from '../core/web/types/board';
-import type { SegmentMetrics } from '../styles/controls';
+import type { FieldMetrics, SegmentMetrics } from '../styles/controls';
 import { TYPE_FAMILIES, fontFace } from '../styles/fonts';
 import type { ColourName, Colours } from '../styles/tokens';
 import {
@@ -20,7 +20,17 @@ import {
   type TypeStyle,
 } from '../styles/type';
 import { accentInk, markColour } from './accent';
-import { DISABLED_OPACITY, joinLabel, paint, tint, type ColourKey } from './paint';
+import {
+  DISABLED_OPACITY,
+  hitSlopFor,
+  joinLabel,
+  paint,
+  tint,
+  touchRoom,
+  type ColourKey,
+  type HitSlop,
+  type TouchRoom,
+} from './paint';
 import { UI_COPY } from './strings';
 
 // ── Text ────────────────────────────────────────────────────────────────────────────────────
@@ -208,6 +218,18 @@ export type SegmentSlop = { readonly top: number; readonly bottom: number };
 /** A segment's slop: the track's inset above and below it, all it has (a slop past it is lost). */
 export function segmentSlop({ trackInset }: Pick<SegmentMetrics, 'trackInset'>): SegmentSlop {
   return { top: trackInset, bottom: trackInset };
+}
+
+export type FieldTouch = { readonly slop: HitSlop; readonly room: TouchRoom };
+
+/**
+ * The text field's touch (rules 3.2, 10.1): the slop that grows its drawn height to 44 pt, as a
+ * button's does, and the room that keeps that slop inside the field's own box (a touch never lands
+ * outside a parent's box), so nothing moves. A multiline area is taller than 44 and takes none.
+ */
+export function fieldTouch(field: FieldMetrics, multiline: boolean): FieldTouch {
+  const height = multiline ? field.multilineMinHeight : field.height;
+  return { slop: hitSlopFor(height), room: touchRoom(height) };
 }
 
 export type Tone = 'accent' | 'success' | 'warning' | 'info' | 'muted';

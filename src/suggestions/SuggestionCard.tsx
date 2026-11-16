@@ -10,7 +10,7 @@
 import { StyleSheet, View, type AccessibilityActionEvent } from 'react-native';
 
 import { useTokens } from '../styles/theme';
-import { Button, Card, Text } from '../ui';
+import { Button, Card, Text, useAnnounce } from '../ui';
 import type { SuggestionView } from './model';
 import { SUGGESTION_COPY } from './strings';
 import type { SuggestionActions } from './use-suggestions';
@@ -131,8 +131,13 @@ export function SuggestionLine({ view, actions }: SuggestionPartProps) {
   );
 }
 
-/** §6.12.3 'started': in the suggestion's place for 4 s. */
+/**
+ * §6.12.3 'started': in the suggestion's place for 4 s, said as it appears (TalkBack through its
+ * live region, VoiceOver through useAnnounce). Each surface's actions hold their own Start, so
+ * only the line where the person pressed it is shown, and said.
+ */
 export function StartedLine() {
+  useAnnounce(SUGGESTION_COPY.started);
   return (
     <Card padding="space4" radius="panel">
       <Text level={5} tone="success" accessibilityLiveRegion="polite" accessibilityRole="text">

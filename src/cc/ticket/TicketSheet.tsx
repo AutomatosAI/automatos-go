@@ -4,7 +4,8 @@
 // that may approve, and, for a role that may chat, Ask Auto about #number, which leaves the sheet's
 // route and then opens the chat wave's new conversation with the ticket as its context
 // (routes.chatWithTicket): never a chat of its own. A route id that is not a row id reads as not
-// found; a load that fails says why, with Try again where it can help.
+// found; a load that fails says why, with Try again where it can help, and a refresh that fails
+// keeps the ticket open under the line that says it may be out of date (rule 6.4).
 
 import MessagesSquare from 'lucide-react-native/icons/messages-square';
 import { View } from 'react-native';
@@ -12,7 +13,7 @@ import { View } from 'react-native';
 import { ApiError } from '../../api/errors';
 import { routes } from '../../navigation/routes';
 import { useTokens } from '../../styles/theme';
-import { Button, ErrorState, LoadingState, Sheet, Text } from '../../ui';
+import { Button, ErrorState, LoadingState, OutOfDateNote, Sheet, Text } from '../../ui';
 import { BOARD_SCREEN } from '../shell/tabs';
 import { TICKET_COPY } from '../strings';
 import { useSheetRoute, type SheetRoute } from '../use-sheet-route';
@@ -88,6 +89,7 @@ function TicketContent({ taskId, route }: { readonly taskId: string; readonly ro
   const readOnly = readOnlyNote(data, role);
   return (
     <>
+      {ticket.isRefetchError ? <OutOfDateNote words={TICKET_COPY.outOfDate} /> : null}
       <TicketBody view={view} route={route} />
       <LinkedDeliverables rows={deliverables} onOpen={route.replaceWith} />
       {readOnly ? (

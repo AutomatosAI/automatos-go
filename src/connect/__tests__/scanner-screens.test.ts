@@ -23,7 +23,7 @@ const SCANNER = readdirSync(path.join(ROOT, SCANNER_DIR)).map((file) => ({
 const COMPONENTS = SCANNER.filter(({ name }) => name.endsWith('.tsx'));
 const qrScanner = read(SCANNER_DIR, 'QrScanner.tsx');
 const pairLinkScreen = read(SCANNER_DIR, 'PairLinkScreen.tsx');
-const scanRoute = read('app/connect/scan.tsx');
+const scanRoute = read(SCANNER_DIR, 'ScanScreen.tsx');
 const pairRoute = read('app/go/pair.tsx');
 
 /** Every source file under a folder, tests excluded. */

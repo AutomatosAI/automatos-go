@@ -179,7 +179,10 @@ function ChatPane(props: ChatPaneProps) {
           focusMessageId={chat.focus}
           onFocused={chat.onFocused}
         />
-        {voice.available ? <VoiceWindow voice={{ ...voice, ...chatViewVoice(voice) }} /> : null}
+        {voice.available ? (
+          // the stage's state pill says the voice's state on this view: the caption is not said again
+          <VoiceWindow voice={{ ...voice, ...chatViewVoice(voice) }} captionSaid={false} />
+        ) : null}
         <PinnedSuggestion inset={COMPOSER_INSET} />
         <ChatComposer home={home} voice={voice} />
       </KeyboardAvoidingView>

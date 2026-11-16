@@ -5,11 +5,12 @@
 // word ('● Listening', the lit circle's text twin, announced as they change), A6's own VoiceLine
 // (why the mic cannot start, Open Settings, Download, 'See it in the chat', which opens the Chat
 // view) and Stop (quick-ask's, and A2's for a typed turn). The home places it over the tab bar; on
-// the Chat view it sits in the column over the message box (US-023h, chat.ts chatViewVoice).
+// the Chat view it sits in the column over the message box (US-023h, chat.ts chatViewVoice), where
+// the stage's state pill already says the voice's state, so the caption is not said a second time.
 
 import { StyleSheet, View } from 'react-native';
 
-import { Text } from '../../../ui';
+import { Text, useAnnounce } from '../../../ui';
 import type { CandyHomeVoice } from '../../../voice/home/use-candy-home-voice';
 import { VoiceLine } from '../../../voice/screen/VoiceLine';
 import { AiLabel } from '../../ai-label';
@@ -26,6 +27,8 @@ export type VoiceWindowProps = {
   readonly voice: WindowVoice;
   /** How far over the screen's foot it floats (above the tab bar); in the column when omitted. */
   readonly bottom?: number;
+  /** The caption is said as it changes; false where another line on screen says the same state. */
+  readonly captionSaid?: boolean;
 };
 
 /** Whether the window has anything to say. */
@@ -33,8 +36,9 @@ export function voiceWindowShown(voice: WindowVoice): boolean {
   return voice.caption !== null || voice.line !== null || voice.stopEnabled;
 }
 
-export function VoiceWindow({ voice, bottom }: VoiceWindowProps) {
+export function VoiceWindow({ voice, bottom, captionSaid = true }: VoiceWindowProps) {
   const { vars, type, rs, shadow } = useCandyPaint();
+  useAnnounce(voice.caption?.label, captionSaid, { changesOnly: true });
   if (!voiceWindowShown(voice)) return null;
   const { caption } = voice;
   return (
@@ -48,7 +52,11 @@ export function VoiceWindow({ voice, bottom }: VoiceWindowProps) {
     >
       <AiLabel />
       {caption ? (
-        <View accessible accessibilityLabel={caption.label} accessibilityLiveRegion="polite">
+        <View
+          accessible
+          accessibilityLabel={caption.label}
+          accessibilityLiveRegion={captionSaid ? 'polite' : 'none'}
+        >
           <Text style={[type.display('status'), { color: vars.text }]}>
             {`${CANDY_COPY.statusGlyph.active} ${caption.text}`}
           </Text>

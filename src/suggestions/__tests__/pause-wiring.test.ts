@@ -15,7 +15,7 @@ const section = readRepoFile('src/suggestions/PauseSection.tsx');
 const hook = readRepoFile('src/suggestions/use-pause.ts');
 
 describe('Settings', () => {
-  const settings = readRepoFile('app/(app)/settings/index.tsx');
+  const settings = readRepoFile('src/settings/SettingsScreen.tsx');
 
   it('places the switch after Voice and before What Auto depends on', () => {
     const voice = settings.indexOf('VOICE_SCREENS.settings');
@@ -53,7 +53,8 @@ describe('the switch', () => {
   it('shows a failure as a line under it, announced, never thrown', () => {
     expect(section).toMatch(/\{view\.line \? \(/);
     expect(section).toContain('accessibilityLiveRegion="polite"');
-    expect(hook).toContain('announce(pauseFailureLine(next));');
+    expect(section).toContain('useAnnounce(view.line, true, { changesOnly: true });');
+    expect(hook).toContain('setFailure(Object.freeze({ paused, error }));');
   });
 });
 

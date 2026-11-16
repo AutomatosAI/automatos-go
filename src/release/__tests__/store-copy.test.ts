@@ -3,14 +3,14 @@
 // an account (D64), never speaks of plans, credits or prices (D8), never offers to delete an
 // account or a workspace (D63), never claims that nothing leaves (D70), and states one minimum
 // age, 16 (D12). A phrase in support/forbidden-copy.ts fails the test with its file and text
-// unless ALLOWED names that exact text there, with its reason.
+// unless ALLOWED (settings/store-copy.ts) names that exact text, with its reason.
 
 import { describe, expect, it } from 'vitest';
 
+import { ALLOWED } from './settings/store-copy';
 import { appCopy, copyFiles, copyTextsOf } from './support/copy-text';
 import {
   AGE_STATEMENTS,
-  ALLOWED,
   BILLING,
   DATA_CLAIMS,
   DELETION,

@@ -61,9 +61,18 @@ describe("Studio's list", () => {
       'iconButton.md',
       'iconButton.lg',
       'pill',
+      'field',
+      'field.multiline',
       'segment',
     ]);
     touches.forEach(([name, touch]) => expect(touch, name).toBeGreaterThanOrEqual(MIN_TOUCH));
+  });
+
+  it('holds the text field to the 44 pt touch: 40 drawn, 2 of slop above and below', () => {
+    const touches = new Map(controlTouchesOf(STUDIO_CONTROLS));
+    expect(STUDIO_CONTROLS.field.height).toBe(40);
+    expect(touches.get('field')).toBe(MIN_TOUCH);
+    expect(touches.get('field.multiline')).toBe(80);
   });
 });
 
@@ -91,6 +100,8 @@ describe('buildControlSizes', () => {
   it('builds a small control that takes the rest of its 44 pt as slop', () => {
     const small = { ...CONTROL_SPECS, pillMinHeight: 20 };
     expect(buildControlSizes(small).pillMinHeight).toBe(20);
+    const field = { ...CONTROL_SPECS, field: { height: 30, multilineMinHeight: 80 } };
+    expect(new Map(controlTouchesOf(buildControlSizes(field))).get('field')).toBe(MIN_TOUCH);
   });
 
   it('refuses a segment that its track’s inset cannot bring to 44 pt, naming it', () => {

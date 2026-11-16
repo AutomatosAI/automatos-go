@@ -8,7 +8,7 @@ import X from 'lucide-react-native/icons/x';
 import { StyleSheet, View } from 'react-native';
 
 import { useTokens } from '../../styles/theme';
-import { Button, Text, TextField } from '../../ui';
+import { Button, Text, TextField, useAnnounce } from '../../ui';
 import { QUESTIONS_COPY } from '../strings';
 import { QUESTION_CONTROLS } from './chrome';
 import type { DismissConfirm, QuestionControls } from './controls';
@@ -114,6 +114,8 @@ function Confirm({
   readonly card: QuestionCardState;
 }) {
   const { spacing } = useTokens();
+  // the confirm step appears after Dismiss: what dismissing does is said with it
+  useAnnounce(confirm.effect);
   return (
     <View style={{ gap: QUESTION_CONTROLS.gap }}>
       <Text

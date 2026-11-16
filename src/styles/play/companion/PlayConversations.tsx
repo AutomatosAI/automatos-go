@@ -44,6 +44,8 @@ export type PlayConversationsProps = {
   readonly footer?: ReactElement | null;
   /** In the rows' place while there are none: loading, a failure, the empty state. */
   readonly empty?: ReactElement | null;
+  /** Over the rows: the line that says they may be out of date (rule 6.4), or none. */
+  readonly note?: ReactElement | null;
   /** The signed-in person's initial on the avatar chip; an icon without it. */
   readonly initial?: string | null;
 };
@@ -168,6 +170,7 @@ function ConversationRow({ row, last, paint, onOpen }: RowProps) {
 export function PlayConversations(props: PlayConversationsProps) {
   const { conversations, now, timeZone, onNewChat, onOpen, onEndReached, footer, empty, initial } =
     props;
+  const { note = null } = props;
   const paint = useCompanionPaint();
   const sections = useMemo(
     () => conversationSections(conversations, { now, timeZone }),
@@ -218,6 +221,13 @@ export function PlayConversations(props: PlayConversationsProps) {
           />
         )}
         onEndReached={onEndReached}
+        ListHeaderComponent={
+          note ? (
+            <View style={{ paddingHorizontal: list.rowPaddingX, paddingTop: spacing.space5 }}>
+              {note}
+            </View>
+          ) : null
+        }
         ListFooterComponent={footer ?? null}
         ListEmptyComponent={empty ?? null}
         stickySectionHeadersEnabled={false}

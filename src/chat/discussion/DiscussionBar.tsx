@@ -14,7 +14,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useAppSession } from '../../app-state/session';
 import type { ChatMessage } from '../../core/web/types';
 import { useTokens } from '../../styles/theme';
-import { Button, IconButton, Text } from '../../ui';
+import { Button, IconButton, Text, useAnnounce } from '../../ui';
 import { useFollowLink } from '../components/follow-link';
 import { DISCUSSION_COPY, NEEDS_COPY } from '../strings';
 import { discussionBar, type DiscussionAction, type DiscussionBarView } from './discussion';
@@ -105,7 +105,9 @@ function OpenBar({ view, onRebrief }: { readonly view: OpenView; readonly onRebr
   );
 }
 
+/** Opening the ticket, then its failure: the first words are read in order, a failure said. */
 function Notice({ text, onRetry }: { readonly text: string; readonly onRetry?: () => void }) {
+  useAnnounce(text, true, { changesOnly: true });
   return (
     <>
       <Text level={TEXT_LEVEL} tone="muted" accessibilityLiveRegion="polite">

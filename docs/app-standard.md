@@ -136,12 +136,12 @@ back to home when there is nothing behind. An app does not use the system's head
 their place (the record, decision D3). Template: `src/ui/Header.tsx`, its logic in
 `src/ui/header-model.ts` and its collapsing title in `src/ui/use-collapsing-title.ts`;
 `src/navigation/use-go-back.ts`, whose rule is the pure `src/navigation/back.ts`. Held by:
-`src/ui/__tests__/header.test.ts`, `src/navigation/__tests__/go-back.test.ts`. A copy keeps the
-pure module's name, `header-model.ts`: a `header.ts` beside `Header.tsx` clashes on a file system
-that ignores case. Owed: none of the template's own screens is on the Header yet. Each would
-change visibly (most settings screens have no bar: back sits at the top of the scrolling
-content), so each move needs a phone check. Three files still write the back rule by hand, and
-`go-back.test.ts` lists them.
+`src/ui/__tests__/header.test.ts`, `src/navigation/__tests__/go-back.test.ts`, which also walks
+every product file: no file but the hook calls the router's back. A copy keeps the pure module's
+name, `header-model.ts`: a `header.ts` beside `Header.tsx` clashes on a file system that ignores
+case. Owed: none of the template's own screens is on the Header yet. Each would change visibly
+(most settings screens have no bar: back sits at the top of the scrolling content), so each move
+needs a phone check.
 
 **4.3 The keyboard. (Must)** Every keyboard-avoiding view takes the one behaviour
 (`KEYBOARD_AVOIDING_BEHAVIOUR`), on both platforms. A message box pads through
@@ -150,7 +150,17 @@ content), so each move needs a phone check. Three files still write the back rul
 `src/ui/__tests__/sheet-keyboard.test.ts`.
 
 **4.4 Route files are thin. (Must)** A file under `app/` mounts a screen that lives under `src/`
-and holds nothing else. Template: `app/welcome.tsx`.
+and holds nothing else. Thin means this. The file imports only from `src/`, and from the router
+only the route's params and `Redirect`. Beside its imports it holds one default function.
+That function takes no props, may name what it reads from the params, calls no other hook, writes
+no function inside, and returns one element with no children: a screen from `src/`, or a
+`Redirect`. A layout file is not a screen: it is held only to declaring its stack. Nor is
+`app/+native-intent.tsx`, the router's file for links the system hands over, which
+`src/navigation/__tests__/system-links.test.ts` holds to passing them on. A route that cannot be
+thin is on the audit's allowed list with its reason. One is: an alias of the chat route. Template:
+`app/welcome.tsx`, the rule in `src/release/__tests__/support/route-files.ts`, the list in
+`src/release/__tests__/settings/thin-routes.ts`. Held by:
+`src/release/__tests__/thin-routes.test.ts`.
 
 **4.5 A picture above a sheet. (Shaped)** Where a screen is a scene with its content on a sheet
 below, it is one shared frame built on Screen, not drawn per screen. The template has none. It is
@@ -218,9 +228,11 @@ that keeps its data on the phone shows what it holds instead, under rule 6.4. Te
 **6.4 A screen says what it is showing. (Must)** Data that is out of date stays on screen under a
 line that says so. Not set up, offline, waiting to send and not downloaded are named states with
 their own words, never a spinner that does not end. The out-of-date line is `OutOfDateNote`, on
-the Command Centre's four tabs and the inbox. Template: `src/ui/OutOfDateNote.tsx`. Held by:
-`src/release/__tests__/named-states.test.ts`, which walks the words of each named state. Owed: the
-line on eight more screens and sheets, which that test lists.
+every screen and sheet that can hold older data: thirteen, listed in
+`src/release/__tests__/settings/named-states.ts`. A failed refresh keeps what the screen holds,
+under the line. The failed state is for a read that holds nothing. Template:
+`src/ui/OutOfDateNote.tsx`. Held by: `src/release/__tests__/named-states.test.ts`, which walks the
+words of each named state and checks that each listed screen draws the line.
 
 **6.5 Nothing is shown that does not work. (Must)** A row, a tab or a button appears only when
 what it opens exists. No "coming soon". And what has shipped can be reached: two taps from an
@@ -263,7 +275,7 @@ company's sign-in offers Sign in with Apple beside it.
 own sections and the app's (the look, Notifications, Voice) come first. Privacy and legal with
 About come after them. The ways to leave are always last, and the one that cannot be undone is
 the very last. A section the app has no use for is left out. Template:
-`app/(app)/settings/index.tsx`.
+`src/settings/SettingsScreen.tsx`, which `app/(app)/settings/index.tsx` mounts.
 
 **8.2 Privacy and legal. (Must)** The policy, the Terms, support, the crash reports switch where
 the app reports crashes, and the version with the code the app runs. Template:
@@ -315,12 +327,21 @@ Template: `src/voice/`.
 ## 10. Accessibility
 
 **10.1 Touch targets are 44 points. (Must)** A smaller control reaches 44 through its hit slop.
-Template: `MIN_TOUCH` and `hitSlopFor` in `src/ui/paint.ts`. Owed: the text field is 40 points
-tall with no slop, the one control under 44.
+The text field is drawn 40 points tall and sits in a frame whose slop grows it to 44, and
+`buildControlSizes` holds the field to the target with the other controls. Template: `MIN_TOUCH`
+and `hitSlopFor` in `src/ui/paint.ts`, `fieldTouch` in `src/ui/variants.ts`. Held by:
+`src/ui/__tests__/touch-targets.test.ts`, `src/styles/__tests__/controls.test.ts`.
 
 **10.2 Every control has a name. (Must)** A control that shows no words has an accessibility
 label, and a button that is only an icon is the IconButton, whose type requires one. Held by:
-`src/release/__tests__/a11y-audit.test.ts`.
+`src/release/__tests__/a11y-audit.test.ts`. What changes on a screen is told one way. A region
+whose words appear or change while the person is there calls `useAnnounce` beside its live
+region. On iOS, which has no live regions, it says the words once each time they appear or
+change, never words still on screen and never blank or hidden ones. On Android the live region
+speaks. Template: `src/ui/use-announce.ts`, its decision the pure `announceStep` in
+`src/ui/announce-model.ts`. Held by: `src/release/__tests__/announcements.test.ts`: only the hook
+announces, and every live region that speaks sits in a component that uses it or is on a short
+list with its reason. Owed: one list footer, listed there.
 
 **10.3 Reduce Motion is honoured. (Must)** A sheet fades where it would slide, and every loop
 stops and shows a still. Template: `src/styles/provider/reduce-motion.ts`, `src/ui/Sheet.tsx`.
@@ -330,8 +351,11 @@ palette, at WCAG AA (4.5 to 1), computed from the tokens. A pair that reads unde
 the test with what it measures and why it stands, and may not get worse. A mark in the accent (a
 rule, a dot, a cursor) reads at 3 to 1 or more, from one lookup. Template:
 `src/styles/contrast.ts`, `src/ui/accent.ts`. Held by: `src/styles/__tests__/contrast.test.ts`
-and `src/ui/__tests__/accent.test.ts`. Owed: one spinner that is not Text still paints the raw
-accent, and some of the calendar's kind squares read under 3 to 1 as marks on dark grounds.
+and `src/ui/__tests__/accent.test.ts`. The tool line's spinner and the other marks that painted
+the accent raw (a tab's rule, a day's dot, the busy ring, the chosen style card's ring and word)
+read it through `src/ui/accent.ts`, and `accent.test.ts` checks each mark. Owed: some of the
+calendar's kind squares read under 3 to 1 as marks on dark grounds. Their colours are the server
+repository's own values.
 
 **10.5 Text to be read is never dimmed. (Must)** Read, quiet or secondary text takes a muted
 token, never an opacity set on the text or on what holds it, so its contrast can be tested. A
@@ -488,11 +512,17 @@ every pull request, from a lockfile install with scripts off. Template:
 `.github/workflows/ci.yml`.
 
 **14.2 The release audits travel with the copy and stay. (Must)** An audit changes only because
-the product changed, and says why in its own comment. Template: `src/release/__tests__/`,
-`src/config/__tests__/`. Owed: one small settings file per app (its package name, its product
-folders, its palettes, each audit's allowed list and the contrast test's pairs of text and
-ground) that the audits read, in place of constants edited by hand in each copy. It accepts a product folder outside the app's own, for an app that shares
-source with its product.
+the product changed, and says why in its own comment. What differs by app is in one settings
+folder the audits read, `src/release/__tests__/settings/`, and a copy edits that folder and no
+audit. It holds the app's identity, the folders the audits walk (one outside the repository is
+written as `../<folder>`, for an app that shares source with its product), the palettes and pairs
+of the contrast test, and each audit's allowed list in a file named after it, every entry with
+its reason, all registered in its index. It sits under `__tests__` on purpose: in the product
+tree, the audits would scan it. Checks of the app's own files stay inside the audits: the files a
+scan must find, and `app.json`'s plugins and fonts. A copy rewrites those as its own tests.
+Template: `src/release/__tests__/` with its `settings/`, `src/config/__tests__/`. Held by:
+`src/release/__tests__/audit-settings.test.ts`, which also refuses an audit that keeps its own
+copy of a value that moved, and `tree.test.ts`.
 
 **14.3 Updates over the air go only to the build they were made for. (Must)** The runtime version
 is the fingerprint, so an update never reaches a binary with different native code. The
@@ -571,8 +601,17 @@ Template commit: <40-character sha>. Standard read at: <sha>.
 A difference that will close names the work that closes it, and carries a date once the owner has
 set one. A rule the app has no use for is a row too ("9.4: does not apply, the app has no
 voice"). The file lives in the app's own repository: this
-repository's record names no product. Owed: a test, travelling with the audits, that the file
-exists, names a commit and cites only rules that exist.
+repository's record names no product.
+
+A test travels with the audits and holds the file. In a copy, which sets `role: 'copy'` in
+`src/release/__tests__/settings/record.ts`, it requires `TEMPLATE.md` beside `package.json`: a
+40-character template commit and the commit the standard was read at, both tables, only rules
+that exist, and no row that leaves its rule, what the app does or whether it stays blank. The rule
+numbers travel as `src/release/__tests__/support/standard-rules.json`, written from this page by
+`node scripts/generate-standard-rules.mjs`. In the template the test fails while that list differs
+from this page, and proves the checker on the example above. Template:
+`src/release/__tests__/support/app-record.ts`. Held by:
+`src/release/__tests__/app-record.test.ts`.
 
 ## How the standard changes
 
@@ -608,6 +647,13 @@ template, or records why not.
 | 16 Nov 2026 | Every way of leaving also deletes a downloaded theme's files (8.4). A copy takes `src/connect/user-files.ts`, `switch.ts` and `use-server-switch.ts`, and adds each folder of a person's files it keeps in the cache to `USER_FILE_CLEARERS`. |
 | 16 Nov 2026 | The app's words were read against its code and corrected where they said more than the code does: the pairing card, where speech is recognised, what each way of leaving deletes, the report sheet on the hosted server and the count of styles. Rule 11.5 says so for every app. |
 | 16 Nov 2026 | Rule 13.6 now says what survives a reinstall and what a backup carries, and 14.3 what the fingerprint reads. Nothing for a copy to take. An app whose downloads must stay keeps them under documents. |
+| 16 Nov 2026 | The release audits read one settings folder (14.2): the app's identity, the folders they walk, the contrast test's palettes and pairs, and each audit's allowed list in a file named after it, every entry with its reason. The audits now import from it, and `audit-settings.test.ts` refuses one that keeps its own copy of a value that moved. A copy takes `src/release/__tests__/settings/` and edits it (its identity, its folders, its own allowed lists), with the audits, `audit-settings.test.ts` and `tree.test.ts`. |
+| 16 Nov 2026 | A test holds the app's record: in a copy, `app-record.test.ts` requires `TEMPLATE.md` beside `package.json`, naming its commits, carrying both tables and citing only rules that exist. The rule numbers travel as `standard-rules.json`, which the template writes from this page. A copy takes `src/release/__tests__/app-record.test.ts`, `support/app-record.ts`, `support/standard-rules.json`, `settings/record.ts` and `scripts/generate-standard-rules.mjs`, and sets its role to `copy`. |
+| 16 Nov 2026 | One way to announce (10.2): a region whose words appear or change calls `useAnnounce`, which says them on iOS once each time they appear or change, and leaves them to the live region on Android. A walk of the source refuses any other caller of the announcement, and a speaking live region without the hook unless it is listed with its reason. A copy takes `src/ui/use-announce.ts`, `announce-model.ts`, `src/release/__tests__/announcements.test.ts` and `settings/announcements.ts`, and moves its own announcements onto the hook. |
+| 16 Nov 2026 | The out-of-date line is on every screen and sheet that can hold older data (6.4): thirteen, and none owed. A failed refresh keeps what a screen holds under the line, and the failed state is for a read that holds nothing. A copy takes `src/ui/OutOfDateNote.tsx` and `named-states.test.ts`, and lists its own screens in `settings/named-states.ts`. |
+| 16 Nov 2026 | Every file under `app/` is held to a stated thin-route rule (4.4), and the Settings screen lives in `src/settings/SettingsScreen.tsx`, which its route only mounts (8.1). A layout is held only to declaring its stack, and one alias route is on the allowed list with its reason. A copy takes `src/release/__tests__/thin-routes.test.ts`, `support/route-files.ts` and `settings/thin-routes.ts`, and moves what its own routes hold into `src/`. |
+| 16 Nov 2026 | No file but `useGoBack` calls the router's back (4.2). The chat route, Older chats and the voice screen, which wrote the rule by hand, go through the hook, and `go-back.test.ts` refuses any other caller. A copy takes `src/navigation/__tests__/go-back.test.ts`, and moves its own back buttons onto `useGoBack`. |
+| 16 Nov 2026 | The text field takes the 44-point touch (10.1). It is still drawn 40 tall, inside a frame whose slop grows it to 44, and `buildControlSizes` holds the field to the target. A copy takes `src/ui/TextField.tsx`, `src/ui/variants.ts` and `src/styles/controls.ts`, with `src/ui/__tests__/touch-targets.test.ts` and `src/styles/__tests__/controls.test.ts`. |
 
 ## Related
 

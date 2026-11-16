@@ -2,15 +2,16 @@
 // '▸ NEXT' in the accent, its title in text (wrapped to two lines, then cut) and START and HIDE in
 // HUD's 1 pt accent lines; never above TYPE · HOLD TO TALK (no room there on a 375 × 667 phone).
 // One element to VoiceOver ('Next: <title>') with Start and Hide as its actions, as the card is.
-// 'Started. Auto is on it.' takes its place for 4 s. Never spoken. Nothing where discovery does not
-// list `suggestions`, or when none is open.
+// 'Started. Auto is on it.' takes its place for 4 s, said as it appears (TalkBack through its live
+// region, VoiceOver through useAnnounce). Never spoken. Nothing where discovery does not list
+// `suggestions`, or when none is open.
 
-import { useEffect, type ReactNode } from 'react';
-import { AccessibilityInfo, Pressable, StyleSheet, View } from 'react-native';
+import { type ReactNode } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { HUD_CORE } from '../styles/hud/core/model';
 import { useVoiceCore, type VoiceCore } from '../styles/hud/core/use-voice-core';
-import { Text } from '../ui';
+import { Text, useAnnounce } from '../ui';
 import { hitSlopFor } from '../ui/paint';
 import { suggestionView, type SuggestionView } from './model';
 import { suggestionAccessibility } from './SuggestionCard';
@@ -125,15 +126,16 @@ export function HudNext() {
   const { offered, open } = useOpenSuggestions();
   const actions = useSuggestionActions();
   const { started } = actions;
-  useEffect(() => {
-    if (started) AccessibilityInfo.announceForAccessibility(SUGGESTION_COPY.started);
-  }, [started]);
+  useAnnounce(SUGGESTION_COPY.started, started !== null, { occasion: started ?? undefined });
   const newest = open[0];
   if (!offered) return null;
   if (started) {
     return (
       <View style={PAD}>
-        <Text style={[monoFace(core), { color: core.paint.accent }]}>
+        <Text
+          accessibilityLiveRegion="polite"
+          style={[monoFace(core), { color: core.paint.accent }]}
+        >
           {SUGGESTION_COPY.started}
         </Text>
       </View>

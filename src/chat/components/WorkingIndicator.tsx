@@ -7,7 +7,7 @@
 // focus: a polite live region on Android, an announcement on iOS (which has no live regions).
 
 import { useEffect } from 'react';
-import { AccessibilityInfo, Platform, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, {
   Easing,
   cancelAnimation,
@@ -20,7 +20,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { useTokens } from '../../styles/theme';
-import { Text } from '../../ui';
+import { Text, useAnnounce } from '../../ui';
 import { CHAT_COPY } from '../strings';
 import { WORKING_PULSE, workingMotion } from '../view-model';
 import { THINKING_LABEL, THREAD, thinkingStyle } from './thread-look';
@@ -73,17 +73,11 @@ export type WorkingIndicatorProps = {
   readonly boxed: boolean;
 };
 
-/** iOS ignores accessibilityLiveRegion, so VoiceOver is told once, when the pill appears. */
-function useAnnounceOnIos(words: string) {
-  useEffect(() => {
-    if (Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(words);
-  }, [words]);
-}
-
 export function WorkingIndicator({ boxed }: WorkingIndicatorProps) {
   const tokens = useTokens();
   const { pulse } = workingMotion(useReducedMotion());
-  useAnnounceOnIos(CHAT_COPY.thinkingLabel);
+  // iOS ignores accessibilityLiveRegion, so VoiceOver is told once, when the pill appears
+  useAnnounce(CHAT_COPY.thinkingLabel);
   return (
     <View
       accessible

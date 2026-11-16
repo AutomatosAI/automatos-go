@@ -10,7 +10,7 @@
 
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Text } from '../../../ui';
+import { Text, useAnnounce } from '../../../ui';
 import { DISABLED_OPACITY, MIN_TOUCH } from '../../../ui/paint';
 import type { ArcadeHomeVoice } from '../../../voice/home/use-arcade-home-voice';
 import { VoiceLine } from '../../../voice/screen/VoiceLine';
@@ -75,6 +75,7 @@ function LanguageButton({ language }: { readonly language: HudLanguage }) {
 function Voice({ voice }: { readonly voice: ArcadeHomeVoice }) {
   const { vars, type } = useArcadePaint();
   const { caption, language } = voice;
+  useAnnounce(caption?.label, true, { changesOnly: true });
   return (
     <View style={styles.voice}>
       <VoiceSurround>

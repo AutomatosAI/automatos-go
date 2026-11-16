@@ -11,15 +11,16 @@
 // under the name when Dynamic Type leaves no room beside it. VoiceOver hears each agent as one line
 // ('Iris, Social media lead, working'); the rows are not buttons (the app has no agent screen).
 // Until the agents are read the view waits with the foundation's spinner; a failed read shows A2's
-// error words with Try again (ErrorState); no agents is 'No agents yet.' and nothing else. Nothing
-// here moves, but the header keeps the pause control (CANDY-LAYOUT §4: the home header). The column
+// error words with Try again (ErrorState); a read again that fails keeps the team under the line
+// that says it may be out of date (OutOfDateNote); no agents is 'No agents yet.'. Nothing here
+// moves, but the header keeps the pause control (CANDY-LAYOUT §4: the home header). The column
 // scrolls, and its foot clears the floating tab bar.
 
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { NeedsYouRows } from '../../../api/needs-you';
-import { ErrorState, LoadingState, Text } from '../../../ui';
+import { ErrorState, LoadingState, OutOfDateNote, Text } from '../../../ui';
 import { CANDY_LEADING, CANDY_MIN, CANDY_STEPS } from '../../typeface/candy-type';
 import { CandyPauseButton } from '../CandyPauseButton';
 import { Avatar } from '../parts/Avatar';
@@ -142,11 +143,18 @@ function TeamBody({ read }: { readonly read: TeamRead }) {
   const { vars, type } = useCandyPaint();
   const { team, error, retry } = read;
   if (team === null) return error ? <ErrorState error={error} onRetry={retry} /> : <LoadingState />;
+  const note = read.isRefetchError ? <OutOfDateNote words={CANDY_TEAM_COPY.outOfDate} /> : null;
   if (team.total === 0) {
-    return <Text style={[type.label, { color: vars.bandQuiet }]}>{said.empty}</Text>;
+    return (
+      <>
+        {note}
+        <Text style={[type.label, { color: vars.bandQuiet }]}>{said.empty}</Text>
+      </>
+    );
   }
   return (
     <>
+      {note}
       <FrontRow members={team.front} />
       <TeamList members={team.members} />
     </>

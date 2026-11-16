@@ -4,14 +4,15 @@
 // permission in the phone's Settings), when the voice setting changes and on Check again; and
 // Check again itself: one POST per press, never while one is out, never retried (D-WRITES). Its
 // answer replaces any read still out and is announced to VoiceOver once this phone's facts are
-// read again too; a refusal is kept as the line under the rows and announced (iOS has no live
-// regions). Nothing runs where discovery does not list readiness. Only wiring: the rows, the
-// marks and the words are view-model.ts's and client-rows.ts's.
+// read again too (useAnnounce: iOS has no live regions); a refusal is kept as the line under the
+// rows, which says it as it appears (ReadinessSection.tsx). Nothing runs where discovery does not
+// list readiness. Only wiring: the rows, the marks and the words are view-model.ts's and
+// client-rows.ts's.
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, AppState, Platform } from 'react-native';
+import { AppState } from 'react-native';
 
 import { canReadiness } from '../api/capabilities';
 import { useAppSession } from '../app-state/session';
@@ -20,6 +21,7 @@ import { useCurrentServer } from '../connect/use-current-server';
 import { logger } from '../lib/logger';
 import { serverNameOf } from '../push/bind/build-session';
 import type { PhoneContext } from '../push/settings/view-model';
+import { useAnnounce } from '../ui';
 import { useVoiceSetting } from '../voice/settings/use-voice-setting';
 import { checkReadiness, fetchReadiness } from './api';
 import { NO_CLIENT_FACTS, readClientFacts, type ClientFacts } from './client-facts';
@@ -72,15 +74,14 @@ function useClientFacts(shown: boolean) {
   return { facts, read };
 }
 
-function announce(line: string): void {
-  if (Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(line);
-}
-
 /** Check again: the POST, this phone's facts read afresh beside it, and the refusal's line. */
 function useCheckAgain(key: readonly unknown[], readPhone: (fresh: boolean) => Promise<void>) {
   const { client } = useAppSession();
   const queryClient = useQueryClient();
   const [state, setState] = useState<CheckState>(CHECK_IDLE);
+  // each answered check is its own occasion: 'Checked just now.' is said once for each
+  const [checked, setChecked] = useState(0);
+  useAnnounce(READINESS_COPY.checkedNow, checked > 0, { occasion: checked });
   const out = useRef(false);
   const run = useCallback(() => {
     if (out.current) return;
@@ -94,13 +95,11 @@ function useCheckAgain(key: readonly unknown[], readPhone: (fresh: boolean) => P
         queryClient.setQueryData(key, readiness);
         await phone;
         setState(CHECK_IDLE);
-        announce(READINESS_COPY.checkedNow);
+        setChecked((count) => count + 1);
       })
       .catch((error: unknown) => {
         logger.warn('[readiness] Check again was refused or failed', error);
-        const line = refusalLine(error);
-        setState(Object.freeze({ sending: false, refusal: line }));
-        announce(line);
+        setState(Object.freeze({ sending: false, refusal: refusalLine(error) }));
       })
       .finally(() => {
         out.current = false;
@@ -119,6 +118,8 @@ export type ReadinessState = Readonly<{
   /** Discovery lists readiness: an older server shows Settings as it was. */
   shown: boolean;
   view: ReadinessView;
+  /** A refresh failed while the server's items are held: they stay, under the line (rule 6.4). */
+  isRefetchError: boolean;
   checkAgain: () => void;
 }>;
 
@@ -141,8 +142,9 @@ export function useReadiness(): ReadinessState {
     items: query.data?.items ?? null,
     client: clientRows(facts, context),
     checking: check.state.sending || query.isLoading,
-    readError: query.error,
+    // a failed refresh over items it holds is the out-of-date line's to say, not the failed words
+    readError: query.isRefetchError ? null : query.error,
     refusal: check.state.refusal,
   });
-  return { shown, view, checkAgain: check.run };
+  return { shown, view, isRefetchError: query.isRefetchError, checkAgain: check.run };
 }

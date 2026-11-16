@@ -1,7 +1,7 @@
 // R15 as a test that keeps running in CI. (a) Every way to talk to Auto — the thread in Studio,
 // Play and HUD, the voice screen, and whatever a later change adds — carries the AI label, the one
 // muted caption (D73): the whole product tree, comments removed, is scanned for code that sends a
-// person's text or speech to Auto; each file found is in support/surfaces.ts's list with exactly
+// person's text or speech to Auto; each file found is in settings/surfaces.ts's list with exactly
 // its markers, and its render reaches the foundation's AiLabel file by file, or it is used only
 // inside a surface that does. Nothing here asks for a label beside a composer or a composer lock.
 // (b) Report this: the files that mount the foundation's ReportSheet, what each reports, what Auto's
@@ -17,18 +17,15 @@ import { CONSENT_SHEET_COPY } from '../../consent/strings';
 import { codeOf } from './support/code';
 import { definingFile, importersOf, rendersFirst, rendersFrom } from './support/jsx';
 import {
-  AI_LABEL_FILE,
   AUTO_MESSAGES,
   CHAT_SCREEN,
   FIRST_OPEN_THREAD,
   PLAY_HOME,
   REPORT_MOUNTS,
-  SEND_HINT,
-  SEND_MARKERS,
   SEND_SURFACES,
-  sendMarkersIn,
   type LabelPath,
-} from './support/surfaces';
+} from './settings/surfaces';
+import { AI_LABEL_FILE, SEND_HINT, SEND_MARKERS, sendMarkersIn } from './support/surfaces';
 import { productFiles, readRepoFile } from './support/tree';
 
 const products = productFiles();
@@ -207,9 +204,12 @@ describe('(b) Report this', () => {
     const page = 'src/cc/deliverables/use-deliverable.ts';
     expect(definingFile(page, 'reportTarget')).toBe('src/cc/deliverables/detail.ts');
     expect(codeOf('src/cc/deliverables/detail.ts')).toContain("target_type: 'deliverable'");
+    // the route mounts the style switch, and the switch draws the page in every style
     const route = 'app/(app)/cc/deliverables/[id].tsx';
-    expect(rendersFrom(route, 'src/cc/deliverables/DeliverableDetail.tsx')).toBe(true);
-    expect(rendersFrom(route, 'src/styles/homes/PlayDeliverable.tsx')).toBe(true);
+    const styleSwitch = 'src/styles/homes/PlaySwitch.tsx';
+    expect(rendersFrom(route, styleSwitch)).toBe(true);
+    expect(rendersFrom(styleSwitch, 'src/cc/deliverables/DeliverableDetail.tsx')).toBe(true);
+    expect(rendersFrom(styleSwitch, 'src/styles/homes/PlayDeliverable.tsx')).toBe(true);
   });
 
   it("says, for every surface that can show Auto's messages, what Report this is there", () => {

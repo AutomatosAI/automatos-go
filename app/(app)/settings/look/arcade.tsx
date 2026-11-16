@@ -3,13 +3,8 @@
 // US-022c); this one reads only if no other is mounted (sync/reader-guard.ts). The page is
 // src/styles/arcade/look-page/ArcadeLookPage.
 import { ArcadeLookPage } from '../../../../src/styles/arcade/look-page/ArcadeLookPage';
-import { StyleSync } from '../../../../src/styles/sync/StyleSync';
+import { SyncedPage } from '../../../../src/styles/sync/SyncedPage';
 
 export default function ArcadeLookSettings() {
-  return (
-    <>
-      <StyleSync />
-      <ArcadeLookPage />
-    </>
-  );
+  return <SyncedPage page={ArcadeLookPage} />;
 }

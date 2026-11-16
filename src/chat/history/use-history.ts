@@ -22,6 +22,8 @@ export type ChatHistory = {
   readonly footer: HistoryFooter;
   /** Why the first page failed (an ApiError), for ErrorState's words. */
   readonly error: unknown;
+  /** Asking again failed while a list is held: the rows are what it last had (rule 6.4). */
+  readonly isRefetchError: boolean;
   readonly retry: () => void;
   readonly loadMore: () => void;
 };
@@ -44,6 +46,7 @@ export function useChatHistory(): ChatHistory {
     state: historyState({ list, isError, isFetching }),
     footer: historyFooter(query),
     error,
+    isRefetchError: query.isRefetchError,
     retry,
     loadMore,
   };

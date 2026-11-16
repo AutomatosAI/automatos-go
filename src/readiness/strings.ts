@@ -14,6 +14,8 @@ export const READINESS_COPY = Object.freeze({
   checkAgainHint: 'Checks everything Auto depends on now.',
   /** The server's items are being read (the first read, or Check again). */
   checking: 'Checking…',
+  /** Over the list when its last refresh failed (rule 6.4): what it shows is kept. */
+  outOfDate: "Couldn't refresh, so this may be out of date. Check again to try again.",
   /** Announced to VoiceOver when Check again answers (iOS has no live regions). */
   checkedNow: 'Checked just now.',
   /** A 429 checked_recently that carries no words of its own (the server's are shown when sent). */

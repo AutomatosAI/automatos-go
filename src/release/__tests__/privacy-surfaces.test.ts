@@ -6,9 +6,11 @@
 
 import { describe, expect, it } from 'vitest';
 
+import { rendersFrom } from './support/jsx';
 import { readRepoFile } from './support/tree';
 
-const SETTINGS = 'app/(app)/settings/index.tsx';
+const SETTINGS_ROUTE = 'app/(app)/settings/index.tsx';
+const SETTINGS = 'src/settings/SettingsScreen.tsx';
 const WELCOME_ROUTE = 'app/welcome.tsx';
 const WELCOME = 'src/connect/screens/WelcomeScreen.tsx';
 const SECTION = 'src/release/components/PrivacySection.tsx';
@@ -20,8 +22,11 @@ const IN_APP_BROWSER = /react-native-webview|expo-web-browser|WebBrowser|\bWebVi
 
 describe('Settings → Privacy & legal', () => {
   it('is mounted on the Account screen', () => {
+    expect(rendersFrom(SETTINGS_ROUTE, SETTINGS), 'the Settings route mounts the screen').toBe(
+      true,
+    );
     const text = readRepoFile(SETTINGS);
-    expect(text).toContain("from '../../../src/release/components/PrivacySection'");
+    expect(text).toContain("from '../release/components/PrivacySection'");
     expect(text).toMatch(/<PrivacySection \/>/);
   });
 

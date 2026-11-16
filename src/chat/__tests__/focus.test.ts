@@ -46,7 +46,7 @@ describe('the chat route opens at a message', () => {
   });
 
   it("is wired from the route to Studio's and Play's thread lists", () => {
-    expect(read('app/(app)/chat/[id].tsx')).toMatch(
+    expect(read('src/chat/screens/ChatRouteScreen.tsx')).toMatch(
       /focusMessageId=\{focusFromChatParams\(params\)\}/,
     );
     const styleChat = read('src/styles/homes/StyleHome.tsx');

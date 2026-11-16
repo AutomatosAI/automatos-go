@@ -20,13 +20,14 @@ import easJson from '../../../eas.json';
 import { checkReleaseEnv } from '../../../scripts/check-release-env';
 import { expo } from '../../config/__tests__/app-json';
 import { ENV_NAMES } from '../../lib/env';
+import { APP_IDENTITY } from './settings/identity';
 import { tableWithColumns } from './support/markdown';
 import { readRepoFile, repoRoot } from './support/tree';
 
 const TESTFLIGHT_DOC = 'docs/release/testflight.md';
 const EAS_WORKFLOWS = '.eas/workflows';
 const GITHUB_WORKFLOWS = '.github/workflows';
-const BUNDLE_ID = 'com.automatos.app';
+const BUNDLE_ID = APP_IDENTITY.bundleId;
 const ENV_TABLE = ['Name', 'preview', 'production'] as const;
 
 const COMPLETE_ENV = {

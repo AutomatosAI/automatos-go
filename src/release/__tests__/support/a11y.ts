@@ -7,6 +7,15 @@
 
 import ts from 'typescript';
 
+/** D38's floor: no text under 11 pt (src/styles/type.ts MIN_TEXT_SIZE). */
+export const MIN_TEXT_POINTS = 11;
+
+/** The least cap on Dynamic Type the audit accepts, with a one-line reason above it. */
+export const LEAST_FONT_SCALE_CAP = 2;
+
+/** The primitive every icon-only button goes through: its accessibilityLabel is required. */
+export const ICON_BUTTON_FILE = 'src/ui/IconButton.tsx';
+
 const RAW_PRESSABLE = /^(?:Animated\.)?(?:Pressable|Touchable(?:Opacity|Highlight|WithoutFeedback|NativeFeedback)?)$/;
 const LUCIDE = /^lucide-react-native(?:\/|$)/;
 const ICON_TAG = /Icon$/;

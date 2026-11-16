@@ -7,7 +7,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import type { MascotName } from '../../../core/frozen/lib/mascot/types';
-import { Text } from '../../../ui';
+import { Text, useAnnounce } from '../../../ui';
 import { HUD_CORE, chipView, type ChipView } from './model';
 import { useVoiceCore } from './use-voice-core';
 
@@ -24,6 +24,7 @@ const { chip } = HUD_CORE;
 export function StateChip({ state, deliverableKind, words }: StateChipProps) {
   const { paint, style } = useVoiceCore();
   const view = words ?? chipView(state, deliverableKind);
+  useAnnounce(view.label, true, { changesOnly: true });
   const face = style.type.mono(HUD_CORE.monoSize, 500, { trackingEm: HUD_CORE.tracking.chip });
   return (
     <View

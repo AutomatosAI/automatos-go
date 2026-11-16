@@ -9,6 +9,7 @@ import { FlatList, StyleSheet, View, type ListRenderItem } from 'react-native';
 import type { Edge } from 'react-native-safe-area-context';
 
 import { routes } from '../../navigation/routes';
+import { useGoBack } from '../../navigation/use-go-back';
 import { useTokens } from '../../styles/theme';
 import {
   Button,
@@ -16,6 +17,7 @@ import {
   EmptyState,
   ErrorState,
   LoadingState,
+  OutOfDateNote,
   Screen,
   Text,
   UI_COPY,
@@ -59,13 +61,15 @@ export function ListFooter({ footer, onLoadMore }: FooterProps) {
 type ChatListProps = {
   readonly rows: readonly ChatRowView[];
   readonly footer: HistoryFooter;
+  /** Its last refresh failed: the rows are what it last had (rule 6.4). */
+  readonly outOfDate: boolean;
   readonly onOpen: (chatId: string) => void;
   readonly onLoadMore: () => void;
 };
 
 const keyOf = (row: ChatRowView) => row.id;
 
-function ChatList({ rows, footer, onOpen, onLoadMore }: ChatListProps) {
+function ChatList({ rows, footer, outOfDate, onOpen, onLoadMore }: ChatListProps) {
   const { spacing } = useTokens();
   const renderItem = useCallback<ListRenderItem<ChatRowView>>(
     ({ item }) => <ChatRow row={item} onOpen={onOpen} />,
@@ -77,6 +81,9 @@ function ChatList({ rows, footer, onOpen, onLoadMore }: ChatListProps) {
       keyExtractor={keyOf}
       renderItem={renderItem}
       ItemSeparatorComponent={Divider}
+      ListHeaderComponent={
+        outOfDate ? <OutOfDateNote words={HISTORY_COPY.outOfDate} inset={spacing.space3} /> : null
+      }
       ListFooterComponent={<ListFooter footer={footer} onLoadMore={onLoadMore} />}
       contentContainerStyle={{ paddingHorizontal: spacing.space3, paddingBottom: spacing.space6 }}
     />
@@ -105,16 +112,21 @@ function HistoryBody({ history, onOpen, onNewChat }: BodyProps) {
       />
     );
   }
-  return <ChatList rows={rows} footer={footer} onOpen={onOpen} onLoadMore={loadMore} />;
+  return (
+    <ChatList
+      rows={rows}
+      footer={footer}
+      outOfDate={history.isRefetchError}
+      onOpen={onOpen}
+      onLoadMore={loadMore}
+    />
+  );
 }
 
 export function ChatsScreen() {
   const router = useRouter();
   const history = useChatHistory();
-  const back = useCallback(() => {
-    if (router.canGoBack()) router.back();
-    else router.replace(routes.home);
-  }, [router]);
+  const back = useGoBack(routes.home);
   const newChat = useCallback(() => router.push(routes.chat(NEW_CHAT_ID)), [router]);
   const open = useCallback((chatId: string) => router.push(routes.chat(chatId)), [router]);
   return (

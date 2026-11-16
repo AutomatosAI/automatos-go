@@ -127,7 +127,7 @@ describe('the wiring (source)', () => {
   });
 
   it('puts the one row in Settings’ About section, after Privacy & legal and before the way out', () => {
-    const settings = readRepoFile('app/(app)/settings/index.tsx');
+    const settings = readRepoFile('src/settings/SettingsScreen.tsx');
     const privacy = settings.indexOf('<PrivacySection />');
     const about = settings.indexOf('<Section title={LICENCES_COPY.section}>');
     const row = settings.indexOf('router.push(routes.licences)');

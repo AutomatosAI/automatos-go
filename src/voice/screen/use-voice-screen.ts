@@ -25,6 +25,7 @@ import type { ChatFile } from '../../chat/request';
 import type { MascotName } from '../../core/frozen/lib/mascot/types';
 import { logger } from '../../lib/logger';
 import { routes } from '../../navigation/routes';
+import { useGoBack } from '../../navigation/use-go-back';
 import type { HudTurn } from '../../styles/hud/core/model';
 import { useStyle } from '../../styles/theme';
 import { voiceLookPath } from '../nav';
@@ -92,6 +93,7 @@ function useMountPermission(): PermissionVerdict | null {
 
 function useActions(quick: QuickAskView, thread: ThreadView, setTyping: (on: boolean) => void) {
   const router = useRouter();
+  const goBack = useGoBack(routes.home);
   const { layout } = useStyle();
   const chatId = thread.state.chatId;
   const { send } = thread;
@@ -106,14 +108,14 @@ function useActions(quick: QuickAskView, thread: ThreadView, setTyping: (on: boo
       },
       stop,
       look: () => router.push(voiceLookPath(layout)),
-      close: () => (router.canGoBack() ? router.back() : router.replace(routes.home)),
+      close: goBack,
       lineAction: (action) => {
         if (action === 'openSettings') permissions.openSettings();
         else if (action === 'download') download();
         else if (chatId !== null) router.push(routes.chat(chatId));
       },
     }),
-    [stop, download, router, layout, chatId, send, setTyping],
+    [stop, download, router, goBack, layout, chatId, send, setTyping],
   );
 }
 

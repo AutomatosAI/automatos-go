@@ -151,6 +151,8 @@ export const CANDY_TEAM_COPY = Object.freeze({
   /** What VoiceOver hears for the active row as a whole. */
   frontLabel: 'Your agents, active ones first',
   empty: 'No agents yet.',
+  /** Over the team when the agents' last refresh failed (rule 6.4): who is shown is kept. */
+  outOfDate: "Couldn't refresh your team, so this may be out of date.",
 });
 
 /**

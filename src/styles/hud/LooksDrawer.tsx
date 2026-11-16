@@ -14,7 +14,7 @@ import { useEffect, useState } from 'react';
 import { BackHandler, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { IconButton, Text } from '../../ui';
+import { IconButton, Text, useAnnounce } from '../../ui';
 import { LookSheet } from '../play/look-page/LookSheet';
 import { HUD_DRAWER_COPY } from '../strings';
 import { useLookSyncNotice } from '../sync/LookSync';
@@ -48,6 +48,7 @@ function useBackToClose(active: boolean, onClose: () => void) {
 
 function Header({ status, onClose }: { readonly status: string; readonly onClose: () => void }) {
   const paint = useDrawerPaint();
+  useAnnounce(status, true, { changesOnly: true });
   if (!paint) return null;
   const { vars, style } = paint;
   const { title, status: line } = HUD_DRAWER;

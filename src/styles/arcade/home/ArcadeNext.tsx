@@ -8,8 +8,7 @@
 // what was done; never a status colour, never the accent for one. Nothing where discovery does not
 // list `suggestions`, or when none is open.
 
-import { useEffect } from 'react';
-import { AccessibilityInfo, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { suggestionAccessibility } from '../../../suggestions/SuggestionCard';
 import { SUGGESTION_COPY } from '../../../suggestions/strings';
@@ -19,7 +18,7 @@ import {
   type SuggestionActions,
 } from '../../../suggestions/use-suggestions';
 import type { SuggestionView } from '../../../suggestions/model';
-import { Text } from '../../../ui';
+import { Text, useAnnounce } from '../../../ui';
 import { ARCADE_HOME_COPY } from '../../strings';
 import { ArcadeButton } from '../parts/ArcadeButton';
 import { useArcadePaint } from '../parts/use-arcade-paint';
@@ -72,6 +71,7 @@ function NextLine({ view, actions }: LineProps) {
 /** 'Started. Auto is on it.' in the line's place, after the story's ★ (hidden from VoiceOver). */
 function StartedLine() {
   const { vars, type } = useArcadePaint();
+  useAnnounce(SUGGESTION_COPY.started);
   return (
     <View style={[styles.piece, styles.row]}>
       <Text
@@ -96,11 +96,7 @@ function StartedLine() {
 export function ArcadeNext() {
   const { offered, open } = useOpenSuggestions();
   const actions = useSuggestionActions();
-  const { started } = actions;
-  useEffect(() => {
-    if (started) AccessibilityInfo.announceForAccessibility(SUGGESTION_COPY.started);
-  }, [started]);
-  const shown = arcadeNext({ offered, open, started: started !== null });
+  const shown = arcadeNext({ offered, open, started: actions.started !== null });
   if (shown.kind === 'none') return null;
   if (shown.kind === 'started') return <StartedLine />;
   return <NextLine view={shown.view} actions={actions} />;

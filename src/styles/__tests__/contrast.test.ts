@@ -1,42 +1,28 @@
 // docs/app-standard.md rule 10.4, the one test over every pair: each text colour on each ground
 // the primitives draw it on, in every palette of every built-in style, at WCAG AA (4.5:1). A new
-// style is covered because STYLE_IDS grows; an app built from this template names its palettes
-// here. KNOWN is the list of pairs that read under AA today, each with what it measures and why it
-// stands: a pair that gets worse, a new one, and one that was fixed but is still listed all fail.
+// style is covered because STYLE_IDS grows; an app built from this template names its palettes,
+// its pairs (TEXT_ON) and its KNOWN list in its settings (src/release/__tests__/settings/
+// contrast.ts). KNOWN is the list of pairs that read under AA today, each with what it measures and
+// why it stands: a pair that gets worse, a new one, and one that was fixed but is still listed all
+// fail.
 
 import { describe, expect, it } from 'vitest';
 
+import { CONTRAST_PALETTES, KNOWN, TEXT_ON } from '../../release/__tests__/settings/contrast';
 import { toneColour } from '../../ui/tone-colour';
 import { TEXT_TONES, type TextTone } from '../../ui/variants';
-import { AA_TEXT, TEXT_ON, contrastFailures, solidOver, textOnFor } from '../contrast';
+import { AA_TEXT, contrastFailures, solidOver, textOnFor } from '../contrast';
 import { STYLE_IDS, tokensFor, type ColourName, type Colours, type Tokens } from '../tokens';
 import { STUDIO_COLOURS } from '../tokens/studio';
 
-const SCHEMES = ['light', 'dark'] as const;
 const DECIMALS = 100;
 const floor2 = (ratio: number) => Math.floor(ratio * DECIMALS) / DECIMALS;
 
-/** Every built-in palette once: a style that ignores the scheme gives one set, Studio two. */
-const PALETTES: readonly Tokens[] = [
-  ...new Set(STYLE_IDS.flatMap((style) => SCHEMES.map((scheme) => tokensFor(style, scheme)))),
-];
+const PALETTES = CONTRAST_PALETTES;
 const nameOf = (tokens: Tokens) => `${tokens.style} ${tokens.scheme}`;
 
-type Known = { readonly pair: string; readonly ratio: number; readonly why: string };
-
-// Studio's values are core's own (tokens/studio-source.ts is copied, never retuned), and the web
-// paints the same ones: each of these closes when core's token moves, not by a change here.
-const STUDIO_IS_CORES = "Studio Light's value is core's token, copied and never retuned here";
-const KNOWN: readonly Known[] = [
-  { pair: 'studio light: mutedForeground on muted', ratio: 4.2, why: STUDIO_IS_CORES },
-  { pair: 'studio light: fg3 on background', ratio: 3.25, why: STUDIO_IS_CORES },
-  { pair: 'studio light: fg3 on card', ratio: 3.77, why: STUDIO_IS_CORES },
-  { pair: 'studio light: accent on background', ratio: 4.23, why: STUDIO_IS_CORES },
-  { pair: 'studio light: destructive on background', ratio: 4.23, why: STUDIO_IS_CORES },
-];
-
 const found = PALETTES.flatMap((tokens) =>
-  contrastFailures(tokens.colours, textOnFor(tokens.colours)).map((failure) => ({
+  contrastFailures(tokens.colours, textOnFor(tokens.colours, TEXT_ON)).map((failure) => ({
     pair: `${nameOf(tokens)}: ${failure.text} on ${failure.ground}`,
     ratio: floor2(failure.ratio),
   })),
@@ -102,10 +88,10 @@ describe('a tone a palette reads from another token', () => {
   });
 
   it('the pairs for a palette measure the token it draws', () => {
-    const drawn = textOnFor(candy).map(([text]) => text);
+    const drawn = textOnFor(candy, TEXT_ON).map(([text]) => text);
     expect(drawn).toContain('primary');
     expect(drawn).not.toContain('accent');
-    expect(textOnFor(studio)).toEqual(TEXT_ON);
+    expect(textOnFor(studio, TEXT_ON)).toEqual(TEXT_ON);
   });
 });
 
@@ -153,6 +139,8 @@ describe('contrastFailures', () => {
   it('refuses to blend over a ground that is not solid, and a page that is not', () => {
     const veil = `${WHITE}80`;
     expect(() => solidOver(`${INK}80`, veil)).toThrow(/carries transparency/);
-    expect(() => contrastFailures(palette({ background: veil }))).toThrow(/page is opaque/);
+    expect(() => contrastFailures(palette({ background: veil }), TEXT_ON)).toThrow(
+      /page is opaque/,
+    );
   });
 });

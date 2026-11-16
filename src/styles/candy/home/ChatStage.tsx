@@ -17,7 +17,7 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Text } from '../../../ui';
+import { Text, useAnnounce } from '../../../ui';
 import { hitSlopFor } from '../../../ui/paint';
 import { SHARED_COLOURS } from '../../tokens/candy-catalogue';
 import { candyAvatarInitial } from '../../typeface/candy-type';
@@ -92,6 +92,7 @@ function BackCircle({ onBack }: Pick<ChatStageProps, 'onBack'>) {
 function StatePill({ stage }: Pick<ChatStageProps, 'stage'>) {
   const { vars, type, round } = useCandyPaint();
   const pill = statePill(stage);
+  useAnnounce(pill.label, true, { changesOnly: true });
   return (
     <View
       accessible

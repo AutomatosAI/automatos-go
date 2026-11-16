@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
+import { ALLOWED_WEB_VIEW_MENTIONS } from './settings/dependency-audit';
 import {
   CRASH_SDK,
   CRASH_SDK_FAMILY,
@@ -143,18 +144,14 @@ function webViewMentions(lockNeeds: Needs): string[] {
   );
 }
 
-// expo names both as optional peers, for its DOM components, which the lint refuses ('use dom',
-// expo/dom, @expo/dom-webview): npm never installs an optional peer, and nothing here imports one.
-const ALLOWED_WEB_VIEW_MENTIONS = [
-  'node_modules/expo optional peer react-native-webview',
-  'node_modules/expo optional peer @expo/dom-webview',
-];
+// The mentions allowed, each with why, are the app's (settings/dependency-audit.ts).
+const ALLOWED_MENTIONS = ALLOWED_WEB_VIEW_MENTIONS.entries;
 
 describe('no installed package needs a WebView (rule 13.8: not through another package)', () => {
   it("only expo names one, as an optional peer, and the allowed list is not stale", () => {
     const found = webViewMentions(needsSchema.parse(JSON.parse(readRepoFile('package-lock.json'))));
-    expect(found.filter((mention) => !ALLOWED_WEB_VIEW_MENTIONS.includes(mention))).toEqual([]);
-    expect(ALLOWED_WEB_VIEW_MENTIONS.filter((mention) => !found.includes(mention))).toEqual([]);
+    expect(found.filter((mention) => !ALLOWED_MENTIONS.includes(mention))).toEqual([]);
+    expect(ALLOWED_MENTIONS.filter((mention) => !found.includes(mention))).toEqual([]);
   });
 
   it('names a dependency, an optional dependency, a peer and an optional peer, nothing looser', () => {

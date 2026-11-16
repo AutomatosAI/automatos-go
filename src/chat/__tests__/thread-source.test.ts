@@ -79,8 +79,8 @@ describe('the list and the thinking pill', () => {
     expect(working).toContain('accessibilityLabel={CHAT_COPY.thinkingLabel}');
     expect(working).toContain('level={THINKING_LABEL.level}');
     expect(working).toContain('weight={THINKING_LABEL.weight}');
-    // iOS has no live regions: VoiceOver is told once
-    expect(working).toContain('AccessibilityInfo.announceForAccessibility(words)');
+    // iOS has no live regions: VoiceOver is told once, through the app's one hook
+    expect(working).toContain('useAnnounce(CHAT_COPY.thinkingLabel);');
   });
 
   it('writes the composer in the thread’s 16/24', () => {

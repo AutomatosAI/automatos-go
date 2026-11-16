@@ -203,7 +203,9 @@ node scripts/generate-licences.mjs
 the script would write, and names the packages that differ. It also fails when a package declares
 no licence or `UNLICENSED` (unless `NO_LICENCE_ALLOWED` names it with its reason), and when a kind
 of licence arrives that `LICENCE_IDS` does not list: read that licence, decide whether the app may
-ship it and what it would owe beyond showing its text, then add it.
+ship it and what it would owe beyond showing its text, then add it. Both lists are in
+`src/release/__tests__/settings/release-licences.ts`, the folder that holds every release audit's
+allowed list and the app's other audit settings (CLAUDE.md, 'Release (A7)').
 
 Not listed: dev dependencies, and optional packages that name an `os` or a `cpu` (native binaries
 for the computer that builds, such as `@sentry/cli-*` and `lightningcss-*`; the package that pulls

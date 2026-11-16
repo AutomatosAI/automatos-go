@@ -318,7 +318,7 @@ describe('the wiring', () => {
   });
 
   it('puts the server section on Account, with the banner line and the way out', () => {
-    expect(read('app/(app)/settings/index.tsx')).toContain(
+    expect(read('src/settings/SettingsScreen.tsx')).toContain(
       '<ServerSection server={server} edition={discovery.edition} />',
     );
     const section = read('src/connect/components/ServerSection.tsx');

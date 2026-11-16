@@ -19,10 +19,28 @@ screens themselves can only be checked on a phone. That is this owner step.
   `accessibilityLabel` its type requires.
 
 The Text primitive cannot be told to stop scaling: `allowFontScaling` is not one of its props.
-Three exceptions are listed, each with its reason, in
-`src/release/__tests__/support/a11y-allowed.ts`: the header's menu button (its badge sits beside
-the icon), HUD's menu square (part of HUD's command row) and Lost's big '404' (a decoration hidden
-from VoiceOver, with the same meaning in text under it).
+Seven exceptions are listed, each with its reason, in
+`src/release/__tests__/settings/a11y-audit.ts`. Six are buttons that show only an icon and are not
+`IconButton`. Each always carries a label, required by its type or always set by its view:
+
+- the header's menu button: its count badge sits beside the icon, in a box that grows to hold it,
+  and `IconButton` is a fixed square with no slot for a badge;
+- HUD's menu square: the same row button as LOOK beside it, drawn in the 1 pt accent lines of HUD's
+  command row with a 44 pt hit area; `IconButton`'s HUD dress is a different box;
+- Play's Send / Stop: one circle in Play's own paint, holding an arrow or Play's square for Stop;
+  `IconButton` takes an icon only and paints from the dress, so it can draw neither the square nor
+  that paint;
+- Play's way to the notifications inbox: a bell in Play's own round chip, with the count badge
+  beside it while something is unread; `IconButton` has no slot for a badge and does not paint
+  Play's ground;
+- Candy's Send / Stop: a 44 pt accent circle in the message box, holding an arrow or a rounded
+  square for Stop; `IconButton` can draw neither the square nor the accent fill;
+- Candy's hold to talk: a 64 pt circle in the tab bar's raised centre; `IconButton` is at most
+  42 pt and only fires a press, so it can neither fill the centre nor take the press in and out a
+  hold needs.
+
+One text does not scale: Lost's big '404', a decoration hidden from VoiceOver, with the same
+meaning in text under it.
 
 What CI cannot see: text that clips, overlaps or runs off the screen at the largest size, a
 layout that does not wrap, an action pushed out of reach. That is what this pass checks.

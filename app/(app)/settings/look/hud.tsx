@@ -3,13 +3,8 @@
 // US-016j); this one reads only if no other is mounted (sync/reader-guard.ts). The page is
 // src/styles/hud/drawer/HudLookPage.
 import { HudLookPage } from '../../../../src/styles/hud/drawer/HudLookPage';
-import { StyleSync } from '../../../../src/styles/sync/StyleSync';
+import { SyncedPage } from '../../../../src/styles/sync/SyncedPage';
 
 export default function HudLookSettings() {
-  return (
-    <>
-      <StyleSync />
-      <HudLookPage />
-    </>
-  );
+  return <SyncedPage page={HudLookPage} />;
 }
