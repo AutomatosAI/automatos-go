@@ -123,8 +123,10 @@ primitive gives it, and a size no control can be. It keeps a frozen copy. The pr
 list from `useStyle().controls`. Template: `src/styles/controls.ts`, `STYLE_CONTROLS` in
 `src/styles/tokens/controls.ts`. Held by: `src/styles/__tests__/controls.test.ts`.
 
-**3.6 Icons. (Must)** One icon set (`lucide-react-native`), imported one icon at a time, drawn at
-the stroke the primitives use (`ICON_STROKE` in `src/ui/paint.ts`).
+**3.6 Icons. (Must)** One icon set, imported one icon at a time, drawn at the stroke the
+primitives use (`ICON_STROKE` in `src/ui/paint.ts`). The template's is `lucide-react-native`. The
+audits read the set's name from `ICON_SET` in `src/release/__tests__/settings/a11y-audit.ts`, so
+an app on another set names it there.
 
 ## 4. The screen
 
@@ -183,11 +185,16 @@ through one table, and what it carries is checked before anything opens. In a re
 nothing from outside reaches the router but a route that table builds: anything else opens Lost
 (`routes.lost`). A link over 2,048 characters is not parsed. A link with a scheme is read only
 when it is https on the one host the app claims for its links, or the app's own scheme: another
-scheme or another host opens Lost. An id from outside holds letters, digits, dot, underscore and
-hyphen, at most 128, and is never `.` or `..` (`isUsableId` in `src/navigation/routes.ts`). A
-development build alone lets a link the table cannot map go on as it came. Template:
-`src/navigation/web-links.ts`,
-`app/+native-intent.tsx`. Held by: `src/navigation/__tests__/system-links.test.ts` and
+scheme or another host opens Lost. A link's query holds at most 16 pairs, counted before any is
+read. The table reads only the names its entry reads and ignores any other, but a name it reads
+given twice refuses the link, and so does a value it reads over 512 characters once decoded. An id
+from outside holds letters, digits, dot, underscore and hyphen, at most 128, and is never `.` or
+`..` (`isUsableId` in `src/navigation/routes.ts`). It is taken exactly as it came: an id that
+arrives padded is refused, not trimmed. An address or a code a person typed, pasted or scanned is
+still trimmed, because a person may paste a space. In a development build only the development
+client's own launch form goes on unmapped. The app's own scheme is held to the table in every
+build. Template: `src/navigation/web-links.ts`, `app/+native-intent.tsx`. Held by:
+`src/navigation/__tests__/link-rules.test.ts`, `system-links.test.ts` and
 `src/navigation/__tests__/routes.test.ts`.
 
 **5.3 A gate before the screens. (Must)** One pure, tested table decides what a person sees
@@ -243,15 +250,19 @@ that keeps its data on the phone shows what it holds instead, under rule 6.4. Te
 line that says so. Not set up, offline, waiting to send and not downloaded are named states with
 their own words, never a spinner that does not end. The out-of-date line is `OutOfDateNote`, on
 every screen and sheet that can hold older data: thirteen, listed in
-`src/release/__tests__/settings/named-states.ts`. A failed refresh keeps what the screen holds,
+`src/release/__tests__/settings/named-states.ts`. Beside them, `OWED` lists a copy's screens that
+still owe the line, each with its file and its reason. It is empty in the template. A failed
+refresh keeps what the screen holds,
 under the line. The failed state is for a read that holds nothing. Coming back from the background
 asks again: TanStack's focus follows the app's foreground state, wired once beside the query
 client, so a stale query a screen holds is read again on a real return, and shows fresh data or
 keeps what it held under the line. A short flip to inactive and back, such as a permission prompt,
 asks nothing, and a query with a rule of its own for a return opts out. Template:
 `src/ui/OutOfDateNote.tsx`, `src/api/app-focus.ts`. Held by:
-`src/release/__tests__/named-states.test.ts`, which walks the words of each named state and checks
-that each listed screen draws the line, and `src/api/__tests__/app-focus.test.ts`.
+`src/release/__tests__/named-states.test.ts` with `support/out-of-date.ts`, which walks the words
+of each named state, checks that each listed screen draws the line, and holds that every screen
+that reads its query's refetch error is in one list or the other, never both, and that each owed
+one names a file and a reason; and `src/api/__tests__/app-focus.test.ts`.
 
 **6.5 Nothing is shown that does not work. (Must)** A row, a tab or a button appears only when
 what it opens exists. No "coming soon". And what has shipped can be reached: two taps from an
@@ -481,9 +492,12 @@ caps in `src/api/config.ts`, `src/lib/text-runs.ts`, `src/voice/speech/runs.ts`.
 `src/voice/__tests__/speech-runs.test.ts`, `src/cc/__tests__/deliverable-text-runs.test.ts`.
 
 **13.2b The address a build is given is an address and nothing more. (Must)** https, a host and an
-optional port: no user name or password, no path, no query, no fragment. Plain http only in a
-development build. A value that is not one fails the build, and is refused again when the app
-starts. Template: `isServerAddress` in `src/lib/env.ts`, `scripts/check-release-env.js`. Held by:
+optional port: no user name or password, no path, no query, no fragment. The host is written
+plainly: lower-case ASCII letters, digits and hyphens in labels, a strict dotted quad if it is a
+number, or an IPv6 address in brackets. Plain http only in a development build. A value that is
+not one fails the build, and is refused again when the app starts, by the same rules: the two
+checks run on different URL parsers, so neither takes its parser's reading as enough. Template:
+`isServerAddress` in `src/lib/env.ts`, `scripts/check-release-env.js`. Held by:
 `src/lib/__tests__/env.test.ts`, `scripts/__tests__/check-release-env.test.ts`.
 
 **13.2c A redirect is never followed, and no cookie is kept. (Must)** Every request is sent so
@@ -492,14 +506,19 @@ error. What the app holds to prove who is asking goes only to the address it was
 carries a cookie or stores one. An app that lets a person pair with a server of their own may read
 where one such answer pointed, to offer that same server's https address, and nothing else. One
 exception: a download marked as one whose route answers with a redirect to storage follows that
-redirect once, only to an https address, and carries no header at all. A server on a public
-address cannot point that one step into a private network; a server on a home or office network
-may, since it is the same network. What storage answers is never read as the server's: its
+redirect once, only to an https address, and carries no header at all. Its host is refused first
+and judged second. It may hold only ASCII letters, digits, hyphens and dots, in labels of legal
+length, with an optional numeric port, and the platform's own reading of the address must give
+the same host. From a server on a public address, storage is a name of two labels or more, never
+a local name and never a number in any form. From a server on a home or office network, it may be
+a name, or a private dotted quad written plainly, never the phone itself, loopback or link-local.
+Nothing in brackets is taken from either. What storage answers is never read as the server's: its
 refusals sign no one out, and its address is kept on no error. The platform's own picture and
 video loaders are not under this rule yet. Template: the request policy in
 `src/api/transport.ts`, `src/api/transfer-request.ts`, `src/api/private-host.ts`,
-`src/connect/https-twin.ts`. Held by: `src/api/__tests__/transport.test.ts`,
-`client-redirect.test.ts`, `transfer-redirect.test.ts`, `src/connect/__tests__/https-twin.test.ts`.
+`src/lib/host-text.ts`, `src/connect/https-twin.ts`. Held by: `src/api/__tests__/transport.test.ts`,
+`client-redirect.test.ts`, `transfer-redirect.test.ts`, `storage-host.test.ts`,
+`src/connect/__tests__/https-twin.test.ts`.
 
 **13.2d An opened stream has limits. (Must)** An idle time (90 seconds for the live events, which
 carry a heartbeat every 20 seconds; 15 minutes for a chat turn, which has none), a cap on one line
@@ -566,10 +585,16 @@ written as `../<folder>`, for an app that shares source with its product), the p
 of the contrast test, and each audit's allowed list in a file named after it, every entry with
 its reason, all registered in its index. It sits under `__tests__` on purpose: in the product
 tree, the audits would scan it. Checks of the app's own files stay inside the audits: the files a
-scan must find, and `app.json`'s plugins and fonts. A copy rewrites those as its own tests.
+scan must find, and `app.json`'s plugins and fonts. A copy rewrites those as its own tests. The
+audits import only what every app has: Node's own modules and the packages listed with their
+reasons in `settings/audit-imports.ts`. The icon set's name is a setting (`ICON_SET` in
+`settings/a11y-audit.ts`), so a copy without that library can take the accessibility audit.
 Template: `src/release/__tests__/` with its `settings/`, `src/config/__tests__/`. Held by:
 `src/release/__tests__/audit-settings.test.ts`, which also refuses an audit that keeps its own
-copy of a value that moved, and `tree.test.ts`.
+copy of a value that moved, `tree.test.ts`, and `audit-imports.test.ts`, which refuses a package
+not on the list and a listed one no audit imports. Owed: `yaml`, which the audits use to read
+workflow files, is not declared in `package.json` and arrives only through other packages.
+Declaring it waits for the next change to `package.json`.
 
 **14.3 Updates over the air go only to the build they were made for. (Must)** The runtime version
 is the fingerprint, so an update never reaches a binary with different native code. The
@@ -709,6 +734,11 @@ template, or records why not.
 | 16 Nov 2026 | Coming back from the background asks again (6.4): TanStack's focus follows the app's foreground state, wired once beside the query client, so a stale query a screen holds is read again on a real return, and a short flip to inactive asks nothing. Before, nothing wired it, so a return asked again only where a screen did so itself. A copy takes `src/api/app-focus.ts` and its call in `src/app-state/query-root.tsx`, with `app-focus.test.ts`, and sets `refetchOnWindowFocus: false` on any query with a return rule of its own. |
 | 16 Nov 2026 | Every action the repository's own workflows use is pinned to a commit, with its release beside it, not to a tag (14.1). `workflow-pins.test.ts` refuses any other `uses:`, read as lines and as YAML, and holds the CI job names. A copy takes `src/config/__tests__/workflow-pins.test.ts`, and pins its own workflows at commits. |
 | 16 Nov 2026 | Text a server chooses is trimmed and cut in one read, never with a pattern whose work grows with the square of its length (13.2a). Each single pass answers as the pattern it replaced on ordinary and random input, and grows linearly on a long run. A copy takes `src/lib/text-runs.ts`, `src/voice/speech/runs.ts` and the files that call them (`sentences.ts`, `speakable.ts`, `src/cc/deliverables/detail.ts`, `file-source.ts`), with their tests and `src/lib/__tests__/growth.ts`. |
+| 16 Nov 2026 | The link table is as strict as the strictest copy's (5.2): a link carries at most 16 query pairs, counted before any is read, a name the table reads given twice refuses it, a name it does not read is ignored, and a value it reads is at most 512 characters once decoded. An id that arrives padded is refused, not trimmed, and in a development build only the development client's own launch form goes on unmapped, so the app's own scheme is held to the table in every build. A copy takes `src/navigation/web-links.ts` and `routes.ts`, with `link-rules.test.ts`, `web-links.test.ts`, `routes.test.ts` and `system-links.test.ts`. |
+| 16 Nov 2026 | The redirect to storage refuses a host first and judges it second (13.2c): it must be written plainly and read the same by the platform's own URL, so a host written with a percent-escape, a non-ASCII or full-width character, or in brackets can no longer be judged public while the phone connects somewhere else. The address a build is given is written plainly too (13.2b): the check at launch had accepted a non-ASCII, full-width or capital host that the build's check refused, because the two run on different URL parsers. A copy takes `src/lib/host-text.ts`, `src/api/private-host.ts`, `transfer-request.ts`, `src/lib/env.ts` and `scripts/check-release-env.js`, with `storage-host.test.ts`, `private-host.test.ts`, `transfer-redirect.test.ts`, `host-text.test.ts`, `env.test.ts` and `check-release-env.test.ts`. |
+| 16 Nov 2026 | A copy has a place to say which screens still owe the out-of-date line (6.4): `OWED` in `settings/named-states.ts`, each entry a screen's file and its reason, empty in the template. `named-states.test.ts` holds that every screen that reads its query's refetch error is in one list or the other, never both. A copy takes `src/release/__tests__/named-states.test.ts` and `support/out-of-date.ts`, adds `OWED` to its `settings/named-states.ts` and its settings index, and lists there each screen of its own that does not draw the line yet. |
+| 16 Nov 2026 | The audits import only what every app has (14.2, 3.6): Node's own modules and the packages listed with their reasons in `settings/audit-imports.ts`, and `audit-imports.test.ts` refuses any other. The icon set's name is a setting, `ICON_SET` in `settings/a11y-audit.ts`, so a copy without that library can take the accessibility audit, and the upload audit types the pickers' files from the app's own `picked.ts`. A copy takes `audit-imports.test.ts`, `support/imports.ts`, `support/a11y.ts`, `a11y-audit.test.ts`, `upload-audit.test.ts`, `audit-settings.test.ts` and `settings/audit-imports.ts` with its settings index, sets `ICON_SET` to its own set, and adds to the list, with its reason, any package its own audits import. |
+| 16 Nov 2026 | A copy that gains `src/config/__tests__` moves its identity values into `settings/identity.ts` in the same change: `audit-settings.test.ts` reads every file there as an audit and fails on one that spells the app's identity (14.2). That test and `audit-imports.test.ts` both walk the folder, and fail while it is missing. |
 
 ## Related
 
