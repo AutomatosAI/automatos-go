@@ -35,7 +35,14 @@ export const RELEASE_SDK_DENYLIST: readonly DenylistEntry[] = [
   { pattern: 'expo-ads-admob', reason: ADVERTISING },
   { pattern: '@microsoft/applicationinsights-*', reason: ANALYTICS },
   { pattern: 'react-native-webview', reason: 'a WebView: none anywhere (D-NO-WEBVIEW)' },
+  {
+    pattern: '@expo/dom-webview',
+    reason: "a WebView for Expo's DOM components: none anywhere (D-NO-WEBVIEW)",
+  },
 ];
+
+/** The web views by name: none is declared, installed or needed by an installed package. */
+export const WEB_VIEWS = ['react-native-webview', '@expo/dom-webview'] as const;
 
 // The crash or error SDKs the denylist above does not already name: any of them beside Sentry
 // would make '@sentry/react-native is the only crash or error SDK' false.

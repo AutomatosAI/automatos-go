@@ -31,12 +31,23 @@ Scaffold lifted from the academy app's TestFlight tree.
 | `npm run check:core`                       | `src/core/web`, `src/core/frozen` and `src/core/route-manifest.json` match `core.lock.json` / the manifest (no hand edits, no drift) |
 | `npm run check:routes`                     | server tables `src/**/routes.ts` (not `src/navigation/`) served at the pin or `pendingUpstream` (K4)     |
 
-Lint guards: `fetch` / `XMLHttpRequest` only in `src/api/**`; `expo/fetch` only in
-`src/api/transport.ts`; never `react-native-webview`; files warn over 400 lines and fail over
-800; functions 50 lines (`.tsx` 150; test callbacks exempt, as on the web), depth 4,
-complexity 10; no colour literals in `src/**` or `app/**` outside `src/styles/tokens/**`;
-`src/core/*.ts` and `src/core/parity/**` import no React, React Native or Expo; `console` only
-in `src/lib/logger.ts`.
+Lint guards: `fetch` / `XMLHttpRequest` / `WebSocket` / `EventSource` / `sendBeacon` only in
+`src/api/**`; `expo/fetch` only in `src/api/transport.ts` (expo's own `expo/src/winter/fetch`
+nowhere); no second HTTP client anywhere; never react-native-svg's address loaders (`SvgUri`,
+`SvgFromUri`, `fetchText`; from `/css` `SvgCssUri`, `SvgWithCssUri`, `LocalSvg`, `WithLocalSvg`,
+`loadLocalRawResource`), a namespace import of it or a `require()` / `import()` of it: fetch the
+text through the client and draw it with `SvgXml`; the file system's own transfers
+(`File.downloadFileAsync`; `downloadAsync`, `uploadAsync`, `createDownloadResumable`,
+`createUploadTask`, `DownloadResumable`, `UploadTask`) only in `src/api/**`, through
+`src/api/transfer.ts`; never `react-native-webview`, `expo/dom`, `@expo/dom-webview` or the
+`'use dom'` directive; files warn over 400 lines and fail over 800; functions 50 lines (`.tsx`
+150; test callbacks exempt, as on the web), depth 4, complexity 10; no colour literals in
+`src/**` or `app/**` outside `src/styles/tokens/**` (`#rgb`, `#rgba` with a letter, `#rrggbb`,
+`#rrggbbaa`, `rgb()`, `rgba()`, `hsl()`, `hsla()`, `hwb()`; and where React Native reads a
+colour, four decimal digits or a colour's name, `'transparent'` allowed); `src/core/*.ts` and
+`src/core/parity/**` import no React, React Native or Expo; `console` only in
+`src/lib/logger.ts`. Each is proved by `scripts/__tests__/eslint-rules*.test.ts`; inline eslint
+comments are not read.
 
 CI (`.github/workflows/ci.yml`): jobs `typecheck · lint · test` and
 `expo-doctor · iOS bundle` (names are read by branch protection — do not

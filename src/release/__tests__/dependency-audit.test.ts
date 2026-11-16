@@ -1,8 +1,10 @@
 // R11 and KR10 as a test that keeps running in CI: the app has no analytics, advertising,
-// attribution or tracking SDK and no WebView, in package.json or anywhere in the installed tree,
-// @sentry/react-native is its only crash or error SDK, and app.json declares no tracking.
+// attribution or tracking SDK and no WebView (react-native-webview, or @expo/dom-webview for Expo's
+// DOM components), in package.json or anywhere in the installed tree, no installed package needs a
+// WebView, @sentry/react-native is its only crash or error SDK, and app.json declares no tracking.
 
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 
 import {
   CRASH_SDK,
@@ -10,6 +12,7 @@ import {
   matchesPattern,
   OTHER_ERROR_SDKS,
   RELEASE_SDK_DENYLIST,
+  WEB_VIEWS,
   type DenylistEntry,
 } from './support/denylist';
 import {
@@ -62,6 +65,7 @@ describe('the matcher and the offender report', () => {
         'node_modules/zod': {},
         'node_modules/some-lib/node_modules/@segment/analytics-react-native': {},
         'node_modules/innocent': { name: 'react-native-webview' },
+        'node_modules/expo/node_modules/@expo/dom-webview': {},
       },
     };
     expect(describeOffenders(offenders(lockPackages(fake), RELEASE_SDK_DENYLIST))).toEqual([
@@ -69,6 +73,8 @@ describe('the matcher and the offender report', () => {
         '@segment/analytics-react-native): an analytics SDK: the labels say no analytics (R11)',
       'react-native-webview (package-lock.json node_modules/innocent): a WebView: none anywhere ' +
         '(D-NO-WEBVIEW)',
+      '@expo/dom-webview (package-lock.json node_modules/expo/node_modules/@expo/dom-webview): ' +
+        "a WebView for Expo's DOM components: none anywhere (D-NO-WEBVIEW)",
     ]);
   });
 
@@ -100,6 +106,76 @@ describe('no analytics, advertising, tracking SDK or WebView (R11, KR10, D-NO-WE
 
   it('no package-lock.json entry matches a denylist entry', () => {
     expect(describeOffenders(offenders(installed, RELEASE_SDK_DENYLIST))).toEqual([]);
+  });
+});
+
+// What each installed package asks for, read for the web views: .npmrc sets legacy-peer-deps, so
+// npm installs no peer, and a package that needs a WebView as a peer would not show in the tree.
+const depMap = z.record(z.string(), z.string()).optional();
+const needsSchema = z.object({
+  packages: z.record(
+    z.string(),
+    z.object({
+      dependencies: depMap,
+      optionalDependencies: depMap,
+      peerDependencies: depMap,
+      peerDependenciesMeta: z
+        .record(z.string(), z.object({ optional: z.boolean().optional() }))
+        .optional(),
+    }),
+  ),
+});
+type Needs = z.infer<typeof needsSchema>;
+
+/** Each lock entry naming a web view: as a dependency, an optional one, a peer or an optional peer. */
+function webViewMentions(lockNeeds: Needs): string[] {
+  return Object.entries(lockNeeds.packages).flatMap(([key, entry]) =>
+    WEB_VIEWS.flatMap((name) => {
+      const peer = entry.peerDependenciesMeta?.[name]?.optional === true ? 'optional peer' : 'peer';
+      return [
+        ...(entry.dependencies?.[name] === undefined ? [] : [`${key} dependency ${name}`]),
+        ...(entry.optionalDependencies?.[name] === undefined
+          ? []
+          : [`${key} optional dependency ${name}`]),
+        ...(entry.peerDependencies?.[name] === undefined ? [] : [`${key} ${peer} ${name}`]),
+      ];
+    }),
+  );
+}
+
+// expo names both as optional peers, for its DOM components, which the lint refuses ('use dom',
+// expo/dom, @expo/dom-webview): npm never installs an optional peer, and nothing here imports one.
+const ALLOWED_WEB_VIEW_MENTIONS = [
+  'node_modules/expo optional peer react-native-webview',
+  'node_modules/expo optional peer @expo/dom-webview',
+];
+
+describe('no installed package needs a WebView (rule 13.8: not through another package)', () => {
+  it("only expo names one, as an optional peer, and the allowed list is not stale", () => {
+    const found = webViewMentions(needsSchema.parse(JSON.parse(readRepoFile('package-lock.json'))));
+    expect(found.filter((mention) => !ALLOWED_WEB_VIEW_MENTIONS.includes(mention))).toEqual([]);
+    expect(ALLOWED_WEB_VIEW_MENTIONS.filter((mention) => !found.includes(mention))).toEqual([]);
+  });
+
+  it('names a dependency, an optional dependency, a peer and an optional peer, nothing looser', () => {
+    const fake: Needs = {
+      packages: {
+        'node_modules/a': { dependencies: { '@expo/dom-webview': '1' } },
+        'node_modules/b/node_modules/c': { optionalDependencies: { 'react-native-webview': '1' } },
+        'node_modules/d': { peerDependencies: { '@expo/dom-webview': '*' } },
+        'node_modules/e': {
+          peerDependencies: { 'react-native-webview': '*' },
+          peerDependenciesMeta: { 'react-native-webview': { optional: true } },
+        },
+        'node_modules/f': { dependencies: { 'react-native-webview-bridge': '1' } },
+      },
+    };
+    expect(webViewMentions(fake)).toEqual([
+      'node_modules/a dependency @expo/dom-webview',
+      'node_modules/b/node_modules/c optional dependency react-native-webview',
+      'node_modules/d peer @expo/dom-webview',
+      'node_modules/e optional peer react-native-webview',
+    ]);
   });
 });
 
