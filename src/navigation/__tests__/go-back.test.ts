@@ -7,7 +7,9 @@
 // other file calls the router's back for itself.
 
 import { createRequire } from 'node:module';
-import { createElement, type ReactElement } from 'react';
+import { createElement, useCallback, useState, type ReactElement } from 'react';
+
+import { usePathname } from 'expo-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { codeOf } from '../../release/__tests__/support/code';
@@ -24,12 +26,15 @@ const ELSEWHERE = routes.chats;
 /** The stand-in router: whether a screen is behind, where the person is, what it was asked. */
 const router = vi.hoisted(() => ({ behind: false, here: '/chats', asked: [] as string[] }));
 
+/** One router for every render, as expo-router's useRouter hands its one router. */
+const standIn = vi.hoisted(() => ({
+  canGoBack: () => router.behind,
+  back: () => router.asked.push('back'),
+  replace: (href: string) => router.asked.push(`replace ${href}`),
+}));
+
 vi.mock('expo-router', () => ({
-  useRouter: () => ({
-    canGoBack: () => router.behind,
-    back: () => router.asked.push('back'),
-    replace: (href: string) => router.asked.push(`replace ${href}`),
-  }),
+  useRouter: () => standIn,
   usePathname: () => router.here,
 }));
 
@@ -49,6 +54,24 @@ function goBackFrom(...fallback: [] | [string]): () => void {
   const [goBack] = handed;
   if (goBack === undefined) throw new Error('the probe did not render');
   return goBack;
+}
+
+/**
+ * What `use` hands one screen over two renders of it, the path changing between them: the first
+ * render asks for a second at once (an update during render), so React renders it again with its
+ * hooks kept, as it does when the person moves on and the screen is still mounted.
+ */
+function acrossAPathChange<T>(use: () => T, first: string, second: string): readonly T[] {
+  const handed: T[] = [];
+  function Probe() {
+    const [render, setRender] = useState(0);
+    router.here = render === 0 ? first : second;
+    handed.push(use());
+    if (render === 0) setRender(1);
+    return null;
+  }
+  renderToStaticMarkup(createElement(Probe));
+  return handed;
 }
 
 /** What the hook's useBack hands the Header, from one render of a component that calls it. */
@@ -184,6 +207,42 @@ describe('the one back hook, over a router (rule 4.2)', () => {
 
   it('puts the fallback a screen names there instead', () => {
     expect(askedAfter(false, goBackFrom(routes.settings))).toEqual([`replace ${routes.settings}`]);
+  });
+
+  it('hands the same press across a path change, so an effect that keeps it runs once', () => {
+    const presses = acrossAPathChange(
+      () => useGoBack(routes.settings),
+      routes.chats,
+      routes.licences,
+    );
+    expect(presses).toHaveLength(2);
+    expect(presses[0]).toBe(presses[1]);
+    const rooted = acrossAPathChange(() => useBack(routes.home, true).goBack, '/a', '/b');
+    expect(rooted[0]).toBe(rooted[1]);
+  });
+
+  it('the probe tells a press that depends on the path apart (the control)', () => {
+    const changing = acrossAPathChange(
+      () => {
+        const here = usePathname();
+        return useCallback(() => here, [here]);
+      },
+      routes.chats,
+      routes.licences,
+    );
+    expect(changing).toHaveLength(2);
+    expect(changing[0]).not.toBe(changing[1]);
+  });
+
+  it('reads where the person is when pressed, from the place the layout effect keeps', () => {
+    const hook = codeOf(HOOK);
+    expect(hook).toMatch(
+      /useLayoutEffect\(\(\) => \{\s+place\.current = \{ here, root \};\s+\}, \[here, root\]\);/,
+    );
+    expect(hook).toContain('}, [router, fallback]);');
+    expect(hook).toContain(
+      'backMove({ canGoBack: router.canGoBack(), fallback, ...place.current })',
+    );
   });
 
   it('asks the router nothing when the fallback is where the person already is', () => {

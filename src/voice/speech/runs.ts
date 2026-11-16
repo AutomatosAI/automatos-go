@@ -56,6 +56,35 @@ export function withoutClosingHashes(text: string): string {
   return closed ? text.slice(0, spaceStart) : text;
 }
 
+const isMark = (char: string) => char === '*' || char === '_';
+const notMark = (char: string) => !isMark(char);
+/** What may follow a word's stray marks: whitespace or a mark of punctuation. */
+const ENDS_A_WORD = /[\s.,!?;:…]/;
+
+/**
+ * A word's stray '*' and '_' at its end taken out ('word**.' says 'word.'): what
+ * /(\S)[*_]+(?=[\s.,!?;:…]|$)/g → '$1' gave. A run of marks followed by whitespace, punctuation or the
+ * end goes, kept only for the one character the pattern took before it: the character before the
+ * run, or the run's own first mark when whitespace or the start of the text is before it. The
+ * pattern tried the rest of a long run from each of its marks: the square of the run.
+ */
+export function withoutMarksEndingWords(text: string): string {
+  const pieces: string[] = [];
+  let copied = 0;
+  for (let start = runEnd(text, 0, notMark); start < text.length;) {
+    const end = runEnd(text, start, isMark);
+    const next = text.charAt(end);
+    const kept = start > 0 && !isSpace(text.charAt(start - 1)) ? start : start + 1;
+    if ((next === '' || ENDS_A_WORD.test(next)) && end > kept) {
+      pieces.push(text.slice(copied, kept));
+      copied = end;
+    }
+    start = runEnd(text, end, notMark);
+  }
+  pieces.push(text.slice(copied));
+  return pieces.join('');
+}
+
 /**
  * A table's separator row, '| --- | :--: |': cells between pipes, each three hyphens or more with a
  * colon at either end, a pipe at either end of the row or not. What

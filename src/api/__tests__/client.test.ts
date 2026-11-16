@@ -92,14 +92,14 @@ describe('headers', () => {
 });
 
 describe('URLs and bodies', () => {
-  it('fills path params URI-encoded and appends the query', async () => {
+  it('fills path params and appends the query', async () => {
     const transport = fakeTransport(() => reply(204));
     await clientWith(transport).request(GET_CHAT, {
-      params: { chatId: 'a b/c?d' },
+      params: { chatId: 'c-1_v2.x' },
       query: { limit: 20, status: 'active', skipped: undefined },
     });
     expect(transport.calls[0]?.url).toBe(
-      'https://api.example.test/api/chat/a%20b%2Fc%3Fd?limit=20&status=active',
+      'https://api.example.test/api/chat/c-1_v2.x?limit=20&status=active',
     );
     expect(transport.calls[0]?.method).toBe('GET');
   });
@@ -109,6 +109,10 @@ describe('URLs and bodies', () => {
     const client = clientWith(transport);
     await expect(client.request(GET_CHAT)).rejects.toThrow(TypeError);
     await expect(client.request(GET_CHAT, { params: { chatId: '..' } })).rejects.toThrow(TypeError);
+    // a value that could leave its segment is refused by the builder itself, whatever the caller
+    for (const chatId of ['a b/c?d', 'a%2F..%2Fb', 'a\\b']) {
+      await expect(client.request(GET_CHAT, { params: { chatId } })).rejects.toThrow(TypeError);
+    }
     expect(transport.calls).toHaveLength(0);
   });
 
