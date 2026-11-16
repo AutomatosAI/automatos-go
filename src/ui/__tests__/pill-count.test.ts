@@ -29,6 +29,7 @@ describe("a pill's count", () => {
     expect(idle).toEqual({
       ground: colours.card,
       colour: mixHex(colours.card, colours.foreground, PILL_COUNT_ALPHA),
+      measured: true,
     });
   });
 
@@ -48,6 +49,29 @@ describe("a pill's count", () => {
     expect(pillCount(dress, { selected: true, pressed: true }, colours.background)).toEqual(
       pillCount(dress, { selected: true }, colours.background),
     );
+  });
+
+  it('never throws on a colour it cannot read: the ink as written, not measured', () => {
+    const dress = dressOf(STUDIO_LIGHT);
+    const odd = {
+      ...dress,
+      paints: {
+        ...dress.paints,
+        pill: {
+          ...dress.paints.pill,
+          rest: { ...dress.paints.pill.rest, background: 'not a colour' },
+        },
+      },
+    };
+    const count = pillCount(odd, { selected: false }, STUDIO_LIGHT.tokens.colours.background);
+    expect(count).toEqual({
+      colour: dress.paints.pill.rest.foreground,
+      ground: STUDIO_LIGHT.tokens.colours.background,
+      measured: false,
+    });
+    // a pill with no fill shows the page, which here cannot be read
+    const hud = HUD_STYLES[0];
+    expect(hud && pillCount(dressOf(hud), { selected: false }, 'nonsense').measured).toBe(false);
   });
 
   it('takes the ink itself where three quarters would read under AA', () => {

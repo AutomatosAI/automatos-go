@@ -95,6 +95,28 @@ describe("a style's own switch colours, by the switch's one rule", () => {
     });
   });
 
+  it('never takes the on colour for the off track while another reads', () => {
+    const paint = ownSwitchPaint({
+      on: [INK],
+      off: [INK, MID],
+      thumb: PAGE,
+      grounds: [PAGE],
+      fallback: INK,
+    });
+    expect(paint.trackColor).toEqual({ false: MID, true: INK });
+  });
+
+  it('skips a colour it cannot read, and never throws', () => {
+    const own = {
+      on: ['nonsense', INK],
+      off: ['transparent', MID],
+      thumb: PAGE,
+      grounds: [PAGE],
+      fallback: INK,
+    };
+    expect(ownSwitchPaint(own).trackColor).toEqual({ false: MID, true: INK });
+  });
+
   it('falls back to the ink that reads where none does', () => {
     const paint = ownSwitchPaint({
       on: [PALE],
