@@ -1,9 +1,10 @@
 // Auto's suggestions, wired (PRD-268 §6.5.2, US-G01; the rules are model.ts's). One query, GET
 // /api/proactive/suggestions?status=open, only where discovery lists `suggestions`: memory only
 // (query-keys.ts), refetched on a suggestion_changed live event (live-events.ts) and on the 60 s
-// poll needs-you uses. Until the person's pause is read, and while they have paused suggestions
-// (§6.9, use-pause.ts), every surface shows none and the list is not read; a pause or a resume
-// reads it again (pause.ts). Start and Hide are for the roles that may answer (owners, admins,
+// poll needs-you uses; what it shows is judged against each one's expiry at every minute's turn
+// (useMinuteClock), with or without a new list. Until the person's pause is read, and while they
+// have paused suggestions (§6.9, use-pause.ts), every surface shows none and the list is not read;
+// a pause or a resume reads it again (pause.ts). Start and Hide are for the roles that may answer (owners, admins,
 // editors; a viewer is 403 on both). Start: refused at once while the app is offline (one line,
 // nothing queued), else Face ID first (gated.ts), then sent; 'Started. Auto is on it.' shows for
 // 4 s, and the suggestion leaves the list at once (so no surface offers it again), and the
@@ -21,6 +22,7 @@ import { NEEDS_YOU_REFETCH_INTERVAL_MS } from '../api/needs-you';
 import { matchesFamily, type KeyFamilyName } from '../api/query-keys';
 import { useAppSession } from '../app-state/session';
 import { roleCan } from '../auth/role';
+import { useMinuteClock } from '../cc/shell/use-shell';
 import { logger } from '../lib/logger';
 import { useStepUp } from '../step-up/use-step-up';
 import { useToast } from '../ui';
@@ -56,9 +58,13 @@ export function useOpenSuggestions(): OpenSuggestions {
     enabled: offered && paused === false,
   });
   const data = query.data;
+  // judged again at each minute's turn, as the approval sheet and the calendar judge theirs: one
+  // past its expiry leaves with no change to the list, so no Start the server would refuse stays
+  // offered (rule 6.5)
+  const now = useMinuteClock().getTime();
   const open = useMemo(
-    () => shownSuggestions({ offered, paused, list: data, now: Date.now() }),
-    [offered, paused, data],
+    () => shownSuggestions({ offered, paused, list: data, now }),
+    [offered, paused, data, now],
   );
   return { offered, open };
 }
