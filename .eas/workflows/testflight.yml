@@ -72,14 +72,16 @@ jobs:
         # repository can read itself there), then from the public address. When neither answers,
         # the update still goes out, with a warning: a stop there would stop every update of a
         # repository nobody can read without a key. git never prompts for a password here, and
-        # its own error lines (which can show a remote's address) are not printed.
+        # its own error lines (which can show a remote's address) are not printed. ls-remote also
+        # lists any ref that only ends in refs/heads/main (a branch x/refs/heads/main, a tag named
+        # so), which anyone who can push may create: only the line for that exact ref is read.
         - name: Stop if main has moved on (its own run ships this change too)
           run: |
             sha="${{ github.sha }}"
             [ -n "$sha" ] || exit 0
             export GIT_TERMINAL_PROMPT=0
-            head=$(git ls-remote origin refs/heads/main 2>/dev/null | cut -f1 || true)
-            [ -n "$head" ] || head=$(git ls-remote https://github.com/AutomatosAI/automatos-go.git refs/heads/main 2>/dev/null | cut -f1 || true)
+            head=$(git ls-remote origin refs/heads/main 2>/dev/null | awk '$2=="refs/heads/main"{print $1}' || true)
+            [ -n "$head" ] || head=$(git ls-remote https://github.com/AutomatosAI/automatos-go.git refs/heads/main 2>/dev/null | awk '$2=="refs/heads/main"{print $1}' || true)
             if [ -z "$head" ]; then
               echo "WARNING: could not read main's head, through the checkout or from the public address." >&2
               echo "WARNING: publishing $sha without knowing it is main's head. If main has moved on, this" >&2
