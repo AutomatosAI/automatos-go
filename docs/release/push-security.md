@@ -192,7 +192,11 @@ key. What the phone does
 ([src/push/registration/attempts.ts](../../src/push/registration/attempts.ts)):
 
 - **Before each registration goes,** it notes that one is out for this server and workspace, in
-  the encrypted store (scopes only). The note is cleared once a push record is kept.
+  the encrypted store (scopes only). The note is cleared only when that is settled: a push record
+  kept, a DELETE the server confirmed (or answered "already gone") in that scope, by Sign out or by
+  Remove this phone, or a learning registration the server refused with a 409. The encrypted store
+  is the signed-in session's: every way of leaving empties it, or makes it unreadable, once the
+  provider has signed out, so a note is only ever read in the session that wrote it.
 - **The next registration repairs it.** With no record, the next launch or resume registers again.
   The server answers the same row (one per install, person and workspace) with no key, because it
   hands out a key once. A hosted phone then revokes that row and registers once more for a new key
@@ -205,6 +209,15 @@ key. What the phone does
   DELETE share the 4 s. Nothing is learned where nothing was sent, or where the person removed this
   phone. If the original registration never arrived, this registers a row only to revoke it, and
   Studio then lists one removed phone.
+- **When the DELETE does not go through** (no network, a refusal, the 4 s over, a learning
+  registration still out when they end), the note stays and the next chance finishes the job: a
+  second Sign out in this launch (Clerk refuses a sign-out offline) revokes the row it learned; after
+  a relaunch, still signed in, the next registration keeps a record (the row is the person's own
+  again) or the next Sign out learns the row again and revokes it. A learning registration that
+  reaches the server after the 4 s changes nothing on a row that already exists; where none did, it
+  makes one with no push token, so nothing can be sent to it, and the next Sign out removes it. Once
+  the sign-out completes, the note goes with the session's store: from then on the next
+  registration on this phone, by anyone, moves the push token off that row.
 - **Notifications off in the phone's Settings** has no row id to tell the server. The phone's own
   setting stops every notification from showing, the screen says the setting is off, and turning it
   on again registers.

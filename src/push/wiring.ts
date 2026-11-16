@@ -29,7 +29,11 @@ import type { NotificationsPort } from './platform/expo';
 import { promptMemoryOver, type PromptMemory } from './prompt/memory';
 import type { DeviceSource } from './registration/device-facts';
 import type { PushKeyStore } from './registration/key-store';
-import { learnRowId, registrationAttemptsOver } from './registration/attempts';
+import {
+  learnRowId,
+  registrationAttemptsOver,
+  type RegistrationAttempts,
+} from './registration/attempts';
 import { askPermission } from './registration/permission';
 import { recoveryLogOver } from './registration/recovery-log';
 import type { RegisterDeps, RegistrationOutcome } from './registration/register';
@@ -150,7 +154,12 @@ function responsesFor(
   });
 }
 
-type RemovalParts = Readonly<{ hold: RemovalHold; registrar: Registrar; teardown: TeardownDeps }>;
+type RemovalParts = Readonly<{
+  hold: RemovalHold;
+  registrar: Registrar;
+  teardown: TeardownDeps;
+  attempts: RegistrationAttempts;
+}>;
 
 function scopeOf(input: WiringInput) {
   return Object.freeze({
@@ -186,6 +195,7 @@ function leavingFor(input: WiringInput, natives: PushNatives, parts: LeavingPart
     store: natives.store,
     revoke: (deviceId, signal) => revokeDevice(input.client, deviceId, signal),
     learn: (signal) => learnRowId(parts.registration, signal),
+    attempts: parts.registration.attempts,
   });
   return Object.freeze({
     leave,
@@ -225,7 +235,12 @@ export function pushWiringFor(input: WiringInput, natives: PushNatives): PushWir
     }),
     prompt,
     teardown,
-    removal: removalFor(input, natives, { hold, registrar, teardown }),
+    removal: removalFor(input, natives, {
+      hold,
+      registrar,
+      teardown,
+      attempts: registration.attempts,
+    }),
     ...leavingFor(input, natives, { registrar, teardown, registration }),
   });
 }

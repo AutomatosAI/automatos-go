@@ -13,6 +13,7 @@
 
 import { isApiError } from '../../api/errors';
 import { logger } from '../../lib/logger';
+import type { RegistrationAttempts } from '../registration/attempts';
 import type { PushKeyStore } from '../registration/key-store';
 import { recordFor, type RecordScope } from '../registration/record';
 import type { Registrar } from '../registration/registrar';
@@ -31,6 +32,8 @@ export type RemovalDeps = Readonly<{
   /** DELETE /api/v1/mobile/devices/{device_id} through the session's client (api.ts). */
   revoke: (deviceId: string) => Promise<void>;
   teardown: TeardownDeps;
+  /** A lost registration's note (attempts.ts), settled by a DELETE the server confirms. */
+  attempts?: Pick<RegistrationAttempts, 'clear'>;
 }>;
 
 export type RemovalOutcome = Readonly<{
@@ -82,6 +85,7 @@ async function revoked(deps: RemovalDeps, deviceId: string): Promise<boolean> {
 async function removeRow(deps: RemovalDeps): Promise<boolean> {
   const deviceId = await recordedDeviceId(deps.store, deps.scope);
   const removed = deviceId !== null && (await revoked(deps, deviceId));
+  if (removed) deps.attempts?.clear(deps.scope);
   await teardownLocal(deps.teardown);
   return removed;
 }

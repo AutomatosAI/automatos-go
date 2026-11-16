@@ -24,6 +24,7 @@
 
 import { logger } from '../../lib/logger';
 import { SIGN_OUT_DELETE_TIMEOUT_MS } from '../config';
+import type { RegistrationAttempts } from '../registration/attempts';
 import type { PushKeyStore } from '../registration/key-store';
 import type { RecordScope } from '../registration/record';
 import type { Registrar } from '../registration/registrar';
@@ -42,6 +43,8 @@ export type LeaveDeps = Readonly<{
   revoke: (deviceId: string, signal: AbortSignal) => Promise<void>;
   /** The row of a registration whose answer was lost (attempts.ts learnRowId); null: none. */
   learn?: (signal: AbortSignal) => Promise<string | null>;
+  /** That note, cleared once a DELETE in this scope is confirmed (and kept when it is not). */
+  attempts?: Pick<RegistrationAttempts, 'clear'>;
   teardown: TeardownDeps;
   timeoutMs?: number;
 }>;
@@ -140,6 +143,7 @@ export function pushLeaveFor(deps: LeaveDeps): PushLeave {
     const revoked = await withinTime(attempt, timeoutMs, lateSignOut);
     tried = true;
     unrevoked = revoked ? null : found.deviceId;
+    if (revoked) deps.attempts?.clear(deps.scope);
     return revoked;
   };
   return async () => {

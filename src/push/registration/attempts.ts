@@ -2,15 +2,23 @@
 // reached the server, but its answer was lost to a timeout or a network that dropped after it was
 // sent, or the app was killed while it was out. The server may then hold an active row for this
 // phone, sending to its push token, that the phone has no id for. register.ts notes the attempt,
-// per server and workspace, BEFORE each POST goes, and clears it once a push record is kept for that
-// scope. A hosted sign-out (bind/leave.ts) that has no other id for its row asks learnRowId, which
-// learns it by registering again without the push token: POST /api/v1/mobile/devices upserts the
-// caller's own row by install id, so its answer names this phone's row and no one else's, and a
-// registration with no token leaves the row's push as it was; the leave then DELETEs that row.
-// Nothing is learned where nothing was noted, or where the person removed this phone (its row was
-// DELETEd then). One MMKV item (KP18: scopes only, never a key, a token or an id): a JSON array of
-// scope keys, the newest last, at most REGISTRATION_ATTEMPTS_MAX. A store that fails reads as none
-// noted, and a failed write is logged. Never throws. Logs carry kinds only.
+// per server and workspace, BEFORE each POST goes. The note is cleared only when that is settled: a
+// push record kept for the scope (register.ts), a DELETE the server confirmed for the scope (the
+// sign-out, bind/leave.ts, or Remove this phone), or a learn the server refused with a 409 (it holds
+// no active row of this phone's). A hosted sign-out that has no other id for its row asks
+// learnRowId, which learns it by registering again without the push token: POST
+// /api/v1/mobile/devices upserts the caller's own row by install id, so its answer names this
+// phone's row and no one else's, and a registration with no token leaves the row's push as it was;
+// the leave then DELETEs that row. A DELETE that fails, or a learn cut off by the sign-out's time,
+// leaves the note, so the next chance finishes the job: a second Sign out in this launch (the row
+// is remembered), or, after a relaunch while still signed in, the next registration or the next
+// Sign out (it learns again). The note lives in the encrypted store, which every way of leaving
+// empties, or makes unreadable, once the provider has signed out (src/connect/switch.ts
+// clearUserData): a note can only have been written in this signed-in session. Nothing is learned
+// where nothing was noted, or where the person removed this phone. One MMKV item (KP18: scopes
+// only, never a key, a token or an id): a JSON array of scope keys, the newest last, at most
+// REGISTRATION_ATTEMPTS_MAX. A store that fails reads as none noted, and a failed write is logged.
+// Never throws. Logs carry kinds only.
 
 import { z } from 'zod';
 
@@ -32,7 +40,7 @@ export type RegistrationAttempts = Readonly<{
   noted: (scope: RecordScope) => boolean;
   /** Before a POST goes. */
   note: (scope: RecordScope) => void;
-  /** A push record was kept here, or the row was learned. */
+  /** Settled: a push record kept here, a DELETE confirmed here, or a learn refused. */
   clear: (scope: RecordScope) => void;
 }>;
 
@@ -114,9 +122,8 @@ export async function learnRowId(deps: LearnDeps, signal?: AbortSignal): Promise
   const input = await tokenlessInput(deps);
   if (!input) return null;
   try {
-    const answer = await registerDevice(deps.client, input, signal);
-    deps.attempts.clear(scope);
-    return answer.device_id;
+    // the note stays until the DELETE of this row is confirmed (bind/leave.ts)
+    return (await registerDevice(deps.client, input, signal)).device_id;
   } catch (error) {
     // a 409 changed nothing: the server holds no active row of this phone's to remove
     if (deviceConflictOf(error)) deps.attempts.clear(scope);

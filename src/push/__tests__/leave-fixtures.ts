@@ -67,6 +67,7 @@ export async function leavingPhone(options: PhoneOptions = {}) {
     store: world.keys.store,
     revoke: (deviceId, signal) => revokeDevice(world.api.client, deviceId, signal),
     learn: (signal) => learnRowId(world.deps, signal),
+    attempts: world.deps.attempts,
     teardown,
     timeoutMs: options.timeoutMs,
   };

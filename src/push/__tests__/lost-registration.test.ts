@@ -9,7 +9,9 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { recordedDeviceId, removeShown } from '../bind/remove-phone';
+import { revokeDevice } from '../api';
+import { pushLeaveFor } from '../bind/leave';
+import { recordedDeviceId, removePhone, removeShown } from '../bind/remove-phone';
 import {
   REGISTRATION_ATTEMPTS_ITEM,
   REGISTRATION_ATTEMPTS_MAX,
@@ -17,10 +19,11 @@ import {
 } from '../config';
 import { registrationAttemptsOver, withAttempt } from '../registration/attempts';
 import { register } from '../registration/register';
+import { createRegistrar } from '../registration/registrar';
 import { recoveryLogOver } from '../registration/recovery-log';
 import { removalHoldOver } from '../registration/removal-hold';
 import { DEVICE_ID, WS, sent } from './data-fixtures';
-import { leavingPhone } from './leave-fixtures';
+import { leavingPhone, teardownOver } from './leave-fixtures';
 import {
   DENIED,
   INSTALL_ID,
@@ -29,12 +32,16 @@ import {
   NEW_TOKEN,
   ORIGIN,
   T0,
+  answering,
   conflict,
+  holding,
   memoryStorage,
   minted,
   offline,
   ok,
+  phone,
   setup,
+  storedRecord,
   type Answer,
   type Script,
 } from './registration-fixtures';
@@ -189,6 +196,69 @@ describe('a hosted sign-out after an answer that never came', () => {
     await phoneAt.registrar.run();
     expect(await phoneAt.leave()).toEqual({ revoked: false, failed: [] });
     expect(phoneAt.world.api.routes()).toEqual([POST]);
+  });
+});
+
+describe('the note is settled only by a DELETE the server confirms', () => {
+  it('a DELETE that fails after the learn keeps it; a second Sign out in this launch finishes', async () => {
+    const { phoneAt, attempts } = await lostPhone({
+      register: [minted(KEY)],
+      revoke: [offline, ok],
+    });
+    expect(await phoneAt.leave()).toEqual({ revoked: false, failed: [] });
+    expect(attempts.noted(SCOPE)).toBe(true);
+    // Clerk refused the sign-out (offline): the person taps Sign out again
+    expect(await phoneAt.leave()).toEqual({ revoked: true, failed: [] });
+    expect(phoneAt.world.api.routes()).toEqual([POST, POST, DELETE, DELETE]);
+    expect(attempts.noted(SCOPE)).toBe(false);
+  });
+
+  it('after a relaunch, still signed in: the next Sign out learns the row again and revokes it', async () => {
+    const { phoneAt, attempts } = await lostPhone({
+      register: [minted(KEY), minted(KEY)],
+      revoke: [offline, ok],
+    });
+    await phoneAt.leave();
+    // a new launch: nothing in memory, the note in the encrypted store
+    const relaunched = pushLeaveFor({ ...phoneAt.deps });
+    expect(await relaunched()).toEqual({ revoked: true, failed: [] });
+    expect(phoneAt.world.api.routes()).toEqual([POST, POST, DELETE, POST, DELETE]);
+    expect(attempts.noted(SCOPE)).toBe(false);
+  });
+
+  it("a lost re-registration's note is settled by the DELETE of the recorded row", async () => {
+    const phoneAt = await leavingPhone({ script: { register: [offline], revoke: [ok] } });
+    phoneAt.world.device.state.token = NEW_TOKEN;
+    await phoneAt.registrar.run();
+    const attempts = registrationAttemptsOver(phoneAt.world.storage);
+    expect(attempts.noted(SCOPE)).toBe(true);
+    expect(await phoneAt.leave()).toEqual({ revoked: true, failed: [] });
+    expect([phoneAt.world.api.routes(), attempts.noted(SCOPE)]).toEqual([[POST, DELETE], false]);
+  });
+
+  it.each<[string, Answer, boolean, boolean]>([
+    ['confirmed', ok, true, false],
+    ['already gone (404)', answering(404, { detail: 'Not found' }), true, false],
+    ['refused', answering(500, {}), false, true],
+  ])('and by Remove this phone: %s', async (_name, answer, removed, kept) => {
+    const world = setup({
+      stored: holding(storedRecord()),
+      script: { register: [offline], revoke: [answer] },
+      device: phone({}, NEW_TOKEN),
+    });
+    const registrar = createRegistrar(world.deps);
+    await registrar.run();
+    expect(world.deps.attempts.noted(SCOPE)).toBe(true);
+    const outcome = await removePhone({
+      scope: SCOPE,
+      hold: removalHoldOver(world.storage),
+      registrar,
+      store: world.keys.store,
+      revoke: (deviceId: string) => revokeDevice(world.api.client, deviceId),
+      teardown: teardownOver(world.keys.store, []),
+      attempts: world.deps.attempts,
+    });
+    expect([outcome.removed, world.deps.attempts.noted(SCOPE)]).toEqual([removed, kept]);
   });
 });
 
