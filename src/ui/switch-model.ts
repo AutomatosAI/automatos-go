@@ -9,7 +9,7 @@
 // row's title, detail and note are Title 6 and Body 6, as Settings → Notifications drew them.
 
 import type { ColourName, Colours } from '../styles/tokens';
-import { firstMark } from './accent';
+import { firstMark, firstMarkColour } from './accent';
 import { MIN_TOUCH, hitSlopFor, type HitSlop } from './paint';
 import { UI_COPY } from './strings';
 import type { TextLevel } from './variants';
@@ -132,4 +132,27 @@ export function switchPaint(colours: Colours): SwitchPaint {
     thumbColor: colours[thumb],
     iosBackground: colours[offTrack],
   };
+}
+
+/**
+ * A style that draws React Native's switch in its own paint (Candy's Motion): its own colours for
+ * each track in order, its thumb, the grounds the switch sits on, and an ink that always reads.
+ */
+export type OwnSwitchColours = Readonly<{
+  on: readonly string[];
+  off: readonly string[];
+  thumb: string;
+  grounds: readonly string[];
+  fallback: string;
+}>;
+
+/**
+ * The same rule as switchTokens on a style's own colours: each track the first of its colours that
+ * reads at 3 to 1 on every ground and under the thumb, else the fallback.
+ */
+export function ownSwitchPaint(own: OwnSwitchColours): SwitchPaint {
+  const under = [...own.grounds, own.thumb];
+  const on = firstMarkColour(own.on, under, own.fallback);
+  const off = firstMarkColour(own.off, under, own.fallback);
+  return { trackColor: { false: off, true: on }, thumbColor: own.thumb, iosBackground: off };
 }

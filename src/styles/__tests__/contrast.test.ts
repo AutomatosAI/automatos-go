@@ -6,7 +6,8 @@
 // why it stands: a pair that gets worse, a new one, and one that was fixed but is still listed all
 // fail. The switch's marks (its thumb on each track, each track on the page and on a card) are held
 // at 3 to 1 in every palette too, with no known list, and a filter pill's count, idle and selected,
-// at AA on the ground its pill shows in every style's dress, every look of each.
+// at AA on the ground its pill shows in every style's dress, every look of each; and the switches
+// Candy and HUD draw themselves, in every look of each.
 
 import { describe, expect, it } from 'vitest';
 
@@ -22,7 +23,8 @@ import { AA_TEXT, contrastFailures, solidOver, textOnFor, type TextOnGrounds } f
 import { STYLE_IDS, tokensFor, type ColourName, type Colours, type Tokens } from '../tokens';
 import { STUDIO_COLOURS } from '../tokens/studio';
 import { dressOf } from '../dress/dress';
-import { ALL_STYLES } from '../dress/__tests__/fixtures';
+import { ALL_STYLES, CANDY_STYLES, HUD_STYLES } from '../dress/__tests__/fixtures';
+import { motionSwitchPaint } from '../candy/look-page/knobs';
 
 const DECIMALS = 100;
 const floor2 = (ratio: number) => Math.floor(ratio * DECIMALS) / DECIMALS;
@@ -123,6 +125,41 @@ describe("a filter pill's count, in every style's dress (rule 10.5: AA)", () => 
 
   it('idle, pressed and selected, each on the ground its pill shows', () => {
     expect(counts).toEqual([]);
+  });
+});
+
+describe('the switches the styles draw themselves, in every look of each', () => {
+  it("Candy's Motion: the thumb on each track, each track on the page and a window (3 to 1)", () => {
+    const bad = CANDY_STYLES.flatMap((style, index) => {
+      const vars = style.candy;
+      if (!vars) return [`#${index}: no Candy paint`];
+      const paint = motionSwitchPaint(vars);
+      const grounds = [paint.thumbColor, vars.page, vars.win];
+      return [paint.trackColor.true, paint.trackColor.false].flatMap((track) =>
+        grounds
+          .filter((ground) => contrastRatio(track, ground) < MARK_CONTRAST)
+          .map((ground) => `#${index}: ${track} on ${ground}`),
+      );
+    });
+    expect(bad).toEqual([]);
+  });
+
+  it("HUD's drawer switches: the word at AA off and on, the on frame at 3 to 1", () => {
+    const bad = HUD_STYLES.flatMap((style, index) => {
+      const vars = style.hud;
+      if (!vars) return [`#${index}: no HUD paint`];
+      const ground = solidOver(vars.drawer, vars.bg);
+      const fill = solidOver(vars.accentFill, ground);
+      const checks = [
+        ['off word', contrastRatio(vars.text2, ground), AA_TEXT],
+        ['on word', contrastRatio(vars.accent, fill), AA_TEXT],
+        ['on frame', contrastRatio(vars.accent, ground), MARK_CONTRAST],
+      ] as const;
+      return checks
+        .filter(([, ratio, least]) => ratio < least)
+        .map(([what, ratio]) => `#${index}: ${what} ${floor2(ratio)}`);
+    });
+    expect(bad).toEqual([]);
   });
 });
 

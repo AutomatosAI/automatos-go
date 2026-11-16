@@ -2,13 +2,17 @@
 // with its value at the right (Geist Mono 500 11 at .16em in text2) over the shared Slider (KS7),
 // the glow's thumb stopping at the look's safeGlow (KS9); then SCAN, AUTO and MOTION in three
 // columns, 44 high in Geist Mono 600 11 at .1em — on: the accent fill, 1.5 pt of the accent and
-// the accent ink; off: 1 pt of the line and text2. While the phone's Reduce Motion holds HUD
-// still, MOTION reads off, dims and takes no press, and 'MOTION OFF · REDUCE MOTION' says why.
+// the accent ink; off: 1 pt of the line and text2. Each is one control, a third of the row wide and
+// 44 tall, heard as a switch with its state (switch-model.ts), and says its state in its word, so
+// the off frame (the line every drawer option wears) is its edge, not its state. While the phone's
+// Reduce Motion holds HUD still, MOTION reads off, dims and takes no press, and 'MOTION OFF ·
+// REDUCE MOTION' says why.
 
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Slider, Text } from '../../../ui';
 import { DISABLED_OPACITY } from '../../../ui/paint';
+import { switchAccessibilityState } from '../../../ui/switch-model';
 import {
   HUD_DRAWER,
   drawerFrame,
@@ -73,7 +77,7 @@ function SwitchButton({ item, paint, onFlip }: SwitchProps) {
       disabled={item.disabled}
       accessibilityRole="switch"
       accessibilityLabel={item.label}
-      accessibilityState={{ checked: item.on, disabled: item.disabled }}
+      accessibilityState={switchAccessibilityState(item.on, item.disabled)}
       style={({ pressed }) => [
         styles.switch,
         drawerFrame(item.on, vars),

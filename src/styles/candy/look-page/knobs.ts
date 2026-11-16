@@ -5,10 +5,12 @@
 // segmented rows of spec.ts KNOBS' words (Gradient with its note, CANDY_GRADIENT_NOTES); Roundness
 // is a slider of whole points 16–40 whose position is written as its choice key (sliderKey through
 // setKnob); Glow a slider 0–10 (setNumber); Motion a switch, which under Reduce Motion is off, says
-// 'Motion off · Reduce Motion' and cannot be changed, since nothing moves then anyway. The chosen
+// 'Motion off · Reduce Motion' and cannot be changed, since nothing moves then anyway; its paint
+// is the switch's one rule on Candy's colours (motionSwitchPaint). The chosen
 // choice is checked for VoiceOver and carries a ✓ on screen, never colour alone. Pure: no React.
 
-import { nearestRadius } from '../../tokens/candy';
+import { ownSwitchPaint, type SwitchPaint } from '../../../ui/switch-model';
+import { nearestRadius, type CandyVars } from '../../tokens/candy';
 import { CARD_SETS, paletteById } from '../../tokens/candy-catalogue';
 import {
   CANDY_CHOICE_WORDS,
@@ -138,6 +140,23 @@ export function motionRow(look: CandyLook, reduceMotion: boolean): MotionRow {
   const on = !reduceMotion && look.motion === 'on';
   const words = reduceMotion ? said.motion.reduced : on ? said.motion.on : said.motion.paused;
   return Object.freeze({ title: title('motion'), on, disabled: reduceMotion, words });
+}
+
+/**
+ * Motion's switch in Candy's own paint, by the switch's one rule (switch-model.ts): on in the
+ * accent, else its text-safe accent; off in the quiet ink; the window's colour for the thumb; each
+ * track reads at 3 to 1 on the page, on a window and under the thumb, else Candy's text.
+ */
+export function motionSwitchPaint(
+  vars: Pick<CandyVars, 'accent' | 'accentText' | 'quiet' | 'win' | 'page' | 'text'>,
+): SwitchPaint {
+  return ownSwitchPaint({
+    on: [vars.accent, vars.accentText],
+    off: [vars.quiet],
+    thumb: vars.win,
+    grounds: [vars.page, vars.win],
+    fallback: vars.text,
+  });
 }
 
 /** The look's Motion a flip of the switch writes. */

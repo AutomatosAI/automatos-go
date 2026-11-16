@@ -5,7 +5,10 @@
 // under it); each is a radio group whose chosen one is checked, filled or ringed, and marked ✓.
 // Roundness (16–40, whole points) and Glow (0–10) are the shared slider, its value beside the
 // label; Motion is React Native's own Switch, its words beside it, off and fixed under Reduce
-// Motion. Every change goes to the style store at once (use-sweet-page.ts).
+// Motion: its whole row is the one control (a press anywhere turns it; VoiceOver and TalkBack hear
+// one switch, named by its label, its words as the hint), and the native switch is only drawn, out
+// of the touch and the accessibility tree. Every change goes to the style store at once
+// (use-sweet-page.ts).
 
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Switch, View } from 'react-native';
@@ -14,6 +17,7 @@ import { Text } from '../../../ui';
 import { MIN_TOUCH } from '../../../ui/paint';
 import { dressedRow } from '../../../ui/dressed';
 import { Slider } from '../../../ui/Slider';
+import { pressSwitch, switchAccessibilityState } from '../../../ui/switch-model';
 import { useDress } from '../../dress/use-dress';
 import { useStyle } from '../../theme';
 import type { CandyLook } from '../look-schema';
@@ -23,6 +27,7 @@ import { CANDY_SWEET_COPY } from '../strings';
 import {
   glowRow,
   motionRow,
+  motionSwitchPaint,
   paletteRow,
   roundnessRow,
   segmentRow,
@@ -169,30 +174,42 @@ function SliderKnob({
 function MotionKnob({ look, page }: { readonly look: CandyLook; readonly page: KnobPage }) {
   const { vars, type } = useCandyPaint();
   const item = motionRow(look, page.reduceMotion);
+  const paint = motionSwitchPaint(vars);
   return (
-    <KnobRow title={item.title}>
-      <View style={styles.motion}>
-        <Switch
-          value={item.on}
-          onValueChange={page.switchMotion}
-          disabled={item.disabled}
-          accessibilityRole="switch"
-          accessibilityLabel={item.title}
-          accessibilityHint={item.words}
-          accessibilityState={{ checked: item.on, disabled: item.disabled }}
-          trackColor={{ false: vars.quiet, true: vars.accent }}
-          thumbColor={vars.win}
-          ios_backgroundColor={vars.quiet}
-        />
-        <Text
-          accessible={false}
-          importantForAccessibility="no"
-          style={[type.body(NOTE_SIZE, 700), styles.title, { color: vars.quiet }]}
-        >
-          {item.words}
-        </Text>
-      </View>
-    </KnobRow>
+    <Pressable
+      onPress={() => pressSwitch(item.on, item.disabled, page.switchMotion)}
+      disabled={item.disabled}
+      accessibilityRole="switch"
+      accessibilityLabel={item.title}
+      accessibilityHint={item.words}
+      accessibilityState={switchAccessibilityState(item.on, item.disabled)}
+    >
+      <KnobRow title={item.title}>
+        <View style={styles.motion}>
+          <View
+            style={styles.drawnOnly}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          >
+            <Switch
+              value={item.on}
+              disabled={item.disabled}
+              accessible={false}
+              trackColor={paint.trackColor}
+              thumbColor={paint.thumbColor}
+              ios_backgroundColor={paint.iosBackground}
+            />
+          </View>
+          <Text
+            accessible={false}
+            importantForAccessibility="no"
+            style={[type.body(NOTE_SIZE, 700), styles.title, { color: vars.quiet }]}
+          >
+            {item.words}
+          </Text>
+        </View>
+      </KnobRow>
+    </Pressable>
   );
 }
 
@@ -260,4 +277,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   motion: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: row.gap },
+  drawnOnly: { pointerEvents: 'none' },
 });

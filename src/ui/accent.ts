@@ -24,14 +24,13 @@ const GROUNDS: readonly ColourName[] = ['background', 'card'];
 const CANDIDATES: readonly ColourName[] = ['accent', 'primary', 'foreground'];
 const LAST_RESORT: ColourName = 'foreground';
 
-function readsOn(colours: Colours, token: ColourName, grounds: readonly ColourName[]): boolean {
-  const ink = solid(colours[token]);
-  return grounds.every((ground) => contrastRatio(ink, solid(colours[ground])) >= MARK_CONTRAST);
+function readsOn(ink: string, grounds: readonly string[]): boolean {
+  return grounds.every((ground) => contrastRatio(solid(ink), solid(ground)) >= MARK_CONTRAST);
 }
 
 /**
  * The first of `candidates` that reads as a mark (3 to 1) on every one of `grounds` in this
- * palette, else `fallback`. The accent's lookup below, and the switch's track and thumb
+ * palette, else `fallback`. The accent's lookup below, and the switch's tracks
  * (switch-model.ts), are this.
  */
 export function firstMark(
@@ -40,7 +39,20 @@ export function firstMark(
   grounds: readonly ColourName[],
   fallback: ColourName,
 ): ColourName {
-  return candidates.find((each) => readsOn(colours, each, grounds)) ?? fallback;
+  const under = grounds.map((ground) => colours[ground]);
+  return candidates.find((each) => readsOn(colours[each], under)) ?? fallback;
+}
+
+/**
+ * The same lookup on a style's own colours, for a part a style draws in its own paint (Candy's
+ * Motion switch): the first of `candidates` that reads as a mark on every one of `grounds`.
+ */
+export function firstMarkColour(
+  candidates: readonly string[],
+  grounds: readonly string[],
+  fallback: string,
+): string {
+  return candidates.find((each) => readsOn(each, grounds)) ?? fallback;
 }
 
 /**
