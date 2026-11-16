@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Frame } from '../../core/ai-sdk-stream';
-import { decodeChunks } from '../body';
+import { decodeChunks, readBytes } from '../body';
 import { createApiClient } from '../client';
 import { ApiError } from '../errors';
 import type { Route } from '../routes';
 import { readChunks, streamTurn } from '../stream';
-import type { StreamingResponse } from '../transport-types';
+import type { StreamingResponse, TransportRequest } from '../transport-types';
 import {
   PENDING,
   SERVER,
@@ -226,6 +226,52 @@ describe('streamTurn', () => {
     controller.abort();
     expect(await done).toBe('aborted');
     expect(transport.calls[0]?.signal.aborted).toBe(true);
+  });
+});
+
+describe("a stream's body read whole", () => {
+  /** A body that sends a byte every `everyMs` until the request is aborted, as fetch's would. */
+  function dripping(request: TransportRequest, everyMs: number): StreamingResponse {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const body = new ReadableStream<Uint8Array>({
+      pull: (controller) =>
+        new Promise<void>((resolve, reject) => {
+          const onAbort = () => {
+            clearTimeout(timer);
+            reject(new Error('Aborted'));
+          };
+          if (request.signal.aborted) return onAbort();
+          request.signal.addEventListener('abort', onAbort, { once: true });
+          timer = setTimeout(() => {
+            request.signal.removeEventListener('abort', onAbort);
+            controller.enqueue(new Uint8Array([120]));
+            resolve();
+          }, everyMs);
+        }),
+      cancel: () => clearTimeout(timer),
+    });
+    return {
+      status: 200,
+      header: () => null,
+      bytes: (maxBytes) => readBytes(body, maxBytes),
+      chunks: () => decodeChunks(body),
+    };
+  }
+
+  it('stays under the connect deadline until it is in: a body that drips is a network error', async () => {
+    const transport = fakeTransport((request) => dripping(request, 2));
+    const response = await clientWith(transport, 40).stream(CHAT, { body: BODY });
+    const error = await response.bytes(1024 * 1024).catch((caught: unknown) => caught);
+    expect(error).toMatchObject({ kind: 'network' });
+    expect(transport.calls[0]?.signal.aborted).toBe(true);
+  });
+
+  it('is read whole when it ends within the deadline', async () => {
+    const transport = fakeTransport(() => chunked(['0:"ok"\n']));
+    const response = await clientWith(transport, 1_000).stream(CHAT, { body: BODY });
+    expect(new TextDecoder().decode(await response.bytes(1024))).toBe('0:"ok"\n');
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    expect(transport.calls[0]?.signal.aborted).toBe(false);
   });
 });
 

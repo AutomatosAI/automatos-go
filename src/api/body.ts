@@ -71,13 +71,33 @@ function refuseByLength(
   throw new BodyTooLargeError(maxBytes);
 }
 
+/** The reads gathered into one body; over the cap or stalled, a throw (the caller cancels). */
+async function gather(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  maxBytes: number,
+): Promise<Uint8Array> {
+  const parts: Uint8Array[] = [];
+  let size = 0;
+  let emptyReads = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) return joined(parts, size);
+    emptyReads = value.byteLength === 0 ? emptyReads + 1 : 0;
+    if (emptyReads >= MAX_EMPTY_READS) throw new BodyStalledError();
+    size += value.byteLength;
+    if (size > maxBytes) throw new BodyTooLargeError(maxBytes);
+    if (value.byteLength > 0) parts.push(value);
+  }
+}
+
 /**
  * A body read whole as bytes, never more than `maxBytes`: a Content-Length over it is refused before
  * any byte is read, and its body cancelled so that nothing more of it is taken in; a body that
- * grows past the cap is cancelled at that read (BodyTooLargeError). A
- * run of empty reads is cancelled too (BodyStalledError): they never reach the cap. The parts are
- * gathered in one local list, appended to in place: a copy at every read would make a body sent a
- * byte at a time cost the square of its size.
+ * grows past the cap is cancelled at that read (BodyTooLargeError). A run of empty reads is
+ * cancelled too (BodyStalledError): they never reach the cap. A read that fails cancels the body as
+ * well, and the reader's lock is released however the read ends. The parts are gathered in one
+ * local list, appended to in place: a copy at every read would make a body sent a byte at a time
+ * cost the square of its size.
  */
 export async function readBytes(
   body: ReadableStream<Uint8Array> | null,
@@ -87,23 +107,12 @@ export async function readBytes(
   refuseByLength(body, maxBytes, contentLength);
   if (!body) return new Uint8Array(0);
   const reader = body.getReader();
-  const cancel = () => reader.cancel().catch(logCancelFailure);
-  const parts: Uint8Array[] = [];
-  let size = 0;
-  let emptyReads = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) return joined(parts, size);
-    emptyReads = value.byteLength === 0 ? emptyReads + 1 : 0;
-    if (emptyReads >= MAX_EMPTY_READS) {
-      cancel();
-      throw new BodyStalledError();
-    }
-    size += value.byteLength;
-    if (size > maxBytes) {
-      cancel();
-      throw new BodyTooLargeError(maxBytes);
-    }
-    if (value.byteLength > 0) parts.push(value);
+  try {
+    return await gather(reader, maxBytes);
+  } catch (error) {
+    reader.cancel().catch(logCancelFailure);
+    throw error;
+  } finally {
+    reader.releaseLock();
   }
 }

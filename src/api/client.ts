@@ -82,7 +82,10 @@ export type CallOptions = {
 export type ParsedCallOptions<S extends z.ZodTypeAny> = CallOptions & { readonly schema: S };
 
 export type StreamCallOptions = CallOptions & {
-  /** The status must arrive within this long; the client's own when not given. No cap after it. */
+  /**
+   * The status must arrive within this long; the client's own when not given. A body read as it
+   * arrives has no deadline after it; one read whole (bytes()) stays under it until it is in.
+   */
   readonly connectTimeoutMs?: number;
 };
 
@@ -204,10 +207,14 @@ async function checked<R extends TransportResponse>(
   throw error;
 }
 
+function noAnswer(timeoutMs: number): Error {
+  return new Error(`no answer within ${timeoutMs} ms`);
+}
+
 function failure(error: unknown, deadline: Deadline, call: CallOptions, timeoutMs: number) {
   if (isApiError(error)) return error;
   if (call.signal?.aborted) return isAbortError(error) ? error : abortError();
-  const cause = deadline.timedOut() ? new Error(`no answer within ${timeoutMs} ms`) : error;
+  const cause = deadline.timedOut() ? noAnswer(timeoutMs) : error;
   return new ApiError('network', { cause });
 }
 
@@ -281,19 +288,29 @@ async function* chunksThen(response: StreamingResponse, done: () => void): Async
   }
 }
 
-/** The opened stream, releasing the caller's abort listener once its body is finished with. */
-function disposing(response: StreamingResponse, dispose: () => void): StreamingResponse {
+/**
+ * The opened stream. Read as it arrives, the connect deadline stops and the body runs as long as
+ * the server keeps it open. Read whole (bytes()), the deadline keeps running until the body is in,
+ * so a body that drips cannot hold the call open without end. Either way the caller's abort
+ * listener is released once the body is finished with.
+ */
+function opened(response: StreamingResponse, deadline: Deadline, ms: number): StreamingResponse {
   return {
     status: response.status,
     bytes: async (maxBytes) => {
       try {
         return await response.bytes(maxBytes);
+      } catch (error) {
+        throw deadline.timedOut() ? new ApiError('network', { cause: noAnswer(ms) }) : error;
       } finally {
-        dispose();
+        deadline.dispose();
       }
     },
     header: (name) => response.header(name),
-    chunks: () => chunksThen(response, dispose),
+    chunks: () => {
+      deadline.settle(); // the body may now run as long as it needs
+      return chunksThen(response, deadline.dispose);
+    },
   };
 }
 
@@ -306,10 +323,8 @@ async function open(
   const connectTimeoutMs = call.connectTimeoutMs ?? ctx.connectTimeoutMs;
   const deadline = startDeadline(connectTimeoutMs, call.signal);
   try {
-    const opened = await ctx.transport.stream({ ...request, signal: deadline.signal });
-    const response = await checked(ctx, opened, token);
-    deadline.settle(); // the server answered: the body may now run as long as it needs
-    return disposing(response, deadline.dispose);
+    const response = await ctx.transport.stream({ ...request, signal: deadline.signal });
+    return opened(await checked(ctx, response, token), deadline, connectTimeoutMs);
   } catch (error) {
     deadline.dispose();
     throw failure(error, deadline, call, connectTimeoutMs);

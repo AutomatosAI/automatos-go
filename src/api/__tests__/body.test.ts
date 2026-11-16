@@ -181,3 +181,52 @@ describe('readBytes against a body sent badly', () => {
     expect(Array.from(bytes)).toEqual([120, 120]);
   });
 });
+
+describe('readBytes when a read fails', () => {
+  /** A reader whose second read rejects, recording what readBytes does with it. */
+  function failingBody() {
+    const seen = { cancelled: false, released: false, reads: 0 };
+    const reader = {
+      read: async () => {
+        seen.reads += 1;
+        if (seen.reads === 1) return { done: false, value: new Uint8Array([1]) };
+        throw new Error('connection reset');
+      },
+      cancel: async () => {
+        seen.cancelled = true;
+      },
+      releaseLock: () => {
+        seen.released = true;
+      },
+    };
+    const body = { getReader: () => reader } as unknown as ReadableStream<Uint8Array>;
+    return { body, seen };
+  }
+
+  it('cancels the body and releases its lock, then surfaces the failure', async () => {
+    const { body, seen } = failingBody();
+    await expect(readBytes(body, 1024)).rejects.toThrow('connection reset');
+    expect(seen).toEqual({ cancelled: true, released: true, reads: 2 });
+  });
+
+  it('releases the lock after a whole read too, so the stream is not left locked', async () => {
+    const body = bytes([new Uint8Array([1, 2])]);
+    await readBytes(body, 10);
+    expect(body.locked).toBe(false);
+  });
+
+  it('cancels and releases a body it refuses at the cap', async () => {
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.enqueue(new Uint8Array(8));
+      },
+      cancel: () => {
+        cancelled = true;
+      },
+    });
+    await expect(readBytes(body, 10)).rejects.toBeInstanceOf(BodyTooLargeError);
+    expect(cancelled).toBe(true);
+    expect(body.locked).toBe(false);
+  });
+});
