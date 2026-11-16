@@ -16,7 +16,7 @@ import { CACHE_URI, memoryFs, textOf } from './fake-file-system';
 
 vi.mock('expo-file-system', async () => (await import('./fake-file-system')).fakeExpoFileSystem);
 
-const { PARTIAL_SUFFIX, download, partialOf } = await import('../transfer');
+const { ASIDE_SUFFIX, PARTIAL_SUFFIX, download, partialOf } = await import('../transfer');
 const { storageAddress, assertOnServer } = await import('../transfer-request');
 
 const TOKEN = 'jwt.token.value';
@@ -103,6 +103,38 @@ describe('a download', () => {
     const refused = answering(() => reply(500));
     await failureOf(download(clientWith(refused), FILE_URL, target()));
     expect(textOf(TARGET_URI)).toBe('new');
+  });
+
+  it('keeps the earlier copy when the new one cannot be moved in, and leaves nothing aside', async () => {
+    memoryFs.files.set(TARGET_URI, encode('old'));
+    memoryFs.failMove = (from) => from.endsWith(PARTIAL_SUFFIX);
+    const transport = answering(() => partsReply(200, [encode('new')]));
+    await expect(download(clientWith(transport), FILE_URL, target())).rejects.toThrow(
+      'the move failed',
+    );
+    expect(textOf(TARGET_URI)).toBe('old');
+    expect([...memoryFs.files.keys()]).toEqual([TARGET_URI]);
+  });
+
+  it('sets the earlier copy aside, moves the new one in, then deletes the earlier one', async () => {
+    memoryFs.files.set(TARGET_URI, encode('old'));
+    const transport = answering(() => partsReply(200, [encode('new')]));
+    await download(clientWith(transport), FILE_URL, target());
+    const partial = partialOf(target()).uri;
+    const aside = `${TARGET_URI}${ASIDE_SUFFIX}`;
+    expect(memoryFs.ops.slice(1)).toEqual([
+      `mv ${TARGET_URI} -> ${aside}`,
+      `mv ${partial} -> ${TARGET_URI}`,
+      `rm ${aside}`,
+    ]);
+    expect([...memoryFs.files.keys()]).toEqual([TARGET_URI]);
+  });
+
+  it('drops an aside copy an interrupted replace left behind', async () => {
+    memoryFs.files.set(`${TARGET_URI}${ASIDE_SUFFIX}`, encode('stale'));
+    const transport = answering(() => partsReply(200, [encode('new')]));
+    await download(clientWith(transport), FILE_URL, target());
+    expect([...memoryFs.files.keys()]).toEqual([TARGET_URI]);
   });
 
   it("is refused before anything is sent when it is not on the client's own server", async () => {

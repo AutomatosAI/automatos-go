@@ -6,7 +6,8 @@
 // handle (expo-file-system's File.open() and FileHandle.writeBytes()), under a byte cap, so a file
 // is never held whole in memory. It is written to a partial file beside the target and moved into
 // place only once the whole body is in; on a failure, an abort or a cap exceeded the partial file
-// is deleted and the target is left as it was.
+// is deleted and the target is left as it was. A copy already at the target is put aside while
+// the new one moves in, and put back if the move fails: it is deleted only once the new one is in.
 //
 // Nothing here sends a file. The one feature that does, a chat attachment, posts multipart through
 // the client, and Expo's fetch reads every request body whole before it sends it (a stream too), so
@@ -27,6 +28,8 @@ export type DownloadOptions = FileCallOptions & {
 
 /** The partial file's name is the target's with this after it. */
 export const PARTIAL_SUFFIX = '.partial';
+/** Where a copy already at the target waits while the new one moves in. */
+export const ASIDE_SUFFIX = '.old';
 
 /** Where a download is written until it is whole: beside the target, under its name. */
 export function partialOf(target: File): File {
@@ -63,10 +66,32 @@ function closeHandle(handle: Handle, failed: boolean): void {
   }
 }
 
-/** The whole file is in: it replaces whatever the target held. */
+/** The copy that was set aside goes back to the target; failing that, it goes (never left over). */
+function putBack(aside: File, target: File): void {
+  try {
+    new File(aside.uri).move(new File(target.uri));
+  } catch (error) {
+    logger.warn('[api] an earlier copy could not be put back', error);
+    removeQuietly(aside);
+  }
+}
+
+/**
+ * The whole file is in: it replaces whatever the target held. The earlier copy is set aside first
+ * and deleted only once the new one is in place; if the move fails, it is put back.
+ */
 function placeInto(partial: File, target: File): void {
-  if (target.exists) target.delete();
-  partial.move(target);
+  const aside = new File(`${target.uri}${ASIDE_SUFFIX}`);
+  removeQuietly(aside); // one an interrupted replace left
+  const hadCopy = target.exists;
+  if (hadCopy) new File(target.uri).move(aside);
+  try {
+    partial.move(target);
+  } catch (error) {
+    if (hadCopy) putBack(aside, target);
+    throw error;
+  }
+  if (hadCopy) removeQuietly(aside);
 }
 
 function callOf({ signal, timeoutMs, redirectsToStorage }: DownloadOptions): FileCallOptions {
