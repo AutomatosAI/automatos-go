@@ -112,12 +112,12 @@ cell says where the app is today, not where its open branches would put it.
 | 2 Type | Follows | Differs | Follows | Follows |
 | 3 Primitives | Follows | Differs | Follows | Follows |
 | 4 The screen | Partly: the Header is built, the template's own screens are not on it (T26). The routes are thin and only the hook goes back | Differs | Partly | Partly |
-| 5 Navigation | Follows. The Tabs shell is built and not mounted | Differs | Partly | Not built |
-| 6 States | Follows. The out-of-date line is on the thirteen screens and sheets that can hold older data | Partly | Partly | Partly |
+| 5 Navigation | Follows. A link from outside opens a route the one table builds, or Lost. The Tabs shell is built and not mounted | Differs | Partly | Not built |
+| 6 States | Follows. The out-of-date line is on the thirteen screens and sheets that can hold older data, a stale query a screen holds asks again when the app returns to the front, and a suggestion past its expiry leaves at the next minute | Partly | Partly | Partly |
 | 7 First run and asks | Partly: 7.5, the speech recognition string (T28) | Partly | Partly | Not built |
 | 8 Settings | Partly: 8.4, pictures left in the phone's picture cache (T25) | Partly | Partly | Not built |
 | 9 Meeting an AI | Follows | Partly | Follows | 9.1 only in its first release |
-| 10 Accessibility | Partly: five pairs under AA (T16), the kind squares (T31), one list footer not announced (T33) | Partly | Follows | Follows |
+| 10 Accessibility | Partly: five pairs under AA (T16), the kind squares (T31), one list footer not announced (T33), the slider's reason at its limit told only to a screen reader (T34). Every switch is one control with its marks at 3 to 1, and a pill's count is a colour held at AA | Partly | Follows | Follows |
 | 11 Words | Follows | Partly | Follows | Follows |
 | 12 Motion, haptics, sound | Follows | Partly | Follows | Not built |
 | 13 Code | Partly: 13.2, pictures and video (T25) and files sent (T32); 13.6, the backup (T23) | Differs | Follows | Partly |
@@ -164,6 +164,26 @@ The template is held to the standard too. Each line is a rule's "Owed".
 | T31 | Some of the calendar's kind squares read under 3 to 1 as marks on dark grounds | 10.4 | Found by T18. The kind colours are the server repository's own values, as T16's are, so that fix is there. **Done, 16 Nov:** the tool line's spinner and the other marks that painted the accent raw (a tab's rule, a day's dot, the busy ring, the chosen style card's ring and word) read it through `src/ui/accent.ts` |
 | T32 | A file sent without being held in memory | 13.2 | The fetch implementation reads a request body whole before it sends it, and the file system's own uploader follows a redirect with its headers, so none is built. The 50 MB limit on an attachment bounds it |
 | T33 | One list footer's live region on `useAnnounce`: Older chats' footer, where Load more's failure appears after a tap | 10.2 | Found by the announcement audit (16 Nov), which lists it in `settings/announcements.ts`. Its file changed in parallel, so only the out-of-date line went in with that change |
+| T34 | A line a sighted person can read that says why the slider's thumb stops at its limit | 10.4 | The part past the limit is drawn faded and is decoration: it reads about 1 to 1 on its track, and the contrast test does not hold it. The thumb stops there and the value is said in words, but only a screen reader is told why (`src/ui/Slider.tsx`) |
+
+## Found by a copy while lifting, fixed 16 Nov
+
+These were faults in the template's own code. A copy that reads the template closely while it
+lifts it is how they are found. Each is fixed in the template, and recorded in the standard's
+Changes.
+
+| Fault | Rule | Found by |
+|---|---|---|
+| A link from outside that the one table could not map went to the router as it came, so a crafted link could open any screen. App A's security review of its own table found it; the template's gap was wider | 5.2 | App A |
+| Back, with nothing behind and a fallback that was the screen already showing, put the screen in its own place, and the Header drew a Back that did nothing on it | 4.2 | App A |
+| A switch row's only touch was the native switch inside it, not the row, and the off track read under 3 to 1 under the thumb and on the page in every palette | 10.1, 10.4 | App A |
+| `StateGlyph` took any colour name, and the screen reader read its glyph beside the state's word | 1.4, 10.6 | App A |
+| A pill's count was its label's ink under an opacity, which no test measured | 10.5 | App A |
+| A return from the background asked the server nothing, so a screen could show old data with no out-of-date line | 6.4 | App C |
+| A suggestion past its expiry stayed offered until its list changed, though its Start would be refused | 6.5 | App A |
+| CI's actions were pinned to tags, which can be moved to other code after review | 14.1 | App A |
+| Text a server chooses was trimmed and cut with patterns whose work grew with the square of a long run | 13.2a | App A |
+| Comments gave `space3` as 12 or 6 points. It is 8 | 3.3 | App A |
 
 ## Open for the owner
 
@@ -187,12 +207,18 @@ The template is held to the standard too. Each line is a rule's "Owed".
   C keeps two rows of its own for them). It comes into the template when a second app needs it.
 - Whether an in-app browser counts as a web view under rule 13.8 (App C refuses it). The template
   itself uses one, so this is a question, not yet a rule.
+- Where a signed record and an unsigned page about the same thing are both drawn, the signed one
+  is the truth for everything it carries, and a page is refused unless it is the one asked for
+  (App C).
+- A store that cannot open what it kept says so, for anything a person wrote (App C).
+- A test over the syntax tree that holds which modules may load a feature and which may call the
+  client (App C).
 
 ## Actions
 
 | Who | What |
 |---|---|
-| Template | T12, T16, T23 to T26, T28, T29 and T31 to T33. Record each in the standard's Changes as it lands |
+| Template | T12, T16, T23 to T26, T28, T29 and T31 to T34. Record each in the standard's Changes as it lands |
 | App A | `TEMPLATE.md` is written, with a row per rule and the three stages sized. Ship what is waiting first. Nothing from the standard goes into that work |
 | App B | `TEMPLATE.md` is written. Give T4 and T6 back. Bring back and its one short control into line (4.2, 3.2). Rebuild its scene frame on Screen when it is next touched |
 | App C | Build its screens on the Tabs shell with drawn chrome. The Header and TabBar it built to the contract are in the template (T1, T2, 16 Nov): take the template's at the next catch-up, where the pure module is `header-model.ts`. Move its lineage into `TEMPLATE.md` |

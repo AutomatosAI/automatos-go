@@ -58,9 +58,11 @@ whether it is light or dark, so the status bar and the system's controls follow.
 **1.4 A status is never colour alone. (Must)** A state is painted from its role token and always
 carries a word or a glyph. The states are the app's own. They paint through one table onto the
 shape's role names, not from a second set of colours. A state's word is a Text tone from that
-table, and its glyph is drawn by `StateGlyph`. Template: `src/ui/state-tokens.ts`,
-`src/ui/StateGlyph.tsx`, `src/ui/StatusPip.tsx`. Held by: `src/ui/__tests__/state-tokens.test.ts`
-and `src/release/__tests__/text-tones.test.ts`.
+table, and its glyph is drawn by `StateGlyph`, which takes the state and nothing else, so no
+feature hands it a colour. The glyph sits beside the word and is hidden from the screen reader
+(rule 10.6). Template: `src/ui/state-tokens.ts`, `src/ui/StateGlyph.tsx`, `src/ui/StatusPip.tsx`.
+Held by: `src/ui/__tests__/state-tokens.test.ts`, `src/ui/__tests__/state-glyph.test.ts` and
+`src/release/__tests__/text-tones.test.ts`.
 
 **1.5 A picture's colours are their own file. (Shaped)** The colours of an illustration or a
 scene sit in a token file of their own. Text is drawn over a picture only on one flat colour of
@@ -132,10 +134,13 @@ owns a list. Template: `src/ui/Screen.tsx`.
 
 **4.2 One header. (Must)** A screen's header is one component built from the tokens: back, a
 title and at most two actions (its type refuses a third). Back goes through one hook that falls
-back to home when there is nothing behind. An app does not use the system's header or tab bar in
-their place (the record, decision D3). Template: `src/ui/Header.tsx`, its logic in
+back to home when there is nothing behind. It stays, and does nothing, on a tab's root and where
+nothing is behind and the fallback is the screen already showing. The Header draws no Back where
+pressing it would do nothing, by the same rule. An app does not use the system's header or tab bar
+in their place (the record, decision D3). Template: `src/ui/Header.tsx`, its logic in
 `src/ui/header-model.ts` and its collapsing title in `src/ui/use-collapsing-title.ts`;
-`src/navigation/use-go-back.ts`, whose rule is the pure `src/navigation/back.ts`. Held by:
+`src/navigation/use-go-back.ts` (`useBack`, which also hands the Header its move, and
+`useGoBack`), whose rule is the pure `backMove` in `src/navigation/back.ts`. Held by:
 `src/ui/__tests__/header.test.ts`, `src/navigation/__tests__/go-back.test.ts`, which also walks
 every product file: no file but the hook calls the router's back. A copy keeps the pure module's
 name, `header-model.ts`: a `header.ts` beside `Header.tsx` clashes on a file system that ignores
@@ -156,9 +161,10 @@ That function takes no props, may name what it reads from the params, calls no o
 no function inside, and returns one element with no children: a screen from `src/`, or a
 `Redirect`. A layout file is not a screen: it is held only to declaring its stack. Nor is
 `app/+native-intent.tsx`, the router's file for links the system hands over, which
-`src/navigation/__tests__/system-links.test.ts` holds to passing them on. A route that cannot be
-thin is on the audit's allowed list with its reason. One is: an alias of the chat route. Template:
-`app/welcome.tsx`, the rule in `src/release/__tests__/support/route-files.ts`, the list in
+`src/navigation/__tests__/system-links.test.ts` holds to handing them to rule 5.2's one table. A
+route that cannot be thin is on the audit's allowed list with its reason. One is: an alias of the
+chat route. Template: `app/welcome.tsx`, the rule in
+`src/release/__tests__/support/route-files.ts`, the list in
 `src/release/__tests__/settings/thin-routes.ts`. Held by:
 `src/release/__tests__/thin-routes.test.ts`.
 
@@ -173,8 +179,16 @@ built once in the app that needs it and comes into the template when a second ap
 `src/navigation/routes.ts`. No path is written by hand anywhere else.
 
 **5.2 One way in from outside. (Must)** A notification, a link or a scan becomes an app route
-through one table, and what it carries is checked before anything opens. Template:
-`src/navigation/web-links.ts`, `app/+native-intent.tsx`.
+through one table, and what it carries is checked before anything opens. In a release build,
+nothing from outside reaches the router but a route that table builds: anything else opens Lost
+(`routes.lost`). A link over 2,048 characters is not parsed. A link with a scheme is read only
+when it is https on the one host the app claims for its links, or the app's own scheme: another
+scheme or another host opens Lost. An id from outside holds letters, digits, dot, underscore and
+hyphen, at most 128, and is never `.` or `..` (`isUsableId` in `src/navigation/routes.ts`). A
+development build alone lets a link the table cannot map go on as it came. Template:
+`src/navigation/web-links.ts`,
+`app/+native-intent.tsx`. Held by: `src/navigation/__tests__/system-links.test.ts` and
+`src/navigation/__tests__/routes.test.ts`.
 
 **5.3 A gate before the screens. (Must)** One pure, tested table decides what a person sees
 before the app proper: each first-run stage, sign-in, consent, then the app. The screens behind
@@ -230,13 +244,21 @@ line that says so. Not set up, offline, waiting to send and not downloaded are n
 their own words, never a spinner that does not end. The out-of-date line is `OutOfDateNote`, on
 every screen and sheet that can hold older data: thirteen, listed in
 `src/release/__tests__/settings/named-states.ts`. A failed refresh keeps what the screen holds,
-under the line. The failed state is for a read that holds nothing. Template:
-`src/ui/OutOfDateNote.tsx`. Held by: `src/release/__tests__/named-states.test.ts`, which walks the
-words of each named state and checks that each listed screen draws the line.
+under the line. The failed state is for a read that holds nothing. Coming back from the background
+asks again: TanStack's focus follows the app's foreground state, wired once beside the query
+client, so a stale query a screen holds is read again on a real return, and shows fresh data or
+keeps what it held under the line. A short flip to inactive and back, such as a permission prompt,
+asks nothing, and a query with a rule of its own for a return opts out. Template:
+`src/ui/OutOfDateNote.tsx`, `src/api/app-focus.ts`. Held by:
+`src/release/__tests__/named-states.test.ts`, which walks the words of each named state and checks
+that each listed screen draws the line, and `src/api/__tests__/app-focus.test.ts`.
 
 **6.5 Nothing is shown that does not work. (Must)** A row, a tab or a button appears only when
 what it opens exists. No "coming soon". And what has shipped can be reached: two taps from an
-obvious entry. Held by: review.
+obvious entry. What stops working while it is on screen leaves it: in the template, a suggestion
+past its expiry leaves at the next minute, though its list has not changed. Template:
+`src/suggestions/use-suggestions.ts`. Held by: review, and for a suggestion's expiry
+`src/suggestions/__tests__/expiry-tick.test.ts`.
 
 **6.6 One toast. (Must)** A short confirmation goes through the one toast provider. Template:
 `src/ui/ToastProvider.tsx`.
@@ -328,9 +350,15 @@ Template: `src/voice/`.
 
 **10.1 Touch targets are 44 points. (Must)** A smaller control reaches 44 through its hit slop.
 The text field is drawn 40 points tall and sits in a frame whose slop grows it to 44, and
-`buildControlSizes` holds the field to the target with the other controls. Template: `MIN_TOUCH`
-and `hitSlopFor` in `src/ui/paint.ts`, `fieldTouch` in `src/ui/variants.ts`. Held by:
-`src/ui/__tests__/touch-targets.test.ts`, `src/styles/__tests__/controls.test.ts`.
+`buildControlSizes` holds the field to the target with the other controls. A switch is one
+control. In a row, the row is the control: a press anywhere on it turns the switch, it carries the
+role, the name and the state, and the native switch inside is drawn only, neither a second target
+nor a second stop. On its own, the switch and its word are the control, grown to 44 by the slop.
+Every switch in the app, a style's own included, takes its state from the one model. Template:
+`MIN_TOUCH` and `hitSlopFor` in `src/ui/paint.ts`, `fieldTouch` in `src/ui/variants.ts`;
+`src/ui/SwitchRow.tsx`, `src/ui/Switch.tsx`, `src/ui/switch-model.ts`. Held by:
+`src/ui/__tests__/touch-targets.test.ts`, `src/styles/__tests__/controls.test.ts`,
+`src/ui/__tests__/every-switch.test.ts`.
 
 **10.2 Every control has a name. (Must)** A control that shows no words has an accessibility
 label, and a button that is only an icon is the IconButton, whose type requires one. Held by:
@@ -353,17 +381,28 @@ rule, a dot, a cursor) reads at 3 to 1 or more, from one lookup. Template:
 `src/styles/contrast.ts`, `src/ui/accent.ts`. Held by: `src/styles/__tests__/contrast.test.ts`
 and `src/ui/__tests__/accent.test.ts`. The tool line's spinner and the other marks that painted
 the accent raw (a tab's rule, a day's dot, the busy ring, the chosen style card's ring and word)
-read it through `src/ui/accent.ts`, and `accent.test.ts` checks each mark. Owed: some of the
-calendar's kind squares read under 3 to 1 as marks on dark grounds. Their colours are the server
-repository's own values.
+read it through `src/ui/accent.ts`, and `accent.test.ts` checks each mark. Every mark of a switch
+reads at 3 to 1: each track on the page and on a card, and the thumb on each track. Each track is
+the first token in its list that reads there, by the accent's lookup (`switchTokens` in
+`src/ui/switch-model.ts`, `firstMark` in `src/ui/accent.ts`), and the contrast test holds the pairs
+in every palette. The slider's part past its limit is drawn faded and is decoration, not a mark:
+the thumb stops there and the value is said in words. Owed: some of the calendar's kind squares
+read under 3 to 1 as marks on dark grounds. Their colours are the server repository's own values.
+Also owed: only a screen reader is told why the slider's thumb stops at its limit. A sighted
+person has no line that says it.
 
 **10.5 Text to be read is never dimmed. (Must)** Read, quiet or secondary text takes a muted
 token, never an opacity set on the text or on what holds it, so its contrast can be tested. A
 token that carries transparency is allowed where the contrast test blends it over every ground it
-is drawn on. A disabled control may dim.
+is drawn on. A count beside a pill's label is a colour held at 4.5 to 1 on each ground it is drawn
+on, idle, pressed and selected, never its label's ink under an opacity. A disabled control may
+dim, and a pressed one while it is pressed. Template: `src/ui/pill-count.ts`. Held by:
+`src/styles/__tests__/contrast.test.ts`, `src/ui/__tests__/pill-count.test.ts`.
 
 **10.6 Decoration carries no meaning. (Must)** A picture, a scene or a character is hidden from
-VoiceOver and is never the only way something is said.
+VoiceOver and is never the only way something is said. So is a state's glyph beside its word: the
+word says the state (rule 1.4). Template: `src/ui/StateGlyph.tsx`. Held by:
+`src/ui/__tests__/state-glyph.test.ts`.
 
 **10.7 The largest text is checked on a phone. (Must)** Before a release, every screen is walked
 at the largest text size. Template: `docs/release/accessibility-pass.md`.
@@ -432,9 +471,14 @@ way out. Also owed: an upload that does not hold the file in memory and follows 
 **13.2a Every body is read under a cap. (Must)** The client cannot read an answer whole without a
 size limit: the transport gives a body as bytes up to the caller's cap, or as it arrives, and
 nothing else. An answer over its cap is refused and read no further. An error's body over its cap
-gives no detail, and its status alone says what kind of error it is. Template:
-`src/api/transport-types.ts`, `src/api/body.ts`, the caps in `src/api/config.ts`. Held by:
-`src/api/__tests__/client-caps.test.ts`.
+gives no detail, and its status alone says what kind of error it is. A cap bounds the size, not
+the work: text a server chooses is never trimmed or cut with a pattern whose work grows with the
+square of its length. It is read once, by the single passes in `src/lib/text-runs.ts` and
+`src/voice/speech/runs.ts`, each held equal to the pattern it replaced on ordinary input and to
+linear growth on a hostile one. Template: `src/api/transport-types.ts`, `src/api/body.ts`, the
+caps in `src/api/config.ts`, `src/lib/text-runs.ts`, `src/voice/speech/runs.ts`. Held by:
+`src/api/__tests__/client-caps.test.ts`, `src/lib/__tests__/text-runs.test.ts`,
+`src/voice/__tests__/speech-runs.test.ts`, `src/cc/__tests__/deliverable-text-runs.test.ts`.
 
 **13.2b The address a build is given is an address and nothing more. (Must)** https, a host and an
 optional port: no user name or password, no path, no query, no fragment. Plain http only in a
@@ -508,8 +552,11 @@ options are the template's fixed ones and the person has a switch. Template:
 ## 14. Release
 
 **14.1 CI is the gate. (Must)** Typecheck, lint, tests, an iOS bundle check and Expo's doctor, on
-every pull request, from a lockfile install with scripts off. Template:
-`.github/workflows/ci.yml`.
+every pull request, from a lockfile install with scripts off. Every action the repository's own
+workflows use is pinned to a commit, with its release beside it, never to a tag: a tag can be
+moved to other code after review, and a commit cannot. One workflow in this repository is never
+edited and still pins by tag: what it pins is its owner's to change. Template:
+`.github/workflows/ci.yml`. Held by, for the pins: `src/config/__tests__/workflow-pins.test.ts`.
 
 **14.2 The release audits travel with the copy and stay. (Must)** An audit changes only because
 the product changed, and says why in its own comment. What differs by app is in one settings
@@ -654,6 +701,14 @@ template, or records why not.
 | 16 Nov 2026 | Every file under `app/` is held to a stated thin-route rule (4.4), and the Settings screen lives in `src/settings/SettingsScreen.tsx`, which its route only mounts (8.1). A layout is held only to declaring its stack, and one alias route is on the allowed list with its reason. A copy takes `src/release/__tests__/thin-routes.test.ts`, `support/route-files.ts` and `settings/thin-routes.ts`, and moves what its own routes hold into `src/`. |
 | 16 Nov 2026 | No file but `useGoBack` calls the router's back (4.2). The chat route, Older chats and the voice screen, which wrote the rule by hand, go through the hook, and `go-back.test.ts` refuses any other caller. A copy takes `src/navigation/__tests__/go-back.test.ts`, and moves its own back buttons onto `useGoBack`. |
 | 16 Nov 2026 | The text field takes the 44-point touch (10.1). It is still drawn 40 tall, inside a frame whose slop grows it to 44, and `buildControlSizes` holds the field to the target. A copy takes `src/ui/TextField.tsx`, `src/ui/variants.ts` and `src/styles/controls.ts`, with `src/ui/__tests__/touch-targets.test.ts` and `src/styles/__tests__/controls.test.ts`. |
+| 16 Nov 2026 | A link from outside opens a route the one table builds, or Lost (5.2). Before, a link the table could not map went to the router as it came, so a crafted link could open any screen; now only a development build lets one through, an id from outside is held to `isUsableId`, and a link over 2,048 characters is not parsed. A copy takes `src/navigation/web-links.ts`, `routes.ts` (its `lost` route and `isUsableId`), `app/+native-intent.tsx` and `src/api/url.ts`, with `system-links.test.ts`, `web-links.test.ts` and `routes.test.ts`, and sets `APP_LINK_HOST` to its own host. |
+| 16 Nov 2026 | Back has a third move, stay (4.2): on a tab's root, and where nothing is behind and the fallback is the screen already showing, it does nothing; before, in that second case, it put the screen in its own place. The Header draws no Back where the move is stay, read from the same rule through `useBack`, and `showsBack` takes the move, not `root`. A copy takes `src/navigation/back.ts`, `use-go-back.ts`, `src/ui/Header.tsx` and `header-model.ts`, with `go-back.test.ts` and `header.test.ts`. |
+| 16 Nov 2026 | A switch is one control and every mark of it reads at 3 to 1 (10.1, 10.4): a switch row is the control, the native switch inside is drawn only, every switch in the app, a style's own included, takes its state from the one model, and each track is the first token in its list that reads on the page and on a card. This changes what a person sees: the off track, in every style. A copy takes `src/ui/switch-model.ts`, `Switch.tsx`, `SwitchRow.tsx` and `accent.ts`, with `switch-model.test.ts`, `every-switch.test.ts` and the switch pairs in `src/styles/__tests__/contrast.test.ts`, and moves any switch of its own onto the model. |
+| 16 Nov 2026 | `StateGlyph` takes a state, never a colour, and is hidden from the screen reader (1.4, 10.6). Its props were a glyph and a colour name; it now takes `state` alone, and draws the glyph and its token from `stateGlyphMark` in `src/ui/state-tokens.ts`. A copy takes `src/ui/StateGlyph.tsx`, `state-tokens.ts` and `src/ui/__tests__/state-glyph.test.ts`, and changes each of its callers to pass the state. |
+| 16 Nov 2026 | A pill's count is a colour held at AA on each ground it is drawn on, idle, pressed and selected, not its label's ink under an opacity (10.5); where three quarters of the ink would read under AA, the count takes the ink itself, which changed some counts in two styles. Rule 10.5 now says that a pressed control may dim while it is pressed, as the primary button does. A copy takes `src/ui/pill-count.ts`, `Pill.tsx`, `variants.ts` and `src/styles/contrast.ts`, with `pill-count.test.ts` and the count's pairs in the contrast test. |
+| 16 Nov 2026 | Coming back from the background asks again (6.4): TanStack's focus follows the app's foreground state, wired once beside the query client, so a stale query a screen holds is read again on a real return, and a short flip to inactive asks nothing. Before, nothing wired it, so a return asked again only where a screen did so itself. A copy takes `src/api/app-focus.ts` and its call in `src/app-state/query-root.tsx`, with `app-focus.test.ts`, and sets `refetchOnWindowFocus: false` on any query with a return rule of its own. |
+| 16 Nov 2026 | Every action the repository's own workflows use is pinned to a commit, with its release beside it, not to a tag (14.1). `workflow-pins.test.ts` refuses any other `uses:`, read as lines and as YAML, and holds the CI job names. A copy takes `src/config/__tests__/workflow-pins.test.ts`, and pins its own workflows at commits. |
+| 16 Nov 2026 | Text a server chooses is trimmed and cut in one read, never with a pattern whose work grows with the square of its length (13.2a). Each single pass answers as the pattern it replaced on ordinary and random input, and grows linearly on a long run. A copy takes `src/lib/text-runs.ts`, `src/voice/speech/runs.ts` and the files that call them (`sentences.ts`, `speakable.ts`, `src/cc/deliverables/detail.ts`, `file-source.ts`), with their tests and `src/lib/__tests__/growth.ts`. |
 
 ## Related
 
