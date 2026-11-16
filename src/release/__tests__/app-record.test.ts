@@ -103,11 +103,31 @@ describe('the checker, on made-up records', () => {
     ]);
   });
 
-  it("names a blank 'what this app does' or 'stays, or closes with'", () => {
-    const rows = ['| 5.4 |  | Four places | Stays |', '| 9.4 | Does not apply | No voice |  |'];
+  it("names a difference's blank 'what this app does', 'why' or 'stays, or closes with'", () => {
+    const rows = [
+      '| 5.4 |  | Four places | Stays |',
+      '| 9.4 | Does not apply | No voice |  |',
+      '| 14.3 | No updates over the air |  | Stays |',
+    ];
     expect(recordFaults(record(LINEAGE, rows), CITABLE)).toEqual([
       "difference 1 leaves 'What this app does' blank",
       "difference 2 leaves 'Stays, or closes with' blank",
+      "difference 3 leaves 'Why' blank",
+    ]);
+  });
+
+  it("names a 'kept, removed, changed' table with no part, or a part with a blank cell", () => {
+    const part = '| The Tabs shell | Kept, mounted | Four places of equal weight |';
+    const none = record(LINEAGE, GOOD_ROWS).replace(`${part}\n`, '');
+    expect(recordFaults(none, CITABLE)).toEqual(["'## Kept, removed, changed' lists no part"]);
+    const blanks = record(LINEAGE, GOOD_ROWS).replace(
+      part,
+      ['|  | Removed | No voice |', '| Voice |  | No voice |', '| Push | Changed |  |'].join('\n'),
+    );
+    expect(recordFaults(blanks, CITABLE)).toEqual([
+      "kept 1 leaves 'Part' blank",
+      "kept 2 leaves 'Kept, removed or changed' blank",
+      "kept 3 leaves 'Why' blank",
     ]);
   });
 
@@ -141,13 +161,14 @@ if (APP_RECORD.role === 'template') {
     it("passes the standard's example, its '<…>' read as the commits they stand for", () => {
       const example = recordExample(standard);
       expect(example).toContain('Template commit: <40-character sha>.');
-      expect(recordFaults(example, CITABLE, { placeholders: true })).toEqual([]);
+      expect(recordFaults(example, CITABLE, { example: true })).toEqual([]);
     });
 
-    it('refuses those placeholders in a real record', () => {
+    it('refuses those placeholders, and its table with no part, in a real record', () => {
       expect(recordFaults(recordExample(standard), CITABLE)).toEqual([
         "the template commit '<40-character sha>' is not a 40-character sha",
         "the commit the standard was read at '<sha>' is not a sha",
+        "'## Kept, removed, changed' lists no part",
       ]);
     });
 
