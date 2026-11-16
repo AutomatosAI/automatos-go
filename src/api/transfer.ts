@@ -8,6 +8,10 @@
 // place only once the whole body is in; on a failure, an abort or a cap exceeded the partial file
 // is deleted and the target is left as it was. A copy already at the target is put aside while
 // the new one moves in, and put back if the move fails: it is deleted only once the new one is in.
+// Every download listens to one abort that leaving fires (stopDownloads: sign-out, a server
+// switch, src/connect/user-files.ts): a download stopped so places nothing, even when its body
+// ends after the person has gone, because the abort is checked after the last write and before
+// the move, in the same turn as the move.
 //
 // Nothing here sends a file. The one feature that does, a chat attachment, posts multipart through
 // the client, and Expo's fetch reads every request body whole before it sends it (a stream too), so
@@ -18,6 +22,7 @@ import { File } from 'expo-file-system';
 
 import { logger } from '../lib/logger';
 import type { ApiClient } from './client';
+import { abortError, isAbortError } from './errors';
 import { DOWNLOAD_MAX_BYTES } from './config';
 import type { FileCallOptions } from './transfer-request';
 
@@ -98,18 +103,36 @@ function callOf({ signal, timeoutMs, redirectsToStorage }: DownloadOptions): Fil
   return { signal, timeoutMs, redirectsToStorage };
 }
 
+/** One signal for a download: the caller's, if any, and leaving's; release drops the listeners. */
+function joinedSignal(signals: readonly (AbortSignal | undefined)[]) {
+  const joined = new AbortController();
+  const stop = () => joined.abort();
+  const live = signals.filter((signal): signal is AbortSignal => signal !== undefined);
+  live.forEach((signal) => {
+    if (signal.aborted) stop();
+    else signal.addEventListener('abort', stop);
+  });
+  const release = () => live.forEach((signal) => signal.removeEventListener('abort', stop));
+  return { signal: joined.signal, release };
+}
+
+function stopIfAborted(signal: AbortSignal): void {
+  if (signal.aborted) throw abortError();
+}
+
 /** The body written into the partial file, a part at a time; the handle closed however it ends. */
 async function writeInto(
   client: Pick<ApiClient, 'file'>,
   url: string,
   partial: File,
-  options: DownloadOptions,
+  options: DownloadOptions & { readonly signal: AbortSignal },
 ): Promise<void> {
   const handle = openPartial(partial);
   let failed = false;
   try {
     const body = await client.file(url, callOf(options));
     for await (const part of body.parts(options.maxBytes ?? DOWNLOAD_MAX_BYTES)) {
+      stopIfAborted(options.signal);
       handle.writeBytes(part);
     }
   } catch (error) {
@@ -124,16 +147,22 @@ async function fetchInto(
   client: Pick<ApiClient, 'file'>,
   url: string,
   target: File,
-  options: DownloadOptions,
+  options: DownloadOptions & { readonly session: AbortSignal },
 ): Promise<File> {
+  const stop = joinedSignal([options.signal, options.session]);
   const partial = partialOf(target);
   try {
-    await writeInto(client, url, partial, options);
+    stopIfAborted(stop.signal); // stopped while it waited its turn: nothing is created
+    await writeInto(client, url, partial, { ...options, signal: stop.signal });
+    stopIfAborted(stop.signal); // stopped while the last part came: nothing is placed
     placeInto(partial, target);
     return target;
   } catch (error) {
     removeQuietly(partial);
-    throw error;
+    // a file-system failure after the stop (its folder deleted under it) is the stop
+    throw stop.signal.aborted && !isAbortError(error) ? abortError() : error;
+  } finally {
+    stop.release();
   }
 }
 
@@ -141,6 +170,21 @@ type Running = { readonly url: string; readonly done: Promise<File> };
 
 /** Downloads running, by target: a target is only ever written by one of them at a time. */
 const running = new Map<string, Running>();
+
+/** What every download running now listens to; stopDownloads fires it and starts a new one. */
+let leaving = new AbortController();
+
+/**
+ * Stops every download running now (the person is leaving: sign-out, a server switch). None of
+ * them places a file afterwards, whenever its body ends; each rejects with an AbortError. A later
+ * ask, for the same target too, downloads afresh.
+ */
+export function stopDownloads(): void {
+  const left = leaving;
+  leaving = new AbortController();
+  running.clear();
+  left.abort();
+}
 
 /**
  * `url` on the client's server written to `target`, through a partial file; the target once it is
@@ -163,9 +207,10 @@ export function download(
     () => undefined,
     () => undefined,
   );
+  const session = leaving.signal;
   const done: Promise<File> = (async () => {
     await earlier;
-    return fetchInto(client, url, target, options);
+    return fetchInto(client, url, target, { ...options, session });
   })().finally(() => {
     if (running.get(key)?.done === done) running.delete(key);
   });
