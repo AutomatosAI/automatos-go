@@ -224,6 +224,25 @@ standard's Changes.
 - If the template ever adds sign-in through another company, its link table needs an entry for the
   return address: an exact path, on the app's own scheme only, its query handed to the sign-in
   library and to nothing else (App A, whose table is the donor). The template has no such sign-in.
+- The word audit reads only `strings.ts` and `*-copy.ts` files, so a copy whose words sit in a
+  source it shares from outside the app needs a list of its own for them (App C).
+- The thin-route check refuses a layout built on the template's own Tabs pattern, so a copy on the
+  Tabs shell lists its layouts in `settings/thin-routes.ts` (App C).
+- The TabBar's chrome can name a tab's word only by a body size (`labelLevel`), never by another
+  type role (App C).
+- The settings audit and the imports audit read `scripts/__tests__` by name and fail when a copy
+  has none, and the identity settings ask for fields a copy may not have (App C).
+- Several files fail under the compiler's unchecked-index option (`noUncheckedIndexedAccess`),
+  which the template does not turn on (App C).
+- The record's test imports the rules generator, so a copy must carry
+  `scripts/generate-standard-rules.mjs` to take the test (App C).
+- Three tests read files only the template has, so a copy cannot take them as they are (App C).
+- The audit of what the audits import reads only the audits' own folders, so a module an audit
+  loads from elsewhere is not held to its list (App C).
+- Rule 6.4's audit assumes the query library: it finds a screen's failed refresh through its
+  query's refetch error, so a copy that reads its data another way cannot take it as it is (App C).
+- An announcement on a line that also carries an age ("Updated 2 min ago") is said again each time
+  the age changes. The note is in `useAnnounce`'s comment (App C).
 
 ## Actions
 
