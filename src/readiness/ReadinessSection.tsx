@@ -13,7 +13,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { useDress } from '../styles/dress/use-dress';
 import { useTokens } from '../styles/theme';
-import { Button, Card, Divider, ListRow, Section, StateGlyph, Text } from '../ui';
+import { Button, Card, Divider, ListRow, Section, StateGlyph, Text, useAnnounce } from '../ui';
 import type { TextLevel } from '../ui/variants';
 import type { ReadinessState } from './schema';
 import { READINESS_COPY } from './strings';
@@ -80,6 +80,8 @@ export type ReadinessCardProps = {
 
 export function ReadinessCard({ view, onFix, onCheckAgain }: ReadinessCardProps) {
   const { spacing } = useTokens();
+  // Checking…, a refusal or a failed read, said as it changes; the first line is read in order
+  useAnnounce(view.line, true, { changesOnly: true });
   return (
     <Section title={READINESS_COPY.title} aside={view.count}>
       <Card>

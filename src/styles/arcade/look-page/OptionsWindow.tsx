@@ -6,7 +6,7 @@
 
 import { StyleSheet, View } from 'react-native';
 
-import { Text } from '../../../ui';
+import { Text, useAnnounce } from '../../../ui';
 import { ARCADE_OPTIONS_COPY } from '../../strings';
 import type { ArcadeKnob } from '../look-schema';
 import { ArcadeButton } from '../parts/ArcadeButton';
@@ -19,6 +19,7 @@ const said = ARCADE_OPTIONS_COPY;
 
 function SaidLine({ line }: { readonly line: OptionsSaid | null }) {
   const { vars, type } = useArcadePaint();
+  useAnnounce(line?.text);
   if (line === null) return null;
   const failedLine = line.kind === 'failed';
   return (

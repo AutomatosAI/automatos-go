@@ -17,7 +17,7 @@ import type { WebLinkTarget } from '../navigation/web-links';
 import { HUD_CORE } from '../styles/hud/core/model';
 import { useVoiceCore } from '../styles/hud/core/use-voice-core';
 import { useTokens } from '../styles/theme';
-import { Button, Card, Sheet, Text } from '../ui';
+import { Button, Card, Sheet, Text, useAnnounce } from '../ui';
 import { BriefFooter } from './BriefFooter';
 import { sectionHeading, type BriefRowView, type BriefSectionView } from './model';
 import type { Brief } from './schema';
@@ -121,8 +121,9 @@ function HudRow({ view, card }: HudRowProps) {
 /** A suggestion row's '▸ START': Face ID first; the sheet stays open for the done words. */
 function HudStart({ view, card }: HudRowProps) {
   const label = view.row.action?.label;
-  if (!view.start || !label || !card.canStart) return null;
   const refusal = card.refusal(view);
+  useAnnounce(refusal);
+  if (!view.start || !label || !card.canStart) return null;
   return (
     <View style={{ alignSelf: 'flex-start' }}>
       <Button

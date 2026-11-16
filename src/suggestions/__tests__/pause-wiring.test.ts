@@ -53,7 +53,8 @@ describe('the switch', () => {
   it('shows a failure as a line under it, announced, never thrown', () => {
     expect(section).toMatch(/\{view\.line \? \(/);
     expect(section).toContain('accessibilityLiveRegion="polite"');
-    expect(hook).toContain('announce(pauseFailureLine(next));');
+    expect(section).toContain('useAnnounce(view.line, true, { changesOnly: true });');
+    expect(hook).toContain('setFailure(Object.freeze({ paused, error }));');
   });
 });
 

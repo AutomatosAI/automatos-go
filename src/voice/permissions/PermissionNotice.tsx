@@ -7,7 +7,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { useTokens } from '../../styles/theme';
-import { Button, Text } from '../../ui';
+import { Button, Text, useAnnounce } from '../../ui';
 import { MIN_TOUCH } from '../../ui/paint';
 import { PERMISSION_COPY } from '../strings';
 import { permissionNotice, type PermissionVerdict } from './permission-flow';
@@ -22,6 +22,7 @@ export type PermissionNoticeProps = {
 export function PermissionNotice({ verdict }: PermissionNoticeProps) {
   const { spacing } = useTokens();
   const notice = permissionNotice(verdict);
+  useAnnounce(notice?.text, true, { changesOnly: true });
   if (notice === null) return null;
   return (
     <View style={[styles.notice, { gap: spacing.space3 }]}>

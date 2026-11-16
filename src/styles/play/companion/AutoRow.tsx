@@ -7,7 +7,7 @@ import { StyleSheet, View } from 'react-native';
 
 import type { CaptionFacts } from '../../../core/frozen/components/play/chat/caption';
 import type { MascotName } from '../../../core/frozen/lib/mascot/types';
-import { Text } from '../../../ui';
+import { Text, useAnnounce } from '../../../ui';
 import { joinLabel } from '../../../ui/paint';
 import { MASCOT_SIZES } from '../../mascot/geometry';
 import { Mascot } from '../../mascot/Mascot';
@@ -26,9 +26,12 @@ const { autoRow } = COMPANION;
 
 export function AutoRow({ state, facts }: AutoRowProps) {
   const paint = useCompanionPaint();
-  if (!paint) return null;
   const shown = typeof state === 'string' ? state : state.driver.mascot.mascot;
   const status = playStatus(shown, facts);
+  const label = joinLabel(status.word, status.detail);
+  // Auto's state as he works: the one it opens with is read in order, each change is said
+  useAnnounce(label, true, { changesOnly: true });
+  if (!paint) return null;
   const { vars, style } = paint;
   const detailFace =
     status.detailFace === 'mono'
@@ -40,7 +43,7 @@ export function AutoRow({ state, facts }: AutoRowProps) {
       <View
         accessible
         accessibilityRole="text"
-        accessibilityLabel={joinLabel(status.word, status.detail)}
+        accessibilityLabel={label}
         accessibilityLiveRegion="polite"
         style={[styles.words, { gap: autoRow.wordGap }]}
       >

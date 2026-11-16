@@ -6,7 +6,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { useTokens } from '../../styles/theme';
-import { Button, Text } from '../../ui';
+import { Button, Text, useAnnounce } from '../../ui';
 import { MIN_TOUCH } from '../../ui/paint';
 import type { VoiceLine as Line } from './core-props';
 import type { MessageAction } from './voice-view-model';
@@ -20,6 +20,7 @@ export type VoiceLineProps = {
 
 export function VoiceLine({ line, onAction }: VoiceLineProps) {
   const { spacing } = useTokens();
+  useAnnounce(line?.text, true, { changesOnly: true });
   if (line === null) return null;
   const { text, button } = line;
   return (

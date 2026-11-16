@@ -16,7 +16,7 @@ import { useFollowLink } from '../chat/components/follow-link';
 import type { ApprovalView } from '../core/approval-view';
 import { appRouteForWebLink } from '../navigation/web-links';
 import { useTokens } from '../styles/theme';
-import { Button, Sheet, Text } from '../ui';
+import { Button, Sheet, Text, useAnnounce } from '../ui';
 import { tint } from '../ui/paint';
 import { useMinuteClock } from '../cc/shell/use-shell';
 import { approvalSheetView, type ApprovalSheetView, type SheetKind } from './sheet-view';
@@ -98,6 +98,7 @@ type AnswerProps = Pick<ApprovalSheetProps, 'busy' | 'error' | 'onAllow' | 'onRe
 
 function Answers({ sheet, busy, error, onAllow, onRefuse, onAlwaysAllow }: AnswerProps) {
   const { spacing } = useTokens();
+  useAnnounce(error);
   return (
     <View style={{ gap: spacing.space3 }}>
       {sheet.allow ? (

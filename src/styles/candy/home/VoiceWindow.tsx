@@ -9,7 +9,7 @@
 
 import { StyleSheet, View } from 'react-native';
 
-import { Text } from '../../../ui';
+import { Text, useAnnounce } from '../../../ui';
 import type { CandyHomeVoice } from '../../../voice/home/use-candy-home-voice';
 import { VoiceLine } from '../../../voice/screen/VoiceLine';
 import { AiLabel } from '../../ai-label';
@@ -35,6 +35,7 @@ export function voiceWindowShown(voice: WindowVoice): boolean {
 
 export function VoiceWindow({ voice, bottom }: VoiceWindowProps) {
   const { vars, type, rs, shadow } = useCandyPaint();
+  useAnnounce(voice.caption?.label, true, { changesOnly: true });
   if (!voiceWindowShown(voice)) return null;
   const { caption } = voice;
   return (

@@ -1,13 +1,14 @@
 // The owner said no while a request of Auto's still waits on a yes (F091-C2; the web's
 // components/chatbot/withdraw-offer-card.tsx): the offer's words, then each request with Withdraw
 // (denies its grant) and Keep it (sends nothing). Nothing is withdrawn without the click; each
-// request settles on its own as 'Withdrawn.' or 'Kept — it still waits for your yes.'. A role that
+// request settles on its own as 'Withdrawn.' or 'Kept — it still waits for your yes.', said as it
+// settles (a request that had settled before the card was shown is read in order). A role that
 // cannot act reads the requests with the D17 words in place of the buttons.
 
 import { StyleSheet, View } from 'react-native';
 
 import { useTokens } from '../../styles/theme';
-import { Button, Card, Text } from '../../ui';
+import { Button, Card, Text, useAnnounce } from '../../ui';
 import { GRANT_COPY } from '../strings';
 import { grantRefusalText, type CardAccess } from './actions';
 import { ReadOnlyNote, RefusalText } from './CardNotes';
@@ -28,6 +29,7 @@ type RequestProps = {
 function RequestLine({ request, access, onSettled }: RequestProps) {
   const { spacing } = useTokens();
   const call = useCardRequest(request.key, onSettled, grantRefusalText);
+  useAnnounce(request.settled, true, { changesOnly: true });
   const choose = (choice: WithdrawChoice) => {
     const action = withdrawAction(choice, request.grantId);
     if (action.kind === 'settle') onSettled(request.key, action.outcome);

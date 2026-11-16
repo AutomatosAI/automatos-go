@@ -11,7 +11,7 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { useGoBack } from '../../../navigation/use-go-back';
-import { IconButton, Screen, Text } from '../../../ui';
+import { IconButton, Screen, Text, useAnnounce } from '../../../ui';
 import { STYLE_SCREENS } from '../../nav';
 import { StyleScope } from '../../provider/StyleScope';
 import { LOOK_SYNC_COPY, PLAY_LOOK_COPY } from '../../strings';
@@ -34,6 +34,8 @@ const NOTICE_SIZE = 13;
 function Heading({ status }: { readonly status: string }) {
   const goBack = useGoBack(STYLE_SCREENS.settingsStyle);
   const paint = useCompanionPaint();
+  // the line the page opens with is read in order; a change (saved, synced) is said
+  useAnnounce(status, true, { changesOnly: true });
   if (!paint) return null;
   const { vars, style } = paint;
   const { spacing } = style.tokens;

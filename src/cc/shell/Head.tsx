@@ -8,7 +8,7 @@ import { View } from 'react-native';
 
 import { useShellTitle } from '../../styles/dress/use-cc-dress';
 import { useTokens } from '../../styles/theme';
-import { Text } from '../../ui';
+import { Text, useAnnounce } from '../../ui';
 import { SHELL_COPY } from '../strings';
 import { HEAD, ledeFigureFace } from './chrome';
 import { ledeText, type LedePart } from './lede';
@@ -56,6 +56,9 @@ function Title() {
 export function Head({ lede }: { readonly lede: readonly LedePart[] }) {
   const { spacing } = useTokens();
   const eyebrow = useEyebrow();
+  const spoken = ledeText(lede);
+  // the figures it opens with are read in order; a change the stream brings is said
+  useAnnounce(spoken, true, { changesOnly: true });
   return (
     <View
       style={{
@@ -71,7 +74,7 @@ export function Head({ lede }: { readonly lede: readonly LedePart[] }) {
         <Text
           level={HEAD.ledeLevel}
           tone={HEAD.ledeTone}
-          accessibilityLabel={ledeText(lede)}
+          accessibilityLabel={spoken}
           accessibilityLiveRegion="polite"
         >
           {lede.map((part, index) => (

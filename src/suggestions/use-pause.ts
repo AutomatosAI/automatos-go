@@ -3,13 +3,12 @@
 // older server shows Settings unchanged and lists no suggestions anyway). The Settings switch
 // (PauseSection.tsx) and the home's open list (use-suggestions.ts) share the one query, so a press
 // takes the suggestions off every surface as soon as the server answers. A press is one PUT, never
-// while one is out; a refusal puts the switch back, is kept as the line under it and announced to
-// VoiceOver (iOS has no live regions). Only wiring: the calls, the cache and the words are
-// pause.ts's.
+// while one is out; a refusal puts the switch back and is kept as the line under it, which says it
+// to VoiceOver as it appears (PauseSection.tsx, useAnnounce: iOS has no live regions). Only wiring:
+// the calls, the cache and the words are pause.ts's.
 
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
-import { AccessibilityInfo, Platform } from 'react-native';
 
 import { canSuggestions } from '../api/capabilities';
 import { NEEDS_YOU_REFETCH_INTERVAL_MS } from '../api/needs-you';
@@ -18,17 +17,12 @@ import { logger } from '../lib/logger';
 import {
   applyPause,
   fetchMyProactive,
-  pauseFailureLine,
   pausedNow,
   pauseQueryKeys,
   pauseView,
   type PauseFailure,
   type PauseView,
 } from './pause';
-
-function announce(line: string): void {
-  if (Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(line);
-}
 
 /** GET /api/proactive/me for this server's workspace, only when `enabled`. */
 function useMyProactive(enabled: boolean, refetchInterval?: number) {
@@ -66,9 +60,7 @@ function useSavePause(key: QueryKey) {
     onMutate: () => setFailure(null),
     onError: (error: unknown, paused: boolean) => {
       logger.warn('[suggestions] the pause was refused or failed', error);
-      const next: PauseFailure = Object.freeze({ paused, error });
-      setFailure(next);
-      announce(pauseFailureLine(next));
+      setFailure(Object.freeze({ paused, error }));
     },
   });
   const run = useCallback(

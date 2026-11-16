@@ -1,10 +1,11 @@
 // The app's one toast: useToast().show('Answered — the agent is resuming.') from any screen or
 // sheet. One at a time, each for 2.4 s; a new one replaces the one on screen (overlay.ts:
-// toastReducer). VoiceOver hears it through an announcement (iOS has no live regions); TalkBack
-// through the toast's live region. The app shell mounts this once, inside the theme.
+// toastReducer). Each toast is mounted by its id, so Toast announces it once as it appears
+// (TalkBack through its live region, VoiceOver through useAnnounce). The app shell mounts this
+// once, inside the theme.
 
 import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react';
-import { AccessibilityInfo, Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
 import { Toast } from './Toast';
 import {
@@ -36,7 +37,6 @@ export function ToastProvider({
 
   useEffect(() => {
     if (!current) return undefined;
-    if (Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(current.message);
     const timer = setTimeout(() => dispatch({ type: 'expire', id: current.id }), TOAST_DURATION_MS);
     return () => clearTimeout(timer);
   }, [current]);

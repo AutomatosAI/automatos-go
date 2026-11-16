@@ -13,6 +13,7 @@ export { ErrorState, type ErrorStateProps } from './ErrorState';
 export { Header, type HeaderAction, type HeaderActions, type HeaderProps } from './Header';
 export { SCROLL_EVENT_THROTTLE_MS, type CollapsingTitle } from './header-model';
 export { useCollapsingTitle, type CollapsingTitleHandlers } from './use-collapsing-title';
+export { useAnnounce, type AnnounceOptions } from './use-announce';
 export { TabBar, type TabBarProps } from './TabBar';
 export {
   TABS_MOST,
