@@ -74,6 +74,8 @@ describe('src/ui: accessibility', () => {
         'Pill',
         'SegmentedControl',
         'Sheet',
+        'Switch',
+        'SwitchRow',
         'TabBar',
         'TextField',
       ].sort(),

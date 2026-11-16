@@ -24,9 +24,23 @@ const GROUNDS: readonly ColourName[] = ['background', 'card'];
 const CANDIDATES: readonly ColourName[] = ['accent', 'primary', 'foreground'];
 const LAST_RESORT: ColourName = 'foreground';
 
-function readsOnEveryGround(colours: Colours, token: ColourName): boolean {
+function readsOn(colours: Colours, token: ColourName, grounds: readonly ColourName[]): boolean {
   const ink = solid(colours[token]);
-  return GROUNDS.every((ground) => contrastRatio(ink, solid(colours[ground])) >= MARK_CONTRAST);
+  return grounds.every((ground) => contrastRatio(ink, solid(colours[ground])) >= MARK_CONTRAST);
+}
+
+/**
+ * The first of `candidates` that reads as a mark (3 to 1) on every one of `grounds` in this
+ * palette, else `fallback`. The accent's lookup below, and the switch's track and thumb
+ * (switch-model.ts), are this.
+ */
+export function firstMark(
+  colours: Colours,
+  candidates: readonly ColourName[],
+  grounds: readonly ColourName[],
+  fallback: ColourName,
+): ColourName {
+  return candidates.find((each) => readsOn(colours, each, grounds)) ?? fallback;
 }
 
 /**
@@ -36,7 +50,7 @@ function readsOnEveryGround(colours: Colours, token: ColourName): boolean {
 export function accentToken(colours: Colours): ColourName {
   const known = found.get(colours);
   if (known !== undefined) return known;
-  const token = CANDIDATES.find((each) => readsOnEveryGround(colours, each)) ?? LAST_RESORT;
+  const token = firstMark(colours, CANDIDATES, GROUNDS, LAST_RESORT);
   found.set(colours, token);
   return token;
 }

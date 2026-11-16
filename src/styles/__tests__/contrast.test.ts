@@ -4,14 +4,17 @@
 // its pairs (TEXT_ON) and its KNOWN list in its settings (src/release/__tests__/settings/
 // contrast.ts). KNOWN is the list of pairs that read under AA today, each with what it measures and
 // why it stands: a pair that gets worse, a new one, and one that was fixed but is still listed all
-// fail.
+// fail. The switch's marks (its thumb on each track, each track on the page and on a card) are held
+// at 3 to 1 in every palette too, with no known list.
 
 import { describe, expect, it } from 'vitest';
 
 import { CONTRAST_PALETTES, KNOWN, TEXT_ON } from '../../release/__tests__/settings/contrast';
+import { MARK_CONTRAST } from '../../ui/accent';
+import { switchTokens } from '../../ui/switch-model';
 import { toneColour } from '../../ui/tone-colour';
 import { TEXT_TONES, type TextTone } from '../../ui/variants';
-import { AA_TEXT, contrastFailures, solidOver, textOnFor } from '../contrast';
+import { AA_TEXT, contrastFailures, solidOver, textOnFor, type TextOnGrounds } from '../contrast';
 import { STYLE_IDS, tokensFor, type ColourName, type Colours, type Tokens } from '../tokens';
 import { STUDIO_COLOURS } from '../tokens/studio';
 
@@ -72,6 +75,26 @@ describe('every text colour on every ground, in every palette (rule 10.4)', () =
     }
     expect(TEXT_TONES.danger).toBe('destructive');
     expect(TEXT_TONES.subtle).toBe('fg3');
+  });
+});
+
+describe("the switch's marks, in every palette (rule 10.4: 3 to 1)", () => {
+  const SWITCH_GROUNDS: readonly ColourName[] = ['background', 'card'];
+  const marks = PALETTES.flatMap((tokens) => {
+    const { onTrack, thumb, offTrack } = switchTokens(tokens.colours);
+    const pairs: readonly TextOnGrounds[] = [
+      [thumb, [onTrack, offTrack]],
+      [onTrack, SWITCH_GROUNDS],
+      [offTrack, SWITCH_GROUNDS],
+    ];
+    return contrastFailures(tokens.colours, pairs, MARK_CONTRAST).map(
+      (failure) =>
+        `${nameOf(tokens)}: ${failure.text} on ${failure.ground} ${floor2(failure.ratio)}`,
+    );
+  });
+
+  it('the thumb on each track, and each track on the page and on a card', () => {
+    expect(marks).toEqual([]);
   });
 });
 
