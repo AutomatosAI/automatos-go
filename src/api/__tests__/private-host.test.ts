@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { hostOfAddress, isPrivateNetworkHost, storageHostAllowed } from '../private-host';
+import {
+  hostOfAddress,
+  isPrivateNetworkHost,
+  storageHost,
+  storageHostAllowed,
+} from '../private-host';
 
 describe('isPrivateNetworkHost', () => {
   it('knows the private, loopback and link-local blocks, IPv4 and IPv6', () => {
@@ -64,11 +69,71 @@ describe('hostOfAddress', () => {
 });
 
 describe('storageHostAllowed', () => {
-  it('lets a public server reach only public storage, a private one either', () => {
-    expect(storageHostAllowed('s3.amazonaws.com', 'https://api.example.test')).toBe(true);
-    expect(storageHostAllowed('10.0.0.5', 'https://api.example.test')).toBe(false);
-    expect(storageHostAllowed('10.0.0.5', 'http://10.0.0.2:8000')).toBe(true);
-    expect(storageHostAllowed('minio.internal', 'https://automatos.local')).toBe(true);
+  const PUBLIC = 'https://api.example.test';
+  const HOME = 'http://192.168.1.20:8000';
+
+  it('from a public server: a public name of two labels or more, and nothing else', () => {
+    expect(storageHostAllowed('s3.eu-west-1.amazonaws.com', PUBLIC)).toBe(true);
+    for (const host of ['minio', 'nas.local', 'x.internal', 'y.lan', 'z.home.arpa', '10.0.0.5']) {
+      expect(storageHostAllowed(host, PUBLIC), host).toBe(false);
+    }
+    expect(storageHostAllowed('52.95.110.1', PUBLIC)).toBe(false);
     expect(storageHostAllowed('10.0.0.5', 'not an address')).toBe(false);
+  });
+
+  it('from a server on a private network: a name on it, or a private dotted quad', () => {
+    for (const host of ['minio', 'nas.local', 'minio.internal', '10.0.0.5', '172.20.1.1']) {
+      expect(storageHostAllowed(host, HOME), host).toBe(true);
+      expect(storageHostAllowed(host, 'https://automatos.local'), host).toBe(true);
+    }
+  });
+
+  it('from either: never the phone itself, link-local, a public quad or a number in another form', () => {
+    for (const host of [
+      'localhost',
+      'minio.localhost',
+      '127.0.0.1',
+      '169.254.169.254',
+      '52.95.110.1',
+      '0177.0.0.1',
+      '0x7f.0.0.1',
+      '2130706433',
+      '10.1',
+    ]) {
+      expect(storageHostAllowed(host, HOME), host).toBe(false);
+      expect(storageHostAllowed(host, PUBLIC), host).toBe(false);
+    }
+  });
+});
+
+describe('storageHost: what the platform will connect to, read alike or refused', () => {
+  it('reads a plain host, lower-cased, without its port', () => {
+    expect(storageHost('https://Bucket.S3.Example.test:9443/k?x=1')).toBe('bucket.s3.example.test');
+    expect(storageHost('https://192.168.1.30/q3.pdf')).toBe('192.168.1.30');
+  });
+
+  it('refuses when the platform reads another host from the same text', () => {
+    expect(storageHost('https://bucket.example.test/x', () => 'elsewhere.example.test')).toBeNull();
+  });
+
+  it('refuses when the platform cannot read it at all', () => {
+    const throws = () => {
+      throw new TypeError('Invalid URL');
+    };
+    expect(storageHost('https://bucket.example.test/x', throws)).toBeNull();
+  });
+
+  it('takes the platform reading that differs only by case or a last dot', () => {
+    expect(storageHost('https://bucket.example.test/x', () => 'BUCKET.example.test.')).toBe(
+      'bucket.example.test',
+    );
+  });
+
+  it('refuses a label over 63 characters, a name over 253, an empty label and a last dot', () => {
+    const long = `${'a'.repeat(64)}.example.test`;
+    const huge = `${Array.from({ length: 64 }, () => 'abc').join('.')}.test`;
+    for (const host of [long, huge, 'a..example.test', 'bucket.example.test.', '-a.example.test']) {
+      expect(storageHost(`https://${host}/x`), host).toBeNull();
+    }
   });
 });
