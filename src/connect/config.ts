@@ -21,12 +21,9 @@ export const DEFAULT_PORTS: Readonly<Record<string, number>> = Object.freeze({
 export const ADDRESS_MAX_LENGTH = 512;
 
 // The private (RFC 1918) blocks http:// is allowed on, and the blocks that reach the phone itself
-// (D-HTTPS, KC6), are defined with the IP parsing in src/lib/ip.ts, which the storage hop shares.
-
-/** 'localhost' and every name under it (RFC 6761) are the phone itself. */
-export const LOOPBACK_NAME = 'localhost';
-/** Names on the home network (mDNS) may use http:// (D-HTTPS). */
-export const PRIVATE_NAME_SUFFIX = '.local';
+// (D-HTTPS, KC6), are defined with the IP parsing in src/lib/ip.ts, which the storage hop shares;
+// the names (localhost, .local) and the rule itself with the host's text, in src/lib/host-text.ts,
+// which the build's addresses and the API client ask too.
 
 /** The pairing link: `{web_url}/go/pair?{query}` (automatos-ai services/mobile/pairing.py). */
 export const PAIR_LINK_PATH = '/go/pair';

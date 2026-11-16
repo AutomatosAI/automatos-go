@@ -5,6 +5,10 @@
 // render only when the words, whether they show, or the occasion change, never on every render.
 // This is the only file that calls AccessibilityInfo.announceForAccessibility
 // (src/release/__tests__/announcements.test.ts).
+//
+// A line that also carries an age ("Updated 2 min ago") has new words each time the age changes,
+// so it is said again each time. Pass the words without the age, so only a change in what the line
+// says is told, and keep the age outside the live region, which TalkBack would read again too.
 
 import { useEffect, useRef } from 'react';
 import { AccessibilityInfo, Platform } from 'react-native';

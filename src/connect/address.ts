@@ -1,25 +1,14 @@
 // Server addresses (PRD-001 §4.5, D-HTTPS, KC6): the trust boundary for every address a person
 // types or a pairing link carries. Parsed by hand, not with URL: React Native's URL is a partial
 // polyfill, and a strict grammar refuses what a WHATWG parser would quietly reinterpret (192.168.1
-// as 192.168.0.1, 0x7f.1, an integer host, a backslash, user:pass@). Pure.
+// as 192.168.0.1, 0x7f.1, an integer host, a backslash, user:pass@). What a host is, and where
+// http may go, is decided once in src/lib/host-text.ts (hostKind, httpAllowedTo), which the build's
+// addresses and the API client ask too. Pure.
 
-import {
-  inIpv4Range,
-  isIpv6SelfAddress,
-  LOOPBACK_IPV4_RANGES,
-  mappedIpv4,
-  parseIpv4,
-  parseIpv6,
-  PRIVATE_IPV4_RANGES,
-} from '../lib/ip';
-import {
-  ADDRESS_MAX_LENGTH,
-  DEFAULT_PORTS,
-  INSECURE_SCHEME,
-  LOOPBACK_NAME,
-  PRIVATE_NAME_SUFFIX,
-  SECURE_SCHEME,
-} from './config';
+import { hostKind, httpAllowedTo } from '../lib/host-text';
+import { ADDRESS_MAX_LENGTH, DEFAULT_PORTS, INSECURE_SCHEME, SECURE_SCHEME } from './config';
+
+export { hostKind, type HostKind } from '../lib/host-text';
 
 export type AddressRefusal =
   | 'empty'
@@ -43,8 +32,6 @@ export type ServerAddress =
     }
   | { readonly ok: false; readonly reason: AddressRefusal };
 
-export type HostKind = 'private' | 'public' | 'loopback' | 'invalid';
-
 export type Authority = { readonly host: string; readonly port: number | null };
 
 const SCHEME_PREFIX = /^([A-Za-z][A-Za-z0-9+.-]*):\/\//;
@@ -58,51 +45,12 @@ const AUTHORITY_END = /[/?#]/;
 const BARE_TAILS: ReadonlySet<string> = new Set(['', '/']);
 const PORT = /^\d{1,5}$/;
 const MAX_PORT = 65535;
-/** A URL parser reads a host whose last label is a number as IPv4 (WHATWG "ends in a number"). */
-const NUMERIC_LABEL = /^(\d+|0x[0-9a-f]*)$/;
-const DNS_LABEL = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
-const DNS_NAME_MAX_LENGTH = 253;
-const IPV6_LITERAL = /^\[([^\]]+)\]$/;
 const SERVER_SCHEMES: ReadonlySet<string> = new Set([SECURE_SCHEME, INSECURE_SCHEME]);
+/** A paired server is never the phone itself, in any build: loopback is refused before http. */
+const PAIRING_BUILD = Object.freeze({ development: false });
 
 function refuse(reason: AddressRefusal): ServerAddress {
   return Object.freeze({ ok: false, reason });
-}
-
-function isDnsName(name: string): boolean {
-  const labels = name.split('.');
-  return name.length <= DNS_NAME_MAX_LENGTH && labels.every((label) => DNS_LABEL.test(label));
-}
-
-function ipv4Kind(name: string): HostKind {
-  const quad = parseIpv4(name);
-  if (!quad) return 'invalid';
-  if (LOOPBACK_IPV4_RANGES.some((range) => inIpv4Range(quad, range))) return 'loopback';
-  return PRIVATE_IPV4_RANGES.some((range) => inIpv4Range(quad, range)) ? 'private' : 'public';
-}
-
-/** Every IPv6 literal is public (KC6), except those that reach the phone itself. */
-function ipv6Kind(literal: string): HostKind {
-  const inner = IPV6_LITERAL.exec(literal)?.[1];
-  const groups = inner === undefined ? null : parseIpv6(inner);
-  if (!groups) return 'invalid';
-  const mapped = mappedIpv4(groups);
-  const mappedLoopback = mapped !== null && ipv4Kind(mapped.join('.')) === 'loopback';
-  return isIpv6SelfAddress(groups) || mappedLoopback ? 'loopback' : 'public';
-}
-
-function nameKind(name: string): HostKind {
-  if (!isDnsName(name)) return 'invalid';
-  if (name === LOOPBACK_NAME || name.endsWith(`.${LOOPBACK_NAME}`)) return 'loopback';
-  return name.endsWith(PRIVATE_NAME_SUFFIX) ? 'private' : 'public';
-}
-
-/** What a host (a name, an IPv4 literal or a bracketed IPv6 literal) is, for the HTTPS rule. */
-export function hostKind(host: string): HostKind {
-  const name = host.toLowerCase();
-  if (name.startsWith('[')) return ipv6Kind(name);
-  const labels = name.split('.');
-  return NUMERIC_LABEL.test(labels[labels.length - 1]) ? ipv4Kind(name) : nameKind(name);
 }
 
 /**
@@ -110,7 +58,7 @@ export function hostKind(host: string): HostKind {
  * 172.16.0.0/12 and 192.168.0.0/16 (strict dotted quads), and names ending in '.local'.
  */
 export function isPrivateHost(host: string): boolean {
-  return hostKind(host) === 'private';
+  return httpAllowedTo(host, PAIRING_BUILD);
 }
 
 function parsePort(text: string): number | null {
@@ -155,7 +103,7 @@ function originFor(scheme: string, { host, port }: Authority): ServerAddress {
   if (kind === 'invalid') return refuse('not_an_address');
   if (kind === 'loopback') return refuse('loopback');
   const insecure = scheme === INSECURE_SCHEME;
-  if (insecure && kind !== 'private') return refuse('http_public');
+  if (insecure && !httpAllowedTo(host, PAIRING_BUILD)) return refuse('http_public');
   const portSuffix = port === null || port === DEFAULT_PORTS[scheme] ? '' : `:${port}`;
   const origin = `${scheme}://${host.toLowerCase()}${portSuffix}`;
   return Object.freeze({ ok: true, origin, insecure });
