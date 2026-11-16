@@ -6,7 +6,7 @@ The text and choices for the App Store Connect record of Automatos Go (bundle id
 
 Proof: [src/release/\_\_tests\_\_/release-docs.test.ts](../../src/release/__tests__/release-docs.test.ts)
 parses this file. Each field is within its limit, the name is `app.json`'s, and the URLs are
-`src/release/legal-links.ts`'s. The description says "AI assistant" and states one age, 16. No
+`src/release/legal-links.ts`'s. The description says "AI assistant" and states one age, 18 (R16). No
 block uses a sign-up, billing or 'nothing leaves' phrase (US-021k's lists), or a word the app's
 terms rule out (Artifact, Recipe, Workflow, "the assistant", Command Center).
 
@@ -89,7 +89,7 @@ PRIVACY
 
 BEFORE YOU START
 - Automatos Go works with an Automatos workspace you already belong to, or with an Automatos server you run. Sign in with your Automatos account, or connect to your own server.
-- For people aged 16 and over.
+- For people aged 18 and over.
 ```
 
 ## Keywords

@@ -71,7 +71,7 @@ Play's form has no free Notes field like Apple's. If Play asks for more, use thi
 |---|---|---|
 | Ads | No ads | [README.md](README.md) R11 (no advertising SDK) |
 | Content rating | The IARC questionnaire | [age-rating.md](age-rating.md) |
-| Target audience | 16 and over: the age groups are in age-rating.md | [age-rating.md](age-rating.md) |
+| Target audience | 18 and over (R16): the age group is in age-rating.md | [age-rating.md](age-rating.md) |
 | Data safety | The form's answers | [play-data-safety.md](play-data-safety.md) (OT-R15) |
 | Store listing | Not written yet: no Play listing in this wave (KR16) | The App Store fields in [store-listing.md](store-listing.md) are its starting point |
 

@@ -1087,7 +1087,7 @@ server. "Gerard" means a decision or a dashboard Gerard holds; "counsel" means l
 | §13 | Clerk's "Allow users to delete their accounts" stays off | Gerard (Clerk dashboard) |
 | §13 | privacy@automatos.app is monitored | Gerard |
 | §13 | Studio can transfer a workspace's ownership; if not, what support does instead | automatos-ai |
-| §14 | One minimum age, 16 (D12), against the live Terms' different age | Gerard (OT-R13) |
+| §14 | Decided: one minimum age, 18 (R16, the owner, 16 Nov 2026, in place of D12's 16), as the live Terms say; the draft's D12 figure becomes 18 before it is published | Gerard (OT-R3) |
 | A.1 | Other User Content rather than Emails or Text Messages (`app-store-privacy.md` uses Other User Content) | Gerard |
 | A.1 | Whether Clerk's IP-derived city on hosted sessions counts as location (photos are answered above) | Gerard |
 | A.2 | "Encrypted in transit", now that plain-HTTP pairing ships | Gerard (`play-data-safety.md`) |
@@ -1102,7 +1102,7 @@ server. "Gerard" means a decision or a dashboard Gerard holds; "counsel" means l
 |---|---|---|
 | Header | Make https://automatos.app/terms the one Terms the app links to (it is: `legal-links.ts`), and point Studio's own terms page at it or bring it in line | Gerard (automatos-ai-landing) |
 | Header | The effective date | Gerard (OT-R3) |
-| §02 | 16, as D12 says, against the live Terms' different age | Gerard (OT-R13) |
+| §02 | Decided: 18 (R16, the owner, 16 Nov 2026, in place of D12's 16), which the live Terms already say; the draft's D12 figure becomes 18 before it is published | Gerard (OT-R3) |
 | §06 | What Automatos can do on a report: platform admins pause, delete or restore a whole workspace, and no tool removes one message or Deliverable | automatos-ai, Gerard |
 | §06 | Who answers the moderation inbox, and whether "two working days" covers reports | Gerard |
 | §09 | Apple's standard EULA with the clause as a courtesy, or these Terms as a custom EULA | Gerard, counsel |

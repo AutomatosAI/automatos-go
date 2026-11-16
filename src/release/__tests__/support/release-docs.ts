@@ -2,7 +2,7 @@
 // into a store form (each ```text block), the listing's fields and App Store Connect's limits, the
 // addresses of a legal page on the app's own site, the statements a document makes (for its ages),
 // and the secret-shaped strings no document may hold. The site, its published addresses and the
-// ALLOWED ages that are not 16 are the app's (settings/identity.ts, settings/release-docs.ts). Pure
+// ALLOWED ages that are not 18 are the app's (settings/identity.ts, settings/release-docs.ts). Pure
 // over strings: release-docs.test.ts reads the files through tree.ts.
 
 import { APP_IDENTITY } from '../settings/identity';

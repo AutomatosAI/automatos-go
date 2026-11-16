@@ -2,7 +2,7 @@
 // the literal text of every product .tsx, in every wave and every style — never points at creating
 // an account (D64), never speaks of plans, credits or prices (D8), never offers to delete an
 // account or a workspace (D63), never claims that nothing leaves (D70), and states one minimum
-// age, 16 (D12). A phrase in support/forbidden-copy.ts fails the test with its file and text
+// age, 18 (R16, the owner, 16 Nov 2026). A phrase in support/forbidden-copy.ts fails the test with its file and text
 // unless ALLOWED (settings/store-copy.ts) names that exact text, with its reason.
 
 import { describe, expect, it } from 'vitest';
@@ -208,7 +208,7 @@ describe('the app’s copy', () => {
   });
 });
 
-describe('one minimum age, 16 (D12, R16)', () => {
+describe('one minimum age, 18 (R16)', () => {
   it.each([
     ['You must be 16 or older to use Automatos Go', [16]],
     ['For people aged 18 and over', [18]],
@@ -226,14 +226,14 @@ describe('one minimum age, 16 (D12, R16)', () => {
     },
   );
 
-  it('every age the app’s copy states is 16', () => {
+  it('every age the app’s copy states is 18', () => {
     const wrong = copy.flatMap(({ file, text }) =>
       agesIn(text)
         .filter((age) => age !== MINIMUM_AGE)
         .map((age) => `${file}: ${age} in “${text}”`),
     );
     expect(wrong).toEqual([]);
-    expect(MINIMUM_AGE).toBe(16);
+    expect(MINIMUM_AGE).toBe(18);
     AGE_STATEMENTS.forEach((pattern) => expect(pattern.flags).toContain('g'));
   });
 });
