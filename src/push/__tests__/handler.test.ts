@@ -102,7 +102,10 @@ describe('handleResponse: a reply from the notification', () => {
     const later = world({ script: ANSWERED, storage });
     expect(await handleResponse(REPLY, later.deps)).toBeNull();
     expect(later.requests()).toEqual([]);
-    expect(JSON.parse(storage.items.get(HANDLED_KEYS_ITEM) ?? '[]')).toEqual([`${IOS_ID}:reply`]);
+    expect(JSON.parse(storage.items.get(HANDLED_KEYS_ITEM) ?? '[]')).toEqual([
+      `${IOS_ID}:reply`,
+      `signed:${QUESTION.workspace_id}:42:${NOTIFICATION_ID}:${NOW_S}`,
+    ]);
   });
 
   it('422 → already answered; the notification is still read and dismissed', async () => {

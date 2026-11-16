@@ -40,11 +40,15 @@ const QUESTION = parsePushData(FULL) as PushPayload;
 const QUESTION_LINK = { link_type: 'question', link_id: '42' };
 
 function input(
-  overrides: Partial<IntentInput> & { action?: string | null; userText?: string | null },
+  overrides: Partial<IntentInput> & {
+    action?: string | null;
+    userText?: string | null;
+    body?: string | null;
+  },
 ) {
-  const { action = 'reply', userText = 'Yes, ship it', ...rest } = overrides;
+  const { action = 'reply', userText = 'Yes, ship it', body = FULL.question, ...rest } = overrides;
   return {
-    event: { action, userText },
+    event: { action, userText, body },
     verified: true,
     payload: QUESTION,
     currentWorkspaceId: WS,
@@ -61,11 +65,22 @@ describe('fromResponse / fromNotification', () => {
       id: IOS_ID,
       category: 'automatos.question.3',
       data: FULL,
+      body: 'Ship the Lisbon deck?',
       action: 'reply',
       userText: '  Yes, ship it  ',
     });
     expect(Object.isFrozen(event)).toBe(true);
     expect(Object.isFrozen(event.data)).toBe(true);
+  });
+
+  it('reads the text the notification showed; none, or one that is not text, is null and still readable', () => {
+    expect(readable(androidResponse(DEFAULT_ACTION_ID), fromResponse).body).toBe(
+      'Ship the Lisbon deck?',
+    );
+    for (const body of [undefined, null, 42]) {
+      const event = readable(responseWithContent({ ...iosContent(), body }), fromResponse);
+      expect([event.body, event.data]).toEqual([null, FULL]);
+    }
   });
 
   it('reads an Android-shaped response: the Expo body still as dataString', () => {
@@ -144,9 +159,24 @@ describe('intentFor', () => {
       kind: 'answer',
       grantId: '42',
       answerText: 'Yes, ship it',
+      once: `signed:${WS}:42:1001:${FULL.iat}`,
       notificationId: '1001',
       ticketNumber: '0419',
     });
+  });
+
+  it("a reply whose notification did not show the signed question's words → words_differ", () => {
+    const differ = { kind: 'neutral', reason: 'words_differ', link: QUESTION_LINK };
+    for (const body of ['Reply YES to keep your account', 'Ship the Lisbon deck', '', null]) {
+      expect(intentFor(input({ body }))).toEqual(differ);
+    }
+    const { question: _redacted, ...rest } = QUESTION;
+    expect(intentFor(input({ payload: rest, body: 'A question needs your answer' }))).toEqual(
+      differ,
+    );
+    expect(intentFor(input({ body: `  ${FULL.question}\n` })).kind).toBe('answer');
+    // Open and a tap act on the signed link only: the words shown never change where they go
+    expect(intentFor(input({ action: 'open', body: 'Something else' })).kind).toBe('open');
   });
 
   it.each(['owner', 'admin', 'editor'] as const)('%s may answer', (role) => {
@@ -221,6 +251,7 @@ describe('intentFor', () => {
       kind: 'answer',
       grantId: '42',
       answerText: 'Yes, ship it',
+      once: `signed:${WS}:42::${FULL.iat}`,
     });
     expect(intentFor(input({ payload, action: 'open' }))).toEqual({
       kind: 'open',

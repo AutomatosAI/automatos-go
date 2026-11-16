@@ -154,6 +154,11 @@ export const PUSH_ACTION_COPY = Object.freeze({
   unverified: "This notification couldn't be checked, so nothing was sent.",
   otherWorkspace: 'That notification is from another workspace.',
   answerHere: 'Answer it here.',
+  /** A reply whose notification did not show the signed question's words: nothing was sent. */
+  wordsDiffer:
+    "This notification didn't show the question's own words, so nothing was sent. Answer it here.",
+  /** A reply carrying a question this phone already replied to from a notification. */
+  repliedBefore: 'You already replied to this notification, so nothing was sent again.',
   /** A tap the phone could not check: its link is not followed, the inbox opens instead. */
   uncheckedTap:
     "This notification couldn't be checked on this phone, so here are your notifications.",
@@ -229,6 +234,8 @@ export const PUSH_TAPS_COPY = Object.freeze({
     other_workspace: 'From another workspace',
     cannot_answer: 'Your role cannot answer here',
     blank_reply: 'The reply was empty',
+    words_differ: "Its words weren't the question's",
+    replayed: 'Replied to before',
     unknown: 'Opened Notifications',
     unreadable: "Couldn't be read",
     repeat: 'Already handled',

@@ -214,3 +214,60 @@ key. What the phone does
 
 [src/push/\_\_tests\_\_/lost-registration.test.ts](../../src/push/__tests__/lost-registration.test.ts)
 proves each of these.
+
+### What a verified push proves
+
+**What is signed.** `sig` is HMAC-SHA256, keyed with this phone's own push key, over
+`["v2", type, workspace_id, notification_id, grant_id, link_type, link_id, ticket_number, question, options, iat]`
+([src/push/signature/canonical.ts](../../src/push/signature/canonical.ts)). Nothing else in a push
+is signed: not the title ("{agent or Auto} · {AI badge}"), the body, the sound, the priority, the
+category (which chooses the buttons), the Android channel, or the unsigned `message_id` a brief's
+push carries. The server sends a question's body as its signed `question`. A push with no
+`question` (any other event, or a question hidden by the workspace's "Hide question text in
+notifications") shows a fixed line, such as "A question needs your answer", that no signed field
+names.
+
+**What each action trusts.**
+
+| Action | What it acts on |
+|---|---|
+| A tap, or **Open** | The signed payload only. The screen is the signed link's, read again from the server with the person's own sign-in before it opens. The bell row marked read is the signed `notification_id`. An approval's sheet is the signed `grant_id`'s and shows the server's own record; with "Face ID before approve or answer" on (the default) it asks for Face ID before Approve. The words shown change nothing. |
+| **Reply**, with typed words | Where the answer goes: the signed `grant_id` of a signed `link_type` `question`. What the answer says: what the person typed, in answer to the words the notification showed. |
+| A push while the app is open | Shown only when it verifies within 2 s, with its own title and body. |
+
+**The worst case, before this change.** Anyone who holds this phone's Expo push token and one
+signed question payload less than 7 days old, for a question still open in the workspace the app
+is in, could send it again with words of their own and a Reply button. What the person typed in
+answer to those words was then posted as their answer to the real question, once.
+
+**What already bounds it.** The age limit (7 days old, 5 minutes ahead); the workspace check (a push
+of another workspace acts on nothing); the role check (a viewer cannot answer); the server takes one
+answer per question (a second gets "That question was already answered."); iOS asks for an unlocked
+phone before the reply field opens. Not a bound: the record of responses handled
+(`identifier:action`), because a push sent again arrives under a new identifier; and Face ID is not
+asked for a notification Reply.
+
+**What the phone does now**
+([src/push/inbound/intent.ts](../../src/push/inbound/intent.ts),
+[handler.ts](../../src/push/inbound/handler.ts), [dedupe.ts](../../src/push/inbound/dedupe.ts)):
+
+- A Reply is posted only when the notification's body is the signed `question`, word for word
+  (spaces at either end aside). Otherwise (other words, no words, or a payload with no signed
+  question) nothing is sent, the question opens in the app, where the server's own text is shown,
+  and the line says "This notification didn't show the question's own words, so nothing was sent.
+  Answer it here."
+- A signed payload is replied to once. Before the answer is posted, its workspace, grant and
+  notification ids and its `iat` are claimed in the store of responses handled (ids only, never
+  words; the last 50 keys; kept across launches; cleared by sign-out). The same payload sent again
+  opens the question with "You already replied to this notification, so nothing was sent again."
+
+[src/push/\_\_tests\_\_/reply-binding.test.ts](../../src/push/__tests__/reply-binding.test.ts)
+and [inbound.test.ts](../../src/push/__tests__/inbound.test.ts) prove each branch.
+
+**What a verified push still does not prove.** The words on the lock screen. A notification that
+arrives while the app is closed is drawn by iOS or Android without any of the app's code, so a push
+with genuine signed data and words of its own is shown as it was sent. Checking it before it is shown
+needs a notification service extension, which is native code this app does not have. The title (the
+sender's name and the AI badge) and the fixed lines of other pushes are not signed, so the phone
+cannot check them. For it to, the server would have to sign the title and the body it sends (both,
+or a SHA-256 of each) in the canonical message, under a new payload version.

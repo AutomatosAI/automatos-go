@@ -149,8 +149,15 @@ route answers compare-and-swap, so "Answered" needs the grant granted with this 
 | Someone answered first, or the question closed | "That question was already answered." |
 | Network failure | "Not sent. Open the question to answer it." |
 | Signature did not verify | "This notification couldn't be checked, so nothing was sent." |
+| The notification did not show the signed question's words | "This notification didn't show the question's own words, so nothing was sent. Answer it here." |
+| This phone already replied to that signed question | "You already replied to this notification, so nothing was sent again." |
 
-Each response is handled once: the last 50 handled keys are kept across launches.
+The last two open the question. The signature covers the data, not the words a notification
+shows, so a Reply is posted only to the words the server signed
+([release/push-security.md](release/push-security.md), "What a verified push proves").
+
+Each response is handled once, and each signed question replied to once: the last 50 handled keys
+are kept across launches.
 
 **Open or tap** (`A4:src/push/links/targets.ts`, `stale.ts`). `link_type` picks the screen:
 

@@ -5,7 +5,8 @@
 // is (GET /api/notifications, with the person's own credentials), the push's own first when its
 // notification_id is a notification's. An unverified push's id only chooses which of the person's
 // own rows is shown first: nothing is posted, followed or marked read for it (D-SIGNATURE). A
-// reply that cannot be sent opens the question, as before.
+// reply that cannot be sent opens the question, as before: so does one whose notification did not
+// show the signed question's words, and one carrying a signed payload this phone already replied to.
 
 import type { WorkspaceRole } from '../../api/workspace';
 import { ROLE_COPY } from '../../auth/strings';
@@ -56,6 +57,10 @@ export function neutralOutcome(intent: Neutral, context: NeutralContext): Handle
       );
     case 'blank_reply':
       return outcome(questionRoute(intent.link), PUSH_ACTION_COPY.answerHere);
+    case 'words_differ':
+      return outcome(questionRoute(intent.link), PUSH_ACTION_COPY.wordsDiffer);
+    case 'replayed':
+      return outcome(questionRoute(intent.link), PUSH_ACTION_COPY.repliedBefore);
     case 'unknown':
       return outcome(inboxRoute(context.focus));
   }

@@ -9,9 +9,10 @@
 // (EXNotificationSerializer.m serializedNotificationData), and the trigger keeps the whole userInfo
 // (trigger.payload): when content.data comes over empty, trigger.payload.body is read instead, so a
 // push the phone holds is never unreadable for want of the one copy the JS mapping used.
-// Anything missing or malformed is {kind: 'unreadable'}: this never throws. Nothing here is
-// verified: event.data is the data as received, and only src/push/signature decides whether it
-// came from the phone's own server (the action handler acts on parsePushData's output only).
+// content.body is the text the notification showed (outside the signature: intent.ts holds a
+// Reply to it). Anything missing or malformed is {kind: 'unreadable'}: this never throws. Nothing
+// here is verified: event.data is the data as received, and only src/push/signature decides
+// whether it came from the phone's own server (the action handler acts on parsePushData's output).
 
 import { z } from 'zod';
 
@@ -25,6 +26,8 @@ export type InboundEvent = Readonly<{
   category: string | null;
   /** The notification's data as received: an object, never verified here. */
   data: Readonly<Record<string, unknown>>;
+  /** The text the notification showed (content.body), as received; null without one. Never logged. */
+  body: string | null;
   /** The response's actionIdentifier; null for a notification received in the foreground. */
   action: string | null;
   /** What the person typed into 'Reply…'; null when nothing was typed. */
@@ -41,6 +44,7 @@ const RequestShape = z.object({
   identifier: z.string().min(1),
   content: z.object({
     categoryIdentifier: z.string().nullish(),
+    body: z.string().nullish().catch(null),
     data: z.unknown(),
   }),
 });
@@ -105,6 +109,7 @@ function eventOf(
     id: request.identifier,
     category: request.content.categoryIdentifier ?? null,
     data: Object.freeze(data),
+    body: request.content.body ?? null,
     action,
     userText,
   });

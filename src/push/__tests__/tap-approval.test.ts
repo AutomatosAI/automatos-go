@@ -85,7 +85,7 @@ const MISSION_FIELDS = Object.freeze({
 describe('the push names its approval', () => {
   const intentOf = (fields: Parameters<typeof signed>[0]) =>
     intentFor({
-      event: { action: DEFAULT_ACTION_ID, userText: null },
+      event: { action: DEFAULT_ACTION_ID, userText: null, body: null },
       verified: true,
       payload: parsePushData(signed(fields)),
       currentWorkspaceId: WS,

@@ -5,8 +5,12 @@
 // link — and a verified one is acted on only in the current workspace. Only 'reply', 'open' and
 // the tap exist (no Approve, no option buttons: D-LOCK-SCREEN); any other identifier is 'unknown'.
 // The category is unsigned and never decides anything: a reply answers only a signed question
-// (link_type 'question' with a grant_id). An Open or a tap on an approval's push carries its signed
-// grant_id, for the approval sheet (PRD-268 US-G08). A signed field sent as '' reads as absent.
+// (link_type 'question' with a grant_id), and only when the words the notification showed are
+// that signed question: the title, the body, the sound and the buttons are set outside the
+// signature, so an old signed payload sent again with words of its own still verifies, and its
+// Reply opens the question in the app instead of posting what the person typed to other words.
+// An Open or a tap on an approval's push carries its signed grant_id, for the approval sheet
+// (PRD-268 US-G08). A signed field sent as '' reads as absent.
 
 import type { WorkspaceRole } from '../../api/workspace';
 import { roleCan } from '../../auth/role';
@@ -20,19 +24,28 @@ import {
   ROW_ID_PATTERN,
 } from '../config';
 import type { PushPayload } from '../schemas/payload';
+import { signedReplyKey } from './dedupe';
 import type { InboundEvent } from './parse';
 
 /** A push's signed link (link_type, link_id); an absent field is left out. */
 export type PushLink = Readonly<{ link_type?: string; link_id?: string }>;
 
 export type NeutralReason =
-  'unverified' | 'other_workspace' | 'cannot_answer' | 'blank_reply' | 'unknown';
+  | 'unverified'
+  | 'other_workspace'
+  | 'cannot_answer'
+  | 'blank_reply'
+  | 'words_differ'
+  | 'replayed'
+  | 'unknown';
 
 export type PushIntent =
   | Readonly<{
       kind: 'answer';
       grantId: string;
       answerText: string;
+      /** The signed payload's key (dedupe.ts signedReplyKey): claimed once before posting. */
+      once: string;
       notificationId?: string;
       ticketNumber?: string;
     }>
@@ -41,7 +54,7 @@ export type PushIntent =
   | Readonly<{ kind: 'neutral'; reason: NeutralReason; link?: PushLink }>;
 
 export type IntentInput = Readonly<{
-  event: Pick<InboundEvent, 'action' | 'userText'>;
+  event: Pick<InboundEvent, 'action' | 'userText' | 'body'>;
   /** verifyPushSignature's answer for this payload. */
   verified: boolean;
   /** parsePushData's output for event.data; null when it is not a v2 payload. */
@@ -92,10 +105,22 @@ function openIntent(payload: PushPayload): PushIntent {
   });
 }
 
+/**
+ * The notification showed the question the server signed, word for word (edge spaces aside): the
+ * server sends a question's body as its signed `question`, so a body that differs, or a question
+ * the payload does not carry (a redacted one), is not what the person was answering.
+ */
+export function showsSignedQuestion(shown: string | null, signed: string | undefined): boolean {
+  return !!shown && !!signed && shown.trim() === signed.trim();
+}
+
 function replyIntent(input: IntentInput, payload: PushPayload): PushIntent {
   const grantId = present(payload.grant_id);
   if (payload.link_type !== QUESTION_LINK_TYPE || !grantId) return neutral('unknown');
   const question = linkOf(payload);
+  if (!showsSignedQuestion(input.event.body, payload.question)) {
+    return neutral('words_differ', question);
+  }
   if (!roleCan(input.role, 'answer')) return neutral('cannot_answer', question);
   const answerText = answerTextOf(input.event.userText);
   if (!answerText) return neutral('blank_reply', question);
@@ -105,6 +130,7 @@ function replyIntent(input: IntentInput, payload: PushPayload): PushIntent {
     kind: 'answer',
     grantId,
     answerText,
+    once: signedReplyKey(payload),
     ...(notificationId && { notificationId }),
     ...(ticketNumber && { ticketNumber }),
   });

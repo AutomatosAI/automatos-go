@@ -2,7 +2,10 @@
 // notification response → exactly one honest outcome. parse (parse.ts) → handled once
 // (handled-store.ts) → the push record's key (registration/key-store.ts) → verifyPushSignature →
 // intentFor → act. A reply posts its answer once (answer.ts) and lands on Questions with the
-// server's result; Open and a tap open the link's screen after its stale check (links/stale.ts);
+// server's result, only when its notification showed the signed question's words (intent.ts) and
+// its signed payload was never replied to before (dedupe.ts signedReplyKey, claimed in the same
+// store); otherwise it opens the question with nothing sent. Open and a tap open the link's screen
+// after its stale check (links/stale.ts), acting on the signed payload only, never the words shown;
 // anything else opens the notifications inbox (the push's own row first), or the question, with
 // nothing done (outcomes.ts): a tap never lands on home with nothing to show. A tap on an approval's
 // push whose grant still waits also opens its approval sheet over that screen (PRD-268 US-G08),
@@ -266,6 +269,32 @@ function openApproval(deps: HandlerDeps, sheet: SheetTarget): void {
   }
 }
 
+/** What act() read for a response: its event, its payload, the check's word and the role. */
+type Seen = Readonly<{
+  event: ReadableEvent;
+  payload: PushPayload | null;
+  verification: Verification;
+  role: WorkspaceRole | null;
+}>;
+
+const REPLIED_BEFORE: Intent<'neutral'> = Object.freeze({ kind: 'neutral', reason: 'replayed' });
+
+/** Nothing done: the inbox or the question, its line, and the diagnostics' words. */
+function neutralShown(deps: HandlerDeps, intent: Intent<'neutral'>, seen: Seen): Handled {
+  const { event, payload, verification, role } = seen;
+  const context = {
+    role,
+    focus: payload?.notification_id ?? null,
+    replied: event.action === REPLY_ACTION_ID,
+  };
+  return show(deps, neutralOutcome(intent, context), {
+    kind: 'neutral',
+    reason: intent.reason,
+    detail: intent.reason === 'unverified' ? verification : null,
+    linkType: payload?.link_type,
+  });
+}
+
 async function act(event: ReadableEvent, deps: HandlerDeps): Promise<Handled> {
   const payload = parsePushData(event.data);
   const verification = await verificationOf(payload, deps);
@@ -281,26 +310,16 @@ async function act(event: ReadableEvent, deps: HandlerDeps): Promise<Handled> {
     '[push] notification action',
     intent.kind === 'neutral' ? intent.reason : intent.kind,
   );
+  const seen: Seen = { event, payload, verification, role };
   switch (intent.kind) {
     case 'answer':
+      // the same signed payload sent again, under a new identifier, posts nothing more
+      if (!firstTime(deps.handled, intent.once)) return neutralShown(deps, REPLIED_BEFORE, seen);
       return answer(intent, event, deps);
     case 'open':
       return open(intent, deps);
     case 'neutral':
-      return show(
-        deps,
-        neutralOutcome(intent, {
-          role,
-          focus: payload?.notification_id ?? null,
-          replied: event.action === REPLY_ACTION_ID,
-        }),
-        {
-          kind: 'neutral',
-          reason: intent.reason,
-          detail: intent.reason === 'unverified' ? verification : null,
-          linkType: payload?.link_type,
-        },
-      );
+      return neutralShown(deps, intent, seen);
   }
 }
 
