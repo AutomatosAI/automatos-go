@@ -20,6 +20,7 @@ import {
 } from '../../cc/deliverables/gallery';
 import type { DeliverableRow } from '../../cc/deliverables/schemas';
 import { TYPE_STYLE_KEYS, type TypeStyleKey } from '../../core/frozen/lib/looks/catalogue';
+import { screenPath } from '../../navigation/back';
 import { routes } from '../../navigation/routes';
 import { joinLabel } from '../../ui/paint';
 import { countPhrase } from '../../ui/variants';
@@ -201,14 +202,9 @@ export function deliverableEyebrow(facts: PageFacts, clock: Clock): string {
   return shelfEyebrow(facts.typeWord, made, madeBy(facts), facts.failed);
 }
 
-function bare(pathname: string): string {
-  const path = pathname.split(/[?#]/, 1)[0].trim();
-  return path.length > 1 ? path.replace(/\/+$/, '') : path;
-}
-
 /** The Shelf and a Deliverable draw their own header in Play: the shell steps aside on them. */
 export function shelfOwnsScreen(pathname: string): boolean {
-  const path = bare(pathname);
+  const path = screenPath(pathname);
   const shelf = routes.cc.deliverables;
   return path === shelf || (path.startsWith(`${shelf}/`) && path.length > shelf.length + 1);
 }

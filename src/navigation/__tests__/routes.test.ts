@@ -4,6 +4,7 @@ import { ADDRESS_MAX_LENGTH, PAIR_CODE_INPUT_MAX_LENGTH } from '../../connect/co
 import {
   CONNECT_CODE_PARAM,
   CONNECT_ORIGIN_PARAM,
+  ID_MAX_LENGTH,
   QUESTION_PARAM,
   TICKET_PARAM,
   chatWithTicket,
@@ -11,6 +12,7 @@ import {
   connectWith,
   isTaskId,
   isUsableId,
+  pairLinkWith,
   questionFromTicketParams,
   routes,
   ticketFromChatParams,
@@ -43,9 +45,9 @@ describe('app routes', () => {
     expect(routes.cc.deliverable('9b1c-dlv')).toBe('/cc/deliverables/9b1c-dlv');
   });
 
-  it('URI-encodes an id into its one segment', () => {
-    expect(routes.chat('a/b?c')).toBe('/chat/a%2Fb%3Fc');
-    expect(routes.cc.deliverable(' d 1 ')).toBe('/cc/deliverables/d%201');
+  it('puts an id, trimmed, into its one segment', () => {
+    expect(routes.chat(' c-1 ')).toBe('/chat/c-1');
+    expect(routes.cc.deliverable('d_1.v2')).toBe('/cc/deliverables/d_1.v2');
   });
 
   it('refuses an id that is blank or a dot segment', () => {
@@ -56,6 +58,21 @@ describe('app routes', () => {
     }
   });
 
+  it('refuses an id that could leave its segment: a slash, encoded or not, a space, a control', () => {
+    for (const bad of ['a/b', 'a%2Fb', '../settings', 'a\\b', 'a b', 'a?b', 'a#b', 'a\u0000b']) {
+      expect(isUsableId(bad)).toBe(false);
+      expect(() => routes.chat(bad)).toThrow(TypeError);
+      expect(() => routes.chatAt('c-1', bad)).toThrow(TypeError);
+      expect(() => routes.cc.ticket(42, bad)).toThrow(TypeError);
+    }
+  });
+
+  it(`takes an id of ${ID_MAX_LENGTH} characters at most`, () => {
+    expect(isUsableId('a'.repeat(ID_MAX_LENGTH))).toBe(true);
+    expect(isUsableId('a'.repeat(ID_MAX_LENGTH + 1))).toBe(false);
+    expect(isUsableId('9b1c2a54-0000-4000-8000-0000000000d1')).toBe(true);
+  });
+
   it('opens a ticket at one of its questions, as the web link does', () => {
     expect(routes.cc.ticket(42, 'g-9')).toBe('/cc/ticket/42?question=g-9');
     expect(routes.cc.ticket(42, 7)).toBe('/cc/ticket/42?question=7');
@@ -63,6 +80,7 @@ describe('app routes', () => {
     expect(questionFromTicketParams(paramsOf(routes.cc.ticket(42, 'g-9')))).toBe('g-9');
     expect(questionFromTicketParams({})).toBeNull();
     expect(questionFromTicketParams({ [QUESTION_PARAM]: '  ' })).toBeNull();
+    expect(questionFromTicketParams({ [QUESTION_PARAM]: '../g-9' })).toBeNull();
   });
 
   it('takes only a board row id for a ticket (digits, as GET /api/v1/tasks/{task_id})', () => {
@@ -121,6 +139,13 @@ describe("Connect's routes and prefill (US-006d)", () => {
     expect(routes.connectScan).toBe('/connect/scan');
     expect(routes.pairLink).toBe('/go/pair');
     expect(routes.connectWith).toBe(connectWith);
+  });
+
+  it('opens the pairing screen with a read link, its values URI-encoded as api and code', () => {
+    const href = pairLinkWith({ apiOrigin: 'http://192.168.1.20:8000', code: 'ABCD-2345' });
+    expect(href).toBe('/go/pair?api=http%3A%2F%2F192.168.1.20%3A8000&code=ABCD-2345');
+    expect(paramsOf(href)).toEqual({ api: 'http://192.168.1.20:8000', code: 'ABCD-2345' });
+    expect(routes.pairLinkWith).toBe(pairLinkWith);
   });
 
   it('is plain /connect with nothing to prefill', () => {

@@ -76,19 +76,22 @@ blocks a merge, CI or the TestFlight delivery on EAS Workflows.
   secret from that run.
 - The job's `if: github.ref == 'refs/heads/main'` keeps this file's own runs on `main`: never a
   pull request, so a fork never triggers it.
-- It installs nothing: `actions/checkout@v4` (without stored git credentials) and
-  `actions/setup-node@v4`, then `node` runs the repository's own script. No npm package runs, and
-  the token is set on that one step only.
+- It installs nothing: `actions/checkout` (without stored git credentials) and
+  `actions/setup-node`, each at a commit, then `node` runs the repository's own script. No npm
+  package runs, and the token is set on that one step only.
 - `permissions: contents: read`; five minutes at most.
 - Every push to `main` runs `scripts/release/check-push-security.mjs` with the token, so a change
   to that script or this workflow should be reviewed before it merges (required review on `main`
   is a repository setting, Gerard's).
 
-**Accepted risk: tag pins.** The two actions are pinned by tag, `@v4`, as ci.yml pins them (the
-kit asks this job to mirror ci.yml, as the foundation's TestFlight job did when it held an Expo
-token). They run before the token step, so a re-pointed `v4` tag could tamper with the runner.
-Pinning both to commit SHAs (`actions/checkout@<sha> # v4.x.y`) closes that; it is Gerard's call,
-and ci.yml and this file should then change together.
+**Pinned by commit, not by tag.** The two actions run before the token step, so a re-pointed tag
+could tamper with the runner. Both are pinned to the commit their `v4` tag named on 16 Nov 2026,
+the same commits ci.yml names, with the release beside each: `actions/checkout@11d5960a… # v4.4.0`
+and `actions/setup-node@49933ea5… # v4.4.0`. An update moves both files together, to the full
+sha of a release (`gh api repos/actions/checkout/commits/<tag> -q .sha`).
+`src/config/__tests__/workflow-pins.test.ts` refuses a `uses:` in either file that is not a
+40-character sha with its release beside it, and `scripts/__tests__/release-push-security.test.ts`
+holds this job to ci.yml's commits.
 
 **The schedule can stop.** GitHub turns off scheduled workflows in a public repository after 60
 days without activity in it. A push to `main` still runs the check; after a quiet spell, look
