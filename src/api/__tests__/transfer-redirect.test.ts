@@ -76,17 +76,22 @@ describe('a redirect', () => {
     expect(transport.calls).toHaveLength(1);
   });
 
-  it("storage's refusal is its kind and signs no one out", async () => {
-    const onAuthExpired = vi.fn();
-    const transport = answering(redirect(STORAGE), () => reply(401, '<Error/>'));
-    const error = await failureOf(
-      download(clientWith(transport, { onAuthExpired }), FILE_URL, target(), {
-        redirectsToStorage: true,
-      }),
-    );
-    expect(error).toMatchObject({ kind: 'auth', status: 401 });
-    expect(onAuthExpired).not.toHaveBeenCalled();
-  });
+  it.each([401, 403, 404, 429, 500])(
+    "storage's %i is server with its status, and signs no one out",
+    async (status) => {
+      const onAuthExpired = vi.fn();
+      const transport = answering(redirect(STORAGE), () =>
+        reply(status, '<Error/>', { 'Retry-After': '30' }),
+      );
+      const error = await failureOf(
+        download(clientWith(transport, { onAuthExpired }), FILE_URL, target(), {
+          redirectsToStorage: true,
+        }),
+      );
+      expect(error).toMatchObject({ kind: 'server', status, retryAt: null });
+      expect(onAuthExpired).not.toHaveBeenCalled();
+    },
+  );
 
   it("storage's body is under the same cap", async () => {
     const transport = answering(redirect(STORAGE), () => partsReply(200, [encode('123456789')]));

@@ -362,7 +362,6 @@ function filePort(ctx: Context): FilePort {
     timeoutMs: ctx.timeoutMs,
     signed: () => signed(ctx),
     checked: (response, token) => checked(ctx, response, token),
-    now: ctx.now,
   };
 }
 

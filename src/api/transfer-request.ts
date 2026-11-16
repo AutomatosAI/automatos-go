@@ -8,19 +8,19 @@
 // redirect to storage (GET /api/documents/generated/{filename}: a presigned address). Then the one
 // redirect is followed, and only to an https address with a host and nothing before it: the
 // second request carries no header at all, so no bearer, no workspace and no cookie goes with
-// it, and what it answers is checked without signing anyone out. A second redirect, an http
-// address, or a redirect on a request not so named is the redirect error every call gives.
+// it, and what it answers is checked without signing anyone out: any refusal from storage is
+// 'server' with its status. A second redirect, an http address, or a redirect on a request not
+// so named is the redirect error every call gives.
 
 import { ERROR_BODY_MAX_BYTES, STORAGE_REDIRECT_MAX_CHARS } from './config';
 import { callFailure, startDeadline, type Deadline } from './deadline';
-import { ApiError, errorFromResponse, isRedirectStatus } from './errors';
+import { ApiError, isRedirectStatus } from './errors';
 import { BodyTooLargeError } from './body';
 import type { Server } from './server';
 import type { FileResponse, Transport, TransportResponse } from './transport-types';
 import { withoutTrailingSlash } from './url';
 
 const LOCATION_HEADER = 'location';
-const RETRY_AFTER_HEADER = 'retry-after';
 const GET = 'GET';
 /** Whitespace, a control character or a backslash: nothing a real address holds. */
 const UNSAFE = /[\s\u0000-\u001f\u007f\\]/;
@@ -57,7 +57,6 @@ export type FilePort = {
   }>;
   /** The client's check of its own server's answer: OK through, anything else its ApiError. */
   readonly checked: <R extends TransportResponse>(response: R, token: string | null) => Promise<R>;
-  readonly now: () => number;
 };
 
 /** `url` when it is on the client's own server; anything else is refused before it is asked. */
@@ -84,14 +83,15 @@ async function discard(response: TransportResponse): Promise<void> {
 }
 
 /**
- * Storage's answer: OK through; anything else its kind, a redirect too, and no one signed out.
- * Where a redirect from storage pointed is never kept: it may be another presigned address.
+ * Storage's answer: OK through; anything else is 'server' with its status, whatever it is. A 401
+ * or 403 from storage is a link run out, not the person's session or role: it signs no one out
+ * and never says "sign in again". Where a redirect from storage pointed is never kept: it may be
+ * another presigned address.
  */
-async function storageChecked(response: FileResponse, now: number): Promise<FileResponse> {
+async function storageChecked(response: FileResponse): Promise<FileResponse> {
   if (response.status >= 200 && response.status < 300) return response;
-  const limit = { retryAfter: response.header(RETRY_AFTER_HEADER), now };
   await discard(response);
-  throw errorFromResponse(response.status, '', null, limit);
+  throw new ApiError('server', { status: response.status });
 }
 
 async function answered(
@@ -106,7 +106,7 @@ async function answered(
   await discard(first);
   const signal = options.deadline.signal;
   const second = await port.transport.file({ url: target, method: GET, headers: {}, signal });
-  return storageChecked(second, port.now());
+  return storageChecked(second);
 }
 
 async function* partsUnder(
