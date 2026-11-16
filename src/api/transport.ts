@@ -4,7 +4,8 @@
 // whole body is read as bytes under the caller's cap (body.ts readBytes), with a Content-Length
 // over the cap refused before a byte is read: nothing here reads a body whole without one. binary
 // keeps the headers too: Auto's server voice, one MP3. file gives the body as bytes as they arrive,
-// under the caller's cap, for transfer.ts to write to a file without holding it in memory.
+// under the caller's cap, for transfer.ts to write to a file without holding it in memory, and,
+// when the body is not content-encoded, refuses one whose length is not its Content-Length.
 
 import { fetch as expoFetch } from 'expo/fetch';
 
@@ -18,6 +19,8 @@ import type {
 } from './transport-types';
 
 const CONTENT_LENGTH = 'content-length';
+const CONTENT_ENCODING = 'content-encoding';
+const IDENTITY = 'identity';
 
 /**
  * What every request is sent with, whatever the client asked for.
@@ -63,11 +66,14 @@ async function sendBinary(request: TransportRequest): Promise<BinaryResponse> {
 async function sendFile(request: TransportRequest): Promise<FileResponse> {
   const response = await open(request);
   const length = () => response.headers.get(CONTENT_LENGTH);
+  // a content-encoded body is decoded as it is read, so its Content-Length is not the bytes read
+  const encoding = response.headers.get(CONTENT_ENCODING)?.trim().toLowerCase() ?? IDENTITY;
+  const exact = encoding === IDENTITY;
   return {
     status: response.status,
     bytes: (maxBytes) => readBytes(response.body, maxBytes, length()),
     header: (name) => response.headers.get(name),
-    parts: (maxBytes) => readParts(response.body, maxBytes, length()),
+    parts: (maxBytes) => readParts(response.body, maxBytes, length(), exact),
   };
 }
 

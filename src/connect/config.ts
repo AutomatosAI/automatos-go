@@ -20,24 +20,9 @@ export const DEFAULT_PORTS: Readonly<Record<string, number>> = Object.freeze({
 /** A host name (253) with a scheme and a port fits well inside this; longer is not an address. */
 export const ADDRESS_MAX_LENGTH = 512;
 
-export type Ipv4Quad = readonly [number, number, number, number];
-export type Ipv4Range = { readonly base: Ipv4Quad; readonly prefix: number };
+// The private (RFC 1918) blocks http:// is allowed on, and the blocks that reach the phone itself
+// (D-HTTPS, KC6), are defined with the IP parsing in src/lib/ip.ts, which the storage hop shares.
 
-/**
- * The private (RFC 1918) blocks http:// is allowed on (D-HTTPS, KC6). 172.16.0.0/12 joins the
- * PRD's 10.x and 192.168.x; 100.64.0.0/10 (Tailscale: use its HTTPS name) and 169.254.0.0/16
- * do not.
- */
-export const PRIVATE_IPV4_RANGES: readonly Ipv4Range[] = Object.freeze([
-  { base: [10, 0, 0, 0], prefix: 8 },
-  { base: [172, 16, 0, 0], prefix: 12 },
-  { base: [192, 168, 0, 0], prefix: 16 },
-]);
-/** On a phone these reach the phone itself: 127.0.0.0/8, and 0.0.0.0/8, which connects there. */
-export const LOOPBACK_IPV4_RANGES: readonly Ipv4Range[] = Object.freeze([
-  { base: [127, 0, 0, 0], prefix: 8 },
-  { base: [0, 0, 0, 0], prefix: 8 },
-]);
 /** 'localhost' and every name under it (RFC 6761) are the phone itself. */
 export const LOOPBACK_NAME = 'localhost';
 /** Names on the home network (mDNS) may use http:// (D-HTTPS). */

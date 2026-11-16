@@ -75,3 +75,13 @@ export function limitWaitMs(
   if (fromHeader !== null) return fromHeader;
   return bodySeconds === undefined ? null : saneWaitMs(bodySeconds * MS_PER_SECOND);
 }
+
+/**
+ * A wait in seconds as the app may use it, on a screen or for a timer: within the same bounds as
+ * a limit's wait (from now up to RETRY_AFTER_MAX_MS), else null. Every reader of an error's
+ * retryAfterSeconds goes through here, whoever made the error.
+ */
+export function boundedRetryAfterSeconds(seconds: number | null | undefined): number | null {
+  if (seconds === null || seconds === undefined) return null;
+  return saneWaitMs(seconds * MS_PER_SECOND) === null ? null : seconds;
+}

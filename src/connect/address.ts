@@ -4,16 +4,22 @@
 // as 192.168.0.1, 0x7f.1, an integer host, a backslash, user:pass@). Pure.
 
 import {
+  inIpv4Range,
+  isIpv6SelfAddress,
+  LOOPBACK_IPV4_RANGES,
+  mappedIpv4,
+  parseIpv4,
+  parseIpv6,
+  PRIVATE_IPV4_RANGES,
+} from '../lib/ip';
+import {
   ADDRESS_MAX_LENGTH,
   DEFAULT_PORTS,
   INSECURE_SCHEME,
-  LOOPBACK_IPV4_RANGES,
   LOOPBACK_NAME,
-  PRIVATE_IPV4_RANGES,
   PRIVATE_NAME_SUFFIX,
   SECURE_SCHEME,
 } from './config';
-import { inIpv4Range, isIpv6SelfAddress, mappedIpv4, parseIpv4, parseIpv6 } from './ip';
 
 export type AddressRefusal =
   | 'empty'

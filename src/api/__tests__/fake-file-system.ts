@@ -17,14 +17,20 @@ export const memoryFs = {
   ops: [] as string[],
   /** Handles opened and not yet closed. */
   openHandles: 0,
-  /** Set to make the next writeBytes throw (a full disk). */
+  /** Set to make every writeBytes throw (a full disk). */
   failWrites: false,
+  /** Set to make every handle's close throw. */
+  failCloses: false,
+  /** Set to make a move throw when it answers true for the move's source and destination. */
+  failMove: null as ((from: string, to: string) => boolean) | null,
   reset() {
     this.files.clear();
     this.folders.clear();
     this.ops.length = 0;
     this.openHandles = 0;
     this.failWrites = false;
+    this.failCloses = false;
+    this.failMove = null;
   },
 };
 
@@ -57,6 +63,7 @@ class FakeHandle {
   close(): void {
     if (this.#open) memoryFs.openHandles -= 1;
     this.#open = false;
+    if (memoryFs.failCloses) throw new Error('the handle could not be closed');
   }
 }
 
@@ -113,6 +120,8 @@ export class FakeFile {
   }
   move(to: FakeFile): void {
     if (to.exists) throw new Error('the destination already exists');
+    if (!this.exists) throw new Error('the file does not exist');
+    if (memoryFs.failMove?.(this.uri, to.uri)) throw new Error('the move failed');
     memoryFs.ops.push(`mv ${this.uri} -> ${to.uri}`);
     memoryFs.files.set(to.uri, memoryFs.files.get(this.uri) ?? new Uint8Array(0));
     memoryFs.files.delete(this.uri);

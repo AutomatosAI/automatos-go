@@ -10,6 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 
 import type { ApiClient } from '../../api/client';
+import { isAbortError } from '../../api/errors';
 import { useAppSession } from '../../app-state/session';
 import { logger } from '../../lib/logger';
 import { openInBrowser } from '../open-studio';
@@ -61,6 +62,8 @@ export function useSystemViewer(body: ViewerBody, title: string): SystemViewer {
     setFailure(null);
     openBody(client, body, title)
       .catch((error: unknown) => {
+        // a later open stopped this one's download (open-file.ts): that one says how it went
+        if (isAbortError(error)) return;
         logger.warn('[cc/deliverables] the file did not open', error);
         setFailure(openFailureMessage(error));
       })

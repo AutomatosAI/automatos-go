@@ -14,7 +14,7 @@ import { z } from 'zod';
 
 import { REDIRECT_TARGET_MAX_CHARS, SERVER_MESSAGE_MAX_CHARS } from './config';
 import { parseJson } from './json';
-import { limitWaitMs, saneWaitMs } from './retry-after';
+import { boundedRetryAfterSeconds, limitWaitMs, saneWaitMs } from './retry-after';
 import { API_ERROR_COPY, APP_ERROR_COPY, LIMIT_COPY } from './strings';
 
 const MS_PER_SECOND = 1_000;
@@ -198,13 +198,17 @@ export function errorFromResponse(
   limit?: LimitFacts,
 ): ApiError {
   const kind = kindForStatus(status);
-  const detail = detailOf(body);
+  const { retryAfterSeconds: bodySeconds, ...detail } = detailOf(body);
   const redirectTo =
     isRedirectStatus(status) && location && location.length <= REDIRECT_TARGET_MAX_CHARS
       ? { redirectTo: location }
       : {};
-  const lifts = kind === 'limit' ? limitDetail(detail.retryAfterSeconds, limit) : {};
-  return new ApiError(kind, { status, ...detail, ...redirectTo, ...lifts });
+  // a body's wait is never kept as it came: a limit's is worked out, any other's bounded the same
+  const wait =
+    kind === 'limit'
+      ? limitDetail(bodySeconds, limit)
+      : retryAfterOf(boundedRetryAfterSeconds(bodySeconds) ?? undefined);
+  return new ApiError(kind, { status, ...detail, ...redirectTo, ...wait });
 }
 
 /** Codes the app gives errors it raises itself (no response behind them), each with its own words. */

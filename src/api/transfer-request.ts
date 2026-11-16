@@ -6,21 +6,23 @@
 //
 // A redirect is never followed, with one exception the caller names: a route that answers with a
 // redirect to storage (GET /api/documents/generated/{filename}: a presigned address). Then the one
-// redirect is followed, and only to an https address with a host and nothing before it: the
-// second request carries no header at all, so no bearer, no workspace and no cookie goes with
-// it, and what it answers is checked without signing anyone out. A second redirect, an http
-// address, or a redirect on a request not so named is the redirect error every call gives.
+// redirect is followed, and only to an https address with a host and nothing before it, never
+// into a private network from a public server (private-host.ts): the second request carries no
+// header at all, so no bearer, no workspace and no cookie goes with it, and what it answers is
+// checked without signing anyone out: any refusal from storage is 'server' with its status. A
+// second redirect, an http address, a private host or a redirect on a request not so named is
+// the redirect error every call gives.
 
 import { ERROR_BODY_MAX_BYTES, STORAGE_REDIRECT_MAX_CHARS } from './config';
 import { callFailure, startDeadline, type Deadline } from './deadline';
-import { ApiError, errorFromResponse, isRedirectStatus } from './errors';
+import { ApiError, isRedirectStatus } from './errors';
+import { hostOfAddress, storageHostAllowed } from './private-host';
 import { BodyTooLargeError } from './body';
 import type { Server } from './server';
 import type { FileResponse, Transport, TransportResponse } from './transport-types';
 import { withoutTrailingSlash } from './url';
 
 const LOCATION_HEADER = 'location';
-const RETRY_AFTER_HEADER = 'retry-after';
 const GET = 'GET';
 /** Whitespace, a control character or a backslash: nothing a real address holds. */
 const UNSAFE = /[\s\u0000-\u001f\u007f\\]/;
@@ -57,7 +59,6 @@ export type FilePort = {
   }>;
   /** The client's check of its own server's answer: OK through, anything else its ApiError. */
   readonly checked: <R extends TransportResponse>(response: R, token: string | null) => Promise<R>;
-  readonly now: () => number;
 };
 
 /** `url` when it is on the client's own server; anything else is refused before it is asked. */
@@ -70,12 +71,18 @@ export function assertOnServer(apiUrl: string, url: string): void {
   }
 }
 
-/** Where a storage redirect may lead: an https address with a host; anything else is null. */
-export function storageAddress(location: string | null): string | null {
+/**
+ * Where a storage redirect may lead: an https address with a host, and, when the app's own server
+ * is not on a private network, a host that is not on one either (private-host.ts); anything else
+ * is null. A server on a home or office network may point to storage on that same network.
+ */
+export function storageAddress(location: string | null, apiUrl: string): string | null {
   if (!location || location.length > STORAGE_REDIRECT_MAX_CHARS || UNSAFE.test(location)) {
     return null;
   }
-  return STORAGE_ADDRESS.test(location) ? location : null;
+  if (!STORAGE_ADDRESS.test(location)) return null;
+  const host = hostOfAddress(location);
+  return host !== null && storageHostAllowed(host, apiUrl) ? location : null;
 }
 
 /** A body not wanted (a redirect's): read no further than an error body's cap, then let go. */
@@ -83,13 +90,16 @@ async function discard(response: TransportResponse): Promise<void> {
   await response.bytes(ERROR_BODY_MAX_BYTES).catch(() => undefined);
 }
 
-/** Storage's answer: OK through; anything else its kind, a redirect too, and no one signed out. */
-async function storageChecked(response: FileResponse, now: number): Promise<FileResponse> {
+/**
+ * Storage's answer: OK through; anything else is 'server' with its status, whatever it is. A 401
+ * or 403 from storage is a link run out, not the person's session or role: it signs no one out
+ * and never says "sign in again". Where a redirect from storage pointed is never kept: it may be
+ * another presigned address.
+ */
+async function storageChecked(response: FileResponse): Promise<FileResponse> {
   if (response.status >= 200 && response.status < 300) return response;
-  const limit = { retryAfter: response.header(RETRY_AFTER_HEADER), now };
-  const location = response.header(LOCATION_HEADER);
   await discard(response);
-  throw errorFromResponse(response.status, '', location, limit);
+  throw new ApiError('server', { status: response.status });
 }
 
 async function answered(
@@ -99,12 +109,12 @@ async function answered(
   options: { readonly deadline: Deadline; readonly call: FileCallOptions },
 ): Promise<FileResponse> {
   const marked = options.call.redirectsToStorage === true && isRedirectStatus(first.status);
-  const target = marked ? storageAddress(first.header(LOCATION_HEADER)) : null;
+  const target = marked ? storageAddress(first.header(LOCATION_HEADER), port.server.apiUrl) : null;
   if (target === null) return port.checked(first, token);
   await discard(first);
   const signal = options.deadline.signal;
   const second = await port.transport.file({ url: target, method: GET, headers: {}, signal });
-  return storageChecked(second, port.now());
+  return storageChecked(second);
 }
 
 async function* partsUnder(

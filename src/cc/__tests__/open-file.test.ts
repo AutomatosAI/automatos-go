@@ -123,6 +123,62 @@ describe('the system viewer', () => {
   });
 });
 
+describe('two opens at once', () => {
+  /** A body that sends its first part, then waits until the request is aborted, as fetch's does. */
+  function stalling(request: TransportRequest): FakeResponse {
+    const parts = async function* () {
+      yield new TextEncoder().encode('%PDF-first');
+      await new Promise<never>((_, reject) => {
+        const fail = () => reject(Object.assign(new Error('Aborted'), { name: 'AbortError' }));
+        if (request.signal.aborted) fail();
+        else request.signal.addEventListener('abort', fail, { once: true });
+      });
+    };
+    return { ...reply(200), parts };
+  }
+
+  const partials = () => [...memoryFs.files.keys()].filter((uri) => uri.endsWith('.partial'));
+
+  it('the same file tapped twice: the first download stops, the second shows the one copy', async () => {
+    server.answers = [stalling, pdf];
+    const first = openInSystemViewer(file());
+    await vi.waitFor(() => expect(partials()).toHaveLength(1));
+    const second = openInSystemViewer(file());
+    await expect(first).rejects.toMatchObject({ name: 'AbortError' });
+    await second;
+    expect(transport.calls).toHaveLength(2);
+    expect(transport.calls[0]?.signal.aborted).toBe(true);
+    expect(memoryFs.files.get(`${FOLDER}/q3.pdf`)).toEqual(PDF);
+    expect(partials()).toEqual([]);
+    expect(viewer.calls).toEqual([{ uri: `${FOLDER}/q3.pdf`, displayName: 'Q3 plan' }]);
+  });
+
+  it('a second file opened while the first downloads: only the second lands and is shown', async () => {
+    server.answers = [stalling, pdf];
+    const first = openInSystemViewer(file());
+    await vi.waitFor(() => expect(partials()).toHaveLength(1));
+    const other = { ...file(GENERATED_URL), fileName: 'budget.pdf', title: 'Budget' };
+    const second = openInSystemViewer(other);
+    await expect(first).rejects.toMatchObject({ name: 'AbortError' });
+    await second;
+    expect([...memoryFs.files.keys()]).toEqual([`${FOLDER}/budget.pdf`]);
+    expect(viewer.calls).toEqual([{ uri: `${FOLDER}/budget.pdf`, displayName: 'Budget' }]);
+  });
+
+  it('three quick opens: only the last one downloads after the first is stopped', async () => {
+    server.answers = [stalling, pdf];
+    const first = openInSystemViewer(file());
+    await vi.waitFor(() => expect(partials()).toHaveLength(1));
+    const second = openInSystemViewer(file());
+    const third = openInSystemViewer({ ...file(), fileName: 'q4.pdf', title: 'Q4' });
+    await expect(first).rejects.toMatchObject({ name: 'AbortError' });
+    await expect(second).rejects.toMatchObject({ name: 'AbortError' });
+    await third;
+    expect(transport.calls).toHaveLength(2);
+    expect([...memoryFs.files.keys()]).toEqual([`${FOLDER}/q4.pdf`]);
+  });
+});
+
 describe('a redirect on the way to the file', () => {
   const toStorage = () => reply(302, '', { Location: STORAGE });
 
@@ -139,6 +195,37 @@ describe('a redirect on the way to the file', () => {
     await expect(openInSystemViewer(file())).rejects.toMatchObject({ kind: 'server', status: 302 });
     expect(transport.calls.map((call) => call.url)).toEqual([RAW_URL]);
     expect(viewer.calls).toEqual([]);
+  });
+
+  it('never marks a name that could lead out of the route: it is then an ordinary download', () => {
+    const route = `${SERVER.apiUrl}/api/documents/generated/`;
+    for (const name of [
+      '../x',
+      '..',
+      'a..b.pdf',
+      '%2e%2e/x',
+      '%2E%2e%2Fx',
+      'x%2fy.pdf',
+      'x%5Cy.pdf',
+      'x\\y.pdf',
+      'sub/q3.pdf',
+      '',
+      '?x=1',
+    ]) {
+      expect(redirectsToStorage(SERVER.apiUrl, `${route}${name}`), name).toBe(false);
+    }
+    expect(redirectsToStorage(SERVER.apiUrl, `${route}q3.pdf?download=1`)).toBe(true);
+    expect(redirectsToStorage(SERVER.apiUrl, `${route}Q3 plan-v2.pdf`)).toBe(true);
+  });
+
+  it('an unmarked generated path that redirects is refused, and nothing goes to the address', async () => {
+    server.answers = [() => reply(302, '', { Location: STORAGE })];
+    const odd = `${SERVER.apiUrl}/api/documents/generated/../x.pdf`;
+    await expect(openInSystemViewer(file(odd))).rejects.toMatchObject({
+      kind: 'server',
+      status: 302,
+    });
+    expect(transport.calls.map((call) => call.url)).toEqual([odd]);
   });
 
   it('knows the generated route by its path on this server only', () => {

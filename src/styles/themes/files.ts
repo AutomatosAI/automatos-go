@@ -55,11 +55,16 @@ function removeQuietly(entry: File | Directory): void {
   }
 }
 
+/** Downloads running, by copy: two asks for one file share one download. */
+const downloading = new Map<string, Promise<File | null>>();
+
 /**
  * Deletes every theme file on the phone, a partial left beside a copy too (every way of leaving:
- * src/connect/user-files.ts). The next read downloads what the painted theme needs again.
+ * src/connect/user-files.ts, which stops the running downloads first). The downloads running are
+ * forgotten, so the next read downloads what the painted theme needs again, from the next server.
  */
 export function clearThemeFiles(): void {
+  downloading.clear();
   removeQuietly(new Directory(Paths.cache, THEME_FILES_FOLDER));
 }
 
@@ -77,15 +82,15 @@ async function download(client: ApiClient, file: ThemeFile): Promise<File | null
   }
 }
 
-/** Downloads running, by copy: two asks for one file share one download. */
-const downloading = new Map<string, Promise<File | null>>();
-
 /** The file's copy on the phone, downloaded when it is not there yet; null when refused or failed. */
 export function cacheThemeFile(client: ApiClient, file: ThemeFile): Promise<File | null> {
   const key = `${file.digest}/${file.path}`;
   const running = downloading.get(key);
   if (running) return running;
-  const started = download(client, file).finally(() => downloading.delete(key));
+  const started: Promise<File | null> = download(client, file).finally(() => {
+    // after a clear the key may already belong to a newer download
+    if (downloading.get(key) === started) downloading.delete(key);
+  });
   downloading.set(key, started);
   return started;
 }

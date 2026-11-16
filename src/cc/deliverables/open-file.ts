@@ -4,16 +4,18 @@
 // by the viewer module the foundation installed (react-native-file-viewer-turbo: QuickLook on iOS,
 // the default app on Android; docs/native-modules.md). A generated document's route may answer
 // with a redirect to storage: only that route's download follows it, once, to https, with nothing
-// of the session (src/api/transfer-request.ts). The copy is deleted when the viewer closes, and
-// the folder is emptied before every download, so a copy the viewer never reported closing goes
-// on the next open. A download that fails is an ApiError of the taxonomy's kind (its status, when
+// of the session (src/api/transfer-request.ts). The viewer keeps one copy at a time: a new open
+// stops the download still running for an earlier one and waits for it to settle (its partial
+// file gone) before the folder is emptied, and the earlier open then ends as an abort, which
+// shows nothing. The copy is deleted when the viewer closes, and the folder is emptied before
+// every download, so a copy the viewer never reported closing goes on the next open. A download that fails is an ApiError of the taxonomy's kind (its status, when
 // the server sent one); a viewer that cannot show the file is a ViewerError. Nothing is retried.
 
 import { Directory, File, Paths } from 'expo-file-system';
 import { open } from 'react-native-file-viewer-turbo';
 
 import type { ApiClient } from '../../api/client';
-import { ApiError, isApiError } from '../../api/errors';
+import { abortError, ApiError, isAbortError, isApiError } from '../../api/errors';
 import { download } from '../../api/transfer';
 import { withoutTrailingSlash } from '../../api/url';
 import { logger } from '../../lib/logger';
@@ -41,11 +43,35 @@ export function downloadError(error: unknown): ApiError {
   return isApiError(error) ? error : new ApiError('network', { cause: error });
 }
 
-/** Whether `url` is a generated document's route on this server, which may redirect to storage. */
+/** The viewer's download running now: how to stop it, and its settling (never a rejection). */
+type ViewerDownload = { readonly stop: AbortController; readonly settled: Promise<void> };
+
+let latest: ViewerDownload | null = null;
+
+/** A dot-dot, an escaped dot, slash or backslash, or a backslash: never in a file's own name. */
+const NOT_A_NAME = /\.\.|%2e|%2f|%5c|\\/i;
+const NAME_END = /[?#]/;
+
+/** The file name in a generated document's path: one segment, nothing that could leave it. */
+function isFileName(rest: string): boolean {
+  const end = rest.search(NAME_END);
+  const name = end < 0 ? rest : rest.slice(0, end);
+  return name !== '' && !name.includes('/') && !NOT_A_NAME.test(name);
+}
+
+/**
+ * Whether `url` is a generated document's route on this server, which may redirect to storage:
+ * its path is that route's with a plain file name. A name that could lead out of the route
+ * (`..`, an escaped dot, slash or backslash, a backslash, a further segment) is an ordinary
+ * download, which follows nothing.
+ */
 export function redirectsToStorage(apiUrl: string, url: string): boolean {
   const origin = withoutTrailingSlash(apiUrl);
   const onServer = url.slice(0, origin.length).toLowerCase() === origin.toLowerCase();
-  return onServer && url.slice(origin.length).startsWith(GENERATED_PREFIX);
+  const path = url.slice(origin.length);
+  return (
+    onServer && path.startsWith(GENERATED_PREFIX) && isFileName(path.slice(GENERATED_PREFIX.length))
+  );
 }
 
 function viewerFolder(): Directory {
@@ -72,17 +98,44 @@ export type ViewerSource = {
   readonly url: string;
 };
 
-/** The file, downloaded through the transfer module into the emptied viewer folder. */
-export async function downloadForViewer(source: ViewerSource, fileName: string): Promise<File> {
+async function fetchCopy(
+  source: ViewerSource,
+  fileName: string,
+  after: { readonly earlier: Promise<void> | undefined; readonly stop: AbortController },
+): Promise<File> {
+  await after.earlier; // the earlier download has stopped and removed its partial file
+  if (after.stop.signal.aborted) throw abortError(); // a newer open came while this one waited
   clearViewerFiles();
-  const target = new File(viewerFolder(), fileName);
+  return download(source.client, source.url, new File(viewerFolder(), fileName), {
+    signal: after.stop.signal,
+    timeoutMs: DOWNLOAD_TIMEOUT_MS,
+    redirectsToStorage: redirectsToStorage(source.client.server.apiUrl, source.url),
+  });
+}
+
+/**
+ * The file, downloaded through the transfer module into the emptied viewer folder. A download
+ * still running for an earlier open is stopped first and waited for; the earlier open then
+ * rejects with an AbortError, as one stopped by its caller does. Any other failure is the
+ * taxonomy's error.
+ */
+export async function downloadForViewer(source: ViewerSource, fileName: string): Promise<File> {
+  const earlier = latest;
+  earlier?.stop.abort();
+  const stop = new AbortController();
+  const copy = fetchCopy(source, fileName, { earlier: earlier?.settled, stop });
+  const settled = copy.then(
+    () => undefined,
+    () => undefined,
+  );
+  const mine: ViewerDownload = { stop, settled };
+  latest = mine;
   try {
-    return await download(source.client, source.url, target, {
-      timeoutMs: DOWNLOAD_TIMEOUT_MS,
-      redirectsToStorage: redirectsToStorage(source.client.server.apiUrl, source.url),
-    });
+    return await copy;
   } catch (error) {
-    throw downloadError(error);
+    throw isAbortError(error) ? error : downloadError(error);
+  } finally {
+    if (latest === mine) latest = null;
   }
 }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  BodyLengthError,
   BodyStalledError,
   BodyTooLargeError,
   MAX_EMPTY_READS,
@@ -299,5 +300,40 @@ describe('readParts', () => {
       },
     });
     await expect(collect(readParts(endless, 1024))).rejects.toBeInstanceOf(BodyStalledError);
+  });
+});
+
+describe('readParts with an exact length', () => {
+  async function collect(parts: AsyncIterable<Uint8Array>): Promise<number> {
+    let size = 0;
+    for await (const part of parts) size += part.byteLength;
+    return size;
+  }
+  const three = () => bytes([new Uint8Array([1, 2]), new Uint8Array([3])]);
+
+  it('takes a body of exactly its Content-Length', async () => {
+    expect(await collect(readParts(three(), 10, '3', true))).toBe(3);
+  });
+
+  it('refuses a body that ends short of it, or runs past it, and cancels the read', async () => {
+    await expect(collect(readParts(three(), 10, '4', true))).rejects.toBeInstanceOf(
+      BodyLengthError,
+    );
+    let cancelled = false;
+    const long = bytes(
+      [new Uint8Array([1, 2]), new Uint8Array([3, 4]), new Uint8Array([5])],
+      () => {
+        cancelled = true;
+      },
+    );
+    await expect(collect(readParts(long, 10, '3', true))).rejects.toBeInstanceOf(BodyLengthError);
+    expect(cancelled).toBe(true);
+    await expect(collect(readParts(null, 10, '2', true))).rejects.toBeInstanceOf(BodyLengthError);
+  });
+
+  it('checks nothing when the length is not exact (an encoded body) or not a number', async () => {
+    expect(await collect(readParts(three(), 10, '4'))).toBe(3);
+    expect(await collect(readParts(three(), 10, 'chunked', true))).toBe(3);
+    expect(await collect(readParts(three(), 10, null, true))).toBe(3);
   });
 });

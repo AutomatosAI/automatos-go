@@ -80,7 +80,7 @@ export function partsReply(
     chunks: async function* () {
       yield* [];
     },
-    parts: (maxBytes) => readParts(stream(), maxBytes, length),
+    parts: (maxBytes) => readParts(stream(), maxBytes, length, true),
   };
 }
 

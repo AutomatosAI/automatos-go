@@ -31,6 +31,7 @@ const {
   paintFiles,
 } = await import('../files');
 const { themeFile } = await import('../file-url');
+const { stopDownloads } = await import('../../../api/transfer');
 const { themePaint } = await import('../paint');
 const { DIGEST, FONT_URL, HARBOUR_ID, answer, fileUrl } = await import('./fixtures');
 
@@ -188,6 +189,32 @@ describe('leaving deletes the theme files', () => {
     expect((await cacheThemeFile(client, fontFile()))?.uri).toBe(COPY);
     expect(transport.calls).toHaveLength(1);
     expect(localThemeFile(FONT_URL, 'font')?.uri).toBe(COPY);
+  });
+
+  it('a download running when the person leaves lands nothing, and the next ask starts afresh', async () => {
+    const gate: { release: () => void } = { release: () => undefined };
+    const held = new Promise<void>((resolve) => {
+      gate.release = resolve;
+    });
+    server.answer = () => ({
+      ...partsReply(200, []),
+      parts: async function* () {
+        yield new Uint8Array(10);
+        await held; // the body ends after the clear, deaf to the abort
+      },
+    });
+    const running = cacheThemeFile(client, fontFile());
+    await vi.waitFor(() => expect(memoryFs.files.get(`${COPY}.partial`)?.byteLength).toBe(10));
+    stopDownloads();
+    clearThemeFiles();
+    server.answer = sized(20);
+    const next = cacheThemeFile(client, fontFile());
+    expect(next).not.toBe(running);
+    gate.release();
+    expect(await running).toBeNull();
+    expect((await next)?.uri).toBe(COPY);
+    expect(memoryFs.files.get(COPY)?.byteLength).toBe(20);
+    expect([...memoryFs.files.keys()]).toEqual([COPY]);
   });
 
   it('logs a folder that will not delete, and does not throw', async () => {
