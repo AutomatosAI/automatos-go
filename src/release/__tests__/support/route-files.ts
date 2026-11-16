@@ -165,7 +165,7 @@ const constFault = (name: string) =>
   `gives const ${name} more than the params, a read of them or one src/ helper given them`;
 
 /** Each const that is not one of the three shapes; a name bound to the params is a params too. */
-function constFaults(statements: readonly ts.Statement[], imports: Imports): string[] {
+function constFaults(statements: readonly ts.Statement[], imports: Imports): readonly string[] {
   const declarations = statements
     .filter(ts.isVariableStatement)
     .flatMap((statement) => [...statement.declarationList.declarations]);
