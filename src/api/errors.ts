@@ -12,7 +12,11 @@
 
 import { z } from 'zod';
 
-import { REDIRECT_TARGET_MAX_CHARS, SERVER_MESSAGE_MAX_CHARS } from './config';
+import {
+  REDIRECT_TARGET_MAX_CHARS,
+  SERVER_CODE_MAX_CHARS,
+  SERVER_MESSAGE_MAX_CHARS,
+} from './config';
 import { parseJson } from './json';
 import { boundedRetryAfterSeconds, limitWaitMs, saneWaitMs } from './retry-after';
 import { API_ERROR_COPY, APP_ERROR_COPY, LIMIT_COPY } from './strings';
@@ -42,8 +46,9 @@ export type ApiErrorDetail = {
   /** A limit: when it lifts (epoch ms, on the client's clock); null when not known or not a limit. */
   readonly retryAt?: number | null;
   /**
-   * Where a redirect the app refused to follow pointed (its Location). Never followed and never
-   * shown: only pairing reads it, to offer the same server's https address (src/connect).
+   * Where a redirect the app refused to follow pointed (its Location), kept only when it has no
+   * query and no fragment. Never followed and never shown: only pairing reads it, to offer the
+   * same server's https address (src/connect).
    */
   readonly redirectTo?: string;
   /** What went wrong underneath, for the logs only. */
@@ -124,12 +129,13 @@ const ErrorBodySchema = z.object({
     .catch(undefined),
 });
 
-function clip(text: string): string {
-  return text.length > SERVER_MESSAGE_MAX_CHARS ? text.slice(0, SERVER_MESSAGE_MAX_CHARS) : text;
+function clip(text: string, maxChars = SERVER_MESSAGE_MAX_CHARS): string {
+  return text.length > maxChars ? text.slice(0, maxChars) : text;
 }
 
+/** A server's code, cut as its message is: it goes into the error's message, for the logs. */
 function codeOf(code: string | undefined): Pick<ApiErrorDetail, 'code'> {
-  return code ? { code } : {};
+  return code ? { code: clip(code, SERVER_CODE_MAX_CHARS) } : {};
 }
 
 function retryAfterOf(seconds: number | undefined): Pick<ApiErrorDetail, 'retryAfterSeconds'> {
@@ -186,6 +192,20 @@ function limitDetail(
   };
 }
 
+/** A query or a fragment: where a presigned address keeps its signature. */
+const QUERY_OR_FRAGMENT = /[?#]/;
+
+/**
+ * Where a refused redirect pointed, as far as a caller needs it: pairing reads the origin and the
+ * path (src/connect/https-twin.ts) and refuses one with a query or a fragment. So an address with
+ * either is not kept at all (a presigned storage address is a credential, in its query), and one
+ * longer than any real address of a server is dropped too.
+ */
+function keptRedirect(location: string | null | undefined): Pick<ApiErrorDetail, 'redirectTo'> {
+  if (!location || location.length > REDIRECT_TARGET_MAX_CHARS) return {};
+  return QUERY_OR_FRAGMENT.test(location) ? {} : { redirectTo: location };
+}
+
 /**
  * A non-OK response as an ApiError of the kind its status names. A redirect (never followed) keeps
  * where it pointed, when it said and the address is no longer than any real one. A limit keeps
@@ -199,10 +219,7 @@ export function errorFromResponse(
 ): ApiError {
   const kind = kindForStatus(status);
   const { retryAfterSeconds: bodySeconds, ...detail } = detailOf(body);
-  const redirectTo =
-    isRedirectStatus(status) && location && location.length <= REDIRECT_TARGET_MAX_CHARS
-      ? { redirectTo: location }
-      : {};
+  const redirectTo = isRedirectStatus(status) ? keptRedirect(location) : {};
   // a body's wait is never kept as it came: a limit's is worked out, any other's bounded the same
   const wait =
     kind === 'limit'

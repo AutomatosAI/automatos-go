@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Frame } from '../../core/ai-sdk-stream';
 import { decodeChunks } from '../body';
 import { createApiClient } from '../client';
-import { STREAM_LINE_MAX_CHARS } from '../config';
+import { CHAT_TURN_MAX_MS, STREAM_LINE_MAX_CHARS } from '../config';
 import { ApiError, userMessage } from '../errors';
 import type { Route } from '../routes';
 import { readEvents } from '../sse';
@@ -150,6 +150,49 @@ describe('a chat turn under its limits', () => {
   });
 });
 
+describe('a stream past its total time', () => {
+  it('a chat turn is opened with the turn total, CHAT_TURN_MAX_MS', async () => {
+    const stream = vi.fn(async () => ({
+      status: 200,
+      header: () => null,
+      bytes: async () => new Uint8Array(0),
+      chunks: async function* () {
+        yield '0:"ok"\n';
+      },
+    }));
+    await streamTurn({ stream }, CHAT, BODY, () => undefined);
+    expect(stream).toHaveBeenCalledWith(
+      CHAT,
+      expect.objectContaining({ maxDurationMs: CHAT_TURN_MAX_MS }),
+    );
+  });
+
+  it("the live events end at the client's total, as 'stream', and the request is aborted", async () => {
+    const transport = fakeTransport((request) => ({
+      status: 200,
+      header: () => null,
+      bytes: async () => new Uint8Array(0),
+      chunks: async function* () {
+        while (!request.signal.aborted) {
+          yield ': hb\n\n';
+          await new Promise((resolve) => setTimeout(resolve, 5));
+        }
+      },
+    }));
+    const client = createApiClient({
+      server: SERVER,
+      getToken: async () => 'jwt.token.value',
+      getWorkspaceId: () => 'ws-1',
+      transport,
+      streamMaxDurationMs: 30,
+    });
+    const error = await failureOf(readEvents(client, EVENTS, () => undefined));
+    expect(error.kind).toBe('stream');
+    expect(error.cause).toMatchObject({ limit: 'time' });
+    expect(transport.calls[0]?.signal.aborted).toBe(true);
+  });
+});
+
 describe('the live events under their limits', () => {
   it("the client's idle timeout ends the stream", async () => {
     const { transport } = watching(['event: board_changed\ndata: {}\n\n']);
@@ -177,7 +220,11 @@ describe('limitedChunks', () => {
 
   it('passes the chunks through untouched within its limits', async () => {
     const seen: string[] = [];
-    for await (const chunk of limitedChunks(of(['ab', 'cd']), { idleMs: 50, maxChars: 4 }, vi.fn()))
+    for await (const chunk of limitedChunks(
+      of(['ab', 'cd']),
+      { idleMs: 50, maxChars: 4, maxMs: 60_000 },
+      vi.fn(),
+    ))
       seen.push(chunk);
     expect(seen).toEqual(['ab', 'cd']);
   });
@@ -188,7 +235,7 @@ describe('limitedChunks', () => {
     const error = await (async () => {
       for await (const chunk of limitedChunks(
         of(['ab', 'cd', 'e']),
-        { idleMs: 50, maxChars: 4 },
+        { idleMs: 50, maxChars: 4, maxMs: 60_000 },
         end,
       ))
         seen.push(chunk);
@@ -198,12 +245,46 @@ describe('limitedChunks', () => {
     expect(end).toHaveBeenCalledTimes(1);
   });
 
+  it('ends a stream open past its total time, however steadily it sends, on the clock', async () => {
+    const end = vi.fn();
+    let now = 0;
+    async function* steady() {
+      for (;;) {
+        now += 10; // a character every 10 ms of the clock: never idle
+        yield 'x';
+      }
+    }
+    const seen: string[] = [];
+    const error = await (async () => {
+      for await (const chunk of limitedChunks(
+        steady(),
+        { idleMs: 50, maxChars: 1_000, maxMs: 35 },
+        end,
+        () => now,
+      ))
+        seen.push(chunk);
+    })().catch((caught: unknown) => caught);
+    expect(error).toMatchObject({ name: 'StreamLimitError', limit: 'time' });
+    expect(seen).toHaveLength(4); // the fourth was asked for at 30 ms, inside the 35
+    expect(end).toHaveBeenCalledTimes(1);
+  });
+
+  it('ends a stream whose next chunk would come after its total time, without waiting for it', async () => {
+    const end = vi.fn();
+    const never = {
+      [Symbol.asyncIterator]: () => ({ next: () => new Promise<never>(() => undefined) }),
+    };
+    const reading = limitedChunks(never, { idleMs: 1_000, maxChars: 4, maxMs: 10 }, end).next();
+    await expect(reading).rejects.toMatchObject({ limit: 'time' });
+    expect(end).toHaveBeenCalledTimes(1);
+  });
+
   it('ends a silent stream at once, without waiting on the read', async () => {
     const end = vi.fn();
     const never = {
       [Symbol.asyncIterator]: () => ({ next: () => new Promise<never>(() => undefined) }),
     };
-    const reading = limitedChunks(never, { idleMs: 10, maxChars: 4 }, end).next();
+    const reading = limitedChunks(never, { idleMs: 10, maxChars: 4, maxMs: 60_000 }, end).next();
     await expect(reading).rejects.toMatchObject({ limit: 'idle' });
     expect(end).toHaveBeenCalledTimes(1);
   });
@@ -214,7 +295,7 @@ describe('limitedChunks', () => {
       yield 'a';
       throw new Error('connection reset');
     }
-    const iterator = limitedChunks(broken(), { idleMs: 50, maxChars: 10 }, end);
+    const iterator = limitedChunks(broken(), { idleMs: 50, maxChars: 10, maxMs: 60_000 }, end);
     await iterator.next();
     await expect(iterator.next()).rejects.toThrow('connection reset');
     expect(end).not.toHaveBeenCalled();

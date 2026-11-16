@@ -18,13 +18,13 @@ describe('isPrivateNetworkHost', () => {
     }
   });
 
-  it('knows the local names, in any case and with a trailing dot', () => {
+  it('knows the local names, in any case', () => {
     for (const host of [
       'localhost',
       'a.localhost',
       'Nas.Local',
       'x.internal',
-      'y.lan.',
+      'y.lan',
       'z.home.arpa',
       'minio',
     ]) {
@@ -32,10 +32,21 @@ describe('isPrivateNetworkHost', () => {
     }
   });
 
-  it('never believes a number that is not a strict dotted quad, or a broken IPv6 literal', () => {
-    for (const host of ['0x7f.1', '2130706433', '127.1', '[::gg]', '[1:2]']) {
-      expect(isPrivateNetworkHost(host), host).toBe(true);
+  it('calls a server host it cannot read NOT private, so it never widens where storage may lead', () => {
+    for (const host of [
+      '0x7f.1',
+      '2130706433',
+      '127.1',
+      '[::gg]',
+      '[1:2]',
+      'y.lan.',
+      'n%61s.local',
+      '',
+    ]) {
+      expect(isPrivateNetworkHost(host), host).toBe(false);
     }
+    expect(storageHostAllowed('10.0.0.5', 'https://0x7f.1')).toBe(false);
+    expect(storageHostAllowed('minio', 'https://[::gg]')).toBe(false);
   });
 
   it('calls public what is on the internet', () => {

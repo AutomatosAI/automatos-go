@@ -16,6 +16,8 @@ export const FILE_URL = `${SERVER.apiUrl}/api/documents/generated/q3.pdf`;
 export const STORAGE = 'https://bucket.storage.example.test/q3.pdf?X-Amz-Signature=abc';
 export const TARGET_URI = `${CACHE_URI}/viewer/q3.pdf`;
 export const encode = (text: string) => new TextEncoder().encode(text);
+/** A download's time limit, which every download names (transfer.ts). */
+export const TIMED = Object.freeze({ timeoutMs: 30_000 });
 
 export function clientWith(transport: FakeTransport, overrides: Partial<ApiClientOptions> = {}) {
   return createApiClient({

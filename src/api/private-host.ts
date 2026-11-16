@@ -12,10 +12,20 @@
 // block, which is what such a server sends; never the phone itself (localhost, loopback) and never
 // link-local. Nothing bracketed, no IPv6 literal, from either.
 //
+// "Never the phone itself, never link-local" holds of what is WRITTEN: literals and local names.
+// A name can resolve to any address, a private one included, and no reading of its text can see
+// that. What bounds that case is the hop itself: https only, one hop, a GET carrying no header
+// at all (no bearer, no workspace, no cookie), its body under the same byte cap, and a TLS
+// certificate the platform must find valid for that very name, which a host inside a private
+// network does not hold for a public name it was pointed at.
+//
 // The server's own host (from the build's address or a pairing, both already held to a strict
 // form) is private when it is an IP literal in a private, loopback or link-local block, IPv6 too
 // (::1, ::, fc00::/7, fe80::/10, an IPv4-mapped address in one of those), localhost or a name
-// under it, a name ending .local, .internal, .lan or .home.arpa, or a name of one label.
+// under it, a name ending .local, .internal, .lan or .home.arpa, or a name of one label. A host
+// this file cannot read (a number that is not a strict dotted quad, an IPv6 literal that does not
+// parse, a name not written plainly) is NOT private: an unreadable server never widens where
+// storage may lead.
 
 import {
   inIpv4Range,
@@ -40,8 +50,6 @@ const PRIVATE_NAME_SUFFIXES: readonly string[] = Object.freeze([
   '.lan',
   '.home.arpa',
 ]);
-/** A URL parser reads a host whose last label is a number as IPv4 (WHATWG "ends in a number"). */
-const NUMERIC_LABEL = /^(\d+|0x[0-9a-f]*)$/;
 const IPV6_LITERAL = /^\[([^\]]+)\]$/;
 const SCHEME_END = '://';
 const AUTHORITY_END = /[/?#]/;
@@ -52,7 +60,7 @@ function isLocalIpv4(quad: Ipv4Quad): boolean {
 
 function isLocalIpv6(literal: string): boolean {
   const groups = parseIpv6(IPV6_LITERAL.exec(literal)?.[1] ?? '');
-  if (!groups) return true; // not an address anyone can check: never believed public
+  if (!groups) return false; // not an address anyone can check: never widens what storage may be
   const mapped = mappedIpv4(groups);
   if (mapped) return isLocalIpv4(mapped);
   return isIpv6SelfAddress(groups) || isIpv6LocalNetwork(groups);
@@ -68,12 +76,13 @@ function isLocalName(name: string): boolean {
  * strict form where it was set) on a private network?
  */
 export function isPrivateNetworkHost(host: string): boolean {
-  const name = host.toLowerCase().replace(/\.$/, '');
-  if (name.startsWith('[')) return isLocalIpv6(name);
-  const labels = name.split('.');
-  if (NUMERIC_LABEL.test(labels[labels.length - 1] ?? '')) {
+  if (host.startsWith('[')) return isLocalIpv6(host.toLowerCase());
+  const labels = plainLabels(host);
+  if (!labels) return false; // not written plainly: never widens what storage may be
+  const name = labels.join('.');
+  if (readsAsNumber(labels)) {
     const quad = parseIpv4(name);
-    return quad === null || isLocalIpv4(quad);
+    return quad !== null && isLocalIpv4(quad);
   }
   return isLocalName(name);
 }
