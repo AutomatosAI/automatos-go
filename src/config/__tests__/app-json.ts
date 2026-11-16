@@ -5,6 +5,7 @@ import path from 'node:path';
 import type { IOSConfig } from 'expo/config-plugins';
 
 import appJson from '../../../app.json';
+import { APP_IDENTITY } from '../../release/__tests__/settings/identity';
 
 export const { expo } = appJson;
 
@@ -16,9 +17,10 @@ export type PrivacyManifest = IOSConfig.PrivacyInfo.PrivacyInfo;
 
 export const privacy: PrivacyManifest = expo.ios.privacyManifests;
 
-// The committed EAS link (public identifiers: the project id ships inside every binary).
-export const EAS_OWNER = 'gerard161';
-export const EAS_PROJECT_ID = '7b4ae66f-9733-4d53-a221-182c1692d574';
+// The committed EAS link (public identifiers: the project id ships inside every binary), from the
+// app's settings; the update URL is EAS's own address for that project.
+export const EAS_OWNER: string = APP_IDENTITY.eas.owner;
+export const EAS_PROJECT_ID: string = APP_IDENTITY.eas.projectId;
 export const EAS_UPDATES_URL = `https://u.expo.dev/${EAS_PROJECT_ID}`;
 
 export const PROJECT_ROOT = path.resolve(__dirname, '../../..');

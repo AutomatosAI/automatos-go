@@ -10,6 +10,7 @@ import { inflateSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 
 import appJson from '../../../app.json';
+import { APP_IDENTITY } from '../../release/__tests__/settings/identity';
 
 const { expo } = appJson;
 
@@ -22,11 +23,12 @@ const ICON_DARK = `${BRAND_REF}icon-dark.png`;
 const ADAPTIVE_ICON = `${BRAND_REF}adaptive-icon.png`;
 const SPLASH = `${BRAND_REF}splash.png`;
 
-// The Studio grounds as bytes: cream hsl(38 50% 92%) and Studio Dark hsl(30 12% 9%).
-const CREAM = [0xf4, 0xee, 0xe2];
-const DARK = [0x1a, 0x18, 0x14];
+// The app's light and dark grounds as bytes, and the splash mark's width (settings/identity.ts):
+// here, Studio's cream hsl(38 50% 92%) and Studio Dark hsl(30 12% 9%).
+const CREAM = APP_IDENTITY.brand.lightGround;
+const DARK = APP_IDENTITY.brand.darkGround;
 const ICON_SIZE = 1024;
-const SPLASH_IMAGE_WIDTH = 220; // as the academy template
+const SPLASH_IMAGE_WIDTH = APP_IDENTITY.brand.splashImageWidth;
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const COLOUR_TYPE_RGB = 2;
@@ -74,7 +76,7 @@ function readPng(ref: string): Png {
   };
 }
 
-function hex(rgb: number[]): string {
+function hex(rgb: readonly number[]): string {
   return `#${rgb.map((byte) => byte.toString(16).padStart(2, '0')).join('')}`;
 }
 

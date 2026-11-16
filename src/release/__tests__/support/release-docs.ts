@@ -1,9 +1,11 @@
 // docs/release as the store-document audit reads it (test-only, US-021p): the text a person pastes
 // into a store form (each ```text block), the listing's fields and App Store Connect's limits, the
-// automatos.app addresses of a legal page, the statements a document makes (for its ages), the
-// ALLOWED ages that are not 16, and the secret-shaped strings no document may hold. Pure over
-// strings: release-docs.test.ts reads the files through tree.ts.
+// addresses of a legal page on the app's own site, the statements a document makes (for its ages),
+// and the secret-shaped strings no document may hold. The site, its published addresses and the
+// ALLOWED ages that are not 16 are the app's (settings/identity.ts, settings/release-docs.ts). Pure
+// over strings: release-docs.test.ts reads the files through tree.ts.
 
+import { APP_IDENTITY } from '../settings/identity';
 import { sectionStartingWith } from './markdown';
 
 export const RELEASE_DOCS_DIR = 'docs/release';
@@ -47,14 +49,18 @@ export function charCount(value: string): number {
   return [...value].length;
 }
 
-const AUTOMATOS_ADDRESS =
-  /(?:https?:\/\/)?(?:[a-z0-9-]+\.)*automatos\.app(?:\/[^\s)\]>`'"|*,;]*)?/gi;
+const escaped = (text: string) => text.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+/** Any address on the app's site or a subdomain of it, with or without its scheme and path. */
+const SITE_ADDRESS = new RegExp(
+  `(?:https?:\\/\\/)?(?:[a-z0-9-]+\\.)*${escaped(APP_IDENTITY.site)}(?:\\/[^\\s)\\]>\`'"|*,;]*)?`,
+  'gi',
+);
 const LEGAL_PATH = /^\/(?:privacy|terms|tos|contact|support|legal|eula)(?:[-/?#.]|$)/i;
 const TRAILING_PUNCTUATION = /[.:]+$/;
 
-/** Every automatos.app address in the text whose path is a legal page's (privacy, terms, support). */
+/** Every address on the app's site in the text whose path is a legal page's (privacy, terms…). */
 export function legalAddresses(text: string): string[] {
-  return [...text.matchAll(AUTOMATOS_ADDRESS)]
+  return [...text.matchAll(SITE_ADDRESS)]
     .map((match) => match[0].replace(TRAILING_PUNCTUATION, ''))
     .filter((address) => {
       const bare = address.replace(/^https?:\/\//i, '');
@@ -80,33 +86,6 @@ export function statementUnits(text: string): string[] {
     .filter((lines) => lines.length > 0)
     .map((lines) => lines.join(' ').replace(/\s+/g, ' ').trim());
 }
-
-export type AllowedAge = Readonly<{ file: string; text: string; age: number; reason: string }>;
-
-/** Statements of an age other than 16 that keep the rule: each exact text, where, and why. */
-export const ALLOWED_AGES: readonly AllowedAge[] = [
-  {
-    file: 'docs/release/age-rating.md',
-    text: 'The live Terms at https://automatos.app/terms (v2.3, section 02) say "You must be at least 18".',
-    age: 18,
-    reason:
-      "Quotes the live Terms' 18 to list it as Gerard's conflict with the one minimum age (D12, KR11, OT-R13). The page's own answers say 16.",
-  },
-  {
-    file: 'docs/release/age-rating.md',
-    text: 'tick only the age groups 16–17 and 18 and over',
-    age: 18,
-    reason:
-      "Play's Target audience names its age groups so; ticking 16–17 and the group above it is how Play shows the one minimum age, 16 (D12).",
-  },
-  {
-    file: 'docs/release/README.md',
-    text: "Resolve the live Terms' minimum age of 18 against D12's 16.",
-    age: 18,
-    reason:
-      "OT-R13's row names the live Terms' 18 as the conflict Gerard resolves (D12, KR11); the record states no age of its own but 16.",
-  },
-];
 
 export type SecretShape = Readonly<{ name: string; pattern: RegExp }>;
 
@@ -153,18 +132,12 @@ export function passwordValuesIn(text: string): string[] {
 
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/g;
 const PLACEHOLDER_DOMAIN = /@(?:[a-z0-9-]+\.)*example\.(?:com|org|net)$/i;
-
-/** The addresses the privacy policy publishes (its section 13 and 15): no person's own account. */
-export const PUBLIC_ADDRESSES: readonly string[] = [
-  'privacy@automatos.app',
-  'support@automatos.app',
-  'hello@automatos.app',
-];
+const published: readonly string[] = APP_IDENTITY.publicAddresses;
 
 /** Every email address in the text that is neither published nor on a placeholder domain. */
 export function accountAddressesIn(text: string): string[] {
   return [...text.matchAll(EMAIL)]
     .map((match) => match[0])
-    .filter((address) => !PUBLIC_ADDRESSES.includes(address.toLowerCase()))
+    .filter((address) => !published.includes(address.toLowerCase()))
     .filter((address) => !PLACEHOLDER_DOMAIN.test(address));
 }

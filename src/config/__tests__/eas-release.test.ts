@@ -13,6 +13,7 @@ import { parse } from 'yaml';
 import { z } from 'zod';
 
 import easJson from '../../../eas.json';
+import { APP_IDENTITY } from '../../release/__tests__/settings/identity';
 import { EAS_OWNER, EAS_PROJECT_ID, EAS_UPDATES_URL, expo, PROJECT_ROOT } from './app-json';
 import {
   beforeUpdateSteps,
@@ -77,11 +78,11 @@ const testflightProfile = easJson.build.testflight;
 // owner, project id or update URL is another EAS project: it would never see this project's
 // TestFlight builds or updates.
 describe('app.json carries the EAS project link', () => {
-  it('is owned by the gerard161 Expo account', () => {
+  it(`is owned by the ${EAS_OWNER} Expo account`, () => {
     expect(expo.owner).toBe(EAS_OWNER);
   });
 
-  it('names the Automatos Go EAS project', () => {
+  it(`names the ${APP_IDENTITY.name} EAS project`, () => {
     expect(expo.extra.eas).toEqual({ projectId: EAS_PROJECT_ID });
   });
 
@@ -132,8 +133,8 @@ describe('eas.json: the profiles the workflows name', () => {
 
   it('the testflight submit profile names the team and the App Store Connect app', () => {
     expect(easJson.submit.testflight.ios).toEqual({
-      appleTeamId: 'KGVA9933BG',
-      ascAppId: '6825362378',
+      appleTeamId: APP_IDENTITY.eas.appleTeamId,
+      ascAppId: APP_IDENTITY.eas.ascAppId,
     });
   });
 });

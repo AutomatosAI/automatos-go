@@ -8,33 +8,20 @@
 // the ALLOWED quotes; every privacy, terms and support address is legal-links.ts's; and no
 // secret-shaped string, password value or person's email address. Explanations around a block
 // (for Gerard) may name the rules they keep, which is why only the blocks are held to the phrases.
+// The ALLOWED quotes, the terms' words and the review labels are the app's
+// (settings/release-docs.ts); its name and site are settings/identity.ts's.
 
 import { describe, expect, it } from 'vitest';
 
-import { SIGN_IN_SCREEN_COPY } from '../../auth/strings';
-import { HOME_COPY, MENU_COPY } from '../../chat/strings';
-import { SHELL_COPY as CC_COPY } from '../../cc/strings';
 import { expo, infoPlist } from '../../config/__tests__/app-json';
-import { CONFIRM_COPY, CONNECT_SCREEN_COPY, WELCOME_COPY } from '../../connect/strings';
-import { CONSENT_SHEET_COPY } from '../../consent/strings';
-import { aiLabelText } from '../../core/web/lib/ai-label/copy';
-import { PUSH_CATEGORY_COPY, PUSH_PHONE_COPY, PUSH_SETTINGS_COPY } from '../../push/strings';
-import { SHELL_COPY } from '../../app-state/strings';
 import { BUILT_IN_STYLE_IDS } from '../../styles/registry/style-id';
-import { PICKER_COPY, STYLE_COPY } from '../../styles/strings';
-import { REPORT_COPY } from '../../ui/strings';
-import {
-  AI_VOICE_GREETING,
-  LANGUAGE_COPY,
-  VOICE_CENTRE_COPY,
-  VOICE_ENTRY_COPY,
-} from '../../voice/strings';
+import { STYLE_COPY } from '../../styles/strings';
 import { LEGAL_LINKS, PRIVACY_POLICY_URL, SUPPORT_URL } from '../legal-links';
-import { PRIVACY_COPY } from '../strings';
+import { APP_IDENTITY } from './settings/identity';
+import { ALLOWED_AGES, REVIEW_LABELS, RULED_OUT_TERMS } from './settings/release-docs';
 import { BILLING, DATA_CLAIMS, MINIMUM_AGE, SIGNUP, agesIn } from './support/forbidden-copy';
 import {
   AGE_RATING_DOC,
-  ALLOWED_AGES,
   EXPORT_DOC,
   LISTING_LIMITS,
   PLAY_ACCESS_DOC,
@@ -64,50 +51,8 @@ const storeBlocks = STORE_TEXT_DOCS.flatMap((file) =>
   pasteBlocks(readRepoFile(file)).map((text) => ({ file, text })),
 );
 const description = fieldValue(listing, 'Description');
-
-/** The words of the app's terms (CLAUDE.md 'Terms') that its store text never uses. */
-const RULED_OUT_TERMS: readonly RegExp[] = [
-  /\bartifacts?\b/i,
-  /\boutputs?\b/i,
-  /\brecipes?\b/i,
-  /\bworkflows?\b/i,
-  /\bjobs?\b/i,
-  /\bthe assistant\b/i,
-  /\bCommand Center\b/,
-];
-
-/** Labels the review notes send a reviewer to: each exactly as the app shows it. */
-const REVIEW_LABELS: readonly string[] = [
-  WELCOME_COPY.signIn,
-  WELCOME_COPY.connect,
-  SIGN_IN_SCREEN_COPY.usePassword,
-  SIGN_IN_SCREEN_COPY.signIn,
-  CONSENT_SHEET_COPY.heading,
-  CONSENT_SHEET_COPY.agree,
-  CONNECT_SCREEN_COPY.continue,
-  CONNECT_SCREEN_COPY.scan,
-  CONFIRM_COPY.title,
-  CONFIRM_COPY.pair,
-  SHELL_COPY.signOut,
-  HOME_COPY.menu,
-  MENU_COPY.newChat,
-  MENU_COPY.chats,
-  MENU_COPY.commandCentre,
-  MENU_COPY.settings,
-  ...Object.values(CC_COPY.tabs),
-  aiLabelText(),
-  REPORT_COPY.action,
-  PRIVACY_COPY.title,
-  PRIVACY_COPY.crashReports,
-  PICKER_COPY.title,
-  PUSH_SETTINGS_COPY.title,
-  PUSH_PHONE_COPY.turnOn,
-  PUSH_CATEGORY_COPY.reply,
-  VOICE_ENTRY_COPY.label,
-  VOICE_CENTRE_COPY.hold.talk.label,
-  LANGUAGE_COPY.section,
-  AI_VOICE_GREETING,
-];
+/** The words of the app's own name, which App Store Connect searches without a keyword. */
+const NAME_WORDS = new RegExp(`^(?:${APP_IDENTITY.name.split(' ').join('|')})$`, 'i');
 
 /** The built-in styles by the names the picker shows (style-id.ts, styles/strings.ts). */
 const STYLE_NAMES: readonly string[] = BUILT_IN_STYLE_IDS.map((id) => STYLE_COPY.names[id]);
@@ -162,16 +107,18 @@ describe('the helpers catch what they must', () => {
   });
 
   it('finds a person’s address, and passes published and placeholder ones', () => {
+    const published = APP_IDENTITY.publicAddresses[0];
     expect(accountAddressesIn('write to someone@gmail.com')).toEqual(['someone@gmail.com']);
-    expect(accountAddressesIn('privacy@automatos.app or reviewer@example.com')).toEqual([]);
+    expect(accountAddressesIn(`${published} or reviewer@example.com`)).toEqual([]);
   });
 
   it('finds every legal-page address, with or without its scheme', () => {
+    const site = APP_IDENTITY.site;
     expect(
       legalAddresses(
-        'See https://automatos.app/privacy, ui.automatos.app/terms. Also automatos.app/contact and https://ui.automatos.app/chat or privacy@automatos.app.',
+        `See https://${site}/privacy, ui.${site}/terms. Also ${site}/contact and https://ui.${site}/chat or privacy@${site}.`,
       ),
-    ).toEqual(['https://automatos.app/privacy', 'ui.automatos.app/terms', 'automatos.app/contact']);
+    ).toEqual([`https://${site}/privacy`, `ui.${site}/terms`, `${site}/contact`]);
   });
 
   it('reads a statement wrapped over lines as one, and list items and rows apart', () => {
@@ -210,9 +157,9 @@ describe('the App Store listing (R22)', () => {
   });
 
   it('is named as app.json names the app, with a subtitle of its own', () => {
-    expect(fieldValue(listing, 'Name')).toBe('Automatos Go');
+    expect(fieldValue(listing, 'Name')).toBe(APP_IDENTITY.name);
     expect(fieldValue(listing, 'Name')).toBe(expo.name);
-    expect(fieldValue(listing, 'Subtitle')).not.toContain('Automatos');
+    expect(fieldValue(listing, 'Subtitle')).not.toContain(APP_IDENTITY.name.split(' ')[0]);
   });
 
   // Claims audit, 16 Nov: the listing said three styles while five shipped. It now names every
@@ -234,7 +181,7 @@ describe('the App Store listing (R22)', () => {
     expect(keywords).not.toMatch(/\s/);
     expect(words.every((word) => word.length > 0)).toBe(true);
     expect(new Set(words.map((word) => word.toLowerCase())).size).toBe(words.length);
-    expect(words.filter((word) => /^(?:automatos|go)$/i.test(word))).toEqual([]);
+    expect(words.filter((word) => NAME_WORDS.test(word))).toEqual([]);
   });
 
   it("names legal-links.ts's support and privacy pages, and an https marketing page", () => {
@@ -242,7 +189,7 @@ describe('the App Store listing (R22)', () => {
     expect(fieldValue(listing, 'Privacy policy URL')).toBe(PRIVACY_POLICY_URL);
     const marketing = new URL(fieldValue(listing, 'Marketing URL'));
     expect(marketing.protocol).toBe('https:');
-    expect(marketing.host).toBe('automatos.app');
+    expect(marketing.host).toBe(APP_IDENTITY.site);
   });
 
   it('gives the copyright a year and an owner, and no URL', () => {

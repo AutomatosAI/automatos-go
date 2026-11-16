@@ -21,24 +21,29 @@ import {
 import {
   ANDROID_BLOCKED,
   ANDROID_PERMISSIONS,
+  LINKED_TYPES,
+  NEVER_DECLARED,
+  NOT_LINKED_TYPES,
   REFERENCED_ONLY_KEYS,
   REQUIRED_KEYS,
   UNREFERENCED_KEYS,
   USED_KEYS,
-} from './store-rules';
+} from '../../release/__tests__/settings/app-config';
+import { APP_IDENTITY } from '../../release/__tests__/settings/identity';
 
 const UNUSED_NOTICE =
   'a bundled library references it, so Apple requires this notice; the app never asks for access.';
+const APP_NAME = APP_IDENTITY.name;
 describe('iOS usage strings (US-002c, ITMS-90683)', () => {
-  it.each(REQUIRED_KEYS)('%s is 30+ characters and names Automatos Go', (key) => {
+  it.each(REQUIRED_KEYS)(`%s is 30+ characters and names ${APP_NAME}`, (key) => {
     const value = infoPlist[key];
     expect(typeof value).toBe('string');
     expect(String(value).length).toBeGreaterThanOrEqual(30);
-    expect(value).toContain('Automatos Go');
+    expect(value).toContain(APP_NAME);
   });
 
   it.each(REFERENCED_ONLY_KEYS)('%s says the app does not use it and never asks', (key) => {
-    expect(infoPlist[key]).toMatch(/^Automatos Go does not /);
+    expect(infoPlist[key]).toMatch(new RegExp(`^${APP_NAME} does not `));
     expect(infoPlist[key]).toContain(UNUSED_NOTICE);
   });
 
@@ -61,29 +66,8 @@ describe('App Transport Security (K11)', () => {
   });
 });
 
-// ITMS-91053: the privacy manifest. The collected types follow the privacy policy draft's
-const dataType = (name: string) => `NSPrivacyCollectedDataType${name}`;
-const LINKED_TYPES = [
-  'EmailAddress',
-  'Name',
-  'PhotosorVideos',
-  'AudioData',
-  'CustomerSupport',
-  'OtherUserContent',
-  'UserID',
-  'DeviceID',
-  'OtherUsageData',
-  'OtherDiagnosticData',
-].map(dataType);
-const NOT_LINKED_TYPES = ['CrashData'].map(dataType);
-// No analytics, no performance tracing, no location: the app collects none (US-002f notes).
-const NEVER_DECLARED = [
-  'ProductInteraction',
-  'PerformanceData',
-  'PreciseLocation',
-  'CoarseLocation',
-].map(dataType);
-
+// ITMS-91053: the privacy manifest. The collected types it declares, linked and not, and the ones
+// it never declares, are the app's (settings/app-config.ts).
 const collectedTypes = (linked: boolean) =>
   privacy.NSPrivacyCollectedDataTypes.filter(
     (entry) => entry.NSPrivacyCollectedDataTypeLinked === linked,

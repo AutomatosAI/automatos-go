@@ -13,9 +13,12 @@ import path from 'node:path';
 
 import { z } from 'zod';
 
+import { APP_IDENTITY } from '../../release/__tests__/settings/identity';
+
 const SHA_PLACEHOLDER = '${{ github.sha }}';
 export const ORIGIN = 'origin';
-export const PUBLIC_ADDRESS = 'https://github.com/AutomatosAI/automatos-go.git';
+/** This repository's public address, from the app's settings. */
+export const PUBLIC_ADDRESS: string = APP_IDENTITY.publicRepository;
 export const OWN_MAIN = `git ls-remote ${ORIGIN} refs/heads/main`;
 export const PUBLIC_MAIN = `git ls-remote ${PUBLIC_ADDRESS} refs/heads/main`;
 /** What each read keeps of ls-remote's answer: the sha on the line for exactly refs/heads/main. */

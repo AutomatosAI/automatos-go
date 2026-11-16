@@ -1,8 +1,9 @@
 // Text contrast over a palette, pure (docs/app-standard.md rule 10.4): every text colour on every
-// ground the primitives draw it on, at WCAG AA. TEXT_ON is that list for the shared token shape
-// (tokens/types.ts), so the one test over it (__tests__/contrast.test.ts) covers every palette of
-// every style, and a palette an app adds is covered by naming it there. A text token that carries
-// transparency (#RRGGBBAA) is blended over each ground before it is measured (rule 10.5).
+// ground the primitives draw it on, at WCAG AA. The list of those pairs (TEXT_ON) and the palettes
+// it is measured in are the app's settings (src/release/__tests__/settings/contrast.ts), so the one
+// test over them (__tests__/contrast.test.ts) covers every palette of every style, and a palette or
+// a role an app adds is covered by naming it there. A text token that carries transparency
+// (#RRGGBBAA) is blended over each ground before it is measured (rule 10.5).
 // What this measures is the Text primitive's tones and the shape's foreground pairs. Shared code
 // that paints the accent itself reads it from src/ui/accent.ts, whose own test holds it.
 
@@ -16,39 +17,20 @@ export const AA_TEXT = 4.5;
 
 export type TextOnGrounds = readonly [text: ColourName, grounds: readonly ColourName[]];
 
-/** Each text colour and the grounds the primitives draw it on (src/ui/variants.ts TEXT_TONES). */
-export const TEXT_ON: readonly TextOnGrounds[] = Object.freeze([
-  ['foreground', ['background', 'card', 'secondary', 'muted']],
-  ['mutedForeground', ['background', 'card', 'secondary', 'muted']],
-  ['fg2', ['background', 'card']],
-  ['fg3', ['background', 'card']],
-  ['cardForeground', ['card']],
-  ['popoverForeground', ['popover']],
-  ['secondaryForeground', ['secondary']],
-  ['primaryForeground', ['primary']],
-  ['accentForeground', ['accent']],
-  ['destructiveForeground', ['destructive']],
-  ['successForeground', ['success']],
-  ['infoForeground', ['info']],
-  ['warningForeground', ['warning']],
-  ['accent', ['background', 'card']],
-  ['olive', ['background', 'card']],
-  ['navy', ['background', 'card']],
-  ['warnInk', ['background', 'card']],
-  ['destructive', ['background', 'card']],
-]);
-
 /**
- * TEXT_ON as a palette draws it: where the Text primitive reads a tone from another token
+ * The pairs as a palette draws them: where the Text primitive reads a tone from another token
  * (toneColour: the accent, in a palette whose `accent` is a ground), that token stands in.
  */
-export function textOnFor(colours: Colours): readonly TextOnGrounds[] {
+export function textOnFor(
+  colours: Colours,
+  pairs: readonly TextOnGrounds[],
+): readonly TextOnGrounds[] {
   const swaps = new Map<ColourName, ColourName>(
     (Object.keys(TEXT_TONES) as TextTone[])
       .filter((tone) => toneColour(colours, tone) !== TEXT_TONES[tone])
       .map((tone) => [TEXT_TONES[tone], toneColour(colours, tone)]),
   );
-  return TEXT_ON.map(([text, grounds]) => [swaps.get(text) ?? text, grounds] as const);
+  return pairs.map(([text, grounds]) => [swaps.get(text) ?? text, grounds] as const);
 }
 
 const SOLID_LENGTH = 7;
@@ -82,7 +64,7 @@ export type ContrastFailure = {
  */
 export function contrastFailures(
   colours: Colours,
-  pairs: readonly TextOnGrounds[] = TEXT_ON,
+  pairs: readonly TextOnGrounds[],
   least: number = AA_TEXT,
 ): readonly ContrastFailure[] {
   const page = colours.background;

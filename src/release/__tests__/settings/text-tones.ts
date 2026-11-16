@@ -26,7 +26,7 @@ const VOICE_CORE =
 const AI_LABEL =
   "The AI label (D-AI-LABEL, D73): React Native's own Text in the scale's undressed face and the muted token, as src/styles/__tests__/ai-label.test.ts requires of it and measures at AA on every built-in style's background. A tone needs the Text primitive, whose face the dress may change.";
 
-export const ALLOWED: readonly AllowedColour[] = [
+export const ALLOWED: readonly AllowedColour[] = Object.freeze([
   allow('src/cc/calendar/DayStrip.tsx', CONTROL_FILL, 'color: paint.color'),
   allow('src/voice/language/LanguageChip.tsx', CONTROL_FILL, 'color: ink'),
   allow('src/cc/shell/Head.tsx', DRESS_MARK, 'color: colours.primary'),
@@ -64,4 +64,4 @@ export const ALLOWED: readonly AllowedColour[] = [
   ),
   allow('src/styles/ai-label.tsx', AI_LABEL, 'color: colours[AI_LABEL_TONE]'),
   ...STYLE_CHROME,
-];
+]);

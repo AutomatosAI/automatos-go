@@ -9,8 +9,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { contrastRatio } from '../../core/web/lib/look-kit/contrast';
-import { LEAST_FONT_SCALE_CAP } from '../../release/__tests__/support/a11y-allowed';
-import { TEXT_ON } from '../../styles/contrast';
+import { TEXT_ON } from '../../release/__tests__/settings/contrast';
+import { LEAST_FONT_SCALE_CAP } from '../../release/__tests__/support/a11y';
 import { STYLE_IDS, tokensFor, type Tokens } from '../../styles/tokens';
 import { MIN_TEXT_SIZE, TYPE_SPECS } from '../../styles/type';
 import { MARK_CONTRAST } from '../accent';

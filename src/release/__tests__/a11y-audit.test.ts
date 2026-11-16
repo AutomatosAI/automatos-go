@@ -2,7 +2,7 @@
 // every wave and every style, text grows with Dynamic Type (no allowFontScaling off, no cap under
 // 2 without a reason above it), nothing is drawn under 11 pt, every pressable that shows no words
 // has an accessibility label, and every icon-only button is the IconButton primitive, whose label
-// its type requires. A true negative is an ALLOWED entry in support/a11y-allowed.ts. The screens
+// its type requires. A true negative is an ALLOWED entry in settings/a11y-audit.ts. The screens
 // themselves, at the largest size in every style, are Gerard's (docs/release/accessibility-pass.md,
 // OT-R8). D38's floor was never a lint rule: eslint.config.js carries the colour half of the
 // foundation's 'text never below 11 pt; no colour literal (lint)', and the scale holds the size.
@@ -16,10 +16,14 @@ import { describe, expect, it } from 'vitest';
 import { MIN_TEXT_SIZE, TEXT_SCALING, TYPE_SPECS } from '../../styles/type';
 import type { IconButtonProps } from '../../ui/IconButton';
 import type { TextProps } from '../../ui/Text';
+import { ALLOWED, type A11yRule } from './settings/a11y-audit';
 import {
   fontSizesOf,
+  ICON_BUTTON_FILE,
   isIconOnly,
   isReasonedCap,
+  LEAST_FONT_SCALE_CAP,
+  MIN_TEXT_POINTS,
   placeOf,
   pressablesOf,
   scalingOf,
@@ -28,13 +32,6 @@ import {
   type FoundPressable,
   type FoundScaling,
 } from './support/a11y';
-import {
-  ALLOWED,
-  ICON_BUTTON_FILE,
-  LEAST_FONT_SCALE_CAP,
-  MIN_TEXT_POINTS,
-  type A11yRule,
-} from './support/a11y-allowed';
 import { productFiles, readRepoFile, repoRoot } from './support/tree';
 
 const files = productFiles();

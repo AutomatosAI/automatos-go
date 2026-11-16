@@ -93,7 +93,7 @@ and only the new file is sent. This covers every photo, not only HEIC.
 - `src/release/__tests__/upload-audit.test.ts`:
   - **(a)** scans the whole product tree (`src/` and `app/`, comments removed) and fails, naming
     the file, when any file outside the explicit list in
-    `src/release/__tests__/support/uploads.ts` gets, redraws or sends a file that way.
+    `src/release/__tests__/settings/upload-audit.ts` gets, redraws or sends a file that way.
   - **(b)** `needsReencode` is true for `image/jpeg`, `image/jpg`, `image/heic`, `image/heif`,
     `image/png`, `image/webp` and for those extensions with no type, and false for PDF, DOCX, XLSX
     and plain text.
@@ -337,7 +337,7 @@ four places:
 - `src/release/__tests__/surfaces.test.ts` (US-021k), part (a):
   - It scans the whole product tree (comments removed) for every way to talk to Auto: A2's
     composer, Play's message box, HUD's core and quick-ask.
-  - Each file found must be in the explicit list in `src/release/__tests__/support/surfaces.ts`.
+  - Each file found must be in the explicit list in `src/release/__tests__/settings/surfaces.ts`.
   - Its render must reach the label file by file: each file renders the next, and the last renders
     the foundation's `AiLabel`. The label must be the first child of its row.
   - A hook may instead be used only inside a listed screen.

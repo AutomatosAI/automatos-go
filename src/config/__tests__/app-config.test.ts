@@ -21,14 +21,23 @@ import {
   requireFromRoot,
   type PluginEntry,
 } from './app-json';
-import { ANDROID_BLOCKED, ANDROID_PERMISSIONS, REQUIRED_KEYS } from './store-rules';
+import {
+  ANDROID_BLOCKED,
+  ANDROID_PERMISSIONS,
+  REQUIRED_KEYS,
+} from '../../release/__tests__/settings/app-config';
+import { APP_IDENTITY } from '../../release/__tests__/settings/identity';
+
+const { name: appName, slug, scheme, version, bundleId, links } = APP_IDENTITY;
+const ASSOCIATED_DOMAINS = [`applinks:${links.applinks}`, `webcredentials:${links.webcredentials}`];
+const PATHS_IN_WORDS = `${links.pathPrefixes.slice(0, -1).join(', ')} and ${links.pathPrefixes.at(-1)}`;
 
 describe('app.json identity (D-IDENTITY)', () => {
-  it('names the app Automatos Go with its slug, scheme and version', () => {
-    expect(expo.name).toBe('Automatos Go');
-    expect(expo.slug).toBe('automatos-go');
-    expect(expo.scheme).toBe('automatos');
-    expect(expo.version).toBe('1.0.0');
+  it(`names the app ${appName} with its slug, scheme and version`, () => {
+    expect(expo.name).toBe(appName);
+    expect(expo.slug).toBe(slug);
+    expect(expo.scheme).toBe(scheme);
+    expect(expo.version).toBe(version);
   });
 
   it('is portrait, follows the system appearance and runs the new architecture', () => {
@@ -37,17 +46,17 @@ describe('app.json identity (D-IDENTITY)', () => {
     expect(expo.newArchEnabled).toBe(true);
   });
 
-  it('is an iPhone-only iOS app with bundle id com.automatos.app', () => {
+  it(`is an iPhone-only iOS app with bundle id ${bundleId}`, () => {
     expect(expo.ios.supportsTablet).toBe(false);
-    expect(expo.ios.bundleIdentifier).toBe('com.automatos.app');
+    expect(expo.ios.bundleIdentifier).toBe(bundleId);
   });
 
   it('declares no non-exempt encryption (no export-compliance prompt)', () => {
     expect(expo.ios.infoPlist.ITSAppUsesNonExemptEncryption).toBe(false);
   });
 
-  it('uses package com.automatos.app on Android', () => {
-    expect(expo.android.package).toBe('com.automatos.app');
+  it(`uses package ${bundleId} on Android`, () => {
+    expect(expo.android.package).toBe(bundleId);
   });
 
   it('versions the runtime by fingerprint, not app version (D46)', () => {
@@ -225,21 +234,18 @@ describe('app.json embeds every bundled font (US-002d, K6)', () => {
 });
 
 describe('app.json links and background modes (K9, K11)', () => {
-  it('claims ui.automatos.app universal links and Clerk passkey credentials, nothing else', () => {
-    expect(expo.ios.associatedDomains).toEqual([
-      'applinks:ui.automatos.app',
-      'webcredentials:clerk.automatos.app',
-    ]);
+  it(`claims ${links.applinks} universal links and Clerk passkey credentials, nothing else`, () => {
+    expect(expo.ios.associatedDomains).toEqual(ASSOCIATED_DOMAINS);
   });
 
-  it('verifies Android app links for /go, /command-center and /chat on ui.automatos.app', () => {
+  it(`verifies Android app links for ${PATHS_IN_WORDS} on ${links.applinks}`, () => {
     expect(expo.android.intentFilters).toEqual([
       {
         action: 'VIEW',
         autoVerify: true,
-        data: ['/go', '/command-center', '/chat'].map((pathPrefix) => ({
+        data: links.pathPrefixes.map((pathPrefix) => ({
           scheme: 'https',
-          host: 'ui.automatos.app',
+          host: links.applinks,
           pathPrefix,
         })),
         category: ['BROWSABLE', 'DEFAULT'],
@@ -331,21 +337,16 @@ describe('the evaluated native config (expo config --type introspect)', () => {
   });
 
   it('the entitlements carry exactly the two associated domains', () => {
-    expect(ios.entitlements['com.apple.developer.associated-domains']).toEqual([
-      'applinks:ui.automatos.app',
-      'webcredentials:clerk.automatos.app',
-    ]);
+    expect(ios.entitlements['com.apple.developer.associated-domains']).toEqual(ASSOCIATED_DOMAINS);
   });
 
   it('the Android manifest has one auto-verified https filter for the three paths', () => {
     const filters = android.manifest.manifest.application[0].activity[0]['intent-filter'];
     const verified = filters.filter((filter) => filter.$?.['android:autoVerify'] === 'true');
     expect(verified).toHaveLength(1);
-    expect(verified[0].data?.map((entry) => entry.$['android:pathPrefix'])).toEqual([
-      '/go',
-      '/command-center',
-      '/chat',
-    ]);
+    expect(verified[0].data?.map((entry) => entry.$['android:pathPrefix'])).toEqual(
+      links.pathPrefixes,
+    );
   });
 
   it.each(REQUIRED_KEYS)('Info.plist keeps the app.json string for %s', (key) => {

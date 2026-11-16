@@ -3,8 +3,9 @@
 // package-lock.json and node_modules, so a dependency added, removed or updated without running the
 // script fails here with the command to run. Every package has a name, a version and a licence id;
 // none ships without a licence, or as UNLICENSED, unless NO_LICENCE_ALLOWED names it with its reason;
-// and the kinds of licence the app ships are pinned in LICENCE_IDS, so a new one is read by a person
-// before it ships. The generator's own rules are proved on small installs written to a temp folder.
+// and the kinds of licence the app ships are pinned in LICENCE_IDS (both in the app's settings,
+// src/release/__tests__/settings/release-licences.ts), so a new one is read by a person before it
+// ships. The generator's own rules are proved on small installs written to a temp folder.
 
 import {
   existsSync,
@@ -21,6 +22,10 @@ import path from 'node:path';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
+import {
+  LICENCE_IDS,
+  NO_LICENCE_ALLOWED,
+} from '../../src/release/__tests__/settings/release-licences';
 import { readRepoFile, repoRoot } from '../../src/release/__tests__/support/tree';
 import {
   GENERATED_NOTE,
@@ -46,39 +51,9 @@ const OUT_OF_DATE = `${OUTPUT_PATH} is not what the generator writes from packag
 const WHOLE_INSTALL_MS = 60_000;
 const LISTED_AT_MOST = 20;
 
-/**
- * Every kind of licence the app ships today, as the packages declare them. A new one arriving
- * fails here. Then: read that licence and decide, before the dependency is merged, whether the app
- * may ship it and what it would owe beyond showing its text (a copyleft licence can ask for the
- * source of what it covers); only then add it here, naming the package that brought it in the
- * commit. An id leaving the list fails too: take it out.
- */
-const LICENCE_IDS: readonly string[] = [
-  '(Apache-2.0 AND BSD-3-Clause)',
-  '(BSD-2-Clause OR MIT OR Apache-2.0)',
-  '(BSD-3-Clause OR GPL-2.0)',
-  '(MIT OR CC0-1.0)',
-  '0BSD',
-  // qrcode-terminal's older `licenses` field, as it is written: Apache-2.0
-  'Apache 2.0',
-  'Apache-2.0',
-  'BSD-2-Clause',
-  'BSD-3-Clause',
-  'BlueOak-1.0.0',
-  'CC-BY-4.0',
-  'CC0-1.0',
-  'ISC',
-  'MIT',
-  'MPL-2.0',
-  'Python-2.0',
-  'Unlicense',
-];
-
-/**
- * A package that declares no licence, or declares itself UNLICENSED (no one else may use it), ships
- * only when it is named here with the reason it may. None does today.
- */
-const NO_LICENCE_ALLOWED: readonly { readonly name: string; readonly reason: string }[] = [];
+// The kinds of licence the app ships (LICENCE_IDS) and the packages allowed to ship without one
+// (NO_LICENCE_ALLOWED), each with its reason, are the app's (settings/release-licences.ts).
+const LICENCE_KINDS = LICENCE_IDS.entries;
 
 /** The list as the generator types it: the shape src/about/licences.ts reads. */
 type LicenceData = ReturnType<typeof buildLicenceData>;
@@ -193,10 +168,10 @@ describe('every package the app ships', () => {
     const ids = [...new Set(committed.packages.map((entry) => entry.licence ?? ''))]
       .filter((id) => id !== '')
       .sort();
-    const fresh = ids.filter((id) => !LICENCE_IDS.includes(id));
+    const fresh = ids.filter((id) => !LICENCE_KINDS.includes(id));
     expect(fresh, 'A new kind of licence: read it before it ships (see LICENCE_IDS)').toEqual([]);
     expect(
-      LICENCE_IDS.filter((id) => !ids.includes(id)),
+      LICENCE_KINDS.filter((id) => !ids.includes(id)),
       'No package has it now',
     ).toEqual([]);
   });

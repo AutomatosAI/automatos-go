@@ -1,8 +1,8 @@
 // The text tone audit's true negatives for the styles' own chrome (text-tones.test.ts; the list
-// and its rules are text-tones-allowed.ts's): each a file under src/styles/ and the exact colours
+// and its rules are text-tones.ts's): each a file under src/styles/ and the exact colours
 // it hands Text there, painting its own style's palette (rule 17), which no shared tone names.
 
-import type { AllowedColour } from './text-tones-allowed';
+import type { AllowedColour } from './text-tones';
 
 const allow = (file: string, reason: string, ...texts: string[]): AllowedColour =>
   Object.freeze({ file, texts: Object.freeze(texts), reason });
@@ -20,7 +20,7 @@ const ARCADE =
 const CANDY =
   "Candy's own chrome (rule 17): its cards, bands, pills and tabs in the palette's own variables (src/styles/tokens/candy.ts: text, quiet, bandQuiet, cardInk, accentInk and each paint's ink), on Candy's own grounds. No tone names them: Candy's shared accent is its chip.";
 
-export const STYLE_CHROME: readonly AllowedColour[] = [
+export const STYLE_CHROME: readonly AllowedColour[] = Object.freeze([
   allow('src/styles/edges/ArcadeEdgeWindow.tsx', EDGES, 'color: vars.tx2'),
   allow('src/styles/edges/CandyEdgeWindow.tsx', EDGES, 'color: vars.quiet'),
   allow(
@@ -395,4 +395,4 @@ export const STYLE_CHROME: readonly AllowedColour[] = [
   allow('src/styles/candy/parts/StatusChip.tsx', CANDY, 'color: vars[chip.ink]'),
   allow('src/styles/candy/parts/TabBar.tsx', CANDY, 'color: vars[paint.ink]'),
   allow('src/styles/candy/parts/WritingChip.tsx', CANDY, 'color: vars.quiet'),
-];
+]);

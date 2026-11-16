@@ -10,6 +10,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { cameraOptions, libraryOptions, MAX_ATTACHMENTS } from '../../chat/attachments/picked';
+import { APP_IDENTITY } from './settings/identity';
+import { PICKER_CALLERS } from './settings/permissions';
 import { sectionStartingWith, tableWithColumns } from './support/markdown';
 import {
   declaredPackages,
@@ -53,15 +55,13 @@ const REQUIRED_DENIED = [
   'FOREGROUND_SERVICE_MEDIA_PROJECTION',
 ].map(permission);
 
-const APP_NAME = 'Automatos Go';
+const APP_NAME = APP_IDENTITY.name;
 const MIN_USED_LENGTH = 30;
 const NEVER_ASKS = 'the app never asks for access.';
 const USAGE_KEY = /^NS\w+UsageDescription$/;
 const NATIVE_MODULES_DOC = 'docs/native-modules.md';
 const PICKER = 'expo-image-picker';
 const MEDIA_LIBRARY = 'expo-media-library';
-// The one file that calls expo-image-picker; picked.ts builds its options (type-only import).
-const PICKER_CALLERS = ['src/chat/attachments/pickers.ts'];
 
 const sorted = (items: Iterable<string>) => [...items].sort();
 const backticked = (cell: string) => [...cell.matchAll(/`([^`]+)`/g)].map(([, inner]) => inner);
@@ -166,7 +166,7 @@ describe('the iOS usage strings (R07, ITMS-90683)', () => {
   });
 
   it.each(keysOfKind('used').map((entry) => [entry.key, entry.string]))(
-    '%s names Automatos Go, says what for and is 30+ characters',
+    `%s names ${APP_NAME}, says what for and is 30+ characters`,
     (_key, value) => {
       expect(value).toContain(APP_NAME);
       expect(value.length).toBeGreaterThanOrEqual(MIN_USED_LENGTH);
@@ -217,13 +217,13 @@ describe('photos come from the system picker, without metadata (R08, US-009b)', 
     expect(offenders).toEqual([]);
   });
 
-  it(`only ${PICKER_CALLERS.join(', ')} imports ${PICKER} as a value`, () => {
+  it(`only ${PICKER_CALLERS.entries.join(', ')} imports ${PICKER} as a value`, () => {
     const importsPicker = (text: string) =>
       [...text.matchAll(new RegExp(`import\\s+(type\\s+)?[^;]*?from\\s+'${PICKER}'`, 'g'))].some(
         ([, typeOnly]) => typeOnly === undefined,
       ) || new RegExp(`(require|import)\\(\\s*'${PICKER}'\\s*\\)`).test(text);
     const callers = product.filter(({ text }) => importsPicker(text)).map(({ file }) => file);
-    expect(callers).toEqual(PICKER_CALLERS);
+    expect(callers).toEqual(PICKER_CALLERS.entries);
   });
 
   it("every camera and library launch passes picked.ts's options", () => {

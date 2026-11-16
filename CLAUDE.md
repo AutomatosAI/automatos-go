@@ -79,6 +79,16 @@ run it a second time.
   requirements, read from the whole product tree. Never weaken, skip or delete one to make a change
   pass: fix the change, or add an entry to that audit's ALLOWED list with the file, the exact text
   and the reason.
+- What the audits read that differs by app lives in one folder, `src/release/__tests__/settings/`
+  (rule 14.2), one file per topic: `identity.ts` (package name, app name, bundle id, site and legal
+  pages, links, the EAS and App Store Connect ids), `tree.ts` (the product folders, a folder outside
+  the repository written as `../<folder>`), `contrast.ts` (palettes, pairs, KNOWN), and each audit's
+  allowed list in the file named after it (`a11y-audit.ts`, `text-tones.ts` with
+  `text-tones-styles.ts`, `store-copy.ts`, `release-docs.ts`, `surfaces.ts`, `upload-audit.ts`,
+  `secure-store-audit.ts`, `named-states.ts`, `dependency-audit.ts`, `release-licences.ts`,
+  `permissions.ts`, `app-config.ts`). Add an entry there, never in the audit.
+  `src/release/__tests__/audit-settings.test.ts` holds the folder: every allowed entry has its reason,
+  and no audit keeps a copy of a value that moved.
 - Before the first submit of every native build, download its IPA and run
   `node scripts/release/scan-ipa.mjs <ipa>` (`docs/release/ipa-scan.md`): it must say PASS
   (ITMS-90683).
