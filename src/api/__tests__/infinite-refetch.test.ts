@@ -61,7 +61,9 @@ describe('a paged list whose pages are held', () => {
     const { failing, observer } = pagedList(newClient());
     await observer.refetch();
     failing.first = true;
-    const again = await observer.refetch();
+    await observer.refetch();
+    // refetch answers the base result; the infinite flags are on the observer's own
+    const again = observer.getCurrentResult();
     expect(again.isRefetchError).toBe(true);
     expect(again.isFetchNextPageError).toBe(false);
     expect(again.data?.pages).toHaveLength(1);
@@ -73,7 +75,8 @@ describe('a paged list whose pages are held', () => {
     failing.next = true;
     await observer.fetchNextPage();
     failing.first = true;
-    const again = await observer.refetch();
+    await observer.refetch();
+    const again = observer.getCurrentResult();
     expect(again.isRefetchError).toBe(true);
     expect(again.isFetchNextPageError).toBe(false);
   });
