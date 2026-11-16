@@ -115,6 +115,13 @@ export const RECOVERY_SCOPES_MAX = 16;
 export const REMOVED_SCOPES_ITEM = 'push.removed.v1';
 export const REMOVED_SCOPES_MAX = 16;
 
+/**
+ * The MMKV item of the scopes where a registration went out and no push record was kept for it
+ * since (its answer lost): server and workspace pairs, nothing else (registration/attempts.ts).
+ */
+export const REGISTRATION_ATTEMPTS_ITEM = 'push.registration-out.v1';
+export const REGISTRATION_ATTEMPTS_MAX = 16;
+
 /** A preference row's push switch for its event (W2 K7: a destination never delivered as a row). */
 export const PUSH_DESTINATION = 'push';
 

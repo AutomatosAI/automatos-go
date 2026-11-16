@@ -214,7 +214,8 @@ So the phone sends every row it read for those events, with only the `push` rows
 1. The registrar closes, so nothing registers the phone again. A registration under way ends first;
    its key is not kept.
 2. Hosted only: `DELETE /api/v1/mobile/devices/{device_id}` for the push record's row (with no
-   record, the row the server last answered), with the still-valid Clerk token,
+   record, the row the server last answered, or the row learned for a registration whose answer was
+   lost: [release/push-security.md](release/push-security.md)), with the still-valid Clerk token,
    waiting at most 4 s. An own server's row is removed by Forget this server instead, with the
    device token, so that path sends one DELETE ([connecting.md](connecting.md)).
 3. The push record, the badge and the delivered notifications are cleared, even if the DELETE

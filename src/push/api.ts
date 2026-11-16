@@ -90,10 +90,15 @@ function checked(value: string, valid: (text: string) => boolean, what: string):
 const isUuid = (value: string) => UUID_PATTERN.test(value);
 const isRowId = (value: string) => ROW_ID_PATTERN.test(value);
 
-export function registerDevice(client: ApiClient, input: RegistrationInput): Promise<Registration> {
+export function registerDevice(
+  client: ApiClient,
+  input: RegistrationInput,
+  signal?: AbortSignal,
+): Promise<Registration> {
   return client.request(PUSH_ROUTES.devices.register, {
     body: registrationBody(input),
     schema: registrationSchema,
+    signal,
   });
 }
 

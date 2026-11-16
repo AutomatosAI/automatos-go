@@ -8,7 +8,8 @@
 // RECOVERY_MIN_INTERVAL_MS; an own server stays 'key_missing' (a DELETE would end its device token).
 // An OS switch-off sends PATCH push_enabled false once; granted again registers (W2 US-009 turns
 // push back on). A 409 becomes a status, never retried here; a network failure keeps the record and
-// waits for the next trigger. A scope the person removed this phone from (removal-hold.ts, KP16)
+// waits for the next trigger. Each POST is noted before it goes and the note cleared once a record
+// is kept (attempts.ts), so a sign-out after an answer that never came can still find the row. A scope the person removed this phone from (removal-hold.ts, KP16)
 // takes no step and answers 'ask', with no row remembered, until a person's tap releases it (the
 // registrar releases it when the tap is made, so a forced run reads a later removal's hold). Once
 // the session has ended (deps.active false) nothing more is sent or kept. Never throws. Logs carry
@@ -20,6 +21,7 @@ import { logger } from '../../lib/logger';
 import { registerDevice, revokeDevice, updateDevice, type RegistrationInput } from '../api';
 import type { NotificationsPort } from '../platform/expo';
 import { deviceConflictOf, type Registration } from '../schemas/server';
+import type { RegistrationAttempts } from './attempts';
 import type { DeviceFacts, DeviceSource } from './device-facts';
 import type { PushKeyStore } from './key-store';
 import { readPermission } from './permission';
@@ -54,6 +56,8 @@ export type RegisterDeps = Readonly<{
   device: DeviceSource;
   store: PushKeyStore;
   recoveries: RecoveryLog;
+  /** The POSTs sent whose answer no record was kept for (attempts.ts). */
+  attempts: RegistrationAttempts;
   /** Remove this phone's hold (KP16): read on each run, released by a person's tap (registrar.ts). */
   hold: Pick<RemovalHold, 'held' | 'release'>;
   now: () => number;
@@ -190,7 +194,10 @@ async function settle(
   // no key for this row: recover_key (hosted) or key_missing (own); another row's key goes
   if (!pushKey) return facts.record ? forgetStale(run.deps.store, base) : base;
   const record = recordOf(run, prepared, answer.device_id, pushKey);
-  if (await saved(run.deps, record)) return Object.freeze({ ...base, record });
+  if (await saved(run.deps, record)) {
+    run.deps.attempts.clear(run.deps.session);
+    return Object.freeze({ ...base, record });
+  }
   return answer.push_key ? forgetStale(run.deps.store, base) : base;
 }
 
@@ -206,6 +213,8 @@ function refused(facts: PushFacts, error: unknown): PushFacts {
 
 async function send(run: Run, facts: PushFacts, prepared: Prepared): Promise<PushFacts> {
   if (!isActive(run.deps)) return facts;
+  // before it goes: an answer that never comes leaves a row the phone has no id for
+  run.deps.attempts.note(run.deps.session);
   let answer: Registration;
   try {
     answer = await registerDevice(run.deps.client, prepared.input);

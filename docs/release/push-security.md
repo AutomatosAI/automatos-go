@@ -182,3 +182,35 @@ it; nothing a run read at its start is written back over it:
 
 Each case holds the call open, changes the choice and releases it:
 [src/push/\_\_tests\_\_/registration-races.test.ts](../../src/push/__tests__/registration-races.test.ts).
+
+### A registration whose answer was lost
+
+A registration can reach the server while its answer never reaches the phone: a timeout after the
+request left, a network that dropped, the app killed while the request was out. The server then
+holds an active row that sends to this phone, and the phone holds no record of it, so no id and no
+key. What the phone does
+([src/push/registration/attempts.ts](../../src/push/registration/attempts.ts)):
+
+- **Before each registration goes,** it notes that one is out for this server and workspace, in
+  the encrypted store (scopes only). The note is cleared once a push record is kept.
+- **The next registration repairs it.** With no record, the next launch or resume registers again.
+  The server answers the same row (one per install, person and workspace) with no key, because it
+  hands out a key once. A hosted phone then revokes that row and registers once more for a new key
+  (at most once a day). An own server cannot do that without ending the pairing, so the phone says
+  "This phone can't check its notifications. Pair it again to turn them on."
+- **Sign out (hosted)** DELETEs the record's row. With no record it DELETEs the row the server last
+  answered, and with neither, where a registration is noted, it learns the row by registering
+  again without the push token (the server answers the caller's own row for this install, and a
+  registration with no token leaves the row's push as it was), then DELETEs it. Learning and the
+  DELETE share the 4 s. Nothing is learned where nothing was sent, or where the person removed this
+  phone. If the original registration never arrived, this registers a row only to revoke it, and
+  Studio then lists one removed phone.
+- **Notifications off in the phone's Settings** has no row id to tell the server. The phone's own
+  setting stops every notification from showing, the screen says the setting is off, and turning it
+  on again registers.
+- **Remove this phone** is offered only with a push record, which names the one row the server keeps
+  for this install. "Removed" is shown only when the server answered the DELETE (or said the row was
+  already gone).
+
+[src/push/\_\_tests\_\_/lost-registration.test.ts](../../src/push/__tests__/lost-registration.test.ts)
+proves each of these.
