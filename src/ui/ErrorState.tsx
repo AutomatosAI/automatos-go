@@ -1,6 +1,8 @@
 // A failed load: the error's kind in the taxonomy's own words (userMessage → src/api/strings.ts),
 // never a status, URL or server internals, and 'Try again' where a retry can help (not for a
-// signed-out session, a missing permission or something that is gone). Announced as an alert.
+// signed-out session, a missing permission or something that is gone). An alert, announced by
+// TalkBack through its live region; iOS has no live regions, so VoiceOver reads it only when it
+// reaches it (no announcement is made on an iPhone).
 
 import { StyleSheet, View } from 'react-native';
 import TriangleAlert from 'lucide-react-native/icons/triangle-alert';
