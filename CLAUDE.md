@@ -83,10 +83,11 @@ run it a second time.
   (rule 14.2), one file per topic: `identity.ts` (package name, app name, bundle id, site and legal
   pages, links, the EAS and App Store Connect ids), `tree.ts` (the product folders, a folder outside
   the repository written as `../<folder>`), `contrast.ts` (palettes, pairs, KNOWN), and each audit's
-  allowed list in the file named after it (`a11y-audit.ts`, `text-tones.ts` with
-  `text-tones-styles.ts`, `store-copy.ts`, `release-docs.ts`, `surfaces.ts`, `upload-audit.ts`,
-  `secure-store-audit.ts`, `named-states.ts`, `dependency-audit.ts`, `release-licences.ts`,
-  `permissions.ts`, `app-config.ts`, `thin-routes.ts`, `announcements.ts`), and `record.ts`:
+  allowed list in the file named after it (`a11y-audit.ts` with the icon set's name,
+  `text-tones.ts` with `text-tones-styles.ts`, `store-copy.ts`, `release-docs.ts`, `surfaces.ts`,
+  `upload-audit.ts`, `secure-store-audit.ts`, `named-states.ts`, `dependency-audit.ts`,
+  `release-licences.ts`, `permissions.ts`, `app-config.ts`, `thin-routes.ts`, `announcements.ts`,
+  `audit-imports.ts`: the only packages the audits may import), and `record.ts`:
   `template` here; a copy sets `copy`, and
   `src/release/__tests__/app-record.test.ts` then requires its `TEMPLATE.md` (rule numbers from
   `src/release/__tests__/support/standard-rules.json`, written by

@@ -2,7 +2,8 @@
 // every wave and every style, text grows with Dynamic Type (no allowFontScaling off, no cap under
 // 2 without a reason above it), nothing is drawn under 11 pt, every pressable that shows no words
 // has an accessibility label, and every icon-only button is the IconButton primitive, whose label
-// its type requires. A true negative is an ALLOWED entry in settings/a11y-audit.ts. The screens
+// its type requires. An icon is a value from the one icon set (ICON_SET, rule 3.6) or a tag named
+// …Icon. A true negative is an ALLOWED entry in settings/a11y-audit.ts. The screens
 // themselves, at the largest size in every style, are Gerard's (docs/release/accessibility-pass.md,
 // OT-R8). D38's floor was never a lint rule: eslint.config.js carries the colour half of the
 // foundation's 'text never below 11 pt; no colour literal (lint)', and the scale holds the size.
@@ -10,13 +11,12 @@
 import path from 'node:path';
 
 import { ESLint } from 'eslint';
-import type { LucideIcon } from 'lucide-react-native';
 import { describe, expect, it } from 'vitest';
 
 import { MIN_TEXT_SIZE, TEXT_SCALING, TYPE_SPECS } from '../../styles/type';
 import type { IconButtonProps } from '../../ui/IconButton';
 import type { TextProps } from '../../ui/Text';
-import { ALLOWED, type A11yRule } from './settings/a11y-audit';
+import { ALLOWED, ICON_SET, type A11yRule } from './settings/a11y-audit';
 import {
   fontSizesOf,
   ICON_BUTTON_FILE,
@@ -52,7 +52,7 @@ const shown = new Set([
   ...scalingOff.map((each) => key(each.file, 'SCALING_OFF', scalingText(each))),
 ]);
 
-const someIcon = (() => null) as unknown as LucideIcon;
+const someIcon = (() => null) as unknown as IconButtonProps['icon'];
 const noop = () => undefined;
 // The types are the guard: an IconButton without a label, or a Text that stops scaling, does not
 // compile (npm run typecheck, CI's 'typecheck · lint · test').
@@ -73,7 +73,7 @@ describe('the tree the audit reads', () => {
 
   it('finds what a pressable shows, its label, and a component that forwards into one', () => {
     const source = [
-      "import Menu from 'lucide-react-native/icons/menu';",
+      `import Menu from '${ICON_SET}/icons/menu';`,
       "import { Pressable, Text, View } from 'react-native';",
       'function Row({ label, children }) {',
       '  return <Pressable accessibilityLabel={label}>{children}</Pressable>;',
