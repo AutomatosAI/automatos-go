@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { ApiError } from '../../api/errors';
-import { API_ERROR_COPY } from '../../api/strings';
+import { API_ERROR_COPY, LIMIT_COPY } from '../../api/strings';
 import { TURN_ERROR_CODES } from '../../core/turn-reducer';
 import type { StoredMessage } from '../schemas';
 import { CHAT_COPY, RECEIPT_STATUS_WORDS, TURN_ERROR_COPY } from '../strings';
@@ -202,6 +202,18 @@ describe('notices', () => {
     expect(
       failWith(new ApiError('server', { status: 402, code: 'credits_exhausted' })),
     ).toMatchObject({ text: CHAT_COPY.limit, retry: false });
+  });
+
+  it('says a limit at the opening with roughly when to try again, and offers to try again', () => {
+    const failWith = (error: unknown) =>
+      notices(threadRows(apply(streaming(), { type: 'failed', error }, ...afterTurn())))[0];
+    expect(
+      failWith(new ApiError('limit', { status: 429, retryAfterSeconds: 150, retryAt: 1 })),
+    ).toMatchObject({ text: LIMIT_COPY.inMinutes(3), retry: true });
+    expect(failWith(new ApiError('limit', { status: 429 }))).toMatchObject({
+      text: API_ERROR_COPY.limit,
+      retry: true,
+    });
   });
 
   it('says a stop, and a stop that did not reach the server', () => {

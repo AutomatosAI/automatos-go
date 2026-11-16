@@ -213,6 +213,7 @@ describe('the QueryClient defaults', () => {
     expect(isRetryable(new ApiError('stream'))).toBe(true);
     expect(isRetryable(new ApiError('server', { status: 503 }))).toBe(true);
     expect(isRetryable(new ApiError('server', { status: 429 }))).toBe(false);
+    expect(isRetryable(new ApiError('limit', { status: 429, retryAfterSeconds: 5 }))).toBe(false);
     expect(isRetryable(new ApiError('server'))).toBe(false);
     for (const kind of [
       'auth',

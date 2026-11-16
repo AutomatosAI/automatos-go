@@ -58,6 +58,8 @@ function reportingRefusals(client: ApiClient, refusals: Pick<Refusals, 'report'>
       reported(route, () => client.stream(route, call)),
     binary: (route: Route, call?: BinaryCallOptions) =>
       reported(route, () => client.binary(route, call)),
+    // a file's 403 may be storage's (a presigned address run out), not this person's role
+    file: client.file,
     authHeaders: client.authHeaders,
   });
 }

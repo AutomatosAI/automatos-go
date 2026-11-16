@@ -4,10 +4,12 @@
 // failure to the taxonomy (errors.ts) and parses every JSON response with the caller's zod schema:
 // without a schema the body is discarded, so no unparsed data ever leaves the client. binary() is
 // the one exception, for a body that is not JSON (Auto's server voice: an MP3): it hands back the
-// bytes and the response's headers, for the caller to check. Every body is read under a cap
+// bytes and the response's headers, for the caller to check. file() is a file on this server, by
+// its address, as bytes as they arrive, for transfer.ts to write to a file (transfer-request.ts). Every body is read under a cap
 // (config.ts): a JSON body or a binary one over its cap is an invalid_response, read no further,
 // and an error body over its cap gives no detail, so the status alone names the kind. A redirect
-// is never followed: it is an error of its status's kind that keeps where it pointed. Every call
+// is never followed: it is an error of its status's kind that keeps where it pointed, and a 429 is
+// a limit that keeps when it lifts (its Retry-After, against the injected clock). Every call
 // also says the language the person chose ("I speak") as Accept-Language, so the server writes its
 // copy in it (accept-language.ts); Automatic sends none. The transport is injected; the real one
 // (transport.ts, expo/fetch) is wired by the app shell, never by tests.
@@ -30,12 +32,15 @@ import {
   JSON_MAX_BYTES,
   REQUEST_TIMEOUT_MS,
   STREAM_CONNECT_TIMEOUT_MS,
+  STREAM_IDLE_TIMEOUT_MS,
 } from './config';
-import { startDeadline, type Deadline } from './deadline';
-import { abortError, ApiError, errorFromResponse, isAbortError, isApiError } from './errors';
+import { callFailure, startDeadline, timedOutError, type Deadline } from './deadline';
+import { ApiError, errorFromResponse } from './errors';
 import { parseJson } from './json';
 import type { Route } from './routes';
 import type { Server } from './server';
+import { limitedChunks, streamLimits, type StreamLimits } from './stream-limits';
+import { openFile, type FileBody, type FileCallOptions, type FilePort } from './transfer-request';
 import type {
   StreamingResponse,
   Transport,
@@ -46,6 +51,7 @@ import { buildUrl, type PathParams, type QueryParams } from './url';
 
 const CONTENT_TYPE_HEADER = 'Content-Type';
 const LOCATION_HEADER = 'location';
+const RETRY_AFTER_HEADER = 'retry-after';
 const JSON_CONTENT_TYPE = 'application/json';
 const UNAUTHORIZED = 401;
 
@@ -65,6 +71,10 @@ export type ApiClientOptions = {
   readonly onAuthExpired?: (error?: ApiError) => void;
   readonly timeoutMs?: number;
   readonly connectTimeoutMs?: number;
+  /** The clock a limit's lift is read against (epoch ms); the phone's own when not given. */
+  readonly now?: () => number;
+  /** No byte for this long ends an opened stream (STREAM_IDLE_TIMEOUT_MS when not given). */
+  readonly streamIdleTimeoutMs?: number;
 };
 
 export type CallOptions = {
@@ -78,8 +88,13 @@ export type CallOptions = {
 export type ParsedCallOptions<S extends z.ZodTypeAny> = CallOptions & { readonly schema: S };
 
 export type StreamCallOptions = CallOptions & {
-  /** The status must arrive within this long; the client's own when not given. No cap after it. */
+  /**
+   * The status must arrive within this long; the client's own when not given. A body read as it
+   * arrives has no deadline after it; one read whole (bytes()) stays under it until it is in.
+   */
   readonly connectTimeoutMs?: number;
+  /** No byte for this long ends the opened stream; the client's own when not given. */
+  readonly idleTimeoutMs?: number;
 };
 
 export type BinaryCallOptions = CallOptions & {
@@ -109,6 +124,11 @@ export interface ApiClient {
   stream(route: Route, options?: StreamCallOptions): Promise<StreamingResponse>;
   /** A body read whole as bytes, with its headers; a non-OK status throws first. */
   binary(route: Route, options?: BinaryCallOptions): Promise<BinaryBody>;
+  /**
+   * A file on this server, by its address, as its bytes as they arrive (transfer.ts writes them to
+   * a file); a non-OK status throws first (transfer-request.ts).
+   */
+  file(url: string, options?: FileCallOptions): Promise<FileBody>;
   /** The bearer and workspace headers, for native loads outside the client (auth-headers.ts). */
   authHeaders(): Promise<AuthHeaders>;
 }
@@ -121,6 +141,8 @@ type Context = {
   readonly getLanguage?: LanguageGetter;
   readonly timeoutMs: number;
   readonly connectTimeoutMs: number;
+  readonly streamIdleTimeoutMs: number;
+  readonly now: () => number;
   readonly expired: (token: string | null, error: ApiError) => void;
 };
 
@@ -153,16 +175,22 @@ function encodeBody(body: unknown): { body?: string | FormData; headers: Record<
   return { body: JSON.stringify(body), headers: { [CONTENT_TYPE_HEADER]: JSON_CONTENT_TYPE } };
 }
 
+/** The headers every call to the client's own server carries, and the token in them. */
+async function signed(ctx: Context) {
+  const token = await resolveToken(ctx.getToken);
+  const headers = {
+    ...acceptLanguageHeaders(readLanguage(ctx.getLanguage)),
+    ...buildAuthHeaders(token, ctx.getWorkspaceId()),
+  };
+  return { token, headers };
+}
+
 /** URL, body and headers; a bad path parameter throws here, before anything is sent. */
 async function prepare(ctx: Context, route: Route, call: CallOptions): Promise<Prepared> {
   const url = buildUrl(ctx.server.apiUrl, route.path, call.params, call.query);
   const encoded = encodeBody(call.body);
-  const token = await resolveToken(ctx.getToken);
-  const headers = {
-    ...encoded.headers,
-    ...acceptLanguageHeaders(readLanguage(ctx.getLanguage)),
-    ...buildAuthHeaders(token, ctx.getWorkspaceId()),
-  };
+  const { token, headers: own } = await signed(ctx);
+  const headers = { ...encoded.headers, ...own };
   const body = encoded.body === undefined ? {} : { body: encoded.body };
   return { token, request: { url, method: route.method, headers, ...body } };
 }
@@ -186,21 +214,21 @@ async function checked<R extends TransportResponse>(
   token: string | null,
 ): Promise<R> {
   if (isOk(response.status)) return response;
-  // a redirect is an answer like any other refusal: never followed (transport.ts), only reported
+  // a redirect is an answer like any other refusal: never followed (transport.ts), only reported;
+  // a limit keeps when it lifts, read against the client's clock as the answer came
+  const limit = { retryAfter: response.header(RETRY_AFTER_HEADER), now: ctx.now() };
   const error = errorFromResponse(
     response.status,
     await errorBody(response),
     response.header(LOCATION_HEADER),
+    limit,
   );
   if (response.status === UNAUTHORIZED) ctx.expired(token, error);
   throw error;
 }
 
 function failure(error: unknown, deadline: Deadline, call: CallOptions, timeoutMs: number) {
-  if (isApiError(error)) return error;
-  if (call.signal?.aborted) return isAbortError(error) ? error : abortError();
-  const cause = deadline.timedOut() ? new Error(`no answer within ${timeoutMs} ms`) : error;
-  return new ApiError('network', { cause });
+  return callFailure(error, deadline, call.signal, timeoutMs);
 }
 
 function issueSummary(error: z.ZodError): string {
@@ -265,27 +293,46 @@ async function fetchBinary(
   }
 }
 
-async function* chunksThen(response: StreamingResponse, done: () => void): AsyncGenerator<string> {
+async function* chunksThen(
+  chunks: AsyncIterable<string>,
+  done: () => void,
+): AsyncGenerator<string> {
   try {
-    yield* response.chunks();
+    yield* chunks;
   } finally {
     done();
   }
 }
 
-/** The opened stream, releasing the caller's abort listener once its body is finished with. */
-function disposing(response: StreamingResponse, dispose: () => void): StreamingResponse {
+/** How a stream was opened: its deadline, the connect timeout it ran under, its limits. */
+type Opening = { readonly deadline: Deadline; readonly ms: number; readonly limits: StreamLimits };
+
+/**
+ * The opened stream. Read as it arrives, the connect deadline stops and the body runs as long as
+ * the server keeps it going, under the stream's limits (stream-limits.ts). Read whole (bytes()),
+ * the deadline keeps running until the body is in, so a body that drips cannot hold the call open
+ * without end. Either way the caller's abort listener is released once the body is finished with.
+ */
+function opened(response: StreamingResponse, { deadline, ms, limits }: Opening): StreamingResponse {
   return {
     status: response.status,
     bytes: async (maxBytes) => {
       try {
         return await response.bytes(maxBytes);
+      } catch (error) {
+        throw deadline.timedOut() ? timedOutError(ms) : error;
       } finally {
-        dispose();
+        deadline.dispose();
       }
     },
     header: (name) => response.header(name),
-    chunks: () => chunksThen(response, dispose),
+    chunks: () => {
+      deadline.settle(); // the body may now run as long as it needs, within its limits
+      return chunksThen(
+        limitedChunks(response.chunks(), limits, deadline.expire),
+        deadline.dispose,
+      );
+    },
   };
 }
 
@@ -298,14 +345,25 @@ async function open(
   const connectTimeoutMs = call.connectTimeoutMs ?? ctx.connectTimeoutMs;
   const deadline = startDeadline(connectTimeoutMs, call.signal);
   try {
-    const opened = await ctx.transport.stream({ ...request, signal: deadline.signal });
-    const response = await checked(ctx, opened, token);
-    deadline.settle(); // the server answered: the body may now run as long as it needs
-    return disposing(response, deadline.dispose);
+    const response = await ctx.transport.stream({ ...request, signal: deadline.signal });
+    const limits = streamLimits(call.idleTimeoutMs ?? ctx.streamIdleTimeoutMs);
+    return opened(await checked(ctx, response, token), { deadline, ms: connectTimeoutMs, limits });
   } catch (error) {
     deadline.dispose();
     throw failure(error, deadline, call, connectTimeoutMs);
   }
+}
+
+/** What a file's request borrows from the client (transfer-request.ts). */
+function filePort(ctx: Context): FilePort {
+  return {
+    server: ctx.server,
+    transport: ctx.transport,
+    timeoutMs: ctx.timeoutMs,
+    signed: () => signed(ctx),
+    checked: (response, token) => checked(ctx, response, token),
+    now: ctx.now,
+  };
 }
 
 export function createApiClient(options: ApiClientOptions): ApiClient {
@@ -317,6 +375,8 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     getLanguage: options.getLanguage,
     timeoutMs: options.timeoutMs ?? REQUEST_TIMEOUT_MS,
     connectTimeoutMs: options.connectTimeoutMs ?? STREAM_CONNECT_TIMEOUT_MS,
+    streamIdleTimeoutMs: options.streamIdleTimeoutMs ?? STREAM_IDLE_TIMEOUT_MS,
+    now: options.now ?? Date.now,
     expired: expiryLatch(options.onAuthExpired),
   };
   return Object.freeze({
@@ -325,6 +385,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       send(ctx, route, call)) as ApiClient['request'],
     stream: (route: Route, call: StreamCallOptions = {}) => open(ctx, route, call),
     binary: (route: Route, call: BinaryCallOptions = {}) => fetchBinary(ctx, route, call),
+    file: (url: string, call: FileCallOptions = {}) => openFile(filePort(ctx), url, call),
     authHeaders: createAuthHeaders(ctx.getToken, ctx.getWorkspaceId),
   });
 }

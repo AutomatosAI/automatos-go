@@ -50,9 +50,13 @@ export const AWAITING_REPLY_GUARD_MS = 5 * 60_000;
  */
 export type ThreadStatus = 'loading' | 'idle' | 'streaming' | 'working' | 'stopped' | 'failed';
 
-/** The client's taxonomy kind (src/api/errors.ts), or 'turn': the server's e: line, by its code. */
+/** The client's taxonomy kind (src/api/errors.ts, a limit with its wait), or 'turn': an e: line. */
 export type ThreadFailure =
-  | { readonly kind: ApiErrorKind; readonly code: string | null }
+  | {
+      readonly kind: ApiErrorKind;
+      readonly code: string | null;
+      readonly retryAfterSeconds?: number;
+    }
   | { readonly kind: 'turn'; readonly code: TurnErrorCode };
 
 /** What the user sent, drawn as their message until the saved copy replaces it. */
@@ -166,9 +170,10 @@ export function shownMessages(state: ThreadState): readonly StoredMessage[] {
 
 /** A thrown failure in the client's taxonomy; anything else is 'server' (userMessage's rule). */
 export function failureOf(error: unknown): ThreadFailure {
-  return isApiError(error)
-    ? { kind: error.kind, code: error.code ?? null }
-    : { kind: 'server', code: null };
+  if (!isApiError(error)) return { kind: 'server', code: null };
+  const { kind, retryAfterSeconds: wait } = error;
+  const failure = { kind, code: error.code ?? null };
+  return kind === 'limit' && wait !== undefined ? { ...failure, retryAfterSeconds: wait } : failure;
 }
 
 function uniqueById(messages: readonly StoredMessage[]): StoredMessage[] {

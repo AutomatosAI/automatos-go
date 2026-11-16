@@ -276,6 +276,26 @@ to be followed elsewhere is an error, so the token never goes to an address the 
 given. A phone paired with an http address that later starts redirecting to https stops
 connecting: pair it again, with the https address.
 
+**Files.** A file the phone keeps (a theme's fonts and mascot files, a Deliverable's file for the
+system viewer) is fetched through the same client and policy, never by the file system's own
+downloader, and written to the phone as it arrives, under a size cap
+([src/api/transfer.ts](../src/api/transfer.ts)). One route may answer with a redirect:
+`GET /api/documents/generated/{filename}`, with a `302` to a presigned storage address when the
+server keeps the document in storage. For that route only, the phone follows the one redirect, to
+an `https` address only, and sends nothing with it: no bearer, no `X-Workspace-ID`, no cookie
+([src/api/transfer-request.ts](../src/api/transfer-request.ts)). A second redirect, or one to an
+`http` address, fails the download as any other redirect does. A server whose storage presigns
+`http` addresses (a local storage service without TLS) cannot hand the phone those documents.
+
+**Streams.** Once a chat turn or the live events have answered, the stream ends, as an
+interrupted reply, when nothing has come for 15 minutes (a chat turn, which has no heartbeat) or
+90 seconds (the live events, whose heartbeat comes every 20 seconds), when it has sent more than
+32 Mi characters, or when one line or event is over 1 Mi characters
+([src/api/config.ts](../src/api/config.ts)).
+
+**Limits.** A `429` is the limit kind: the phone reads its `Retry-After` (seconds, or an HTTP
+date) and says roughly when to try again; a wait it cannot read, or one over a day, is "later".
+
 **The token.** `amd_` plus `token_urlsafe(32)`. The server stores only its hash. On the phone it
 lives in one keychain item, `automatos.paired-server.v1`, with
 `AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY`: readable after the first unlock, never in iCloud Keychain

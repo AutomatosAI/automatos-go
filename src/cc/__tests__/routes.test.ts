@@ -25,6 +25,8 @@ const EXPECTED = [
   'GET /api/deliverables',
   'GET /api/deliverables/{deliverable_id}',
   'GET /api/workspaces/{workspace_id}/files/raw',
+  // a Deliverable's generated document: its download may follow one redirect to storage (T15)
+  'GET /api/documents/generated/{filename}',
 ];
 
 const ROUTES = Object.values(CC_ROUTES).flatMap((group) => Object.values(group));

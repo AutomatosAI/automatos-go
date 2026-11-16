@@ -10,10 +10,11 @@ import {
   isAbortError,
   isApiError,
   kindForStatus,
+  limitWords,
   userMessage,
   type ApiErrorKind,
 } from '../errors';
-import { API_ERROR_COPY, APP_ERROR_COPY } from '../strings';
+import { API_ERROR_COPY, APP_ERROR_COPY, LIMIT_COPY } from '../strings';
 
 const KINDS: readonly ApiErrorKind[] = [
   'network',
@@ -24,15 +25,17 @@ const KINDS: readonly ApiErrorKind[] = [
   'server',
   'stream',
   'invalid_response',
+  'limit',
 ];
 
 describe('kindForStatus', () => {
-  it('names 401, 403, 404 and 409 and calls every other status server', () => {
-    expect([401, 403, 404, 409, 500, 503, 400, 422, 429].map(kindForStatus)).toEqual([
+  it('names 401, 403, 404, 409 and 429 and calls every other status server', () => {
+    expect([401, 403, 404, 409, 429, 500, 503, 400, 402, 422].map(kindForStatus)).toEqual([
       'auth',
       'forbidden',
       'not_found',
       'conflict',
+      'limit',
       'server',
       'server',
       'server',
@@ -129,19 +132,54 @@ describe('ApiError', () => {
     expect(error.message).toBe('ApiError conflict 409 pending_invitation');
   });
 
-  it("keeps a 429's wait, and names none when the body gives none", () => {
+  it("keeps a 429's wait from its body when it has no Retry-After, and names none without one", () => {
     const limited = errorFromResponse(
       429,
       JSON.stringify({ code: 'digest_rate_limited', retry_after_seconds: 61 }),
     );
     expect(limited).toMatchObject({
-      kind: 'server',
+      kind: 'limit',
       status: 429,
       code: 'digest_rate_limited',
       retryAfterSeconds: 61,
+      retryAt: null,
     });
-    expect(limited.message).toBe('ApiError server 429 digest_rate_limited');
+    expect(limited.message).toBe('ApiError limit 429 digest_rate_limited');
     expect(errorFromResponse(429, '').retryAfterSeconds).toBeUndefined();
+    expect(errorFromResponse(429, '').retryAt).toBeNull();
+  });
+
+  it('works out when a 429 lifts from its Retry-After and the clock it is given; the header wins', () => {
+    const now = Date.UTC(2026, 10, 15, 12, 0, 0);
+    const body = JSON.stringify({ retry_after_seconds: 600 });
+    expect(errorFromResponse(429, body, null, { retryAfter: '90', now })).toMatchObject({
+      retryAfterSeconds: 90,
+      retryAt: now + 90_000,
+    });
+    const date = { retryAfter: 'Sun, 15 Nov 2026 12:02:00 GMT', now };
+    expect(errorFromResponse(429, '', null, date)).toMatchObject({
+      retryAfterSeconds: 120,
+      retryAt: now + 120_000,
+    });
+  });
+
+  it('keeps no lift time for any other status, and none past a day', () => {
+    const now = Date.UTC(2026, 10, 15, 12, 0, 0);
+    expect(errorFromResponse(503, '', null, { retryAfter: '30', now })).toMatchObject({
+      kind: 'server',
+      retryAt: null,
+    });
+    expect(errorFromResponse(503, '', null, { retryAfter: '30', now }).retryAfterSeconds).toBe(
+      undefined,
+    );
+    const absurd = errorFromResponse(429, '', null, { retryAfter: '86401', now });
+    expect(absurd).toMatchObject({ kind: 'limit', retryAt: null });
+    expect(absurd.retryAfterSeconds).toBeUndefined();
+  });
+
+  it('leaves a 402 as server: no route the app calls answers one for a limit', () => {
+    const body = JSON.stringify({ detail: { code: 'credits_exhausted', message: 'x' } });
+    expect(errorFromResponse(402, body)).toMatchObject({ kind: 'server', retryAt: null });
   });
 
   it('keeps the cause for the logs', () => {
@@ -198,5 +236,48 @@ describe('userMessage and the copy', () => {
     expect(fromBody.code).toBe(APP_ERROR_CODES.signInNotSetUp);
     expect(userMessage(fromBody)).toBe(API_ERROR_COPY.auth);
     expect(userMessage(new ApiError('auth', { code: 'constructor' }))).toBe(API_ERROR_COPY.auth);
+  });
+});
+
+describe("a limit's words", () => {
+  const now = Date.UTC(2026, 10, 15, 12, 0, 0);
+  const limitIn = (seconds: number) =>
+    new ApiError('limit', {
+      status: 429,
+      retryAfterSeconds: seconds,
+      retryAt: now + seconds * 1000,
+    });
+
+  it('say later when it is not known when the limit lifts', () => {
+    expect(userMessage(new ApiError('limit', { status: 429 }))).toBe(API_ERROR_COPY.limit);
+    expect(API_ERROR_COPY.limit).toMatch(/limit/);
+    expect(API_ERROR_COPY.limit).toMatch(/later/);
+  });
+
+  it('round up to whole minutes, and say under a minute for the last one', () => {
+    expect(userMessage(limitIn(0))).toBe(LIMIT_COPY.underAMinute);
+    expect(userMessage(limitIn(59))).toBe(LIMIT_COPY.underAMinute);
+    expect(userMessage(limitIn(60))).toBe(LIMIT_COPY.underAMinute);
+    expect(userMessage(limitIn(61))).toBe(LIMIT_COPY.inMinutes(2));
+    expect(userMessage(limitIn(3600))).toBe(LIMIT_COPY.inMinutes(60));
+    expect(LIMIT_COPY.inMinutes(3)).toBe(
+      "You've reached a limit for now. Try again in about 3 minutes.",
+    );
+  });
+
+  it("are worded against the caller's clock when it gives one", () => {
+    const error = limitIn(600);
+    expect(userMessage(error, now + 5 * 60_000)).toBe(LIMIT_COPY.inMinutes(5));
+    expect(userMessage(error, now + 9 * 60_000 + 30_000)).toBe(LIMIT_COPY.underAMinute);
+    expect(userMessage(error, now + 20 * 60_000)).toBe(LIMIT_COPY.underAMinute);
+  });
+
+  it('never show the server words, and never a wait past a day', () => {
+    const own = new ApiError('limit', { serverMessage: 'Rate limit exceeded for x.' });
+    expect(userMessage(own)).toBe(API_ERROR_COPY.limit);
+    expect(userMessage(new ApiError('limit', { retryAfterSeconds: 86_401 }))).toBe(
+      API_ERROR_COPY.limit,
+    );
+    expect(limitWords(null)).toBe(API_ERROR_COPY.limit);
   });
 });

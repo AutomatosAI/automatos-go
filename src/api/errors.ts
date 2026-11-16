@@ -5,14 +5,19 @@
 // core/auth/hybrid.py:852-861) and its code and message are kept exactly as sent. A code beside the
 // detail ({"code", "detail"}: the server voice's refusals, tts_busy) is read when the detail has
 // none, and so is a 429's retry_after_seconds (the digest's {"code": "digest_rate_limited",
-// "retry_after_seconds": N}), beside the detail or in it. Statuses outside the named ones (400, 422,
-// 429, …) are 'server': the server refused and the app cannot fix it.
+// "retry_after_seconds": N}), beside the detail or in it. A 429 is 'limit' (rule 6.2): it carries
+// when the limit lifts, from its Retry-After (else that retry_after_seconds) read against the
+// client's clock (retry-after.ts), and its words say roughly when to try again. Statuses outside
+// the named ones (400, 402, 422, …) are 'server': the server refused and the app cannot fix it.
 
 import { z } from 'zod';
 
 import { REDIRECT_TARGET_MAX_CHARS, SERVER_MESSAGE_MAX_CHARS } from './config';
 import { parseJson } from './json';
-import { API_ERROR_COPY, APP_ERROR_COPY } from './strings';
+import { limitWaitMs, saneWaitMs } from './retry-after';
+import { API_ERROR_COPY, APP_ERROR_COPY, LIMIT_COPY } from './strings';
+
+const MS_PER_SECOND = 1_000;
 
 export type ApiErrorKind =
   | 'network'
@@ -22,14 +27,20 @@ export type ApiErrorKind =
   | 'conflict'
   | 'server'
   | 'stream'
-  | 'invalid_response';
+  | 'invalid_response'
+  | 'limit';
 
 export type ApiErrorDetail = {
   readonly status?: number;
   readonly code?: string;
   readonly serverMessage?: string;
-  /** How long the server asks the caller to wait before trying again (retry_after_seconds). */
+  /**
+   * How long the server asks the caller to wait before trying again: retry_after_seconds, and for
+   * a limit its Retry-After first (retry-after.ts), as it stood when the answer came.
+   */
   readonly retryAfterSeconds?: number;
+  /** A limit: when it lifts (epoch ms, on the client's clock); null when not known or not a limit. */
+  readonly retryAt?: number | null;
   /**
    * Where a redirect the app refused to follow pointed (its Location). Never followed and never
    * shown: only pairing reads it, to offer the same server's https address (src/connect).
@@ -45,6 +56,7 @@ export class ApiError extends Error {
   readonly code?: string;
   readonly serverMessage?: string;
   readonly retryAfterSeconds?: number;
+  readonly retryAt: number | null;
   readonly redirectTo?: string;
 
   constructor(kind: ApiErrorKind, detail: ApiErrorDetail = {}) {
@@ -59,6 +71,7 @@ export class ApiError extends Error {
     this.code = detail.code;
     this.serverMessage = detail.serverMessage;
     this.retryAfterSeconds = detail.retryAfterSeconds;
+    this.retryAt = detail.retryAt ?? null;
     this.redirectTo = detail.redirectTo;
   }
 }
@@ -85,6 +98,7 @@ const STATUS_KINDS: ReadonlyMap<number, ApiErrorKind> = new Map<number, ApiError
   [403, 'forbidden'],
   [404, 'not_found'],
   [409, 'conflict'],
+  [429, 'limit'],
 ]);
 
 export function kindForStatus(status: number): ApiErrorKind {
@@ -151,20 +165,46 @@ export function isRedirectStatus(status: number): boolean {
   return status >= REDIRECT_MIN && status < REDIRECT_END;
 }
 
+/** What a limit's answer says about when it lifts: its Retry-After, and the client's clock. */
+export type LimitFacts = {
+  readonly retryAfter: string | null;
+  /** The client's clock when the answer came (epoch ms): an HTTP date needs it, as does retryAt. */
+  readonly now?: number;
+};
+
+/** A limit's wait, as the wait it asked for and the instant it ends; nothing when unknown. */
+function limitDetail(
+  bodySeconds: number | undefined,
+  facts: LimitFacts | undefined,
+): Pick<ApiErrorDetail, 'retryAfterSeconds' | 'retryAt'> {
+  const now = facts?.now;
+  const wait = limitWaitMs(facts?.retryAfter, bodySeconds, now);
+  if (wait === null) return { retryAt: null };
+  return {
+    retryAfterSeconds: wait / MS_PER_SECOND,
+    retryAt: now === undefined ? null : now + wait,
+  };
+}
+
 /**
  * A non-OK response as an ApiError of the kind its status names. A redirect (never followed) keeps
- * where it pointed, when it said and the address is no longer than any real one.
+ * where it pointed, when it said and the address is no longer than any real one. A limit keeps
+ * when it lifts, when its answer said and the wait is believable (retry-after.ts).
  */
 export function errorFromResponse(
   status: number,
   body: string,
   location?: string | null,
+  limit?: LimitFacts,
 ): ApiError {
+  const kind = kindForStatus(status);
+  const detail = detailOf(body);
   const redirectTo =
     isRedirectStatus(status) && location && location.length <= REDIRECT_TARGET_MAX_CHARS
       ? { redirectTo: location }
       : {};
-  return new ApiError(kindForStatus(status), { status, ...detailOf(body), ...redirectTo });
+  const lifts = kind === 'limit' ? limitDetail(detail.retryAfterSeconds, limit) : {};
+  return new ApiError(kind, { status, ...detail, ...redirectTo, ...lifts });
 }
 
 /** Codes the app gives errors it raises itself (no response behind them), each with its own words. */
@@ -182,15 +222,37 @@ function appCopy(error: ApiError): string | undefined {
   return error.status === undefined && error.code ? APP_CODE_COPY.get(error.code) : undefined;
 }
 
+const MS_PER_MINUTE = 60 * MS_PER_SECOND;
+
+/** A limit's words: roughly when to try again, in whole minutes rounded up; "later" when unknown. */
+export function limitWords(waitMs: number | null): string {
+  if (waitMs === null) return API_ERROR_COPY.limit;
+  const minutes = Math.ceil(waitMs / MS_PER_MINUTE);
+  return minutes <= 1 ? LIMIT_COPY.underAMinute : LIMIT_COPY.inMinutes(minutes);
+}
+
+/**
+ * How long is left of a limit: against `now` when the caller holds a clock and the limit's end is
+ * known, else the wait as the answer gave it (right as the answer is shown); null when unknown.
+ */
+function limitLeftMs(error: ApiError, now: number | undefined): number | null {
+  if (now !== undefined && error.retryAt !== null) return Math.max(0, error.retryAt - now);
+  return saneWaitMs(
+    error.retryAfterSeconds === undefined ? null : error.retryAfterSeconds * MS_PER_SECOND,
+  );
+}
+
 /**
  * What to show the user. An error the app raised with a code of its own shows that code's words;
  * a conflict shows the server's own words when it sent any (waitlist, unlinked account, pending
- * invitation: PRD-001 §4.5); every other kind shows its fixed copy.
+ * invitation: PRD-001 §4.5); a limit says roughly when to try again (`now`, the caller's clock in
+ * epoch ms, words it against the moment it is shown); every other kind shows its fixed copy.
  */
-export function userMessage(error: unknown): string {
+export function userMessage(error: unknown, now?: number): string {
   if (!isApiError(error)) return API_ERROR_COPY.server;
   const own = appCopy(error);
   if (own) return own;
   if (error.kind === 'conflict' && error.serverMessage) return error.serverMessage;
+  if (error.kind === 'limit') return limitWords(limitLeftMs(error, now));
   return API_ERROR_COPY[error.kind];
 }

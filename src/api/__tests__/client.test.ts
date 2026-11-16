@@ -186,7 +186,7 @@ describe('status → kind', () => {
     [503, 'server'],
     [400, 'server'],
     [422, 'server'],
-    [429, 'server'],
+    [429, 'limit'],
   ] as const)('%i → %s', async (status, kind) => {
     const transport = fakeTransport(() => jsonReply(status, { detail: 'nope' }));
     const error = await failureOf(
@@ -194,6 +194,23 @@ describe('status → kind', () => {
     );
     expect(error.kind).toBe(kind);
     expect(error.status).toBe(status);
+  });
+
+  it("reads a 429's Retry-After against the client's own clock, never the phone's", async () => {
+    const now = Date.UTC(2026, 10, 15, 12, 0, 0);
+    const transport = fakeTransport(() => reply(429, '', { 'Retry-After': '150' }));
+    const error = await failureOf(
+      clientWith(transport, { now: () => now }).request(WORKSPACE, { schema: WorkspaceSchema }),
+    );
+    expect(error).toMatchObject({ kind: 'limit', retryAfterSeconds: 150, retryAt: now + 150_000 });
+    expect(userMessage(error)).toBe(
+      "You've reached a limit for now. Try again in about 3 minutes.",
+    );
+    const dated = fakeTransport(() =>
+      reply(429, '', { 'Retry-After': 'Sun, 15 Nov 2026 12:00:20 GMT' }),
+    );
+    const soon = await failureOf(clientWith(dated, { now: () => now }).request(WORKSPACE));
+    expect(soon.retryAt).toBe(now + 20_000);
   });
 
   it('keeps the 409 pending_invitation code and message as the server sent them', async () => {

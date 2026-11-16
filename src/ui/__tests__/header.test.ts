@@ -157,8 +157,12 @@ describe('every button in the bar is a 44 pt target', () => {
 
   it('does not fit in a bar that is too short, too tight at the sides or between two buttons', () => {
     const tightest = { minHeight: MIN_TOUCH, paddingX: slop.left, gap: slop.left + slop.right };
-    expect(headerKeepsTouch({ ...tightest, minHeight: tightest.minHeight - 1 }, STUDIO_CONTROLS)).toBe(false);
-    expect(headerKeepsTouch({ ...tightest, paddingX: tightest.paddingX - 1 }, STUDIO_CONTROLS)).toBe(false);
+    expect(
+      headerKeepsTouch({ ...tightest, minHeight: tightest.minHeight - 1 }, STUDIO_CONTROLS),
+    ).toBe(false);
+    expect(
+      headerKeepsTouch({ ...tightest, paddingX: tightest.paddingX - 1 }, STUDIO_CONTROLS),
+    ).toBe(false);
     expect(headerKeepsTouch({ ...tightest, gap: tightest.gap - 1 }, STUDIO_CONTROLS)).toBe(false);
   });
 

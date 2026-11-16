@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { AUTHORIZATION_HEADER, WORKSPACE_HEADER } from '../../api/auth-headers';
 import type { GateInput } from '../../api/capabilities';
-import { createApiClient } from '../../api/client';
 import { ApiError } from '../../api/errors';
 import { API_ERROR_COPY } from '../../api/strings';
-import { SERVER, fakeTransport, reply } from '../../api/__tests__/fake-transport';
+import { SERVER } from '../../api/__tests__/fake-transport';
 import {
   DELIVERABLE_ID_PARAM,
   deliverableDetailView,
@@ -22,18 +20,13 @@ import {
   viewerFormat,
   type FileFacts,
 } from '../deliverables/file-kind';
-import {
-  authenticatedRequest,
-  fileHref,
-  fileLink,
-  viewerFileName,
-} from '../deliverables/file-source';
+import { fileHref, fileLink, viewerFileName } from '../deliverables/file-source';
 import type { DeliverableDetail } from '../deliverables/schemas';
 import { DELIVERABLE_COPY } from '../strings';
 
 // US-013b: the Deliverable's page, pure: how each file is shown (file-kind.ts), where it is loaded
-// from and with which headers (file-source.ts, through the one client), the page's body and head
-// (detail.ts) and the 'Report this' gate. open-file.ts's native half: open-file.test.ts.
+// from (file-source.ts), the page's body and head (detail.ts) and the 'Report this' gate. The
+// download itself, through the one client and the transfer module: open-file.test.ts.
 const WS = '7f1c2a54-0000-4000-8000-000000000001';
 const ID = '0b6f1c2e-1111-4a1b-8c1d-000000000001';
 const RAW = `/api/workspaces/${WS}/files/raw?path=reports%2Fq3.pdf`;
@@ -166,37 +159,6 @@ describe("file-source: the file's link, resolved as the web's Open does", () => 
       expect(fileLink(href, SERVER.apiUrl)).toBeNull();
     }
     expect(fileLink(null, SERVER.apiUrl)).toBeNull();
-  });
-
-  it("builds the download's URL and headers through the client: its bearer and workspace", async () => {
-    const transport = fakeTransport(() => reply(200));
-    const client = createApiClient({
-      server: SERVER,
-      getToken: async () => 'tok_123',
-      getWorkspaceId: () => WS,
-      transport,
-    });
-    const link = fileLink(RAW, client.server.apiUrl);
-    if (link?.kind !== 'api') throw new Error('expected an API link');
-    await expect(authenticatedRequest(client, link)).resolves.toEqual({
-      url: `${SERVER.apiUrl}${RAW}`,
-      headers: { [AUTHORIZATION_HEADER]: 'Bearer tok_123', [WORKSPACE_HEADER]: WS },
-    });
-    expect(transport.calls).toEqual([]); // the headers only: the native load sends them
-  });
-
-  it('signed out, the download carries no header at all', async () => {
-    const client = createApiClient({
-      server: SERVER,
-      getToken: async () => null,
-      getWorkspaceId: () => WS,
-      transport: fakeTransport(() => reply(200)),
-    });
-    const request = await authenticatedRequest(client, {
-      kind: 'api',
-      url: `${SERVER.apiUrl}${RAW}`,
-    });
-    expect(request.headers).toEqual({});
   });
 
   it("names the viewer's copy safely, with the format's extension", () => {
