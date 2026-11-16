@@ -31,6 +31,8 @@ export const NOW_S = 1_792_540_800;
 export const ANSWER_PATH = '/api/v1/approval-grants/42/answer';
 export const READ_PATH = `/api/notifications/${NOTIFICATION_ID}/read`;
 export const REPLY_TEXT = 'Yes, ship it';
+/** The agent the server says asked the question. */
+export const ASKER = 'Ops Agent';
 
 type Fields = SignedFields & { readonly v: number };
 
@@ -198,6 +200,8 @@ export const OPEN_CHECKS: StaleChecks = Object.freeze({
   getChat: async () => ({ id: 'chat' }),
   grantPlaces: async () => [{ id: 77, details: { conversation_id: CARD_CHAT_ID } }],
   missionPlace: async (id: string) => ({ id, config: { origin_chat_id: CARD_CHAT_ID } }),
+  /** The question as the server has it: open, the signed words, asked by ASKER. */
+  askedQuestion: async () => ({ open: true, words: QUESTION_FIELDS.question ?? '', asker: ASKER }),
 });
 
 export type WorldOptions = {

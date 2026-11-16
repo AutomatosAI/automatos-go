@@ -203,13 +203,16 @@ describe('intentFor', () => {
     );
   });
 
-  it('a reply under a title the phone cannot check → sender_unchecked; Auto’s titles and none pass', () => {
-    const unchecked = { kind: 'neutral', reason: 'sender_unchecked', link: QUESTION_LINK };
+  it('a reply under a title the phone cannot check carries it, for the server to confirm', () => {
     for (const title of ['Approve the payment?', 'Ops Agent · AI', 'Auto · AI!', 'Auto']) {
-      expect(intentFor(input({ shown: { title } }))).toEqual(unchecked);
+      expect(intentFor(input({ shown: { title } }))).toMatchObject({
+        kind: 'answer',
+        confirm: { title, question: FULL.question },
+      });
     }
     for (const title of ['Auto · AI', 'Auto · IA', 'Auto · KI', ' Auto · AI ', '', null]) {
-      expect(intentFor(input({ shown: { title } })).kind).toBe('answer');
+      const intent = intentFor(input({ shown: { title } }));
+      expect([intent.kind, 'confirm' in intent]).toEqual(['answer', false]);
     }
     expect(intentFor(input({ action: 'open', shown: { title: 'Approve it' } })).kind).toBe('open');
   });

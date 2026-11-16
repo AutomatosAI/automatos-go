@@ -149,13 +149,16 @@ route answers compare-and-swap, so "Answered" needs the grant granted with this 
 | Someone answered first, or the question closed | "That question was already answered." |
 | Network failure | "Not sent. Open the question to answer it." |
 | Signature did not verify | "This notification couldn't be checked, so nothing was sent." |
-| The body was not the signed question, or a subtitle or picture was shown | "This notification's words couldn't be matched to the question, so nothing was sent. Answer it here." |
-| The title was not Auto's own ("Auto · AI", "IA" or "KI"): an agent's name is not signed | "This phone can't check the sender named on this notification, so nothing was sent. Answer it here." |
+| The body was not the signed question, a subtitle or picture was shown, or (an agent's title) the server's words differ | "This notification's words couldn't be matched to the question, so nothing was sent. Answer it here." |
+| An agent's title: the server, read first, says another agent asked, or names none | "The sender on this notification couldn't be matched to who asked, so nothing was sent. Answer it here." |
+| An agent's title: the server says the question is no longer open | "That question was already answered or closed." |
+| An agent's title: the question could not be read (offline, refused, no answer in 4 s) | "Not sent. Open the question to answer it." |
 | This phone already replied to that signed question | "You already replied to this notification, so nothing was sent again." |
 
-The last three open the question. The signature covers the data, not the words a notification
-shows, so a Reply is posted only when everything shown is the signed question or the server's own
-text; a question a named agent asked is answered in the app
+The last five open the question. The signature covers the data, not the words a notification
+shows, so a Reply is posted only when everything shown is the signed question, Auto's own title, or
+an agent's title the server confirms: for that one the phone reads the question by its signed id
+first (`GET /api/v1/approval-grants?status=pending&kind=question`, within 4 s)
 ([release/push-security.md](release/push-security.md), "What a verified push proves").
 
 Each response is handled once, and each signed question replied to once: the last 50 handled keys

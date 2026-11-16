@@ -229,12 +229,12 @@ picture, no badge count, nothing else a person reads.
 
 | Field | What the server puts there | Can the phone check it? |
 |---|---|---|
-| `title` | "{sender} · {badge}": the sender is the agent that asked, or "Auto" when no agent is named; the badge is the fixed AI term of the language the phone registered: AI, IA (Portuguese, Spanish, French, Italian) or KI (German) | Only "Auto · AI", "Auto · IA" and "Auto · KI". An agent's name is not in the signed payload. |
+| `title` | "{sender} · {badge}": the sender is the agent that asked, or "Auto" when no agent is named; the badge is the fixed AI term of the language the phone registered: AI, IA (Portuguese, Spanish, French, Italian) or KI (German) | "Auto · AI", "Auto · IA" and "Auto · KI" by itself. An agent's name is not in the signed payload, so any other title only once the server says that agent asked (below). |
 | `body` | A question's own `question`, exactly as signed. A push with no `question` (any other event, or a question hidden by the workspace's "Hide question text in notifications") shows a fixed line, such as "A question needs your answer", that no signed field names | Yes, for a question: it must be the signed `question`. |
 | subtitle, pictures | Never sent | They must be absent. |
 
-A question asked by a named agent, the usual case, therefore arrives under a title the phone
-cannot check.
+A question asked by a named agent, the usual case, arrives under a title the phone cannot check by
+itself.
 
 **What each action trusts.**
 
@@ -259,34 +259,55 @@ asked for a notification Reply.
 
 **What the phone does now**
 ([src/push/inbound/shown.ts](../../src/push/inbound/shown.ts),
+[confirm-sender.ts](../../src/push/inbound/confirm-sender.ts),
 [intent.ts](../../src/push/inbound/intent.ts), [handler.ts](../../src/push/inbound/handler.ts),
 [dedupe.ts](../../src/push/inbound/dedupe.ts)). A Reply is posted only when everything the
-notification showed is the signed question or the server's own text; otherwise nothing is sent and
-the question opens in the app, where the server's own text is shown:
+notification showed is the signed question or confirmed by the server; otherwise nothing is sent
+and the question opens in the app, where the server's own text is shown:
 
 - The body must be the signed `question`, word for word (spaces at either end aside), and there
   must be no subtitle and no picture. Otherwise: "This notification's words couldn't be matched to
   the question, so nothing was sent. Answer it here."
-- The title must be absent or one of Auto's three. Any other title, an agent's name included:
-  "This phone can't check the sender named on this notification, so nothing was sent. Answer it
-  here."
+- A title that is absent or one of Auto's three posts at once.
+- Any other title (an agent's name) is confirmed first. The phone reads the open questions the
+  Questions screen lists (`GET /api/v1/approval-grants?status=pending&kind=question`, the
+  person's own sign-in) and takes the one whose id is the signed `grant_id`; nothing the
+  notification shows chooses it. For one question the route returns its `id`, `status`,
+  `question_md` (its words, as markdown), `options` and `owner.agent.name` (the agent that asked).
+  The Reply posts only if that question is still open, its words are the signed `question`'s (the
+  marks a question's markdown may hold, such as `**`, `_`, `#`, `>` and list dashes, and the spaces,
+  left out on both sides), and the title is exactly "{that agent's name} · AI", "· IA" or "· KI".
+  Then the sender shown is the one the server names. Otherwise:
+
+  | The server says | The line |
+  |---|---|
+  | The question is not open (answered, closed, or not listed) | "That question was already answered or closed." |
+  | Other words (also: a link or picture in the question, or one over 500 characters, which the push shortens) | "This notification's words couldn't be matched to the question, so nothing was sent. Answer it here." |
+  | Another agent asked, or it names no agent | "The sender on this notification couldn't be matched to who asked, so nothing was sent. Answer it here." |
+  | Nothing: no network, a refusal (a 403 for a person who may not list questions, a 404), an answer that is not the list, or no answer in 4 s | "Not sent. Open the question to answer it." |
+
+- **The time it has.** Reply opens the app to the foreground (and iOS asks for an unlocked phone
+  first), so it does not run in the time iOS gives a background notification action. The read
+  waits at most 4 s (`STALE_CHECK_TIMEOUT_MS`, the same as Open's check); the answer's POST keeps
+  the client's own 30 s limit.
 - A signed payload is replied to once. Before the answer is posted, its workspace, grant and
   notification ids and its `iat` are claimed in the store of responses handled (ids only, never
   words; the last 50 keys; kept across launches; cleared by sign-out). The same payload sent again
   opens the question with "You already replied to this notification, so nothing was sent again."
 
-What a person sees: a Reply to a question Auto asked still posts and says "Answered". A Reply to a
-question a named agent asked now opens the question in the app, with the sender line, and is
-answered there.
+What a person sees: a Reply to a question Auto asked, or one a named agent asked whose name the
+server confirms, posts and says "Answered". A question whose words carry a link or a picture, or
+run past 500 characters, is answered in the app.
 
-[src/push/\_\_tests\_\_/reply-binding.test.ts](../../src/push/__tests__/reply-binding.test.ts)
-and [inbound.test.ts](../../src/push/__tests__/inbound.test.ts) prove each branch, for a Reply and
-for a plain tap.
+[src/push/\_\_tests\_\_/reply-binding.test.ts](../../src/push/__tests__/reply-binding.test.ts),
+[confirm-sender.test.ts](../../src/push/__tests__/confirm-sender.test.ts) and
+[inbound.test.ts](../../src/push/__tests__/inbound.test.ts) prove each branch, for a Reply and for a
+plain tap.
 
-**What the server would need to sign.** For an agent's question to be answered from the
-notification again, the canonical message must cover the title it sends: the sender's name as a
-signed field (the phone then rebuilds "{sender} · {badge}"), or the title itself (or its SHA-256),
-under a new payload version. To check a push that is not a question, the body's fixed line too.
+**What the server could sign instead.** With the sender's name as a signed field (the phone then
+rebuilds "{sender} · {badge}"), or the title itself (or its SHA-256), under a new payload version,
+the phone would need no read before an agent's Reply, and would post one offline. To check a push
+that is not a question, the body's fixed line too.
 
 **What a verified push still does not prove.** The words on the lock screen. A notification that
 arrives while the app is closed is drawn by iOS or Android without any of the app's code, so a push

@@ -157,9 +157,9 @@ export const PUSH_ACTION_COPY = Object.freeze({
   /** A reply whose notification showed other words than the signed question: nothing was sent. */
   wordsDiffer:
     "This notification's words couldn't be matched to the question, so nothing was sent. Answer it here.",
-  /** A reply under a sender the phone cannot check (an agent's name is not signed). */
+  /** A reply whose title names a sender other than the agent the server says asked. */
   senderUnchecked:
-    "This phone can't check the sender named on this notification, so nothing was sent. Answer it here.",
+    "The sender on this notification couldn't be matched to who asked, so nothing was sent. Answer it here.",
   /** A reply carrying a question this phone already replied to from a notification. */
   repliedBefore: 'You already replied to this notification, so nothing was sent again.',
   /** A tap the phone could not check: its link is not followed, the inbox opens instead. */
@@ -238,7 +238,9 @@ export const PUSH_TAPS_COPY = Object.freeze({
     cannot_answer: 'Your role cannot answer here',
     blank_reply: 'The reply was empty',
     words_differ: "Its words weren't the question's",
-    sender_unchecked: "Its sender couldn't be checked",
+    sender_unchecked: "Its sender wasn't who asked",
+    question_closed: 'It was answered or closed',
+    read_failed: "The question couldn't be read",
     replayed: 'Replied to before',
     unknown: 'Opened Notifications',
     unreadable: "Couldn't be read",

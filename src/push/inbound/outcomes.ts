@@ -6,15 +6,16 @@
 // notification_id is a notification's. An unverified push's id only chooses which of the person's
 // own rows is shown first: nothing is posted, followed or marked read for it (D-SIGNATURE). A
 // reply that cannot be sent opens the question, as before: so does one whose notification showed
-// words other than the signed question's, or a sender the phone cannot check, and one carrying a
-// signed payload this phone already replied to.
+// words other than the signed question's, or a sender the server does not confirm, one whose
+// question the server says is closed or could not be read, and one carrying a signed payload this
+// phone already replied to.
 
 import type { WorkspaceRole } from '../../api/workspace';
 import { ROLE_COPY } from '../../auth/strings';
 import { routes } from '../../navigation/routes';
 import { routeFor, targetFor } from '../links/targets';
 import { inboxRoute } from '../nav';
-import { PUSH_ACTION_COPY } from '../strings';
+import { PUSH_ACTION_COPY, PUSH_LINK_COPY } from '../strings';
 import type { PushIntent, PushLink } from './intent';
 
 /** Where the response took the person, and the line shown there. */
@@ -45,6 +46,8 @@ const ANSWER_IN_THE_APP: Readonly<Record<string, string>> = Object.freeze({
   blank_reply: PUSH_ACTION_COPY.answerHere,
   words_differ: PUSH_ACTION_COPY.wordsDiffer,
   sender_unchecked: PUSH_ACTION_COPY.senderUnchecked,
+  question_closed: PUSH_LINK_COPY.questionGone,
+  read_failed: PUSH_ACTION_COPY.notSent,
   replayed: PUSH_ACTION_COPY.repliedBefore,
 });
 

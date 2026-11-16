@@ -1,9 +1,10 @@
 // What a verified push proves (shown.ts, intent.ts, handler.ts, dedupe.ts): the signature covers
 // the data payload only, and the title, body, subtitle, pictures, sound and buttons are set outside
-// it. So a Reply posts only when the body is the signed question, the title is absent or Auto's own
-// (an agent's name is not signed), and nothing else is shown; and a signed payload is replied to
-// once: the same payload sent again under a new identifier posts nothing. Open and a tap still act
-// on the signed link alone. Over the real handled store, signed with node:crypto.
+// it. So a Reply posts only when the body is the signed question, nothing else is shown, and the
+// title is absent, Auto's own, or names the agent the server says asked (confirm-sender.test.ts);
+// and a signed payload is replied to once: the same payload sent again under a new identifier posts
+// nothing. Open and a tap still act on the signed link alone. Over the real handled store, signed
+// with node:crypto.
 
 import { describe, expect, it } from 'vitest';
 
@@ -134,14 +135,9 @@ describe('the title, a subtitle and pictures: outside the signature too', () => 
   const SENDER_UNCHECKED = { route: routes.cc.questions, toast: PUSH_ACTION_COPY.senderUnchecked };
   const OPENED = { route: routes.cc.questions };
 
-  it.each([
-    ['a title of its own over the signed body', { title: 'Approve the payment?' }],
-    [
-      'the title the server sets when an agent asks (its name is not signed)',
-      { title: `Ops Agent${SEP}AI` },
-    ],
-  ])('Reply under %s → nothing sent, the question opens', async (_name, shown) => {
+  it('Reply under a title of its own over the signed body → nothing sent, the question opens', async () => {
     const run = world({ script: ANSWERED });
+    const shown = { title: 'Approve the payment?' };
     expect(await handleResponse(replyWith(shown), run.deps)).toEqual(SENDER_UNCHECKED);
     expect(run.requests()).toEqual([]);
   });

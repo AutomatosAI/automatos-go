@@ -12,6 +12,7 @@ import { PENDING_STATUS, QUESTION_KIND, ROW_ID_PATTERN, UUID_PATTERN } from './c
 import { PUSH_ROUTES } from './routes';
 import {
   answerSchema,
+  askedQuestionsSchema,
   chatCheckSchema,
   digestQueuedSchema,
   devicesSchema,
@@ -189,6 +190,33 @@ export function answerQuestion(
 export function markNotificationRead(client: ApiClient, notificationId: string): Promise<void> {
   return client.request(PUSH_ROUTES.notificationRead, {
     params: { notification_id: checked(notificationId, isUuid, 'A notification id') },
+  });
+}
+
+/** One question as the server has it now: open or not, its words, and the agent that asked. */
+export type AskedQuestion = Readonly<{ open: boolean; words: string; asker: string | null }>;
+
+/**
+ * The question with this signed grant id, from the open questions the Questions screen lists
+ * (with the person's own sign-in); null when it is not among them (answered, closed or none).
+ */
+export async function askedQuestion(
+  client: ApiClient,
+  grantId: string,
+  signal?: AbortSignal,
+): Promise<AskedQuestion | null> {
+  const id = Number(checked(grantId, isRowId, 'A question id'));
+  const answer = await client.request(PUSH_ROUTES.questions.list, {
+    query: { status: PENDING_STATUS, kind: QUESTION_KIND },
+    schema: askedQuestionsSchema,
+    signal,
+  });
+  const grant = answer.grants.find((row) => row.id === id);
+  if (!grant) return null;
+  return Object.freeze({
+    open: grant.status === PENDING_STATUS,
+    words: grant.question_md,
+    asker: grant.owner?.agent?.name ?? null,
   });
 }
 

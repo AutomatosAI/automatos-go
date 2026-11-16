@@ -2,11 +2,12 @@
 // notification response → exactly one honest outcome. parse (parse.ts) → handled once
 // (handled-store.ts) → the push record's key (registration/key-store.ts) → verifyPushSignature →
 // intentFor → act. A reply posts its answer once (answer.ts) and lands on Questions with the
-// server's result, only when its notification showed the signed question and the server's own
-// text and nothing else (shown.ts, intent.ts), and its signed payload was never replied to before
-// (dedupe.ts signedReplyKey, claimed in the same store); otherwise it opens the question with
-// nothing sent. Open and a tap open the link's screen
-// after its stale check (links/stale.ts), acting on the signed payload only, never the words shown;
+// server's result, only when its notification showed the signed question and nothing else
+// (shown.ts, intent.ts), its title is Auto's own or names the agent the server says asked
+// (confirm-sender.ts, read first), and its signed payload was never replied to before (dedupe.ts
+// signedReplyKey, claimed in the same store); otherwise it opens the question with nothing sent.
+// Open and a tap open the link's screen after its stale check (links/stale.ts), acting on the
+// signed payload only, never the words shown;
 // anything else opens the notifications inbox (the push's own row first), or the question, with
 // nothing done (outcomes.ts): a tap never lands on home with nothing to show. A tap on an approval's
 // push whose grant still waits also opens its approval sheet over that screen (PRD-268 US-G08),
@@ -34,6 +35,7 @@ import { parsePushData, type PushPayload } from '../schemas/payload';
 import type { Sha256 } from '../signature/hmac';
 import { checkPushSignature, type SignatureCheck } from '../signature/verify';
 import { sendAnswer, settlesQuestion } from './answer';
+import { confirmSender } from './confirm-sender';
 import { responseKey } from './dedupe';
 import type { HandledStore } from './handled-store';
 import { intentFor, type PushIntent } from './intent';
@@ -296,6 +298,19 @@ function neutralShown(deps: HandlerDeps, intent: Intent<'neutral'>, seen: Seen):
   });
 }
 
+/** A title naming an agent is confirmed by the server before the reply posts (confirm-sender.ts). */
+async function answerConfirmed(
+  intent: Intent<'answer'>,
+  seen: Seen,
+  deps: HandlerDeps,
+): Promise<Handled> {
+  const check = intent.confirm
+    ? await confirmSender(intent.confirm, intent.grantId, deps.checks)
+    : 'confirmed';
+  if (check === 'confirmed') return answer(intent, seen.event, deps);
+  return neutralShown(deps, Object.freeze({ kind: 'neutral', reason: check }), seen);
+}
+
 async function act(event: ReadableEvent, deps: HandlerDeps): Promise<Handled> {
   const payload = parsePushData(event.data);
   const verification = await verificationOf(payload, deps);
@@ -316,7 +331,7 @@ async function act(event: ReadableEvent, deps: HandlerDeps): Promise<Handled> {
     case 'answer':
       // the same signed payload sent again, under a new identifier, posts nothing more
       if (!firstTime(deps.handled, intent.once)) return neutralShown(deps, REPLIED_BEFORE, seen);
-      return answer(intent, event, deps);
+      return answerConfirmed(intent, seen, deps);
     case 'open':
       return open(intent, deps);
     case 'neutral':
