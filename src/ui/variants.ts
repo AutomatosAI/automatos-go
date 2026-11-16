@@ -25,7 +25,7 @@ import { UI_COPY } from './strings';
 export type TextVariant = 'title' | 'body' | 'mono' | 'eyebrow' | 'thread';
 export type TextLevel = 1 | 2 | 3 | 4 | 5 | 6;
 export type TextTone =
-  'default' | 'muted' | 'subtle' | 'accent' | 'success' | 'info' | 'warning' | 'inverse';
+  'default' | 'muted' | 'subtle' | 'accent' | 'success' | 'info' | 'warning' | 'danger' | 'inverse';
 
 const TITLES = ['title1', 'title2', 'title3', 'title4', 'title5', 'title6'] as const;
 const BODIES = ['body1', 'body2', 'body3', 'body4', 'body5', 'body6'] as const;
@@ -60,6 +60,7 @@ export const TEXT_TONES: Readonly<Record<TextTone, ColourName>> = Object.freeze(
   success: 'olive',
   info: 'navy',
   warning: 'warnInk',
+  danger: 'destructive',
   inverse: 'primaryForeground',
 });
 
