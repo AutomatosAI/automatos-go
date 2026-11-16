@@ -105,6 +105,12 @@ export const DOWNLOAD_MAX_BYTES = 100 * 1024 * 1024;
 export const SERVER_MESSAGE_MAX_CHARS = 500;
 
 /**
+ * A server's error code longer than this is cut: it goes into the error's message, for the logs.
+ * The server's codes are short identifiers (digest_rate_limited, pending_invitation).
+ */
+export const SERVER_CODE_MAX_CHARS = 64;
+
+/**
  * A limit's wait (a 429's Retry-After) longer than this is not believed: the words say "later".
  * The server's own windows are a minute to an hour (its rate limiter, readiness, the digest).
  */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { SERVER_MESSAGE_MAX_CHARS } from '../config';
+import { SERVER_CODE_MAX_CHARS, SERVER_MESSAGE_MAX_CHARS } from '../config';
 import {
   abortError,
   ApiError,
@@ -110,6 +110,13 @@ describe('detailOf', () => {
     expect(detailOf('<html>Bad gateway</html>')).toEqual({});
     expect(detailOf('')).toEqual({});
     expect(detailOf('null')).toEqual({});
+  });
+
+  it('cuts an over-long server code, which goes into the logged message', () => {
+    const long = 'c'.repeat(SERVER_CODE_MAX_CHARS + 50);
+    const error = errorFromResponse(400, JSON.stringify({ code: long, detail: { code: long } }));
+    expect(error.code).toHaveLength(SERVER_CODE_MAX_CHARS);
+    expect(error.message.length).toBeLessThan(SERVER_CODE_MAX_CHARS + 40);
   });
 
   it('cuts an over-long server message', () => {

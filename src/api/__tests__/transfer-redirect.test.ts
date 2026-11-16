@@ -38,7 +38,9 @@ describe('a redirect', () => {
     const transport = answering(redirect(STORAGE));
     const error = await failureOf(download(clientWith(transport), FILE_URL, target(), TIMED));
     expect(error).toBeInstanceOf(ApiError);
-    expect(error).toMatchObject({ kind: 'server', status: 302, redirectTo: STORAGE });
+    expect(error).toMatchObject({ kind: 'server', status: 302 });
+    // the presigned address, a credential in its query, is not kept on the error either
+    expect((error as ApiError).redirectTo).toBeUndefined();
     expect(transport.calls).toHaveLength(1);
     expect(memoryFs.files.size).toBe(0);
   });
