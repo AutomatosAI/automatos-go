@@ -9,6 +9,7 @@ import { FlatList, StyleSheet, View, type ListRenderItem } from 'react-native';
 import type { Edge } from 'react-native-safe-area-context';
 
 import { routes } from '../../navigation/routes';
+import { useGoBack } from '../../navigation/use-go-back';
 import { useTokens } from '../../styles/theme';
 import {
   Button,
@@ -111,10 +112,7 @@ function HistoryBody({ history, onOpen, onNewChat }: BodyProps) {
 export function ChatsScreen() {
   const router = useRouter();
   const history = useChatHistory();
-  const back = useCallback(() => {
-    if (router.canGoBack()) router.back();
-    else router.replace(routes.home);
-  }, [router]);
+  const back = useGoBack(routes.home);
   const newChat = useCallback(() => router.push(routes.chat(NEW_CHAT_ID)), [router]);
   const open = useCallback((chatId: string) => router.push(routes.chat(chatId)), [router]);
   return (
