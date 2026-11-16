@@ -13,7 +13,7 @@ import type { RetryKind } from '../../api/row-status';
 import { GLYPHS, type StatusState } from '../../styles/dress/status-glyphs';
 import { useDress } from '../../styles/dress/use-dress';
 import { useTokens } from '../../styles/theme';
-import { Button, Text } from '../../ui';
+import { Button, StateGlyph, Text } from '../../ui';
 import type { TextLevel } from '../../ui/variants';
 import { STATUS_ROW_COPY } from '../strings';
 import { stateMark, type RowStatusView } from './row-status';
@@ -26,7 +26,7 @@ const NEXT_STEP = Object.freeze({ level: 5 as TextLevel, gap: 'space3' as const 
 export const RETRY_ACTION_NAME = 'retry';
 
 export function StateMark({ state }: { readonly state: StatusState }) {
-  const { colours, scheme, spacing } = useTokens();
+  const { scheme, spacing } = useTokens();
   const dress = useDress();
   const spec = stateMark(state, dress.status === 'glyph', scheme, dress.glyphPaint);
   return (
@@ -36,10 +36,8 @@ export function StateMark({ state }: { readonly state: StatusState }) {
       accessibilityRole="text"
       accessibilityLabel={spec.word}
     >
-      <Text variant="mono" style={{ color: colours[spec.glyphToken] }}>
-        {spec.glyph}
-      </Text>
-      <Text variant="mono" style={{ color: colours[spec.wordToken] }}>
+      <StateGlyph glyph={spec.glyph} role={spec.glyphToken} />
+      <Text variant="mono" tone={spec.wordTone}>
         {spec.word}
       </Text>
     </View>

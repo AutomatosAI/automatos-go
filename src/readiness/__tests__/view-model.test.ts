@@ -151,7 +151,7 @@ describe('readinessMark', () => {
   it('Studio, a theme and Play paint by the colour role (§6.12.2), the word muted', () => {
     expect(readinessMark('ready', false, 'light')).toMatchObject({
       glyphToken: 'success',
-      wordToken: 'mutedForeground',
+      wordTone: 'muted',
     });
     expect(readinessMark('needs_setup', false, 'dark').glyphToken).toBe('info');
     expect(readinessMark('not_checked', false, 'light').glyphToken).toBe('mutedForeground');

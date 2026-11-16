@@ -75,6 +75,18 @@ describe('every text colour on every ground, in every palette (rule 10.4)', () =
       expect(measured.has(TEXT_TONES[tone]), tone).toBe(true);
     }
   });
+
+  it("measures a state's words and the two quieter inks on the page and on a card (rule 2.1)", () => {
+    const grounds = new Map(TEXT_ON.map(([text, on]) => [text, on]));
+    const tones: readonly TextTone[] = ['success', 'info', 'warning', 'danger', 'muted', 'subtle'];
+    for (const tone of tones) {
+      expect(grounds.get(TEXT_TONES[tone]), tone).toEqual(
+        expect.arrayContaining(['background', 'card']),
+      );
+    }
+    expect(TEXT_TONES.danger).toBe('destructive');
+    expect(TEXT_TONES.subtle).toBe('fg3');
+  });
 });
 
 describe('a tone a palette reads from another token', () => {

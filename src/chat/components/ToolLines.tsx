@@ -8,7 +8,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useTokens } from '../../styles/theme';
 import { Text } from '../../ui';
 import { CHAT_COPY } from '../strings';
-import { MARK_COLOURS, type ToolLineRow } from '../view-model';
+import { MARK_COLOURS, MARK_TONES, type ToolLineRow } from '../view-model';
 
 const LINE_LEVEL = 6;
 const MARK_WIDTH = 12;
@@ -26,7 +26,7 @@ function ToolLine({ row }: { readonly row: ToolLineRow }) {
         {row.mark === null ? (
           <ActivityIndicator size="small" color={colour} />
         ) : (
-          <Text variant="mono" style={{ color: colour }}>
+          <Text variant="mono" tone={MARK_TONES[row.tone]}>
             {row.mark}
           </Text>
         )}

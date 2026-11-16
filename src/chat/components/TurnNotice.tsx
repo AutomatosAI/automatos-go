@@ -12,7 +12,7 @@ import { StyleSheet, View } from 'react-native';
 import { useTokens } from '../../styles/theme';
 import { Button, Text } from '../../ui';
 import { CHAT_COPY } from '../strings';
-import { MARK_COLOURS, type Notice } from '../view-model';
+import { MARK_TONES, type Notice } from '../view-model';
 
 const TEXT_LEVEL = 4;
 const MARK_WIDTH = 12;
@@ -25,7 +25,7 @@ export type TurnNoticeProps = {
 };
 
 export function TurnNotice({ notice, onRetry }: TurnNoticeProps) {
-  const { colours, spacing } = useTokens();
+  const { spacing } = useTokens();
   const alert = ALERT_KINDS.has(notice.kind);
   return (
     <View style={{ gap: spacing.space2 }}>
@@ -36,7 +36,7 @@ export function TurnNotice({ notice, onRetry }: TurnNoticeProps) {
         accessibilityLabel={notice.accessibilityLabel}
         style={[styles.line, { gap: spacing.space3 }]}
       >
-        <Text variant="mono" style={[styles.mark, { color: colours[MARK_COLOURS[notice.tone]] }]}>
+        <Text variant="mono" tone={MARK_TONES[notice.tone]} style={styles.mark}>
           {notice.mark}
         </Text>
         <Text level={TEXT_LEVEL} tone="muted" style={styles.text}>

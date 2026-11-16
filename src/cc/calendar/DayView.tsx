@@ -16,6 +16,7 @@ import {
   DAY_ROW,
   FLAG_TONES,
   KIND_SQUARE,
+  KIND_WORD_TONE,
   kindTone,
   pausedOpacity,
 } from './chrome';
@@ -48,11 +49,11 @@ export type KindLineProps = { readonly kind: KindWord; readonly flags: readonly 
 
 /** The kind as its square and WORD in its colour, then 'Paused' or 'Overdue' when they apply. */
 export function KindLine({ kind, flags }: KindLineProps) {
-  const { colours, spacing } = useTokens();
+  const { spacing } = useTokens();
   return (
     <View style={[styles.line, { gap: spacing[KIND_SQUARE.gap] }]}>
       <KindSquare kind={kind} />
-      <Text variant="mono" style={{ color: kindTone(colours, kind) }}>
+      <Text variant="mono" tone={KIND_WORD_TONE}>
         {kind.label}
       </Text>
       <Flags flags={flags} />

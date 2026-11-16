@@ -7,9 +7,9 @@
 import { FlatList, RefreshControl, View, type ListRenderItem } from 'react-native';
 
 import { useTokens } from '../../styles/theme';
-import { Button, EmptyState, ErrorState, LoadingState } from '../../ui';
+import { Button, EmptyState, ErrorState, LoadingState, OutOfDateNote } from '../../ui';
 import { TabHead } from '../shell/TabHead';
-import { DELIVERABLES_COPY } from '../strings';
+import { DELIVERABLES_COPY, SHELL_COPY } from '../strings';
 import { GALLERY_LAYOUT } from './chrome';
 import { DeliverableCard } from './DeliverableCard';
 import type { DeliverableCardView } from './gallery';
@@ -80,6 +80,9 @@ export function DeliverablesTab() {
         <>
           <TabHead />
           <TypePills pills={view.pills} onChoose={choose} />
+          {gallery.query.isRefetchError ? (
+            <OutOfDateNote words={SHELL_COPY.outOfDate} inset={inset} />
+          ) : null}
         </>
       }
       ListHeaderComponentStyle={{ marginBottom: spacing[GALLERY_LAYOUT.gap] }}

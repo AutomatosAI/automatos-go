@@ -12,9 +12,9 @@ import { FlatList, RefreshControl, View, type ListRenderItem } from 'react-nativ
 
 import { userMessage } from '../../api/errors';
 import { useTokens } from '../../styles/theme';
-import { EmptyState, ErrorState, KeyboardLift, LoadingState, Text } from '../../ui';
+import { EmptyState, ErrorState, KeyboardLift, LoadingState, OutOfDateNote, Text } from '../../ui';
 import { TabFrame, TabHead } from '../shell/TabHead';
-import { QUESTIONS_COPY } from '../strings';
+import { QUESTIONS_COPY, SHELL_COPY } from '../strings';
 import { isForbidden } from './answer';
 import { QUESTIONS_LAYOUT } from './chrome';
 import { QuestionCard } from './QuestionCard';
@@ -76,6 +76,9 @@ export function QuestionsTab() {
         ListHeaderComponent={
           <>
             <TabHead />
+            {tab.query.isRefetchError ? (
+              <OutOfDateNote words={SHELL_COPY.outOfDate} inset={inset} />
+            ) : null}
             {readOnly && cards.length > 0 ? (
               <Text
                 level={QUESTIONS_LAYOUT.noteLevel}

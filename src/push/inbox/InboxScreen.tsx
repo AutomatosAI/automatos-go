@@ -12,7 +12,7 @@ import type { Edge } from 'react-native-safe-area-context';
 import { routes } from '../../navigation/routes';
 import { useGoBack } from '../../navigation/use-go-back';
 import { useTokens } from '../../styles/theme';
-import { Divider, EmptyState, ErrorState, LoadingState, Screen } from '../../ui';
+import { Divider, EmptyState, ErrorState, LoadingState, OutOfDateNote, Screen } from '../../ui';
 import { inboxFocusFrom } from '../nav';
 import { PUSH_INBOX_COPY } from '../strings';
 import { InboxHeader } from './InboxHeader';
@@ -33,9 +33,11 @@ type ListProps = {
   readonly onOpen: (id: string) => void;
   readonly refreshing: boolean;
   readonly onRefresh: () => void;
+  /** Its last refresh failed: the rows are what it last had (rule 6.4). */
+  readonly outOfDate: boolean;
 };
 
-function InboxList({ rows, onOpen, refreshing, onRefresh }: ListProps) {
+function InboxList({ rows, onOpen, refreshing, onRefresh, outOfDate }: ListProps) {
   const { spacing } = useTokens();
   const renderItem = useCallback<ListRenderItem<InboxRowView>>(
     ({ item }) => <InboxRow row={item} onOpen={onOpen} />,
@@ -47,6 +49,11 @@ function InboxList({ rows, onOpen, refreshing, onRefresh }: ListProps) {
       keyExtractor={keyOf}
       renderItem={renderItem}
       ItemSeparatorComponent={Divider}
+      ListHeaderComponent={
+        outOfDate ? (
+          <OutOfDateNote words={PUSH_INBOX_COPY.outOfDate} inset={spacing.space3} />
+        ) : null
+      }
       refreshing={refreshing}
       onRefresh={onRefresh}
       contentContainerStyle={{ paddingHorizontal: spacing.space3, paddingBottom: spacing.space6 }}
@@ -83,7 +90,13 @@ export function InboxScreen() {
       );
     }
     return (
-      <InboxList rows={rows} onOpen={onOpen} refreshing={list.isRefetching} onRefresh={refetch} />
+      <InboxList
+        rows={rows}
+        onOpen={onOpen}
+        refreshing={list.isRefetching}
+        onRefresh={refetch}
+        outOfDate={list.isRefetchError}
+      />
     );
   })();
   return (

@@ -168,6 +168,9 @@ export const PUSH_INBOX_COPY = Object.freeze({
   allRead: 'All marked read.',
   emptyTitle: 'Nothing yet',
   emptyMessage: 'When Auto has a message for you or needs you, it shows here.',
+  /** Over the list when its last refresh failed (rule 6.4): the notifications shown are kept. */
+  outOfDate:
+    "Couldn't refresh your notifications, so this may be out of date. Pull down to try again.",
   unread: 'Unread',
   openHint: 'Opens what it is about',
   studioHint: 'Opens in Studio, in your browser',

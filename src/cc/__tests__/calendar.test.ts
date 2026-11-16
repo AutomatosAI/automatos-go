@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import { WORKSPACE_ROLES } from '../../api/workspace';
 import { KIND_META } from '../../core/web/components/command-center/calendar-kinds';
+import { AA_TEXT, contrastRatio } from '../../core/web/lib/look-kit/contrast';
+import { STUDIO_COLOURS, sourceToHex } from '../../styles/tokens/studio';
+import { KIND_WORD_TONE } from '../calendar/chrome';
 import { dayModel, kindWord } from '../calendar/day-model';
 import { pauseAction, pauseOffer, STUDIO_CALENDAR_PATH } from '../calendar/pause';
 import { ScheduleSchema, type ScheduleEntry } from '../calendar/schemas';
@@ -377,5 +380,14 @@ describe('pause rules (D27)', () => {
     expect(pauseOffer(item({ type: 'recipe', playbook_id: 5 }), 'viewer').kind).toBe(
       'manage_in_studio',
     );
+  });
+});
+
+describe("a kind's word", () => {
+  it("is muted: core's kind tones do not read as text on a dark card (rule 10.4)", () => {
+    const card = STUDIO_COLOURS.dark.card;
+    const tones = Object.values(KIND_META).map((meta) => sourceToHex(meta.tone));
+    expect(tones.filter((tone) => contrastRatio(tone, card) < AA_TEXT)).toEqual(tones);
+    expect(KIND_WORD_TONE).toBe('muted');
   });
 });

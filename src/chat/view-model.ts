@@ -52,6 +52,7 @@ export type { ThreadSuggestionRow } from './suggestion-row';
 
 export {
   MARK_COLOURS,
+  MARK_TONES,
   receiptBadge,
   receiptsView,
   toolLineRows,

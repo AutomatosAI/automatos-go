@@ -15,7 +15,7 @@ const NOTE_LEVEL = 6;
 
 export function OversightNote({ view }: { readonly view: OversightView }) {
   const { colours, radii, spacing } = useTokens();
-  const { backgroundColor, color } = tonePaint(colours, 'warning');
+  const { backgroundColor } = tonePaint(colours, 'warning');
   return (
     <View
       accessible
@@ -30,7 +30,7 @@ export function OversightNote({ view }: { readonly view: OversightView }) {
         gap: spacing.space1,
       }}
     >
-      <Text level={NOTE_LEVEL} weight={600} style={{ color }}>
+      <Text level={NOTE_LEVEL} weight={600} tone="warning">
         {view.title}
       </Text>
       {view.rationale ? (
