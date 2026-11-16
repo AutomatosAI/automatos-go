@@ -24,6 +24,7 @@ import { studioRingPalette } from '../../styles/mascot/ring-palette';
 import { selectedPaint } from '../../styles/picker/cards';
 import { STYLE_IDS, tokensFor, type Colours, type Tokens } from '../../styles/tokens';
 import { STUDIO_COLOURS } from '../../styles/tokens/studio';
+import { rgba } from '../../core/web/lib/look-kit/css';
 import { MARK_CONTRAST, accentInk, accentToken, markColour, markOn } from '../accent';
 import { toneColour } from '../tone-colour';
 import { fieldPaint, statusPip, tonePaint } from '../variants';
@@ -76,8 +77,11 @@ describe('the accent as a foreground', () => {
   it('follows the palette, not the style: any palette whose accent is a ground', () => {
     const quiet: Colours = { ...STUDIO_COLOURS.light, accent: STUDIO_COLOURS.light.background };
     expect(accentToken(quiet)).toBe('primary');
+    // measured as it is drawn, alpha and all: at half strength the accent no longer reads
     const seeThrough: Colours = { ...STUDIO_COLOURS.light, accent: `${STUDIO.colours.accent}80` };
-    expect(accentToken(seeThrough)).toBe('accent');
+    expect(accentToken(seeThrough)).toBe('primary');
+    const nearlySolid: Colours = { ...STUDIO_COLOURS.light, accent: `${STUDIO.colours.accent}F2` };
+    expect(accentToken(nearlySolid)).toBe('accent');
   });
 
   it.each(PALETTES.map((tokens) => [nameOf(tokens), tokens] as const))(
@@ -103,6 +107,27 @@ describe('the accent as a foreground', () => {
       foreground: light.background,
     };
     expect(accentToken(nothingReads)).toBe('foreground');
+  });
+
+  it('skips a candidate it cannot read or that is see-through, and never throws', () => {
+    const light = STUDIO_COLOURS.light;
+    for (const accent of [
+      rgba(light.accent, 0.2),
+      `${light.accent}20`,
+      'transparent',
+      'nonsense',
+    ]) {
+      const palette: Colours = { ...light, accent };
+      expect(() => accentToken(palette), accent).not.toThrow();
+      expect(accentToken(palette), accent).toBe('primary');
+    }
+    expect(accentToken({ ...light, accent: rgba(light.accent, 1) })).toBe('accent');
+    const unreadable: Colours = { ...light, accent: 'nonsense', primary: 'nonsense' };
+    expect(accentToken(unreadable)).toBe('foreground');
+    const noPage: Colours = { ...light, background: 'nonsense' };
+    expect(() => accentInk(noPage)).not.toThrow();
+    expect(() => markOn(light, 'accent', 'nonsense')).not.toThrow();
+    expect(markOn(light, 'accent', 'nonsense')).toBe(light.accent);
   });
 
   it('decides once for a palette object', () => {

@@ -9,6 +9,7 @@
 // row's title, detail and note are Title 6 and Body 6, as Settings → Notifications drew them.
 
 import type { ColourName, Colours } from '../styles/tokens';
+import { blendOver } from '../styles/tokens/colour-read';
 import { firstMark, firstMarkColour } from './accent';
 import { MIN_TOUCH, hitSlopFor, type HitSlop } from './paint';
 import { UI_COPY } from './strings';
@@ -58,27 +59,31 @@ export function switchAccessibilityState(
   return { checked: value, disabled };
 }
 
-/** The muted lines under a switch row's title: its detail, then its note; empty ones dropped. */
+/** The muted lines under a switch row's title: its detail, then its note; blank ones dropped. */
 export function switchRowLines(
   detail: string | undefined,
   note: string | null | undefined,
 ): readonly string[] {
-  return [detail, note].filter((line): line is string => Boolean(line));
+  return [detail, note]
+    .map((line) => (typeof line === 'string' ? line.trim() : ''))
+    .filter((line) => line !== '');
 }
 
-const SENTENCE_END = /[.!?…]$/;
+/** A line that already ends in punctuation (a stop, a colon, a comma, a closing quote or bracket). */
+const ENDS_PUNCTUATED = /[.!?…:;,)\]}"'”’»]$/;
 
 /**
- * What a screen reader says after a switch row's name: its detail and its note, each a sentence,
- * so the note (who may change it, why it cannot change yet) is heard though the row is one element.
+ * What a screen reader says after a switch row's name: its detail and its note, each ending in a
+ * stop unless it already ends in punctuation, so the note (who may change it, why it cannot change
+ * yet) is heard though the row is one element. Nothing when both are blank.
  */
 export function switchRowHint(
   detail: string | undefined,
   note: string | null | undefined,
 ): string | undefined {
-  const lines = switchRowLines(detail, note).map((line) => line.trim());
+  const lines = switchRowLines(detail, note);
   if (lines.length === 0) return undefined;
-  return lines.map((line) => (SENTENCE_END.test(line) ? line : `${line}.`)).join(' ');
+  return lines.map((line) => (ENDS_PUNCTUATED.test(line) ? line : `${line}.`)).join(' ');
 }
 
 /** The tokens a switch is painted in, in one palette. */
@@ -103,15 +108,26 @@ const LAST_RESORT: ColourName = 'foreground';
 
 const found = new WeakMap<Colours, SwitchTokens>();
 
+/** A colour as it shows on the page, so two ways of writing one colour count as one. */
+const drawn = (colour: string, page: string) => blendOver(colour, page) ?? colour;
+
 /**
- * The switch's tokens in this palette, decided once per palette object: the first on track and the
- * first off track that read at 3 to 1 on the page and on a card, and so under the card's thumb.
+ * The switch's tokens in this palette, decided once per palette object: the first on track that
+ * reads at 3 to 1 on the page and on a card (and so under the card's thumb), then the first off
+ * track that reads and is not the on track's colour. Past each list, every token of the palette in
+ * the shape's order, so the two tracks differ wherever the palette has two colours that read.
  */
 export function switchTokens(colours: Colours): SwitchTokens {
   const known = found.get(colours);
   if (known !== undefined) return known;
-  const onTrack = firstMark(colours, ON_TRACKS, GROUNDS, LAST_RESORT);
-  const offTrack = firstMark(colours, OFF_TRACKS, GROUNDS, LAST_RESORT);
+  const page = colours.background;
+  const every = Object.keys(colours) as ColourName[];
+  const onTrack = firstMark(colours, [...ON_TRACKS, ...every], GROUNDS, LAST_RESORT);
+  const on = drawn(colours[onTrack], page);
+  const left = [...OFF_TRACKS, LAST_RESORT, ...every].filter(
+    (each) => drawn(colours[each], page) !== on,
+  );
+  const offTrack = firstMark(colours, left, GROUNDS, LAST_RESORT);
   const tokens: SwitchTokens = Object.freeze({ onTrack, thumb: THUMB, offTrack });
   found.set(colours, tokens);
   return tokens;
@@ -148,11 +164,16 @@ export type OwnSwitchColours = Readonly<{
 
 /**
  * The same rule as switchTokens on a style's own colours: each track the first of its colours that
- * reads at 3 to 1 on every ground and under the thumb, else the fallback.
+ * reads at 3 to 1 on every ground (the first of them the page) and under the thumb, the off track
+ * never the on track's colour where another reads; else the fallback.
  */
 export function ownSwitchPaint(own: OwnSwitchColours): SwitchPaint {
   const under = [...own.grounds, own.thumb];
-  const on = firstMarkColour(own.on, under, own.fallback);
-  const off = firstMarkColour(own.off, under, own.fallback);
+  const page = own.grounds[0] ?? own.fallback;
+  const on = firstMarkColour([...own.on, own.fallback], under, own.fallback);
+  const left = [...own.off, own.fallback, ...own.on].filter(
+    (each) => drawn(each, page) !== drawn(on, page),
+  );
+  const off = firstMarkColour(left, under, own.fallback);
   return { trackColor: { false: off, true: on }, thumbColor: own.thumb, iosBackground: off };
 }

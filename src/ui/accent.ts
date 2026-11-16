@@ -5,16 +5,17 @@
 // palette's page and on its cards, and in `primary`, the palette's strong ink, where it does not. Every shared
 // place that paints the accent as a foreground reads it here. A ground in the accent, with its
 // own accentForeground on it (the count badge), keeps `colours.accent`.
+//   Each candidate is measured as it is drawn: a ground over the page, the mark over that, with
+// any alpha a token carries (src/styles/tokens/colour-read.ts). A candidate, a ground or a page
+// that cannot be read reads as nothing, so it is skipped and the lookup never throws, whatever an
+// installed theme supplies.
 
 import { contrastRatio } from '../core/web/lib/look-kit/contrast';
 import type { ColourName, Colours } from '../styles/tokens';
+import { blendOver, readColour } from '../styles/tokens/colour-read';
 
 /** WCAG 1.4.11: the least a mark needs against what it sits on. */
 export const MARK_CONTRAST = 3;
-
-const SOLID_LENGTH = 7;
-/** The colour without any alpha it carries: enough to tell a ground from an ink. */
-const solid = (colour: string) => colour.slice(0, SOLID_LENGTH);
 
 const found = new WeakMap<Colours, ColourName>();
 
@@ -24,14 +25,24 @@ const GROUNDS: readonly ColourName[] = ['background', 'card'];
 const CANDIDATES: readonly ColourName[] = ['accent', 'primary', 'foreground'];
 const LAST_RESORT: ColourName = 'foreground';
 
-function readsOn(ink: string, grounds: readonly string[]): boolean {
-  return grounds.every((ground) => contrastRatio(solid(ink), solid(ground)) >= MARK_CONTRAST);
+/**
+ * How `ink` reads on `ground` as drawn: the ground over the page, the ink over that. 0 where any of
+ * them cannot be read (an unknown form, or a page that is not solid), so it never passes.
+ */
+export function markRatio(ink: string, ground: string, page: string): number {
+  const under = blendOver(ground, page);
+  const over = under === null ? null : blendOver(ink, under);
+  return under === null || over === null ? 0 : contrastRatio(over, under);
+}
+
+function readsOn(ink: string, grounds: readonly string[], page: string): boolean {
+  return grounds.every((ground) => markRatio(ink, ground, page) >= MARK_CONTRAST);
 }
 
 /**
  * The first of `candidates` that reads as a mark (3 to 1) on every one of `grounds` in this
- * palette, else `fallback`. The accent's lookup below, and the switch's tracks
- * (switch-model.ts), are this.
+ * palette, each as it is drawn over the page, else `fallback`. The accent's lookup below, and the
+ * switch's tracks (switch-model.ts), are this.
  */
 export function firstMark(
   colours: Colours,
@@ -40,19 +51,22 @@ export function firstMark(
   fallback: ColourName,
 ): ColourName {
   const under = grounds.map((ground) => colours[ground]);
-  return candidates.find((each) => readsOn(colours[each], under)) ?? fallback;
+  const page = colours.background;
+  return candidates.find((each) => readsOn(colours[each], under, page)) ?? fallback;
 }
 
 /**
  * The same lookup on a style's own colours, for a part a style draws in its own paint (Candy's
- * Motion switch): the first of `candidates` that reads as a mark on every one of `grounds`.
+ * Motion switch): the first of `candidates` that reads as a mark on every one of `grounds`, the
+ * first of which is the page the others sit on.
  */
 export function firstMarkColour(
   candidates: readonly string[],
   grounds: readonly string[],
   fallback: string,
 ): string {
-  return candidates.find((each) => readsOn(each, grounds)) ?? fallback;
+  const page = grounds[0] ?? fallback;
+  return candidates.find((each) => readsOn(each, grounds, page)) ?? fallback;
 }
 
 /**
@@ -77,8 +91,6 @@ export function markColour(colours: Colours, token: ColourName): string {
   return token === 'accent' ? accentInk(colours) : colours[token];
 }
 
-const SOLID_HEX = /^#[0-9a-f]{6}$/i;
-
 /**
  * A mark that sits on a control's own fill (a status dot inside a pill): the mark's colour, or the
  * token's own where the mark would be lost in that fill, as a dot in the accent is on a pill chosen
@@ -86,6 +98,7 @@ const SOLID_HEX = /^#[0-9a-f]{6}$/i;
  */
 export function markOn(colours: Colours, token: ColourName, fill: string): string {
   const mark = markColour(colours, token);
-  if (!SOLID_HEX.test(fill)) return mark;
-  return contrastRatio(solid(mark), fill) >= MARK_CONTRAST ? mark : colours[token];
+  const filled = readColour(fill);
+  if (filled === null || filled.alpha < 1) return mark;
+  return markRatio(mark, fill, fill) >= MARK_CONTRAST ? mark : colours[token];
 }

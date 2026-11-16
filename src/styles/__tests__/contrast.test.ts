@@ -116,9 +116,10 @@ describe("a filter pill's count, in every style's dress (rule 10.5: AA)", () => 
       ['selected', { selected: true }],
     ] as const;
     return states.flatMap(([state, pill]) => {
-      const { colour, ground } = pillCount(dress, pill, page);
-      const ratio = contrastRatio(colour, ground);
+      const { colour, ground, measured } = pillCount(dress, pill, page);
       const name = `${style.tokens.style} ${style.tokens.scheme} #${index}`;
+      if (!measured) return [`${name} ${state}: a colour that cannot be read`];
+      const ratio = contrastRatio(colour, ground);
       return ratio >= AA_TEXT ? [] : [`${name} ${state} ${floor2(ratio)}`];
     });
   });
@@ -229,6 +230,16 @@ describe('contrastFailures', () => {
     expect(solidOver(rgba(INK, 1), WHITE)).toBe(INK);
     expect(solidOver(rgba(INK, 0), WHITE)).toBe(WHITE);
     expect(solidOver(rgba(INK, 0.5), WHITE)).toBe(mixHex(WHITE, INK, 0.5));
+  });
+
+  it('fails plainly, naming it, on a token it cannot read: never passes, never a parse error', () => {
+    expect(() => solidOver('nonsense', WHITE)).toThrow(/nonsense is not a colour this can read/);
+    expect(() => contrastFailures(palette({ muted: 'red' }), [['foreground', ['muted']]])).toThrow(
+      /red is not a colour this can read/,
+    );
+    expect(() => contrastFailures(palette({ background: 'red' }), TEXT_ON)).toThrow(
+      /red is not a colour this can read/,
+    );
   });
 
   it('refuses to blend over a ground that is not solid, and a page that is not', () => {

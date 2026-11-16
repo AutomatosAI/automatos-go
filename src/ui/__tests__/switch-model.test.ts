@@ -11,7 +11,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { contrastRatio } from '../../core/web/lib/look-kit/contrast';
 import { STYLE_IDS, tokensFor, type Colours } from '../../styles/tokens';
 import { STUDIO_COLOURS } from '../../styles/tokens/studio';
-import { MARK_CONTRAST } from '../accent';
+import { rgba } from '../../core/web/lib/look-kit/css';
+import { MARK_CONTRAST, markRatio } from '../accent';
 import { MIN_TOUCH } from '../paint';
 import { UI_COPY } from '../strings';
 import {
@@ -36,6 +37,13 @@ const PALETTES = [
   ...new Set(STYLE_IDS.flatMap((style) => SCHEMES.map((scheme) => tokensFor(style, scheme)))),
 ];
 const nameOf = ({ style, scheme }: { style: string; scheme: string }) => `${style} ${scheme}`;
+/** A track reads as drawn on the page and on a card (accent.ts markRatio). */
+const readsAsTrack = (colours: Colours, track: keyof Colours) =>
+  ['background', 'card'].every(
+    (ground) =>
+      markRatio(colours[track], colours[ground as keyof Colours], colours.background) >=
+      MARK_CONTRAST,
+  );
 
 describe('the switch', () => {
   it('says its state in a word beside it: On or Off', () => {
@@ -122,15 +130,20 @@ describe('the switch row', () => {
     ]);
     expect(switchRowLines(undefined, 'A note')).toEqual(['A note']);
     expect(switchRowLines('', null)).toEqual([]);
+    expect(switchRowLines('   ', '\n\t')).toEqual([]);
+    expect(switchRowLines(' Covers questions ', '  ')).toEqual(['Covers questions']);
   });
 
-  it('says the detail and the note as its hint, each a sentence', () => {
+  it('says the detail and the note as its hint, a stop only where no punctuation ends it', () => {
     expect(switchRowHint('Covers questions', 'Only owners change it.')).toBe(
       'Covers questions. Only owners change it.',
     );
     expect(switchRowHint('Sent at 8?', null)).toBe('Sent at 8?');
     expect(switchRowHint(' A note ', undefined)).toBe('A note.');
+    expect(switchRowHint('Covers:', 'Questions, approvals,')).toBe('Covers: Questions, approvals,');
+    expect(switchRowHint('Beta (for now)', '“Pause”')).toBe('Beta (for now) “Pause”');
     expect(switchRowHint(undefined, null)).toBeUndefined();
+    expect(switchRowHint('  ', ' ')).toBeUndefined();
   });
 });
 
@@ -168,19 +181,63 @@ describe('the switch’s paint (rule 10.4)', () => {
     },
   );
 
-  it('keeps the muted track where it reads, and falls to the main ink where nothing does', () => {
+  it('keeps the muted track where it reads', () => {
     const light = STUDIO_COLOURS.light;
     const readable: Colours = { ...light, muted: light.mutedForeground };
     expect(switchTokens(readable).offTrack).toBe('muted');
-    const lost: Colours = {
+  });
+
+  it('never paints the two tracks in one colour while the palette has two that read', () => {
+    const light = STUDIO_COLOURS.light;
+    const quiet = { muted: light.background, border2: light.background, fg3: light.background };
+    const lost: Colours = { ...light, ...quiet, mutedForeground: light.background };
+    const { onTrack, offTrack } = switchTokens(lost);
+    // Studio's primary is its main ink: the off track is the next colour that reads
+    expect(lost.primary).toBe(lost.foreground);
+    expect(onTrack).toBe('primary');
+    expect(lost[offTrack]).not.toBe(lost[onTrack]);
+    expect(readsAsTrack(lost, offTrack)).toBe(true);
+    const neither: Colours = { ...lost, primary: light.background, foreground: light.background };
+    const both = switchTokens(neither);
+    expect(neither[both.onTrack]).not.toBe(neither[both.offTrack]);
+    expect([readsAsTrack(neither, both.onTrack), readsAsTrack(neither, both.offTrack)]).toEqual([
+      true,
+      true,
+    ]);
+  });
+
+  it('falls to the main ink for both only where nothing else reads', () => {
+    const light = STUDIO_COLOURS.light;
+    const bare = Object.fromEntries(
+      Object.keys(light).map((name) => [name, light.background]),
+    ) as unknown as Colours;
+    const onlyInk: Colours = { ...bare, foreground: light.foreground };
+    expect(switchTokens(onlyInk)).toEqual({
+      onTrack: 'foreground',
+      thumb: 'card',
+      offTrack: 'foreground',
+    });
+  });
+
+  it('measures each candidate as it is drawn, skips one it cannot read, and never throws', () => {
+    const light = STUDIO_COLOURS.light;
+    const odd: Colours = {
       ...light,
-      muted: light.background,
-      border2: light.background,
-      fg3: light.background,
-      mutedForeground: light.background,
+      muted: rgba(light.mutedForeground, 0.2),
+      border2: `${light.foreground}10`,
+      fg3: 'transparent',
+      mutedForeground: 'nonsense',
     };
-    expect(switchTokens(lost).offTrack).toBe('foreground');
-    expect(contrastRatio(lost.foreground, lost.card)).toBeGreaterThanOrEqual(MARK_CONTRAST);
+    expect(() => switchTokens(odd)).not.toThrow();
+    const { offTrack } = switchTokens(odd);
+    expect(['muted', 'border2', 'fg3', 'mutedForeground']).not.toContain(offTrack);
+    expect(readsAsTrack(odd, offTrack)).toBe(true);
+    const unreadable: Colours = { ...light, background: 'nonsense', card: 'nonsense' };
+    expect(() => switchPaint(unreadable)).not.toThrow();
+    expect(switchTokens(unreadable)).toMatchObject({
+      onTrack: 'foreground',
+      offTrack: 'foreground',
+    });
   });
 
   it('takes the main ink on where the strong ink is lost, so the card thumb still reads on it', () => {
@@ -204,7 +261,7 @@ describe('the switch’s paint (rule 10.4)', () => {
   it('decides once for a palette object', () => {
     const palette = { ...STUDIO_COLOURS.light };
     expect(switchTokens(palette).offTrack).toBe('fg3');
-    palette.muted = palette.foreground; // a palette is never changed in place: this shows the answer is kept
+    palette.muted = palette.mutedForeground; // a palette is never changed in place: this shows the answer is kept
     expect(switchTokens(palette).offTrack).toBe('fg3');
     expect(switchTokens({ ...palette }).offTrack).toBe('muted');
   });
