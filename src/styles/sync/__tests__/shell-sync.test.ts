@@ -67,8 +67,9 @@ describe('the wiring (read from the source)', () => {
 
   it("A5's own screens keep their StyleSync, quieted by the guard under the shell's", () => {
     for (const screen of ['style.tsx', 'look/play.tsx', 'look/hud.tsx']) {
-      expect(read(`app/(app)/settings/${screen}`)).toContain('<StyleSync />');
+      expect(read(`app/(app)/settings/${screen}`)).toMatch(/<SyncedPage page=\{\w+\} \/>/);
     }
+    expect(read('src/styles/sync/SyncedPage.tsx')).toMatch(/<StyleSync \/>\s*<Page \/>/);
     expect(read('src/styles/sync/StyleSync.tsx')).toContain('STYLE_SYNC_READER.join(id)');
   });
 });

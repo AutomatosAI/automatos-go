@@ -3,13 +3,8 @@
 // (sync/reader-guard.ts), and the picker asks for a theme read as it opens. The screen is
 // src/styles/picker/StylePicker.
 import { StylePicker } from '../../../src/styles/picker/StylePicker';
-import { StyleSync } from '../../../src/styles/sync/StyleSync';
+import { SyncedPage } from '../../../src/styles/sync/SyncedPage';
 
 export default function StyleSettings() {
-  return (
-    <>
-      <StyleSync />
-      <StylePicker />
-    </>
-  );
+  return <SyncedPage page={StylePicker} />;
 }

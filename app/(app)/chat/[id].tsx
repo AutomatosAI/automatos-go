@@ -1,25 +1,10 @@
-// One conversation (routes.chat(id); 'new' is a draft): the same thread and composer as home,
-// with a way back. Opened from a deep link, Back goes home (useGoBack). A draft with a ticket in its
-// params (routes.chatWithTicket, D-ASK-AUTO) discusses that ticket. The style's layout draws it
-// (src/styles/homes StyleChat, US-016k): Studio's ChatScreen, Play's Companion chat, HUD's core.
-// routes.chatAt opens it scrolled to one of its messages (the `focus` param, PRD-268 US-G03).
+// One conversation (routes.chat(id); 'new' is a draft, routes.chatWithTicket a draft about a
+// ticket, routes.chatAt one scrolled to a message). The screen only wires the route's params; it
+// is src/chat/screens/ChatRouteScreen.tsx.
 import { useLocalSearchParams } from 'expo-router';
 
-import { routeTicketId } from '../../../src/chat/discussion/discussion';
-import { routeChatId } from '../../../src/chat/screens/chat-route';
-import { focusFromChatParams, routes } from '../../../src/navigation/routes';
-import { useGoBack } from '../../../src/navigation/use-go-back';
-import { StyleChat } from '../../../src/styles/homes/StyleHome';
+import { ChatRouteScreen } from '../../../src/chat/screens/ChatRouteScreen';
 
 export default function ChatRoute() {
-  const params = useLocalSearchParams();
-  const back = useGoBack(routes.home);
-  return (
-    <StyleChat
-      chatId={routeChatId(params)}
-      ticketId={routeTicketId(params)}
-      focusMessageId={focusFromChatParams(params)}
-      onBack={back}
-    />
-  );
+  return <ChatRouteScreen params={useLocalSearchParams()} />;
 }

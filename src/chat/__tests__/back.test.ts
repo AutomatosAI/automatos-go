@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 import { codeOf } from '../../release/__tests__/support/code';
 
-const CHAT_ROUTE = 'app/(app)/chat/[id].tsx';
+const CHAT_ROUTE = 'src/chat/screens/ChatRouteScreen.tsx';
 const CHATS = 'src/chat/history/ChatsScreen.tsx';
 
 describe.each([

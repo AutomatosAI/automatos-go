@@ -207,7 +207,7 @@ describe('(b) Report this', () => {
     const page = 'src/cc/deliverables/use-deliverable.ts';
     expect(definingFile(page, 'reportTarget')).toBe('src/cc/deliverables/detail.ts');
     expect(codeOf('src/cc/deliverables/detail.ts')).toContain("target_type: 'deliverable'");
-    const route = 'app/(app)/cc/deliverables/[id].tsx';
+    const route = 'src/styles/homes/PlaySwitch.tsx';
     expect(rendersFrom(route, 'src/cc/deliverables/DeliverableDetail.tsx')).toBe(true);
     expect(rendersFrom(route, 'src/styles/homes/PlayDeliverable.tsx')).toBe(true);
   });

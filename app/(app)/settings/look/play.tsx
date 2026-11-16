@@ -2,13 +2,8 @@
 // reads Play's looks and sends each change as it is made (US-017d, US-016j); this one reads only if
 // no other is mounted (sync/reader-guard.ts). The page is src/styles/play/look-page/PlayLookPage.
 import { PlayLookPage } from '../../../../src/styles/play/look-page/PlayLookPage';
-import { StyleSync } from '../../../../src/styles/sync/StyleSync';
+import { SyncedPage } from '../../../../src/styles/sync/SyncedPage';
 
 export default function PlayLookSettings() {
-  return (
-    <>
-      <StyleSync />
-      <PlayLookPage />
-    </>
-  );
+  return <SyncedPage page={PlayLookPage} />;
 }
