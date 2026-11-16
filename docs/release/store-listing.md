@@ -75,10 +75,10 @@ NOTIFICATIONS THAT MATTER
 - Choose what notifies you, and when Auto's daily digest arrives.
 
 TALK TO AUTO
-- Hold to talk: your phone turns your words into text on the device and sends them to Auto, and Auto's reply is read aloud.
+- Hold to talk: your words become text and go to Auto, and Auto's reply is read aloud. In your iPhone's own language, the iPhone recognises your speech; in another language you choose, Apple may recognise it.
 
-THREE STYLES
-- Studio, Play and HUD. Or let the app follow the theme you use in Studio.
+FIVE STYLES
+- Studio, Play, HUD, Arcade and Candy. Or let the app follow the theme you use in Studio.
 
 YOUR OWN SERVER
 - Run Automatos yourself? Connect Automatos Go to your own Automatos server with a pairing code from Studio.

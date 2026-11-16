@@ -9,8 +9,10 @@ import { pushScreens } from '../../push/nav';
 import type { PushStatus } from '../../push/registration/state';
 import { phoneStatusView, type PhoneContext } from '../../push/settings/view-model';
 import { PUSH_PHONE_COPY } from '../../push/strings';
+import { languageNote } from '../../voice/language/language-rows';
 import { VOICE_SCREENS } from '../../voice/nav';
-import { PERMISSION_COPY, RECOGNITION_COPY } from '../../voice/strings';
+import { DEFAULT_VOICE_SETTING } from '../../voice/settings/voice-setting';
+import { LANGUAGE_COPY, PERMISSION_COPY, RECOGNITION_COPY } from '../../voice/strings';
 import {
   CLIENT_ROW_IDS,
   clientRows,
@@ -126,10 +128,22 @@ describe('speechRow', () => {
     });
   });
 
-  it('names Portuguese (Brazil) when "I speak" chose it', () => {
+  it('names Portuguese (Brazil) when "I speak" chose it and the phone checked it is on the phone', () => {
     expect(speechRow(speech({ locale: 'pt-BR' })).detail).toBe(
       CLIENT_ROW_COPY.speechReady('Portuguese (Brazil)'),
     );
+  });
+
+  // Claims audit, 16 Nov: an iPhone listening in another language than its own is ready with no
+  // on-device check (recognition-policy.ts), and Apple may recognise it, so the row never says
+  // 'on this phone' there: it shows I speak's note, word for word.
+  it("an iPhone in another language than its own shows I speak's note, never 'on this phone'", () => {
+    const brazil = { ...DEFAULT_VOICE_SETTING, language: 'pt-BR' as const };
+    const note = languageNote('ios', brazil, 'en-GB');
+    expect(note).toBe(LANGUAGE_COPY.iosNote('Portuguese', 'Portuguese (Brazil)'));
+    const row = speechRow(speech({ locale: 'pt-BR', elsewhereNote: note }));
+    expect(row).toMatchObject({ state: 'ready', detail: note });
+    expect(row.detail).not.toContain('on this phone');
   });
 
   it("speech recognition off in the phone's Settings comes first", () => {

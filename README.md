@@ -7,9 +7,10 @@ board, and look at what was made. It is a native app, not a web view, and a
 lite companion: the workspace, agents, Playbooks and themes are set up in
 Studio.
 
-Three styles: **Studio** (cream paper or Studio Dark) is on `main`; **Play**
-(Ember, with Auto the mascot) and **HUD** (voice first, square panels, glow and
-grid) are being built on `feat/a5-styles`. Hosted Studio users sign in with
+Five styles, all on `main`: **Studio** (cream paper or Studio Dark), **Play**
+(Ember, with Auto the mascot), **HUD** (voice first, square panels, glow and
+grid), **Arcade** and **Candy** ([docs/styles-and-themes.md](docs/styles-and-themes.md)).
+Hosted Studio users sign in with
 their Automatos account (Clerk). Self-hosted users pair their phone with a
 one-time code from Studio → Settings → Phones & devices, which also shows it as a
 QR image (automatos-ai PRD-266 W2, merged 24 Oct).
