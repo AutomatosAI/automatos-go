@@ -31,12 +31,14 @@ import {
   JSON_MAX_BYTES,
   REQUEST_TIMEOUT_MS,
   STREAM_CONNECT_TIMEOUT_MS,
+  STREAM_IDLE_TIMEOUT_MS,
 } from './config';
 import { startDeadline, type Deadline } from './deadline';
 import { abortError, ApiError, errorFromResponse, isAbortError, isApiError } from './errors';
 import { parseJson } from './json';
 import type { Route } from './routes';
 import type { Server } from './server';
+import { limitedChunks, streamLimits, type StreamLimits } from './stream-limits';
 import type {
   StreamingResponse,
   Transport,
@@ -69,6 +71,8 @@ export type ApiClientOptions = {
   readonly connectTimeoutMs?: number;
   /** The clock a limit's lift is read against (epoch ms); the phone's own when not given. */
   readonly now?: () => number;
+  /** No byte for this long ends an opened stream (STREAM_IDLE_TIMEOUT_MS when not given). */
+  readonly streamIdleTimeoutMs?: number;
 };
 
 export type CallOptions = {
@@ -87,6 +91,8 @@ export type StreamCallOptions = CallOptions & {
    * arrives has no deadline after it; one read whole (bytes()) stays under it until it is in.
    */
   readonly connectTimeoutMs?: number;
+  /** No byte for this long ends the opened stream; the client's own when not given. */
+  readonly idleTimeoutMs?: number;
 };
 
 export type BinaryCallOptions = CallOptions & {
@@ -128,6 +134,7 @@ type Context = {
   readonly getLanguage?: LanguageGetter;
   readonly timeoutMs: number;
   readonly connectTimeoutMs: number;
+  readonly streamIdleTimeoutMs: number;
   readonly now: () => number;
   readonly expired: (token: string | null, error: ApiError) => void;
 };
@@ -280,21 +287,27 @@ async function fetchBinary(
   }
 }
 
-async function* chunksThen(response: StreamingResponse, done: () => void): AsyncGenerator<string> {
+async function* chunksThen(
+  chunks: AsyncIterable<string>,
+  done: () => void,
+): AsyncGenerator<string> {
   try {
-    yield* response.chunks();
+    yield* chunks;
   } finally {
     done();
   }
 }
 
+/** How a stream was opened: its deadline, the connect timeout it ran under, its limits. */
+type Opening = { readonly deadline: Deadline; readonly ms: number; readonly limits: StreamLimits };
+
 /**
  * The opened stream. Read as it arrives, the connect deadline stops and the body runs as long as
- * the server keeps it open. Read whole (bytes()), the deadline keeps running until the body is in,
- * so a body that drips cannot hold the call open without end. Either way the caller's abort
- * listener is released once the body is finished with.
+ * the server keeps it going, under the stream's limits (stream-limits.ts). Read whole (bytes()),
+ * the deadline keeps running until the body is in, so a body that drips cannot hold the call open
+ * without end. Either way the caller's abort listener is released once the body is finished with.
  */
-function opened(response: StreamingResponse, deadline: Deadline, ms: number): StreamingResponse {
+function opened(response: StreamingResponse, { deadline, ms, limits }: Opening): StreamingResponse {
   return {
     status: response.status,
     bytes: async (maxBytes) => {
@@ -308,8 +321,11 @@ function opened(response: StreamingResponse, deadline: Deadline, ms: number): St
     },
     header: (name) => response.header(name),
     chunks: () => {
-      deadline.settle(); // the body may now run as long as it needs
-      return chunksThen(response, deadline.dispose);
+      deadline.settle(); // the body may now run as long as it needs, within its limits
+      return chunksThen(
+        limitedChunks(response.chunks(), limits, deadline.expire),
+        deadline.dispose,
+      );
     },
   };
 }
@@ -324,7 +340,8 @@ async function open(
   const deadline = startDeadline(connectTimeoutMs, call.signal);
   try {
     const response = await ctx.transport.stream({ ...request, signal: deadline.signal });
-    return opened(await checked(ctx, response, token), deadline, connectTimeoutMs);
+    const limits = streamLimits(call.idleTimeoutMs ?? ctx.streamIdleTimeoutMs);
+    return opened(await checked(ctx, response, token), { deadline, ms: connectTimeoutMs, limits });
   } catch (error) {
     deadline.dispose();
     throw failure(error, deadline, call, connectTimeoutMs);
@@ -340,6 +357,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     getLanguage: options.getLanguage,
     timeoutMs: options.timeoutMs ?? REQUEST_TIMEOUT_MS,
     connectTimeoutMs: options.connectTimeoutMs ?? STREAM_CONNECT_TIMEOUT_MS,
+    streamIdleTimeoutMs: options.streamIdleTimeoutMs ?? STREAM_IDLE_TIMEOUT_MS,
     now: options.now ?? Date.now,
     expired: expiryLatch(options.onAuthExpired),
   };
