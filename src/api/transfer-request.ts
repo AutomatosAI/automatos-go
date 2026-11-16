@@ -83,13 +83,15 @@ async function discard(response: TransportResponse): Promise<void> {
   await response.bytes(ERROR_BODY_MAX_BYTES).catch(() => undefined);
 }
 
-/** Storage's answer: OK through; anything else its kind, a redirect too, and no one signed out. */
+/**
+ * Storage's answer: OK through; anything else its kind, a redirect too, and no one signed out.
+ * Where a redirect from storage pointed is never kept: it may be another presigned address.
+ */
 async function storageChecked(response: FileResponse, now: number): Promise<FileResponse> {
   if (response.status >= 200 && response.status < 300) return response;
   const limit = { retryAfter: response.header(RETRY_AFTER_HEADER), now };
-  const location = response.header(LOCATION_HEADER);
   await discard(response);
-  throw errorFromResponse(response.status, '', location, limit);
+  throw errorFromResponse(response.status, '', null, limit);
 }
 
 async function answered(

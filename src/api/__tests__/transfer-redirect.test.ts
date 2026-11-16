@@ -53,13 +53,15 @@ describe('a redirect', () => {
     nothingLeft();
   });
 
-  it('a second hop is refused: the redirect error, and nothing goes to its address', async () => {
-    const again = 'https://elsewhere.example.test/next';
+  it('a second hop is refused, keeping no address, and nothing goes to it', async () => {
+    const again = 'https://elsewhere.example.test/next?X-Amz-Signature=def';
     const transport = answering(redirect(STORAGE), redirect(again, 307));
     const error = await failureOf(
       download(clientWith(transport), FILE_URL, target(), { redirectsToStorage: true }),
     );
-    expect(error).toMatchObject({ kind: 'server', status: 307, redirectTo: again });
+    expect(error).toMatchObject({ kind: 'server', status: 307 });
+    expect((error as ApiError).redirectTo).toBeUndefined();
+    expect(JSON.stringify(error)).not.toContain('Signature');
     expect(transport.calls).toHaveLength(2);
     nothingLeft();
   });
