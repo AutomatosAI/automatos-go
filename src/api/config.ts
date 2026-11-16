@@ -37,3 +37,9 @@ export const REDIRECT_TARGET_MAX_CHARS = 2048;
 
 /** A server message (a 409's detail.message) longer than this is cut before anyone sees it. */
 export const SERVER_MESSAGE_MAX_CHARS = 500;
+
+/**
+ * A limit's wait (a 429's Retry-After) longer than this is not believed: the words say "later".
+ * The server's own windows are a minute to an hour (its rate limiter, readiness, the digest).
+ */
+export const RETRY_AFTER_MAX_MS = 24 * 60 * 60 * 1000;

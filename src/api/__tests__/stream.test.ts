@@ -15,6 +15,7 @@ import {
   flush,
   hangUntilAborted,
   jsonReply,
+  reply,
   type FakeTransport,
 } from './fake-transport';
 
@@ -98,6 +99,24 @@ describe('streamTurn', () => {
     );
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({ kind: 'forbidden', status: 403, serverMessage: 'Not your chat' });
+    expect(frames).toEqual([]);
+  });
+
+  it('maps a 429 at the opening to a limit that keeps when it lifts', async () => {
+    const now = Date.UTC(2026, 10, 15, 12, 0, 0);
+    const transport = fakeTransport(() => reply(429, '', { 'Retry-After': '45' }));
+    const client = createApiClient({
+      server: SERVER,
+      getToken: async () => 'jwt.token.value',
+      getWorkspaceId: () => 'ws-1',
+      transport,
+      now: () => now,
+    });
+    const frames: Frame[] = [];
+    const error = await streamTurn(client, CHAT, BODY, (f) => frames.push(f)).catch(
+      (caught: unknown) => caught,
+    );
+    expect(error).toMatchObject({ kind: 'limit', status: 429, retryAt: now + 45_000 });
     expect(frames).toEqual([]);
   });
 

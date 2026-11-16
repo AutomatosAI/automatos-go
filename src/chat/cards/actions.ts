@@ -124,8 +124,10 @@ function mayShowServerWords(error: ApiError): boolean {
 export function refusalText(error: unknown): string {
   if (!isApiError(error)) return userMessage(error);
   if (mayShowServerWords(error)) return (error.serverMessage ?? '').trim();
-  // the taxonomy by kind, never the server's words (userMessage shows a conflict's own)
-  return userMessage(new ApiError(error.kind, { status: error.status, code: error.code }));
+  // the taxonomy by kind, never the server's words (userMessage shows a conflict's own); a limit
+  // keeps when it lifts, which is the server's number, never its words
+  const { status, code, retryAfterSeconds, retryAt } = error;
+  return userMessage(new ApiError(error.kind, { status, code, retryAfterSeconds, retryAt }));
 }
 
 /** /grant and /deny refuse a card that can no longer run with a 422 (a 409 from a later server). */

@@ -113,6 +113,7 @@ const REFUSALS: ReadonlySet<string> = new Set<SpeechFailureKind>([
 export function speechFailureKind(error: unknown): SpeechFailureKind {
   if (!isApiError(error)) return 'network';
   if (error.code && REFUSALS.has(error.code)) return error.code as SpeechFailureKind;
+  if (error.kind === 'limit') return 'tts_busy';
   if (error.kind === 'network' || error.kind === 'auth') return error.kind;
   return error.kind === 'invalid_response' ? 'invalid_audio' : 'refused';
 }

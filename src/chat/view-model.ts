@@ -172,8 +172,12 @@ export function failureCopy(failure: ThreadFailure): FailureCopy {
   if (failure.kind === 'turn') return TURN_ERROR_COPY[failure.code];
   if (failure.code !== null && KNOWN_TURN_CODES.has(failure.code))
     return TURN_ERROR_COPY[failure.code as TurnErrorCode];
-  // never the server's words: the error carries the kind and code only
-  const copy = errorCopy(new ApiError(failure.kind, failure.code ? { code: failure.code } : {}));
+  // never the server's words: the error carries the kind, the code and a limit's wait only
+  const code = failure.code ? { code: failure.code } : {};
+  const wait = failure.retryAfterSeconds;
+  const copy = errorCopy(
+    new ApiError(failure.kind, wait === undefined ? code : { ...code, retryAfterSeconds: wait }),
+  );
   return { text: copy.message, canRetry: copy.canRetry };
 }
 

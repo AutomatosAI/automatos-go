@@ -61,7 +61,7 @@ describe('binary', () => {
       .binary(SPEECH)
       .catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(ApiError);
-    expect(error).toMatchObject({ kind: 'server', status: 429, code: 'tts_busy' });
+    expect(error).toMatchObject({ kind: 'limit', status: 429, code: 'tts_busy' });
     expect(String((error as Error).message)).not.toContain(TOKEN);
   });
 

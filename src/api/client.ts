@@ -7,7 +7,8 @@
 // bytes and the response's headers, for the caller to check. Every body is read under a cap
 // (config.ts): a JSON body or a binary one over its cap is an invalid_response, read no further,
 // and an error body over its cap gives no detail, so the status alone names the kind. A redirect
-// is never followed: it is an error of its status's kind that keeps where it pointed. Every call
+// is never followed: it is an error of its status's kind that keeps where it pointed, and a 429 is
+// a limit that keeps when it lifts (its Retry-After, against the injected clock). Every call
 // also says the language the person chose ("I speak") as Accept-Language, so the server writes its
 // copy in it (accept-language.ts); Automatic sends none. The transport is injected; the real one
 // (transport.ts, expo/fetch) is wired by the app shell, never by tests.
@@ -46,6 +47,7 @@ import { buildUrl, type PathParams, type QueryParams } from './url';
 
 const CONTENT_TYPE_HEADER = 'Content-Type';
 const LOCATION_HEADER = 'location';
+const RETRY_AFTER_HEADER = 'retry-after';
 const JSON_CONTENT_TYPE = 'application/json';
 const UNAUTHORIZED = 401;
 
@@ -65,6 +67,8 @@ export type ApiClientOptions = {
   readonly onAuthExpired?: (error?: ApiError) => void;
   readonly timeoutMs?: number;
   readonly connectTimeoutMs?: number;
+  /** The clock a limit's lift is read against (epoch ms); the phone's own when not given. */
+  readonly now?: () => number;
 };
 
 export type CallOptions = {
@@ -121,6 +125,7 @@ type Context = {
   readonly getLanguage?: LanguageGetter;
   readonly timeoutMs: number;
   readonly connectTimeoutMs: number;
+  readonly now: () => number;
   readonly expired: (token: string | null, error: ApiError) => void;
 };
 
@@ -186,11 +191,14 @@ async function checked<R extends TransportResponse>(
   token: string | null,
 ): Promise<R> {
   if (isOk(response.status)) return response;
-  // a redirect is an answer like any other refusal: never followed (transport.ts), only reported
+  // a redirect is an answer like any other refusal: never followed (transport.ts), only reported;
+  // a limit keeps when it lifts, read against the client's clock as the answer came
+  const limit = { retryAfter: response.header(RETRY_AFTER_HEADER), now: ctx.now() };
   const error = errorFromResponse(
     response.status,
     await errorBody(response),
     response.header(LOCATION_HEADER),
+    limit,
   );
   if (response.status === UNAUTHORIZED) ctx.expired(token, error);
   throw error;
@@ -317,6 +325,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     getLanguage: options.getLanguage,
     timeoutMs: options.timeoutMs ?? REQUEST_TIMEOUT_MS,
     connectTimeoutMs: options.connectTimeoutMs ?? STREAM_CONNECT_TIMEOUT_MS,
+    now: options.now ?? Date.now,
     expired: expiryLatch(options.onAuthExpired),
   };
   return Object.freeze({

@@ -3,8 +3,9 @@
 //
 //   edgeFor        an error → 'not-running' (no answer: the network kind, or a gateway that cannot
 //                  reach the server, src/connect/server-support.ts isNotRunning), 'something-wrong'
-//                  (server, stream, invalid_response) or null (auth, forbidden, not_found and
-//                  conflict stay with the gate and the screens that raised them)
+//                  (server, stream, invalid_response, and a limit, whose words say when to try
+//                  again) or null (auth, forbidden, not_found and conflict stay with the gate and
+//                  the screens that raised them)
 //   Not running    the hosted server by its host; a self-hosted one ('own') as Automatos asleep
 //                  with the command that starts it (the connect kit's SELF_HOSTED_START_COMMAND,
 //                  so the app shows one command), selectable because there is no clipboard (KS7)
@@ -30,6 +31,7 @@ const SNAG_KINDS: ReadonlySet<ApiErrorKind> = new Set<ApiErrorKind>([
   'server',
   'stream',
   'invalid_response',
+  'limit',
 ]);
 
 /** Which edge screen an error shows; null when it is not an edge's (the gate keeps it). */

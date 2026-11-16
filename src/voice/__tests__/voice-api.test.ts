@@ -169,6 +169,7 @@ describe('fetchSpeech', () => {
     expect(speechFailureKind(new ApiError('server', { status: 400, code: 'other' }))).toBe(
       'refused',
     );
+    expect(speechFailureKind(new ApiError('limit', { status: 429 }))).toBe('tts_busy');
     expect(speechFailureKind(new TypeError('offline'))).toBe('network');
   });
 

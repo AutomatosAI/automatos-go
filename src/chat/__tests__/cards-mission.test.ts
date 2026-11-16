@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { jsonReply, reply, type FakeTransport } from '../../api/__tests__/fake-transport';
 import { ApiError } from '../../api/errors';
-import { API_ERROR_COPY } from '../../api/strings';
+import { API_ERROR_COPY, LIMIT_COPY } from '../../api/strings';
 import { WORKSPACE_ROLES, type WorkspaceRole } from '../../api/workspace';
 import { ROLE_COPY } from '../../auth/strings';
 import {
@@ -194,6 +194,15 @@ describe('a refused card action (403, 409, 422): words, never a status code', ()
       API_ERROR_COPY.server,
     ]);
     for (const text of texts) expect(text).not.toMatch(/\b\d{3}\b/);
+  });
+
+  it("says a limit by when it lifts, never in the server's words", () => {
+    const limited = new ApiError('limit', {
+      status: 429,
+      serverMessage: 'Rate limit exceeded for platform_write.',
+      retryAfterSeconds: 60,
+    });
+    expect(refusalText(limited)).toBe(LIMIT_COPY.underAMinute);
   });
 
   it('reads a refusal off the wire through the client', async () => {
