@@ -112,11 +112,12 @@ function fakeRegistrar(answer: RegistrationOutcome | null): Registrar {
     run: vi.fn(async () => answer),
     latest: () => answer,
     close: vi.fn(async () => undefined),
+    exclusive: <T>(task: () => Promise<T>) => task(),
   };
 }
 
 describe('reportingRegistrar', () => {
-  it('reports each run, passes its options and outcome on, and shares latest and close', async () => {
+  it('reports each run, passes its options and outcome on, and shares latest, close and exclusive', async () => {
     const inner = fakeRegistrar(OUTCOME);
     const report = vi.fn();
     const registrar = reportingRegistrar(inner, report);
@@ -126,6 +127,9 @@ describe('reportingRegistrar', () => {
     expect(registrar.latest()).toBe(OUTCOME);
     await registrar.close();
     expect(inner.close).toHaveBeenCalledTimes(1);
+    expect(registrar.exclusive).toBe(inner.exclusive);
+    expect(await registrar.exclusive(async () => 'done')).toBe('done');
+    expect(report).toHaveBeenCalledTimes(1);
   });
 
   it('reports nothing for a run that answered nothing; a report that throws changes nothing', async () => {

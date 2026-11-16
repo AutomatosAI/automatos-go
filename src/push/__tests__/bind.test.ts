@@ -245,7 +245,7 @@ describe('Remove this phone (KP16): DELETE, then teardown, then ask', () => {
     expect(removalNotice({ removed: true })).toBe(PUSH_ACCOUNT_COPY.removed);
   });
 
-  it('the run under way ends before the row goes, and the row is the one read after it', async () => {
+  it('the row is read, revoked and the phone cleared in the queue, after the run under way', async () => {
     const order: string[] = [];
     let record = storedRecord();
     const deps: RemovalDeps = {
@@ -254,9 +254,13 @@ describe('Remove this phone (KP16): DELETE, then teardown, then ask', () => {
       registrar: {
         run: async () => {
           order.push('run');
-          // the run under way registered again, under another row
-          record = storedRecord({ deviceId: OTHER_DEVICE_ID });
           return { step: 'none', status: { kind: 'ask' }, facts: facts({ held: true }) };
+        },
+        exclusive: async (task) => {
+          order.push('queued');
+          // the run under way registered again, under another row, before the task's turn
+          record = storedRecord({ deviceId: OTHER_DEVICE_ID });
+          return task();
         },
       },
       store: { load: async () => (order.push('load'), record) },
@@ -274,7 +278,7 @@ describe('Remove this phone (KP16): DELETE, then teardown, then ask', () => {
     await removePhone(deps);
     expect(order).toEqual([
       'hold',
-      'run',
+      'queued',
       'load',
       `revoke:${OTHER_DEVICE_ID}`,
       'clear',

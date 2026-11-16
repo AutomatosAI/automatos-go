@@ -1,11 +1,13 @@
 // Remove this phone on a hosted phone's Account (PRD-001 §4.7, KP16, D63): the phone leaves its
 // workspace's devices and stays signed in. In order: the scope is held first (removal-hold.ts), so
-// no run from now on registers it again; the run under way, if any, ends (the session's one
-// registrar, awaited) before the row goes, and the row's id is read after it; DELETE
-// /api/v1/mobile/devices/{device_id} (a row already gone counts as removed); teardownLocal clears
-// the push record, the badge, the delivered notifications and the counters, even when the DELETE
-// failed; a last run reads the held state back, so PushRoot and Settings → Notifications see 'ask'
-// until the person turns notifications on again. An own server keeps the connect kit's 'Remove
+// no run from now on registers it again; then, as ONE task in the session's registrar's queue
+// (exclusive: after the run under way, before any run asked for meanwhile), the row's id is read,
+// DELETE /api/v1/mobile/devices/{device_id} goes (a row already gone counts as removed) and
+// teardownLocal clears the push record, the badge, the delivered notifications and the counters,
+// even when the DELETE failed — so a 'Turn on' tapped meanwhile registers after it, from a cleared
+// phone, and never has its new record wiped; a last run reads the held state back, so PushRoot and
+// Settings → Notifications see 'ask' until the person turns notifications on again (or what their
+// tap since then turned on). An own server keeps the connect kit's 'Remove
 // this phone and forget this server' (one button, never two). Pure over its ports; never rejects.
 // Logs carry kinds only: never the device id, the key or the token.
 
@@ -24,7 +26,7 @@ export type RemovalDeps = Readonly<{
   scope: RecordScope;
   hold: Pick<RemovalHold, 'hold'>;
   /** The session's one registrar (the reporting one, so PushRoot hears the held answer). */
-  registrar: Pick<Registrar, 'run'>;
+  registrar: Pick<Registrar, 'run' | 'exclusive'>;
   store: Pick<PushKeyStore, 'load'>;
   /** DELETE /api/v1/mobile/devices/{device_id} through the session's client (api.ts). */
   revoke: (deviceId: string) => Promise<void>;
@@ -76,12 +78,17 @@ async function revoked(deps: RemovalDeps, deviceId: string): Promise<boolean> {
   }
 }
 
-export async function removePhone(deps: RemovalDeps): Promise<RemovalOutcome> {
-  deps.hold.hold(deps.scope);
-  await deps.registrar.run();
+/** The row read, revoked and the phone cleared: one task, run between the registrar's runs. */
+async function removeRow(deps: RemovalDeps): Promise<boolean> {
   const deviceId = await recordedDeviceId(deps.store, deps.scope);
   const removed = deviceId !== null && (await revoked(deps, deviceId));
   await teardownLocal(deps.teardown);
+  return removed;
+}
+
+export async function removePhone(deps: RemovalDeps): Promise<RemovalOutcome> {
+  deps.hold.hold(deps.scope);
+  const removed = await deps.registrar.exclusive(() => removeRow(deps));
   const after = await deps.registrar.run();
   return Object.freeze({ removed, status: after?.status ?? ASK });
 }

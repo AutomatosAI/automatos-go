@@ -5,7 +5,9 @@
 // pairing runs it from the provider's onExpired (PushRoot). In order: the session's one registrar is
 // closed (the run under way ends and none starts after it, so a resume or a new token never
 // registers the phone again); on the hosted server only, DELETE /api/v1/mobile/devices/{device_id}
-// for the row the push record names, with the still-valid Clerk token, best effort within
+// for the row the push record names — or, with no record, the row the registrar last heard the
+// server answer (a registration whose answer came while the registrar was closing, or a row with no
+// key) — with the still-valid Clerk token, best effort within
 // SIGN_OUT_DELETE_TIMEOUT_MS (a row already gone counts); then teardownLocal, even when the DELETE
 // failed. An own server's row is the connect kit's to revoke (remove-device.ts, with the device's own
 // token), so push never DELETEs there: Forget this server sends ONE DELETE. A row whose DELETE
@@ -32,8 +34,8 @@ export type LeaveDeps = Readonly<{
   source: PushSource;
   /** This session's server and workspace: the push record's row is read in it. */
   scope: RecordScope;
-  /** The session's one registrar. */
-  registrar: Pick<Registrar, 'close'>;
+  /** The session's one registrar: closed first; latest() names the row the server last answered. */
+  registrar: Pick<Registrar, 'close' | 'latest'>;
   store: Pick<PushKeyStore, 'load'>;
   /** DELETE /api/v1/mobile/devices/{device_id} through the session's client (api.ts). */
   revoke: (deviceId: string, signal: AbortSignal) => Promise<void>;
@@ -101,11 +103,24 @@ function closed(registrar: LeaveDeps['registrar'], timeoutMs: number): Promise<v
   );
 }
 
+/** The row the registrar last heard the server answer for this phone; null before any answer. */
+function answeredRow(registrar: LeaveDeps['registrar']): string | null {
+  return registrar.latest()?.facts.serverRow?.deviceId ?? null;
+}
+
 export function pushLeaveFor(deps: LeaveDeps): PushLeave {
   const timeoutMs = deps.timeoutMs ?? SIGN_OUT_DELETE_TIMEOUT_MS;
+  let tried = false;
   let unrevoked: string | null = null;
+  // the record's row; with none, the row the server answered (first leave) or the one not revoked
+  const rowToRevoke = async (): Promise<string | null> => {
+    const recorded = await recordedDeviceId(deps.store, deps.scope);
+    if (recorded) return recorded;
+    return tried ? unrevoked : answeredRow(deps.registrar);
+  };
   const signOut = async (): Promise<boolean> => {
-    const deviceId = (await recordedDeviceId(deps.store, deps.scope)) ?? unrevoked;
+    const deviceId = await rowToRevoke();
+    tried = true;
     const revoked = deviceId !== null && (await revokedInTime(deps.revoke, deviceId, timeoutMs));
     unrevoked = revoked ? null : deviceId;
     return revoked;

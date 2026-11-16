@@ -211,8 +211,10 @@ So the phone sends every row it read for those events, with only the `push` rows
 
 `A4:src/push/bind/leave.ts`. Push is cleared before the sign-in provider is.
 
-1. The registrar closes, so nothing registers the phone again.
-2. Hosted only: `DELETE /api/v1/mobile/devices/{device_id}` with the still-valid Clerk token,
+1. The registrar closes, so nothing registers the phone again. A registration under way ends first;
+   its key is not kept.
+2. Hosted only: `DELETE /api/v1/mobile/devices/{device_id}` for the push record's row (with no
+   record, the row the server last answered), with the still-valid Clerk token,
    waiting at most 4 s. An own server's row is removed by Forget this server instead, with the
    device token, so that path sends one DELETE ([connecting.md](connecting.md)).
 3. The push record, the badge and the delivered notifications are cleared, even if the DELETE
@@ -220,7 +222,9 @@ So the phone sends every row it read for those events, with only the `push` rows
 
 **Remove this phone** (hosted only): "Remove this phone from your workspace's devices?
 Notifications stop here until you turn them on again. You stay signed in." It removes the device row
-and nothing else. Registration then waits until the person turns notifications on again.
+and nothing else. Registration then waits until the person turns notifications on again. The
+DELETE and the clearing run between registrations, never in the middle of one, so a **Turn on**
+tapped meanwhile registers after them ([release/push-security.md](release/push-security.md)).
 
 ## Operator side (self-hosted, W2)
 

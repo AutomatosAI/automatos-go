@@ -155,3 +155,30 @@ To run the check from a laptop (a person with a token, never the build loop):
 ```sh
 EXPO_TOKEN=<the token> node scripts/release/check-push-security.mjs
 ```
+
+## What the phone does about a push (rule 14.5)
+
+The rest of this page is the phone's own side: what it registers, what it keeps when the person
+changes their mind, and what a push that verifies does and does not prove. The full path of a push
+is [../push.md](../push.md).
+
+### The person's last choice wins
+
+The session's one registrar
+([src/push/registration/registrar.ts](../../src/push/registration/registrar.ts)) runs one
+registration at a time. A choice the person makes while a call is out is read by the run after
+it; nothing a run read at its start is written back over it:
+
+- **Notifications off in the phone's Settings during a registration.** The registration's record
+  is kept, then the next run sends `PATCH …/devices/{id} {push_enabled: false}`. On again during
+  that PATCH: the next run registers again.
+- **Remove this phone.** The hold is set first. The row is then read, DELETEd and the phone cleared
+  as one task in the registrar's queue, after the run under way. A **Turn on** tapped before the
+  removal, still waiting behind a run, reads the removal's hold when its turn comes and sends
+  nothing. One tapped during the removal registers after it, from a cleared phone.
+- **Sign out, Forget this server or a new pairing during a registration.** The registrar closes,
+  the late answer's key is not kept, and with no push record the leave DELETEs the row that answer
+  named.
+
+Each case holds the call open, changes the choice and releases it:
+[src/push/\_\_tests\_\_/registration-races.test.ts](../../src/push/__tests__/registration-races.test.ts).

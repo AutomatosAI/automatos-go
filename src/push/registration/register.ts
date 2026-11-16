@@ -9,7 +9,8 @@
 // An OS switch-off sends PATCH push_enabled false once; granted again registers (W2 US-009 turns
 // push back on). A 409 becomes a status, never retried here; a network failure keeps the record and
 // waits for the next trigger. A scope the person removed this phone from (removal-hold.ts, KP16)
-// takes no step and answers 'ask', with no row remembered, until a person's tap releases it. Once
+// takes no step and answers 'ask', with no row remembered, until a person's tap releases it (the
+// registrar releases it when the tap is made, so a forced run reads a later removal's hold). Once
 // the session has ended (deps.active false) nothing more is sent or kept. Never throws. Logs carry
 // kinds and codes only: never the token or key.
 
@@ -53,7 +54,7 @@ export type RegisterDeps = Readonly<{
   device: DeviceSource;
   store: PushKeyStore;
   recoveries: RecoveryLog;
-  /** Remove this phone's hold (KP16): read on each run, released by a person's tap. */
+  /** Remove this phone's hold (KP16): read on each run, released by a person's tap (registrar.ts). */
   hold: Pick<RemovalHold, 'held' | 'release'>;
   now: () => number;
   /** false once the session ended (the registrar's close()): no write is sent, no record kept. */
@@ -278,9 +279,8 @@ export async function register(
   const device = deps.device.read();
   const stored = await storedRecord(deps.store);
   const force = options.force === true;
-  // a person's tap turns notifications back on after Remove this phone
-  if (force && isActive(deps)) deps.hold.release(deps.session);
-  const held = !force && deps.hold.held(deps.session);
+  // read now, not when the run was asked for: a removal made since then is the person's last word
+  const held = deps.hold.held(deps.session);
   const facts: PushFacts = Object.freeze({
     capabilityPush: deps.session.capabilityPush,
     pushExpo: deps.session.pushExpo,

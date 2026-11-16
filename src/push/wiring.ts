@@ -103,6 +103,7 @@ export function reportingRegistrar(
     },
     latest: registrar.latest,
     close: registrar.close,
+    exclusive: registrar.exclusive,
   });
 }
 
