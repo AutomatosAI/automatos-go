@@ -86,6 +86,17 @@ describe('errorFromResponse', () => {
     expect(errorFromResponse(500, '', ELSEWHERE).redirectTo).toBeUndefined();
   });
 
+  it('keeps no Location with a query or a fragment: a presigned address is a credential', () => {
+    const signed = 'https://bucket.example.test/q3.pdf?X-Amz-Signature=abc';
+    const error = errorFromResponse(302, '', signed);
+    expect(error.redirectTo).toBeUndefined();
+    expect(JSON.stringify(error)).not.toContain('Signature');
+    expect(errorFromResponse(302, '', 'https://x.example.test/a#frag').redirectTo).toBeUndefined();
+    expect(
+      errorFromResponse(301, '', 'https://x.example.test/.well-known/automatos.json').redirectTo,
+    ).toBe('https://x.example.test/.well-known/automatos.json');
+  });
+
   it('drops a Location longer than any real address, and an empty or missing one', () => {
     const long = `https://x.example.test/${'a'.repeat(REDIRECT_TARGET_MAX_CHARS)}`;
     expect(errorFromResponse(302, '', long).redirectTo).toBeUndefined();

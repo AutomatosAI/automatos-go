@@ -3,18 +3,36 @@
 // parseSSEFrames (vendored, hooks/use-board-event-stream.ts). Heartbeat comments are dropped there.
 // Event data is passed on as the parser decoded it; each consumer parses it with zod (FND-5). The
 // stream is ended as 'stream' by its limits (stream-limits.ts): silent past the client's idle
-// timeout, too much in all, or one event, whole or still held, over STREAM_LINE_MAX_CHARS, which
-// is checked before the parser reads it.
+// timeout, open past its total time, too much in all, or one event, whole or still held, over
+// STREAM_LINE_MAX_CHARS, which is checked before the parser reads it. A part of an event still
+// coming is held (held-text.ts), never parsed again at every chunk.
 
 import { parseSSEFrames } from '../core/web/hooks/use-board-event-stream';
 import type { ApiClient } from './client';
 import type { Route } from './routes';
 import { openStream, readChunks, type StreamOutcome } from './stream';
+import { heldText } from './held-text';
 import { checkLines } from './stream-limits';
 
 const EVENT_SEPARATOR = '\n\n';
 
 export type ServerEvent = ReturnType<typeof parseSSEFrames>['events'][number];
+
+/**
+ * The stream's events, a chunk at a time: an event still coming is held (held-text.ts) and parsed
+ * only when a chunk may end one, so a long event in small chunks costs its length once.
+ */
+export function eventChunks(onEvent: (event: ServerEvent) => void): (chunk: string) => void {
+  const held = heldText(EVENT_SEPARATOR);
+  return (chunk) => {
+    const text = held.take(chunk);
+    if (text === null) return; // no event ends in it: held, its length counted
+    checkLines(text.split(EVENT_SEPARATOR));
+    const { events, rest } = parseSSEFrames(text);
+    held.keep(rest);
+    events.forEach((event) => onEvent(event));
+  };
+}
 
 /**
  * Every complete event of the stream, in order, until it ends or the caller aborts. onOpen runs
@@ -30,16 +48,5 @@ export async function readEvents(
   const response = await openStream(client, route, { signal });
   if (!response) return 'aborted';
   onOpen?.();
-  let buffer = '';
-  return readChunks(
-    response,
-    (chunk) => {
-      const text = buffer + chunk;
-      checkLines(text.split(EVENT_SEPARATOR));
-      const { events, rest } = parseSSEFrames(text);
-      buffer = rest;
-      events.forEach((event) => onEvent(event));
-    },
-    signal,
-  );
+  return readChunks(response, eventChunks(onEvent), signal);
 }

@@ -1,5 +1,5 @@
 // The social post sheet's hooks: they read the post, the clock, the phone's zone and the role, run a
-// decision through api.ts, and hand media loads the bearer (the client's authHeaders, for native
+// decision through api.ts, and hand media loads the bearer (the client's headersFor, for native
 // loads outside its fetch). The decisions are approval.ts's and the view view.ts's. After a decision,
 // right or refused, the post and the week's calendar (which lists social posts) read the server again;
 // after a 409 the post has already been reloaded, so it is not fetched twice. Approve asks for Face
@@ -131,13 +131,20 @@ export type MediaHeaders = {
   readonly failed: boolean;
 };
 
-/** The headers a native media load sends (the post's media route needs the bearer). */
-export function useMediaHeaders(): MediaHeaders {
+const NO_HEADERS: MediaHeaders = Object.freeze({ headers: Object.freeze({}), failed: false });
+
+/**
+ * The headers a native media load of `url` sends (the post's media route needs the bearer): the
+ * client's own, and only for an address on its server (client.headersFor); none for another, and
+ * none to wait for when there is no address.
+ */
+export function useMediaHeaders(url: string | null): MediaHeaders {
   const client = useApiClient();
   const [state, setState] = useState<MediaHeaders>({ headers: null, failed: false });
   useEffect(() => {
     let live = true;
-    client.authHeaders().then(
+    if (url === null) return undefined;
+    client.headersFor(url).then(
       (headers) => {
         if (live) setState({ headers, failed: false });
       },
@@ -149,6 +156,6 @@ export function useMediaHeaders(): MediaHeaders {
     return () => {
       live = false;
     };
-  }, [client]);
-  return state;
+  }, [client, url]);
+  return url === null ? NO_HEADERS : state;
 }

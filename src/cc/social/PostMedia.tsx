@@ -94,7 +94,9 @@ function MediaItem(props: MediaProps) {
 function Files({ postId, media, width }: PostMediaListProps & { readonly width: number }) {
   const { colours } = useTokens();
   const { server } = useApiClient();
-  const { headers, failed } = useMediaHeaders();
+  const urls = media.files.map((file) => mediaUrl(server.apiUrl, postId, file.name));
+  // every file's address is built on this server (mediaUrl): the first one asks for them all
+  const { headers, failed } = useMediaHeaders(urls[0] ?? null);
   if (failed) return <Note text={SOCIAL_COPY.mediaFailed} />;
   if (!headers || width === 0) {
     return (
@@ -104,11 +106,11 @@ function Files({ postId, media, width }: PostMediaListProps & { readonly width: 
       />
     );
   }
-  return media.files.map((file) => (
+  return media.files.map((file, at) => (
     <MediaItem
       key={`${file.aspect}/${file.name}`}
       file={file}
-      source={{ uri: mediaUrl(server.apiUrl, postId, file.name), headers }}
+      source={{ uri: urls[at] ?? '', headers }}
       frame={mediaFrame(width, file.ratio, SOCIAL_MEDIA.maxHeight)}
     />
   ));

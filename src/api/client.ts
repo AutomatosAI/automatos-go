@@ -19,7 +19,7 @@ import type { z } from 'zod';
 import { acceptLanguageHeaders, readLanguage, type LanguageGetter } from './accept-language';
 import {
   buildAuthHeaders,
-  createAuthHeaders,
+  createHeadersFor,
   resolveToken,
   type AuthHeaders,
   type TokenGetter,
@@ -33,13 +33,16 @@ import {
   REQUEST_TIMEOUT_MS,
   STREAM_CONNECT_TIMEOUT_MS,
   STREAM_IDLE_TIMEOUT_MS,
+  STREAM_MAX_DURATION_MS,
 } from './config';
-import { callFailure, startDeadline, timedOutError, type Deadline } from './deadline';
+import { callFailure, startDeadline, type Deadline } from './deadline';
 import { ApiError, errorFromResponse } from './errors';
 import { parseJson } from './json';
 import type { Route } from './routes';
+import { isPlainOrigin } from '../lib/host-text';
 import type { Server } from './server';
-import { limitedChunks, streamLimits, type StreamLimits } from './stream-limits';
+import { opened } from './opened-stream';
+import { streamLimits } from './stream-limits';
 import { openFile, type FileBody, type FileCallOptions, type FilePort } from './transfer-request';
 import type {
   StreamingResponse,
@@ -75,6 +78,8 @@ export type ApiClientOptions = {
   readonly now?: () => number;
   /** No byte for this long ends an opened stream (STREAM_IDLE_TIMEOUT_MS when not given). */
   readonly streamIdleTimeoutMs?: number;
+  /** Open for this long ends an opened stream (STREAM_MAX_DURATION_MS when not given). */
+  readonly streamMaxDurationMs?: number;
 };
 
 export type CallOptions = {
@@ -95,6 +100,8 @@ export type StreamCallOptions = CallOptions & {
   readonly connectTimeoutMs?: number;
   /** No byte for this long ends the opened stream; the client's own when not given. */
   readonly idleTimeoutMs?: number;
+  /** Open for this long in all ends the opened stream; the client's own when not given. */
+  readonly maxDurationMs?: number;
 };
 
 export type BinaryCallOptions = CallOptions & {
@@ -129,8 +136,11 @@ export interface ApiClient {
    * a file); a non-OK status throws first (transfer-request.ts).
    */
   file(url: string, options?: FileCallOptions): Promise<FileBody>;
-  /** The bearer and workspace headers, for native loads outside the client (auth-headers.ts). */
-  authHeaders(): Promise<AuthHeaders>;
+  /**
+   * The bearer and workspace headers for a native load of `url` outside the client (an image
+   * source), only when `url` is on this server; none for any other address (auth-headers.ts).
+   */
+  headersFor(url: string): Promise<AuthHeaders>;
 }
 
 type Context = {
@@ -142,6 +152,7 @@ type Context = {
   readonly timeoutMs: number;
   readonly connectTimeoutMs: number;
   readonly streamIdleTimeoutMs: number;
+  readonly streamMaxDurationMs: number;
   readonly now: () => number;
   readonly expired: (token: string | null, error: ApiError) => void;
 };
@@ -293,49 +304,6 @@ async function fetchBinary(
   }
 }
 
-async function* chunksThen(
-  chunks: AsyncIterable<string>,
-  done: () => void,
-): AsyncGenerator<string> {
-  try {
-    yield* chunks;
-  } finally {
-    done();
-  }
-}
-
-/** How a stream was opened: its deadline, the connect timeout it ran under, its limits. */
-type Opening = { readonly deadline: Deadline; readonly ms: number; readonly limits: StreamLimits };
-
-/**
- * The opened stream. Read as it arrives, the connect deadline stops and the body runs as long as
- * the server keeps it going, under the stream's limits (stream-limits.ts). Read whole (bytes()),
- * the deadline keeps running until the body is in, so a body that drips cannot hold the call open
- * without end. Either way the caller's abort listener is released once the body is finished with.
- */
-function opened(response: StreamingResponse, { deadline, ms, limits }: Opening): StreamingResponse {
-  return {
-    status: response.status,
-    bytes: async (maxBytes) => {
-      try {
-        return await response.bytes(maxBytes);
-      } catch (error) {
-        throw deadline.timedOut() ? timedOutError(ms) : error;
-      } finally {
-        deadline.dispose();
-      }
-    },
-    header: (name) => response.header(name),
-    chunks: () => {
-      deadline.settle(); // the body may now run as long as it needs, within its limits
-      return chunksThen(
-        limitedChunks(response.chunks(), limits, deadline.expire),
-        deadline.dispose,
-      );
-    },
-  };
-}
-
 async function open(
   ctx: Context,
   route: Route,
@@ -346,7 +314,8 @@ async function open(
   const deadline = startDeadline(connectTimeoutMs, call.signal);
   try {
     const response = await ctx.transport.stream({ ...request, signal: deadline.signal });
-    const limits = streamLimits(call.idleTimeoutMs ?? ctx.streamIdleTimeoutMs);
+    const idle = call.idleTimeoutMs ?? ctx.streamIdleTimeoutMs;
+    const limits = streamLimits(idle, call.maxDurationMs ?? ctx.streamMaxDurationMs);
     return opened(await checked(ctx, response, token), { deadline, ms: connectTimeoutMs, limits });
   } catch (error) {
     deadline.dispose();
@@ -365,7 +334,15 @@ function filePort(ctx: Context): FilePort {
   };
 }
 
+/**
+ * The one client, over `options.server`. Its address must be a plain origin (host-text.ts
+ * isPlainOrigin): every request and the bearer start from it, so one built by hand, outside
+ * hostedServerFrom and ownServerFrom, is refused here too, with a TypeError before anything is sent.
+ */
 export function createApiClient(options: ApiClientOptions): ApiClient {
+  if (!isPlainOrigin(options.server.apiUrl)) {
+    throw new TypeError('The API client needs a plain origin: a scheme, a host and a port');
+  }
   const ctx: Context = {
     server: options.server,
     getToken: options.getToken,
@@ -375,6 +352,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     timeoutMs: options.timeoutMs ?? REQUEST_TIMEOUT_MS,
     connectTimeoutMs: options.connectTimeoutMs ?? STREAM_CONNECT_TIMEOUT_MS,
     streamIdleTimeoutMs: options.streamIdleTimeoutMs ?? STREAM_IDLE_TIMEOUT_MS,
+    streamMaxDurationMs: options.streamMaxDurationMs ?? STREAM_MAX_DURATION_MS,
     now: options.now ?? Date.now,
     expired: expiryLatch(options.onAuthExpired),
   };
@@ -385,6 +363,6 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     stream: (route: Route, call: StreamCallOptions = {}) => open(ctx, route, call),
     binary: (route: Route, call: BinaryCallOptions = {}) => fetchBinary(ctx, route, call),
     file: (url: string, call: FileCallOptions = {}) => openFile(filePort(ctx), url, call),
-    authHeaders: createAuthHeaders(ctx.getToken, ctx.getWorkspaceId),
+    headersFor: createHeadersFor(ctx.server.apiUrl, ctx.getToken, ctx.getWorkspaceId),
   });
 }

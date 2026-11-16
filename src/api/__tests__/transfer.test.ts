@@ -18,20 +18,20 @@ import {
   failureOf,
   nothingLeft,
   target,
+  TIMED,
 } from './transfer-harness';
 import type { TransportRequest } from '../transport-types';
 
 vi.mock('expo-file-system', async () => (await import('./fake-file-system')).fakeExpoFileSystem);
 
-const { ASIDE_SUFFIX, PARTIAL_SUFFIX, download, partialOf, stopDownloads } =
-  await import('../transfer');
+const { ASIDE_SUFFIX, PARTIAL_SUFFIX, download, partialOf } = await import('../transfer');
 
 beforeEach(() => memoryFs.reset());
 
 describe('a download', () => {
   it('is fetched through the client, with its bearer, workspace and language, and written whole', async () => {
     const transport = answering(() => partsReply(200, [encode('%PDF-'), encode('1.7')]));
-    const file = await download(clientWith(transport), FILE_URL, target());
+    const file = await download(clientWith(transport), FILE_URL, target(), TIMED);
     expect(file.uri).toBe(TARGET_URI);
     expect(textOf(TARGET_URI)).toBe('%PDF-1.7');
     expect(transport.calls).toHaveLength(1);
@@ -49,7 +49,7 @@ describe('a download', () => {
 
   it('is written to a partial file beside the target, moved into place only when whole', async () => {
     const transport = answering(() => partsReply(200, [encode('a'), encode('b')]));
-    await download(clientWith(transport), FILE_URL, target());
+    await download(clientWith(transport), FILE_URL, target(), TIMED);
     const partial = partialOf(target()).uri;
     expect(partial).toBe(`${TARGET_URI}${PARTIAL_SUFFIX}`);
     expect(memoryFs.ops).toEqual([`create ${partial}`, `mv ${partial} -> ${TARGET_URI}`]);
@@ -58,18 +58,26 @@ describe('a download', () => {
   it('replaces a copy already at the target only once the new one is whole', async () => {
     memoryFs.files.set(TARGET_URI, encode('old'));
     const transport = answering(() => partsReply(200, [encode('new')]));
-    await download(clientWith(transport), FILE_URL, target());
+    await download(clientWith(transport), FILE_URL, target(), TIMED);
     expect(textOf(TARGET_URI)).toBe('new');
     const refused = answering(() => reply(500));
-    await failureOf(download(clientWith(refused), FILE_URL, target()));
+    await failureOf(download(clientWith(refused), FILE_URL, target(), TIMED));
     expect(textOf(TARGET_URI)).toBe('new');
+  });
+
+  it('removes a partial a crash left for the target before it writes, and none of it stays', async () => {
+    memoryFs.files.set(partialOf(target()).uri, encode('stale bytes from a crash'));
+    const transport = answering(() => partsReply(200, [encode('%PDF')]));
+    await download(clientWith(transport), FILE_URL, target(), TIMED);
+    expect(textOf(TARGET_URI)).toBe('%PDF');
+    expect([...memoryFs.files.keys()]).toEqual([TARGET_URI]);
   });
 
   it('keeps the earlier copy when the new one cannot be moved in, and leaves nothing aside', async () => {
     memoryFs.files.set(TARGET_URI, encode('old'));
     memoryFs.failMove = (from) => from.endsWith(PARTIAL_SUFFIX);
     const transport = answering(() => partsReply(200, [encode('new')]));
-    await expect(download(clientWith(transport), FILE_URL, target())).rejects.toThrow(
+    await expect(download(clientWith(transport), FILE_URL, target(), TIMED)).rejects.toThrow(
       'the move failed',
     );
     expect(textOf(TARGET_URI)).toBe('old');
@@ -79,7 +87,7 @@ describe('a download', () => {
   it('sets the earlier copy aside, moves the new one in, then deletes the earlier one', async () => {
     memoryFs.files.set(TARGET_URI, encode('old'));
     const transport = answering(() => partsReply(200, [encode('new')]));
-    await download(clientWith(transport), FILE_URL, target());
+    await download(clientWith(transport), FILE_URL, target(), TIMED);
     const partial = partialOf(target()).uri;
     const aside = `${TARGET_URI}${ASIDE_SUFFIX}`;
     expect(memoryFs.ops.slice(1)).toEqual([
@@ -93,7 +101,7 @@ describe('a download', () => {
   it('drops an aside copy an interrupted replace left behind', async () => {
     memoryFs.files.set(`${TARGET_URI}${ASIDE_SUFFIX}`, encode('stale'));
     const transport = answering(() => partsReply(200, [encode('new')]));
-    await download(clientWith(transport), FILE_URL, target());
+    await download(clientWith(transport), FILE_URL, target(), TIMED);
     expect([...memoryFs.files.keys()]).toEqual([TARGET_URI]);
   });
 
@@ -105,7 +113,7 @@ describe('a download', () => {
       `${SERVER.apiUrl}/q3 .pdf`,
       '/api/documents/generated/q3.pdf',
     ]) {
-      await expect(download(clientWith(transport), url, target())).rejects.toBeInstanceOf(
+      await expect(download(clientWith(transport), url, target(), TIMED)).rejects.toBeInstanceOf(
         TypeError,
       );
     }
@@ -115,7 +123,7 @@ describe('a download', () => {
 
   it('a refusal is its kind, and nothing is left behind', async () => {
     const transport = answering(() => reply(404, '{"detail":"File not found"}'));
-    const error = await failureOf(download(clientWith(transport), FILE_URL, target()));
+    const error = await failureOf(download(clientWith(transport), FILE_URL, target(), TIMED));
     expect(error).toMatchObject({ kind: 'not_found', status: 404 });
     expect(memoryFs.files.size).toBe(0);
     nothingLeft();
@@ -124,7 +132,7 @@ describe('a download', () => {
   it('a 401 from its own server signs out, as every call does', async () => {
     const onAuthExpired = vi.fn();
     const transport = answering(() => reply(401));
-    await failureOf(download(clientWith(transport, { onAuthExpired }), FILE_URL, target()));
+    await failureOf(download(clientWith(transport, { onAuthExpired }), FILE_URL, target(), TIMED));
     expect(onAuthExpired).toHaveBeenCalledTimes(1);
   });
 });
@@ -139,8 +147,8 @@ describe('two asks for one target', () => {
         }),
     );
     const client = clientWith(transport);
-    const first = download(client, FILE_URL, target());
-    const second = download(client, FILE_URL, target());
+    const first = download(client, FILE_URL, target(), TIMED);
+    const second = download(client, FILE_URL, target(), TIMED);
     expect(second).toBe(first);
     await vi.waitFor(() => expect(transport.calls).toHaveLength(1));
     gate.release();
@@ -156,8 +164,8 @@ describe('two asks for one target', () => {
       () => partsReply(200, [encode('second')]),
     );
     const client = clientWith(transport);
-    const first = download(client, FILE_URL, target());
-    const second = download(client, other, target());
+    const first = download(client, FILE_URL, target(), TIMED);
+    const second = download(client, other, target(), TIMED);
     await first;
     expect(textOf(TARGET_URI)).toBe('first');
     await second;
@@ -172,85 +180,10 @@ describe('two asks for one target', () => {
       () => partsReply(200, [encode('b')]),
     );
     const client = clientWith(transport);
-    await download(client, FILE_URL, target());
-    await download(client, FILE_URL, target());
+    await download(client, FILE_URL, target(), TIMED);
+    await download(client, FILE_URL, target(), TIMED);
     expect(transport.calls).toHaveLength(2);
     expect(textOf(TARGET_URI)).toBe('b');
-  });
-});
-
-describe('a download running when the person leaves', () => {
-  /** A body that sends its parts, then holds its end until released, deaf to any abort. */
-  function heldOpen(parts: readonly string[]) {
-    const gate: { release: () => void } = { release: () => undefined };
-    const held = new Promise<void>((resolve) => {
-      gate.release = resolve;
-    });
-    const answer = (): FakeResponse => ({
-      ...reply(200),
-      parts: async function* () {
-        for (const part of parts) yield encode(part);
-        await held;
-      },
-    });
-    return { gate, answer };
-  }
-
-  it('places nothing, even when its body ends after the clear, and a later ask starts afresh', async () => {
-    const { gate, answer } = heldOpen(['%PDF-whole']);
-    const transport = answering(answer, () => partsReply(200, [encode('%PDF-next')]));
-    const client = clientWith(transport);
-    const running = download(client, FILE_URL, target());
-    await vi.waitFor(() =>
-      expect(memoryFs.files.get(partialOf(target()).uri)?.byteLength).toBe(10),
-    );
-    stopDownloads();
-    memoryFs.files.clear(); // the folders are deleted (user-files.ts)
-    gate.release();
-    await expect(running).rejects.toMatchObject({ name: 'AbortError' });
-    expect(memoryFs.files.size).toBe(0);
-    nothingLeft();
-    await download(client, FILE_URL, target());
-    expect(textOf(TARGET_URI)).toBe('%PDF-next');
-    expect(transport.calls).toHaveLength(2);
-  });
-
-  it('a body still sending when the person leaves stops at its next part', async () => {
-    const gate: { release: () => void } = { release: () => undefined };
-    const held = new Promise<void>((resolve) => {
-      gate.release = resolve;
-    });
-    const transport = answering(() => ({
-      ...reply(200),
-      parts: async function* () {
-        yield encode('one');
-        await held;
-        yield encode('two');
-      },
-    }));
-    const running = download(clientWith(transport), FILE_URL, target());
-    await vi.waitFor(() => expect(memoryFs.files.get(partialOf(target()).uri)?.byteLength).toBe(3));
-    stopDownloads();
-    gate.release();
-    await expect(running).rejects.toMatchObject({ name: 'AbortError' });
-    expect(memoryFs.files.size).toBe(0);
-    expect(transport.calls[0]?.signal.aborted).toBe(true);
-  });
-
-  it('an ask waiting its turn when the person leaves creates nothing', async () => {
-    const { gate, answer } = heldOpen(['first']);
-    const other = `${SERVER.apiUrl}/api/workspaces/w/files/raw?path=q3.pdf`;
-    const transport = answering(answer);
-    const client = clientWith(transport);
-    const first = download(client, FILE_URL, target());
-    const waiting = download(client, other, target());
-    await vi.waitFor(() => expect(transport.calls).toHaveLength(1));
-    stopDownloads();
-    gate.release();
-    await expect(first).rejects.toMatchObject({ name: 'AbortError' });
-    await expect(waiting).rejects.toMatchObject({ name: 'AbortError' });
-    expect(transport.calls).toHaveLength(1);
-    expect(memoryFs.files.size).toBe(0);
   });
 });
 
@@ -258,7 +191,10 @@ describe('a download under its cap', () => {
   it('over its cap is refused, read no further, and the partial file is removed', async () => {
     const transport = answering(() => partsReply(200, [encode('12345'), encode('67890')]));
     const error = await failureOf(
-      download(clientWith(transport), FILE_URL, target(), { maxBytes: 8 }),
+      download(clientWith(transport), FILE_URL, target(), {
+        ...TIMED,
+        maxBytes: 8,
+      }),
     );
     expect(error).toMatchObject({ kind: 'invalid_response' });
     expect(memoryFs.files.size).toBe(0);
@@ -268,7 +204,10 @@ describe('a download under its cap', () => {
   it('a Content-Length over its cap is refused before a byte is written', async () => {
     const transport = answering(() => partsReply(200, [encode('1')], { 'Content-Length': '9' }));
     const error = await failureOf(
-      download(clientWith(transport), FILE_URL, target(), { maxBytes: 8 }),
+      download(clientWith(transport), FILE_URL, target(), {
+        ...TIMED,
+        maxBytes: 8,
+      }),
     );
     expect(error).toMatchObject({ kind: 'invalid_response' });
     nothingLeft();
@@ -278,7 +217,7 @@ describe('a download under its cap', () => {
     const transport = answering(() =>
       partsReply(200, [encode('%PDF')], { 'Content-Length': '4096' }),
     );
-    const error = await failureOf(download(clientWith(transport), FILE_URL, target()));
+    const error = await failureOf(download(clientWith(transport), FILE_URL, target(), TIMED));
     expect(error).toMatchObject({ kind: 'network' });
     expect(memoryFs.files.size).toBe(0);
     nothingLeft();
@@ -286,7 +225,10 @@ describe('a download under its cap', () => {
 
   it('takes a file at exactly its cap', async () => {
     const transport = answering(() => partsReply(200, [encode('1234'), encode('5678')]));
-    await download(clientWith(transport), FILE_URL, target(), { maxBytes: 8 });
+    await download(clientWith(transport), FILE_URL, target(), {
+      ...TIMED,
+      maxBytes: 8,
+    });
     expect(textOf(TARGET_URI)).toBe('12345678');
   });
 
@@ -294,14 +236,16 @@ describe('a download under its cap', () => {
     memoryFs.failWrites = true;
     memoryFs.failCloses = true;
     const transport = answering(() => partsReply(200, [encode('x')]));
-    await expect(download(clientWith(transport), FILE_URL, target())).rejects.toThrow('no space');
+    await expect(download(clientWith(transport), FILE_URL, target(), TIMED)).rejects.toThrow(
+      'no space',
+    );
     expect(memoryFs.files.size).toBe(0);
   });
 
   it('a close that fails after a whole body is the failure, and nothing lands', async () => {
     memoryFs.failCloses = true;
     const transport = answering(() => partsReply(200, [encode('x')]));
-    await expect(download(clientWith(transport), FILE_URL, target())).rejects.toThrow(
+    await expect(download(clientWith(transport), FILE_URL, target(), TIMED)).rejects.toThrow(
       'could not be closed',
     );
     expect(memoryFs.files.size).toBe(0);
@@ -310,7 +254,9 @@ describe('a download under its cap', () => {
   it('a write that fails removes the partial file and closes its handle', async () => {
     memoryFs.failWrites = true;
     const transport = answering(() => partsReply(200, [encode('x')]));
-    await expect(download(clientWith(transport), FILE_URL, target())).rejects.toThrow('no space');
+    await expect(download(clientWith(transport), FILE_URL, target(), TIMED)).rejects.toThrow(
+      'no space',
+    );
     expect(memoryFs.files.size).toBe(0);
     nothingLeft();
   });
@@ -338,6 +284,7 @@ describe('a download that is stopped', () => {
     const controller = new AbortController();
     const transport = answering(stalling);
     const running = download(clientWith(transport), FILE_URL, target(), {
+      ...TIMED,
       signal: controller.signal,
     });
     await vi.waitFor(() => expect(memoryFs.files.get(partialOf(target()).uri)?.byteLength).toBe(5));
@@ -351,7 +298,10 @@ describe('a download that is stopped', () => {
   it('a body still coming at its deadline is the network, and the partial file is removed', async () => {
     const transport = answering(stalling);
     const error = await failureOf(
-      download(clientWith(transport), FILE_URL, target(), { timeoutMs: 20 }),
+      download(clientWith(transport), FILE_URL, target(), {
+        ...TIMED,
+        timeoutMs: 20,
+      }),
     );
     expect(error).toMatchObject({ kind: 'network' });
     expect(transport.calls[0]?.signal.aborted).toBe(true);

@@ -9,8 +9,10 @@
 
 import * as a11yAudit from './a11y-audit';
 import * as announcements from './announcements';
+import * as auditImports from './audit-imports';
 import * as contrast from './contrast';
 import * as dependencyAudit from './dependency-audit';
+import * as namedStates from './named-states';
 import * as permissions from './permissions';
 import * as releaseDocs from './release-docs';
 import * as releaseLicences from './release-licences';
@@ -75,4 +77,6 @@ export const ALLOWED_LISTS: readonly AllowedList[] = frozen([
   ),
   each('announcements', 'PRESENT_FROM_START', announcements.PRESENT_FROM_START),
   each('announcements', 'OWED', announcements.OWED),
+  each('named-states', 'OWED', namedStates.OWED),
+  each('audit-imports', 'ALLOWED_PACKAGES', auditImports.ALLOWED_PACKAGES),
 ]);

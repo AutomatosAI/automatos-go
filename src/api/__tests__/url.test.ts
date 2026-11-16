@@ -6,6 +6,7 @@ import {
   fillPath,
   isFileNameSegment,
   isIdSegment,
+  isWellFormed,
   queryString,
   withoutTrailingSlash,
 } from '../url';
@@ -139,5 +140,49 @@ describe('withoutTrailingSlash', () => {
     expect(withoutTrailingSlash(hostile)).toBe(hostile);
     expect(withoutTrailingSlash(`${hostile}${'/'.repeat(50_000)}`)).toBe(hostile);
     expect(performance.now() - started).toBeLessThan(100);
+  });
+});
+
+describe('what the builder refuses with its own error, before any encoder throws', () => {
+  const high = String.fromCharCode(0xd800);
+  const low = String.fromCharCode(0xdc00);
+
+  it('a route path that does not start with exactly one slash', () => {
+    for (const path of ['evil.example/x', 'api/chat', '//evil.example/x', '']) {
+      expect(() => buildUrl('https://api.example.test', path), path).toThrow(
+        new TypeError('A route path must start with exactly one "/"'),
+      );
+    }
+    expect(buildUrl('https://api.example.test', '/api/chat')).toBe(
+      'https://api.example.test/api/chat',
+    );
+  });
+
+  it('a lone surrogate in a path value: a TypeError naming the parameter, never a URIError', () => {
+    for (const name of [`a${high}.png`, `a${low}.png`, `${low}${high}.png`]) {
+      expect(() => fillPath('/m/{file_name}', { file_name: name })).toThrow(TypeError);
+      expect(() => fillPath('/m/{file_name}', { file_name: name })).toThrow(/"file_name"/);
+    }
+    expect(fillPath('/m/{file_name}', { file_name: `a${high}${low}.png` })).toBe(
+      '/m/a%F0%90%80%80.png',
+    );
+  });
+
+  it('a lone surrogate in a query key or value: a TypeError that repeats neither', () => {
+    expect(() => queryString({ path: `q${high}` })).toThrow(
+      new TypeError('A query parameter is not a usable value'),
+    );
+    expect(() => queryString({ [`k${low}`]: 'v' })).toThrow(TypeError);
+    expect(queryString({ path: `q${high}${low}` })).toBe('?path=q%F0%90%80%80');
+  });
+
+  it('isWellFormed knows a pair from a lone half', () => {
+    expect([`${high}${low}`, 'plain', ''].map(isWellFormed)).toEqual([true, true, true]);
+    expect([high, low, `${low}${high}`, `x${high}`].map(isWellFormed)).toEqual([
+      false,
+      false,
+      false,
+      false,
+    ]);
   });
 });

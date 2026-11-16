@@ -26,7 +26,12 @@ import { abortError, isAbortError } from './errors';
 import { DOWNLOAD_MAX_BYTES } from './config';
 import type { FileCallOptions } from './transfer-request';
 
-export type DownloadOptions = FileCallOptions & {
+export type DownloadOptions = Omit<FileCallOptions, 'timeoutMs'> & {
+  /**
+   * The whole download gives up after this long: the status and every part of the body, to the
+   * last byte. Required: the client's own 30 s is a request's, and a file can take longer.
+   */
+  readonly timeoutMs: number;
   /** The file is refused past this many bytes, read no further (DOWNLOAD_MAX_BYTES if not given). */
   readonly maxBytes?: number;
 };
@@ -49,8 +54,12 @@ function removeQuietly(file: File): void {
   }
 }
 
-/** An empty partial file, its folder made first, and a handle to write it with. */
+/**
+ * An empty partial file, its folder made first, and a handle to write it with. A partial a crash
+ * left for this target is removed first (the person leaving removes the rest: user-files.ts).
+ */
 function openPartial(partial: File) {
+  removeQuietly(partial);
   partial.create({ intermediates: true, overwrite: true });
   return partial.open();
 }
@@ -166,7 +175,12 @@ async function fetchInto(
   }
 }
 
-type Running = { readonly url: string; readonly done: Promise<File> };
+type Running = {
+  readonly url: string;
+  readonly done: Promise<File>;
+  /** The leaving it listens to: once fired, the run is ending and no later ask may join it. */
+  readonly session: AbortSignal;
+};
 
 /** Downloads running, by target: a target is only ever written by one of them at a time. */
 const running = new Map<string, Running>();
@@ -177,12 +191,13 @@ let leaving = new AbortController();
 /**
  * Stops every download running now (the person is leaving: sign-out, a server switch). None of
  * them places a file afterwards, whenever its body ends; each rejects with an AbortError. A later
- * ask, for the same target too, downloads afresh.
+ * ask, for the same target too, downloads afresh, once the stopped run for that target has
+ * settled and removed its partial file: the runs stay in `running` until they settle, so a new
+ * run never shares a partial file with one still unwinding.
  */
 export function stopDownloads(): void {
   const left = leaving;
   leaving = new AbortController();
-  running.clear();
   left.abort();
 }
 
@@ -191,18 +206,19 @@ export function stopDownloads(): void {
  * whole. Throws the client's ApiError (a refusal, the network, a body over its cap as
  * invalid_response), the caller's AbortError, or the file system's own error; the partial file is
  * gone whichever it is. Two asks for one target and one address share one download (the first
- * ask's options hold); an ask for the same target from another address waits for the running one
- * to settle before it starts, so two writers never share a partial file.
+ * ask's options hold); an ask for the same target from another address, or after a stop, waits for
+ * the running one to settle before it starts, so two writers never share a partial file.
+ * `options.timeoutMs` covers the whole download, the last byte of the body included.
  */
 export function download(
   client: Pick<ApiClient, 'file'>,
   url: string,
   target: File,
-  options: DownloadOptions = {},
+  options: DownloadOptions,
 ): Promise<File> {
   const key = target.uri;
   const current = running.get(key);
-  if (current?.url === url) return current.done;
+  if (current?.url === url && !current.session.aborted) return current.done;
   const earlier = current?.done.then(
     () => undefined,
     () => undefined,
@@ -214,6 +230,6 @@ export function download(
   })().finally(() => {
     if (running.get(key)?.done === done) running.delete(key);
   });
-  running.set(key, { url, done });
+  running.set(key, { url, done, session });
   return done;
 }

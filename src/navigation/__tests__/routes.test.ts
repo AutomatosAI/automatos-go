@@ -45,9 +45,14 @@ describe('app routes', () => {
     expect(routes.cc.deliverable('9b1c-dlv')).toBe('/cc/deliverables/9b1c-dlv');
   });
 
-  it('puts an id, trimmed, into its one segment', () => {
-    expect(routes.chat(' c-1 ')).toBe('/chat/c-1');
+  it('puts an id into its one segment exactly as given, and refuses a padded one', () => {
+    expect(routes.chat('c-1')).toBe('/chat/c-1');
     expect(routes.cc.deliverable('d_1.v2')).toBe('/cc/deliverables/d_1.v2');
+    for (const padded of [' c-1 ', ' c-1', 'c-1 ', '\tc-1', 'c-1\n']) {
+      expect(isUsableId(padded)).toBe(false);
+      expect(() => routes.chat(padded)).toThrow(TypeError);
+    }
+    expect(() => routes.cc.ticket(' 419')).toThrow(TypeError);
   });
 
   it('refuses an id that is blank or a dot segment', () => {
@@ -128,7 +133,9 @@ describe('chatWithTicket (D31: a new conversation with the ticket as context)', 
   it('reads the first value when expo-router hands a repeated param as an array', () => {
     expect(ticketFromChatParams({ ticket: ['419', '7'] })).toBe('419');
     expect(ticketFromChatParams({ ticket: [] })).toBeNull();
-    expect(ticketFromChatParams({ ticket: ' 419 ' })).toBe('419');
+    // padded: it came from neither this app nor its server, so it is refused, never trimmed
+    expect(ticketFromChatParams({ ticket: ' 419 ' })).toBeNull();
+    expect(questionFromTicketParams({ [QUESTION_PARAM]: ' g-9' })).toBeNull();
   });
 });
 

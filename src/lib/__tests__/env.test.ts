@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ENV_NAMES, SERVER_ADDRESS_FAULT, env, isHttpUrl, isServerAddress, parseEnv } from '../env';
 
@@ -113,6 +113,8 @@ describe('the addresses a build is given', () => {
     ['a control character before it', '\u0001https://api.automatos.app'],
     ['a host in percent signs', 'https://%61pi.automatos.app'],
     ['a short form of an IP address', 'https://127.1'],
+    ['a non-ASCII host', 'https://b\u00fccher.example'],
+    ['an IPv4 address in hex', 'https://0x7f.0.0.1'],
     ['the default port written out', 'https://api.automatos.app:443'],
     ['a dot path', 'https://api.automatos.app/.'],
     ['two slashes at the end', 'https://api.automatos.app//'],
@@ -121,10 +123,72 @@ describe('the addresses a build is given', () => {
     expect(isServerAddress(value, DEVELOPMENT)).toBe(false);
   });
 
+  // A phone's URL is Expo's, with no Unicode: it keeps a host as it is written, so the parser's own
+  // origin cannot be the only check there (parser differential, security review 16 Nov).
+  describe('with a URL that keeps the host as written, as the one on a phone does', () => {
+    class KeepsTheHost {
+      readonly protocol: string;
+      readonly hostname: string;
+      readonly pathname: string;
+      readonly origin: string;
+      constructor(value: string) {
+        const match = /^(https?:)\/\/(\[[^\]]*\]|[^/:]*)(:\d+)?(\/.*)?$/.exec(value);
+        if (!match) throw new TypeError('Invalid URL');
+        this.protocol = match[1] ?? '';
+        this.hostname = match[2] ?? '';
+        this.pathname = match[4] ?? '/';
+        this.origin = `${this.protocol}//${this.hostname}${match[3] ?? ''}`;
+      }
+    }
+
+    beforeEach(() => vi.stubGlobal('URL', KeepsTheHost));
+    afterEach(() => vi.unstubAllGlobals());
+
+    it.each([
+      ['a full-width address', 'https://\uff11\uff12\uff17.\uff10.\uff10.\uff11'],
+      ['a non-ASCII name', 'https://b\u00fccher.example'],
+      ['capitals', 'https://API.automatos.app'],
+      ['an IPv4 address in hex', 'https://0x7f.0.0.1'],
+      ['an IPv4 address in fewer parts', 'https://127.1'],
+    ])('refuses %s, which that URL would let through', (_what, value) => {
+      expect(isServerAddress(value, RELEASE)).toBe(false);
+    });
+
+    it('still takes a plain name, a dotted quad in development and an IPv6 literal', () => {
+      expect(isServerAddress('https://api.automatos.app', RELEASE)).toBe(true);
+      expect(isServerAddress('http://192.168.1.20:8000', DEVELOPMENT)).toBe(true);
+      expect(isServerAddress('https://[::1]:8443', RELEASE)).toBe(true);
+    });
+  });
+
   it('accepts plain http in a development build only', () => {
     expect(isServerAddress('http://192.168.1.20:8000', DEVELOPMENT)).toBe(true);
     expect(isServerAddress('http://192.168.1.20:8000', RELEASE)).toBe(false);
     expect(isServerAddress('http://localhost:8000', RELEASE)).toBe(false);
+  });
+
+  it('holds development http to this machine and a home network, never a public name', () => {
+    for (const value of [
+      'http://192.168.1.20:8000',
+      'http://10.0.0.2:8000',
+      'http://172.16.4.1',
+      'http://automatos.local:8000',
+      'http://localhost:8000',
+      'http://127.0.0.1:8000',
+      'http://[::1]:8000',
+    ]) {
+      expect(isServerAddress(value, DEVELOPMENT), value).toBe(true);
+    }
+    for (const value of [
+      'http://api.automatos.app',
+      'http://52.95.110.1:8000',
+      'http://100.64.1.1:8000',
+      'http://169.254.169.254',
+      'http://nas',
+      'http://[2600::1]:8000',
+    ]) {
+      expect(isServerAddress(value, DEVELOPMENT), value).toBe(false);
+    }
   });
 
   it('names the variable and the rule, never the value', () => {

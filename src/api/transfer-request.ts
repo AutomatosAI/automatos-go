@@ -16,11 +16,11 @@
 import { ERROR_BODY_MAX_BYTES, STORAGE_REDIRECT_MAX_CHARS } from './config';
 import { callFailure, startDeadline, type Deadline } from './deadline';
 import { ApiError, isRedirectStatus } from './errors';
-import { hostOfAddress, storageHostAllowed } from './private-host';
+import { storageHost, storageHostAllowed } from './private-host';
 import { BodyTooLargeError } from './body';
 import type { Server } from './server';
 import type { FileResponse, Transport, TransportResponse } from './transport-types';
-import { withoutTrailingSlash } from './url';
+import { isOnServer } from './url';
 
 const LOCATION_HEADER = 'location';
 const GET = 'GET';
@@ -63,25 +63,22 @@ export type FilePort = {
 
 /** `url` when it is on the client's own server; anything else is refused before it is asked. */
 export function assertOnServer(apiUrl: string, url: string): void {
-  const origin = withoutTrailingSlash(apiUrl).toLowerCase();
-  const onServer =
-    url.slice(0, origin.length).toLowerCase() === origin && url.charAt(origin.length) === '/';
-  if (!onServer || UNSAFE.test(url)) {
+  if (!isOnServer(apiUrl, url)) {
     throw new TypeError("a file is fetched only from the client's own server");
   }
 }
 
 /**
- * Where a storage redirect may lead: an https address with a host, and, when the app's own server
- * is not on a private network, a host that is not on one either (private-host.ts); anything else
- * is null. A server on a home or office network may point to storage on that same network.
+ * Where a storage redirect may lead: an https address whose host is written plainly and read the
+ * same by the platform's URL, and from a public server a public name, from a server on a home or
+ * office network a name or a private dotted quad on it (private-host.ts); anything else is null.
  */
 export function storageAddress(location: string | null, apiUrl: string): string | null {
   if (!location || location.length > STORAGE_REDIRECT_MAX_CHARS || UNSAFE.test(location)) {
     return null;
   }
   if (!STORAGE_ADDRESS.test(location)) return null;
-  const host = hostOfAddress(location);
+  const host = storageHost(location);
   return host !== null && storageHostAllowed(host, apiUrl) ? location : null;
 }
 

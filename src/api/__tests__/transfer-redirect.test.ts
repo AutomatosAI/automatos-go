@@ -18,6 +18,7 @@ import {
   failureOf,
   nothingLeft,
   target,
+  TIMED,
 } from './transfer-harness';
 
 vi.mock('expo-file-system', async () => (await import('./fake-file-system')).fakeExpoFileSystem);
@@ -35,16 +36,21 @@ describe('a redirect', () => {
 
   it('is not followed when the request is not marked: the redirect error, one request', async () => {
     const transport = answering(redirect(STORAGE));
-    const error = await failureOf(download(clientWith(transport), FILE_URL, target()));
+    const error = await failureOf(download(clientWith(transport), FILE_URL, target(), TIMED));
     expect(error).toBeInstanceOf(ApiError);
-    expect(error).toMatchObject({ kind: 'server', status: 302, redirectTo: STORAGE });
+    expect(error).toMatchObject({ kind: 'server', status: 302 });
+    // the presigned address, a credential in its query, is not kept on the error either
+    expect((error as ApiError).redirectTo).toBeUndefined();
     expect(transport.calls).toHaveLength(1);
     expect(memoryFs.files.size).toBe(0);
   });
 
   it('is followed once when marked, with no bearer, no workspace and no other header', async () => {
     const transport = answering(redirect(STORAGE), () => partsReply(200, [encode('%PDF')]));
-    await download(clientWith(transport), FILE_URL, target(), { redirectsToStorage: true });
+    await download(clientWith(transport), FILE_URL, target(), {
+      ...TIMED,
+      redirectsToStorage: true,
+    });
     expect(textOf(TARGET_URI)).toBe('%PDF');
     expect(transport.calls.map((call) => call.url)).toEqual([FILE_URL, STORAGE]);
     expect(transport.calls[1]?.headers).toEqual({});
@@ -57,7 +63,10 @@ describe('a redirect', () => {
     const again = 'https://elsewhere.example.test/next?X-Amz-Signature=def';
     const transport = answering(redirect(STORAGE), redirect(again, 307));
     const error = await failureOf(
-      download(clientWith(transport), FILE_URL, target(), { redirectsToStorage: true }),
+      download(clientWith(transport), FILE_URL, target(), {
+        ...TIMED,
+        redirectsToStorage: true,
+      }),
     );
     expect(error).toMatchObject({ kind: 'server', status: 307 });
     expect((error as ApiError).redirectTo).toBeUndefined();
@@ -70,7 +79,10 @@ describe('a redirect', () => {
     const plain = 'http://bucket.storage.example.test/q3.pdf';
     const transport = answering(redirect(plain));
     const error = await failureOf(
-      download(clientWith(transport), FILE_URL, target(), { redirectsToStorage: true }),
+      download(clientWith(transport), FILE_URL, target(), {
+        ...TIMED,
+        redirectsToStorage: true,
+      }),
     );
     expect(error).toMatchObject({ kind: 'server', status: 302, redirectTo: plain });
     expect(transport.calls).toHaveLength(1);
@@ -85,6 +97,7 @@ describe('a redirect', () => {
       );
       const error = await failureOf(
         download(clientWith(transport, { onAuthExpired }), FILE_URL, target(), {
+          ...TIMED,
           redirectsToStorage: true,
         }),
       );
@@ -97,6 +110,7 @@ describe('a redirect', () => {
     const transport = answering(redirect(STORAGE), () => partsReply(200, [encode('123456789')]));
     const error = await failureOf(
       download(clientWith(transport), FILE_URL, target(), {
+        ...TIMED,
         redirectsToStorage: true,
         maxBytes: 8,
       }),
@@ -136,49 +150,55 @@ describe('storageAddress', () => {
     }
   });
 
-  const PRIVATE_STORAGE = [
+  const ON_A_HOME_NETWORK = [
     'https://10.0.0.5/q3.pdf',
     'https://172.20.1.1:9000/q3.pdf',
     'https://192.168.1.30/q3.pdf',
-    'https://127.0.0.1/q3.pdf',
-    'https://169.254.169.254/latest/meta-data',
-    'https://0x7f.1/q3.pdf',
-    'https://2130706433/q3.pdf',
-    'https://[::1]/q3.pdf',
-    'https://[fd00::5]/q3.pdf',
-    'https://[fe80::1]/q3.pdf',
-    'https://[::ffff:10.0.0.5]/q3.pdf',
-    'https://localhost/q3.pdf',
-    'https://minio.localhost/q3.pdf',
     'https://nas.local/q3.pdf',
     'https://minio.internal/q3.pdf',
     'https://files.lan/q3.pdf',
     'https://box.home.arpa/q3.pdf',
-    'https://NAS.LOCAL./q3.pdf',
+    'https://NAS.LOCAL/q3.pdf',
     'https://minio:9000/q3.pdf',
   ];
+  const NEVER = [
+    'https://127.0.0.1/q3.pdf',
+    'https://169.254.169.254/latest/meta-data',
+    'https://52.95.110.1/q3.pdf',
+    'https://0x7f.1/q3.pdf',
+    'https://2130706433/q3.pdf',
+    'https://[::1]/q3.pdf',
+    'https://[fd00::5]/q3.pdf',
+    'https://[2600:1f18::1]/q3.pdf',
+    'https://localhost/q3.pdf',
+    'https://minio.localhost/q3.pdf',
+    'https://nas.local./q3.pdf',
+  ];
 
-  it.each(PRIVATE_STORAGE)('refuses %s when the server is public', (location) => {
+  it.each([...ON_A_HOME_NETWORK, ...NEVER])('refuses %s when the server is public', (location) => {
     expect(storageAddress(location, PUBLIC_SERVER)).toBeNull();
   });
 
-  it.each(PRIVATE_STORAGE)('allows %s when the server is on a private network too', (location) => {
-    expect(storageAddress(location, HOME_SERVER)).toBe(location);
-    expect(storageAddress(location, 'https://nas.local')).toBe(location);
-  });
-
-  it('takes a public IP literal and public names from either server', () => {
-    for (const location of ['https://52.95.110.1/q3.pdf', 'https://[2600:1f18::1]/q3.pdf']) {
-      expect(storageAddress(location, PUBLIC_SERVER)).toBe(location);
+  it.each(ON_A_HOME_NETWORK)(
+    'allows %s when the server is on a private network too',
+    (location) => {
       expect(storageAddress(location, HOME_SERVER)).toBe(location);
-    }
+      expect(storageAddress(location, 'https://nas.local')).toBe(location);
+    },
+  );
+
+  it.each(NEVER)('refuses %s from a server on a private network as well', (location) => {
+    expect(storageAddress(location, HOME_SERVER)).toBeNull();
   });
 
   it('follows the hop into a private network only for a server on one', async () => {
     const privateStorage = 'https://minio.internal/q3.pdf?X-Amz-Signature=abc';
     const refused = answering(() => reply(302, '', { Location: privateStorage }));
     const error = await failureOf(
-      download(clientWith(refused), FILE_URL, target(), { redirectsToStorage: true }),
+      download(clientWith(refused), FILE_URL, target(), {
+        ...TIMED,
+        redirectsToStorage: true,
+      }),
     );
     expect(error).toMatchObject({ kind: 'server', status: 302 });
     expect(refused.calls).toHaveLength(1);
@@ -189,6 +209,7 @@ describe('storageAddress', () => {
     );
     const own = clientWith(followed, { server: home });
     await download(own, `${HOME_SERVER}/api/documents/generated/q3.pdf`, target(), {
+      ...TIMED,
       redirectsToStorage: true,
     });
     expect(followed.calls.map((call) => call.url)).toEqual([

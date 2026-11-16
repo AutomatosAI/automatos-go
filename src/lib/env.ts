@@ -8,11 +8,14 @@
 // The two addresses a build is given (the hosted API and hosted Studio) are held to a narrow
 // form, because every hosted request and every link into Studio starts from them: https, a host
 // and an optional port, and no user name, password, path, query or fragment. http is accepted in
-// a development build only, for a server on the same network. A server a person pairs their phone
+// a development build only, for a server on the same network or this machine. A server a person pairs their phone
 // with is another matter (src/connect): there http on a home network is allowed on purpose, and
 // isHttpUrl is the check for it.
 
 import { z } from 'zod';
+
+import { isPlainHost } from './host-text';
+import { inIpv4Range, LOOPBACK_IPV4_RANGES, parseIpv4, PRIVATE_IPV4_RANGES } from './ip';
 
 /** True in a development build only (Metro sets it); a release build and a test run are not one. */
 const IS_DEVELOPMENT = typeof __DEV__ !== 'undefined' && __DEV__;
@@ -20,6 +23,10 @@ const IS_DEVELOPMENT = typeof __DEV__ !== 'undefined' && __DEV__;
 const HTTPS = 'https:';
 const HTTP = 'http:';
 const ROOT_PATH = '/';
+const LOCALHOST = 'localhost';
+const IPV6_LOOPBACK = '[::1]';
+const LOCAL_NAME_SUFFIX = '.local';
+const HTTP_BLOCKS = [...PRIVATE_IPV4_RANGES, ...LOOPBACK_IPV4_RANGES];
 /** What never belongs in a server's address: a user name, a query, a fragment, a backslash. */
 const NEVER_IN_AN_ADDRESS: readonly string[] = ['@', '?', '#', '\\'];
 
@@ -45,6 +52,18 @@ function parsedUrl(value: string): URL | null {
   }
 }
 
+/**
+ * Plain http in a development build reaches only this machine or a home network, as pairing allows
+ * it (src/connect/address.ts): a private (RFC 1918) dotted quad, a name ending .local, and the
+ * loopback a simulator reaches its computer by (localhost, 127.0.0.0/8, [::1]). A bearer is never
+ * sent in clear across the internet, not even from a development build.
+ */
+function httpAllowedTo(host: string): boolean {
+  if (host === LOCALHOST || host === IPV6_LOOPBACK || host.endsWith(LOCAL_NAME_SUFFIX)) return true;
+  const quad = parseIpv4(host);
+  return quad !== null && HTTP_BLOCKS.some((range) => inIpv4Range(quad, range));
+}
+
 /** The value as it is used: without the one slash an address may end with. */
 function withoutLastSlash(value: string): string {
   return value.endsWith(ROOT_PATH) ? value.slice(0, -1) : value;
@@ -57,15 +76,19 @@ function withoutLastSlash(value: string): string {
  * so an address that hides one from the parser is refused too. And the value must be written as
  * the parser reads it (its origin): the text itself is what every request is built on, so a form
  * the parser forgives (`https:host`, a tab in the host, capitals, a host in percent signs, the
- * default port written out) is refused.
+ * default port written out) is refused. The host must also be written plainly (host-text.ts
+ * isPlainHost), because the parser that checks it at launch is not the one the phone connects
+ * with; and http, in a development build, reaches only this machine or a home network.
  */
 export function isServerAddress(value: string, development: boolean): boolean {
   if (NEVER_IN_AN_ADDRESS.some((mark) => value.includes(mark))) return false;
   const url = parsedUrl(value);
   if (url === null) return false;
-  const scheme = url.protocol === HTTPS || (development && url.protocol === HTTP);
-  if (!scheme || url.hostname === '' || url.pathname !== ROOT_PATH) return false;
-  return url.origin === withoutLastSlash(value);
+  const http = development && url.protocol === HTTP && httpAllowedTo(url.hostname);
+  if (!(url.protocol === HTTPS || http) || url.hostname === '' || url.pathname !== ROOT_PATH) {
+    return false;
+  }
+  return url.origin === withoutLastSlash(value) && isPlainHost(url.hostname);
 }
 
 const blank = z.literal('');

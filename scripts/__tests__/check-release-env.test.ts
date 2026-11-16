@@ -158,6 +158,12 @@ const ADDRESS_CASES = [
   'javascript:alert(1)',
   'https://',
   'not a url',
+  'https://b\u00fccher.example',
+  'https://\uff11\uff12\uff17.\uff10.\uff10.\uff11',
+  'https://0x7f.0.0.1',
+  'https://2130706433',
+  'https://[::1]:8443',
+  'https://api.automatos.app.',
 ];
 
 describe('a hosted address the app would refuse at launch', () => {
@@ -174,6 +180,7 @@ describe('a hosted address the app would refuse at launch', () => {
       'https://api.automatos.app',
       'https://api.automatos.app/',
       'https://api.automatos.app:8443',
+      'https://[::1]:8443',
     ]);
   });
 

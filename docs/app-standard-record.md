@@ -121,7 +121,7 @@ cell says where the app is today, not where its open branches would put it.
 | 11 Words | Follows | Partly | Follows | Follows |
 | 12 Motion, haptics, sound | Follows | Partly | Follows | Not built |
 | 13 Code | Partly: 13.2, pictures and video (T25) and files sent (T32); 13.6, the backup (T23) | Differs | Follows | Partly |
-| 14 Release | Partly: 14.3, a plugin's order (T24). The audits read one settings folder | Differs | Partly | Not built |
+| 14 Release | Partly: 14.3, a plugin's order (T24); 14.2, a package the audits use not declared in `package.json` (T35). The audits read one settings folder | Differs | Partly | Not built |
 | 15 Android | Follows. Before an Android release: T29 | Partly | Not built | Not built |
 | 16 The design handoff | Partly | Not checked | Not checked | Follows |
 
@@ -165,6 +165,7 @@ The template is held to the standard too. Each line is a rule's "Owed".
 | T32 | A file sent without being held in memory | 13.2 | The fetch implementation reads a request body whole before it sends it, and the file system's own uploader follows a redirect with its headers, so none is built. The 50 MB limit on an attachment bounds it |
 | T33 | One list footer's live region on `useAnnounce`: Older chats' footer, where Load more's failure appears after a tap | 10.2 | Found by the announcement audit (16 Nov), which lists it in `settings/announcements.ts`. Its file changed in parallel, so only the out-of-date line went in with that change |
 | T34 | A line a sighted person can read that says why the slider's thumb stops at its limit | 10.4 | The part past the limit is drawn faded and is decoration: it reads about 1 to 1 on its track, and the contrast test does not hold it. The thumb stops there and the value is said in words, but only a screen reader is told why (`src/ui/Slider.tsx`) |
+| T35 | `yaml`, which the audits use to read workflow files, declared in `package.json` | 14.2 | `settings/audit-imports.ts` lists it with its reason. It arrives today only through other packages (Expo's bundler config and vitest's vite), so it would be gone if they dropped it. Declaring it goes with the next change to `package.json` |
 
 ## Found by a copy while lifting, fixed 16 Nov
 
@@ -186,7 +187,11 @@ standard's Changes.
 | Text a server chooses was trimmed, cut and stripped of its marks with patterns whose work grew with the square of a long run: a megabyte of one kind took over a minute | 13.2a | App A found the first, in a link's slashes; the template's own pass found the rest |
 | Comments gave `space3` as 12 or 6 points. It is 8 | 3.3 | App A |
 | The request path builder turned any value into one segment by encoding it, so a value with an encoded slash would have been decoded by the server into its own path. Every caller checked first; the builder now refuses it itself | 13.2 | The security review of the link fix |
-| The accessibility audit reads the icon library's types, so a copy without that library cannot take it as it is. Not fixed: owed | 3.6, 14.2 | App A |
+| The accessibility audit imported the icon library's types, so a copy without that library could not take it as it was. The set's name is now a setting, and a test holds the audits to importing only what every app has | 3.6, 14.2 | App A |
+| A link's query had no cap of its own on its pairs or on a value, a name given twice was read by its first value, and an id that arrived padded was trimmed and read. A development build let any link the table could not map go on as it came, the app's own scheme among them | 5.2 | App A, by reading its table and the template's side by side |
+| The redirect to storage judged a host from its text, so a host written with a percent-escape, a non-ASCII or full-width character, or in brackets could be judged public while the phone connected somewhere else | 13.2c | App A's security review of its copy of the template's file |
+| The check at launch on the phone accepted a build address with a non-ASCII, full-width or capital host that the build's check refused: the two run on different URL parsers | 13.2b | The template's own pass, from the same finding |
+| The out-of-date test had no list for screens still owed the line, so a copy that had not drawn it everywhere could not take the test as it was | 6.4 | App A |
 
 ## Open for the owner
 
@@ -216,12 +221,15 @@ standard's Changes.
 - A store that cannot open what it kept says so, for anything a person wrote (App C).
 - A test over the syntax tree that holds which modules may load a feature and which may call the
   client (App C).
+- If the template ever adds sign-in through another company, its link table needs an entry for the
+  return address: an exact path, on the app's own scheme only, its query handed to the sign-in
+  library and to nothing else (App A, whose table is the donor). The template has no such sign-in.
 
 ## Actions
 
 | Who | What |
 |---|---|
-| Template | T12, T16, T23 to T26, T28, T29 and T31 to T34. Record each in the standard's Changes as it lands |
+| Template | T12, T16, T23 to T26, T28, T29 and T31 to T35. Record each in the standard's Changes as it lands |
 | App A | `TEMPLATE.md` is written, with a row per rule and the three stages sized. Ship what is waiting first. Nothing from the standard goes into that work |
 | App B | `TEMPLATE.md` is written. Give T4 and T6 back. Bring back and its one short control into line (4.2, 3.2). Rebuild its scene frame on Screen when it is next touched |
 | App C | Build its screens on the Tabs shell with drawn chrome. The Header and TabBar it built to the contract are in the template (T1, T2, 16 Nov): take the template's at the next catch-up, where the pure module is `header-model.ts`. Move its lineage into `TEMPLATE.md` |

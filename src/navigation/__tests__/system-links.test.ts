@@ -104,7 +104,6 @@ describe('appPathForSystemLink: the pairing link opens its screen once it reads 
   it('opens the bare pairing screen (which says the link cannot be used) for a broken one', () => {
     for (const query of [
       `api=${encodeURIComponent(API)}`,
-      `${PAIR_QUERY}&code=WXYZ-2345`,
       `api=${encodeURIComponent('http://api.example.com')}&code=${CODE}`,
       `api=javascript%3Aalert(1)&code=${CODE}`,
       `api=${encodeURIComponent(`${API}/a/../b`)}&code=${CODE}`,

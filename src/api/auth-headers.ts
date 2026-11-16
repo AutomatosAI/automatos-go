@@ -1,11 +1,13 @@
 // The two headers every call carries (D-ONE-CLIENT): `Authorization: Bearer <token>` from the active
 // sign-in provider and `X-Workspace-ID` once the workspace is known. The client sends them, and
-// authHeaders() hands the same pair to native loads that cannot go through the client's fetch
-// (expo-file-system downloads, expo-image sources). Signed out, there are none: a workspace id
-// without a credential means nothing to the server.
+// headersFor(url) hands the same pair to a native load that cannot go through the client's fetch
+// (an expo-image source), and only for an address on the client's own server (url.ts isOnServer,
+// the test the transfer module uses): for any other address, nothing. Signed out, there are none:
+// a workspace id without a credential means nothing to the server.
 
 import { logger } from '../lib/logger';
 import { ApiError, isApiError } from './errors';
+import { isOnServer } from './url';
 
 export const AUTHORIZATION_HEADER = 'Authorization';
 export const WORKSPACE_HEADER = 'X-Workspace-ID';
@@ -38,10 +40,17 @@ export function buildAuthHeaders(token: string | null, workspaceId: string | nul
   return { ...bearer, [WORKSPACE_HEADER]: workspaceId };
 }
 
-/** authHeaders() over the same provider getToken and workspace the client uses. */
-export function createAuthHeaders(
+/**
+ * headersFor(url) over the same server, provider getToken and workspace the client uses: the
+ * headers for an address on that server, and none for any other (no token is even asked for).
+ */
+export function createHeadersFor(
+  apiUrl: string,
   getToken: TokenGetter,
   getWorkspaceId: WorkspaceIdGetter,
-): () => Promise<AuthHeaders> {
-  return async () => buildAuthHeaders(await resolveToken(getToken), getWorkspaceId());
+): (url: string) => Promise<AuthHeaders> {
+  return async (url) => {
+    if (!isOnServer(apiUrl, url)) return {};
+    return buildAuthHeaders(await resolveToken(getToken), getWorkspaceId());
+  };
 }
