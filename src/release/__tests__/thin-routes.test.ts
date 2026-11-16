@@ -130,6 +130,54 @@ export default function Lost() {
     expect(thin(text)).toContain(fault);
   });
 
+  it('passes each shape a const may take: the params, a read of them, one src/ helper given them', () => {
+    expect(
+      thin(`import { useLocalSearchParams } from 'expo-router';
+import { parseThing } from '../src/thing/params';
+import { ThingScreen } from '../src/thing/ThingScreen';
+export default function Thing() {
+  const params = useLocalSearchParams<{ id: string }>();
+  const id = params.id;
+  const tab = params['tab'];
+  const { chat, ...rest } = params;
+  const [first] = useLocalSearchParams().ids;
+  const { chatId } = parseThing(useLocalSearchParams());
+  const again = parseThing(params);
+  return <ThingScreen id={id} tab={tab} chat={chat} rest={rest} first={first} chatId={chatId} again={again} />;
+}`),
+    ).toEqual([]);
+  });
+
+  it.each([
+    ['a conditional', 'const x = a ? b : c();', 'x'],
+    ['arithmetic', 'const n = params.count + 1;', 'n'],
+    ['a call to anything else', 'const now = Date.now();', 'now'],
+    ['a global given the params', 'const id = String(params.id);', 'id'],
+    ['a src/ helper given more than the params', 'const id = idParam(params, 1);', 'id'],
+    ['a src/ helper given something else', 'const id = idParam(params.id);', 'id'],
+    ['a helper not from src/', 'const id = useLocalSearchParams.call(params);', 'id'],
+    ['a read of a helper’s answer', 'const id = idParam(params).value;', 'id'],
+    ['an index worked out', 'const id = params[key];', 'id'],
+    [
+      'a default in a destructuring',
+      'const { id = idParam(params) } = params;',
+      '{ id = idParam(params) }',
+    ],
+    ['a constant of its own', "const id = 'one';", 'id'],
+  ])('refuses a const given %s', (_what, line, name) => {
+    const text = `import { useLocalSearchParams } from 'expo-router';
+import { A } from '../src/a/A';
+import { idParam } from '../src/a/params';
+export default function Route() {
+  const params = useLocalSearchParams();
+  ${line}
+  return <A />;
+}`;
+    expect(thin(text)).toContain(
+      `gives const ${name} more than the params, a read of them or one src/ helper given them`,
+    );
+  });
+
   it('refuses styles, React and the router beyond its params', () => {
     const text = `import { StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';

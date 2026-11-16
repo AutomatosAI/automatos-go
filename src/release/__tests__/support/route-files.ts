@@ -4,7 +4,12 @@
 //   - it imports only from src/ and, from expo-router, only the route's params and Redirect, so no
 //     React, no React Native and no styles;
 //   - the function takes nothing, may name what it reads from the params (const), and returns one
-//     element with no children: a screen imported from src/, or expo-router's Redirect;
+//     element with no children: a screen imported from src/, or expo-router's Redirect. A const is
+//     given one of three shapes, the ones the routes use: the params themselves
+//     (`useLocalSearchParams()`), a plain read of them (a member, an index by a literal, or a
+//     destructuring with no defaults), or one helper imported from src/ given the params and
+//     nothing else (`deliverableIdParam(useLocalSearchParams())`). No conditional, no arithmetic,
+//     no other call;
 //   - no hook is called but the router's useLocalSearchParams, and no function is written inside.
 // Test-only (it lives under __tests__/ and never reaches the bundle).
 
@@ -94,6 +99,93 @@ function returnedElement(statement: ts.Statement | undefined): ts.JsxSelfClosing
   return ts.isJsxSelfClosingElement(value) ? value : null;
 }
 
+function unwrapped(node: ts.Expression): ts.Expression {
+  return ts.isParenthesizedExpression(node) ? unwrapped(node.expression) : node;
+}
+
+/** The names a route has bound to its params so far, and what it imports. */
+type ParamsScope = Readonly<{ imports: Imports; params: ReadonlySet<string> }>;
+
+/** `useLocalSearchParams()`, with no argument. */
+function isParamsCall(node: ts.Expression): boolean {
+  const value = unwrapped(node);
+  return (
+    ts.isCallExpression(value) &&
+    ts.isIdentifier(value.expression) &&
+    value.expression.text === PARAMS_HOOK &&
+    value.arguments.length === 0
+  );
+}
+
+/** The params: the call itself, or a const bound to it. */
+function isParams(node: ts.Expression, scope: ParamsScope): boolean {
+  const value = unwrapped(node);
+  return isParamsCall(value) || (ts.isIdentifier(value) && scope.params.has(value.text));
+}
+
+/** A member of the params (`params.id`), or an index by a literal (`params['id']`). */
+function isParamsRead(node: ts.Expression, scope: ParamsScope): boolean {
+  const value = unwrapped(node);
+  if (ts.isPropertyAccessExpression(value)) return isParams(value.expression, scope);
+  if (!ts.isElementAccessExpression(value)) return false;
+  const index = value.argumentExpression;
+  const literal = ts.isStringLiteralLike(index) || ts.isNumericLiteral(index);
+  return literal && isParams(value.expression, scope);
+}
+
+/** One helper imported from src/, given the params and nothing else. */
+function isHelperOfParams(node: ts.Expression, scope: ParamsScope): boolean {
+  const value = unwrapped(node);
+  if (!ts.isCallExpression(value) || !ts.isIdentifier(value.expression)) return false;
+  const from = scope.imports.get(value.expression.text);
+  const [only, ...more] = value.arguments;
+  const fromSrc = from !== undefined && FROM_SRC.test(from);
+  return fromSrc && only !== undefined && more.length === 0 && isParams(only, scope);
+}
+
+/** A name, or a destructuring that only reads: no default, no computed key, no nested pattern. */
+function isPlainBinding(name: ts.BindingName): boolean {
+  if (ts.isIdentifier(name)) return true;
+  return name.elements.every(
+    (element) =>
+      ts.isOmittedExpression(element) ||
+      (element.initializer === undefined &&
+        ts.isIdentifier(element.name) &&
+        (element.propertyName === undefined || ts.isIdentifier(element.propertyName))),
+  );
+}
+
+function isAllowedConst(declaration: ts.VariableDeclaration, scope: ParamsScope): boolean {
+  const value = declaration.initializer;
+  if (value === undefined || !isPlainBinding(declaration.name)) return false;
+  return isParams(value, scope) || isParamsRead(value, scope) || isHelperOfParams(value, scope);
+}
+
+const constFault = (name: string) =>
+  `gives const ${name} more than the params, a read of them or one src/ helper given them`;
+
+/** Each const that is not one of the three shapes; a name bound to the params is a params too. */
+function constFaults(statements: readonly ts.Statement[], imports: Imports): readonly string[] {
+  const declarations = statements
+    .filter(ts.isVariableStatement)
+    .flatMap((statement) => [...statement.declarationList.declarations]);
+  const start = { params: new Set<string>(), faults: [] as readonly string[] };
+  return declarations.reduce((state, declaration) => {
+    const scope = { imports, params: state.params };
+    const bindsParams =
+      ts.isIdentifier(declaration.name) &&
+      declaration.initializer !== undefined &&
+      isParamsCall(declaration.initializer);
+    const params = bindsParams
+      ? new Set([...state.params, declaration.name.getText()])
+      : state.params;
+    const faults = isAllowedConst(declaration, scope)
+      ? state.faults
+      : [...state.faults, constFault(declaration.name.getText())];
+    return { params, faults };
+  }, start).faults;
+}
+
 function isConst(statement: ts.Statement): boolean {
   return (
     ts.isVariableStatement(statement) &&
@@ -112,8 +204,10 @@ function elementFaults(element: ts.JsxSelfClosingElement | null, imports: Import
 function bodyFaults(fn: ts.FunctionDeclaration, imports: Imports): string[] {
   const statements = fn.body?.statements ?? [];
   const faults = fn.parameters.length > 0 ? ['takes props'] : [];
-  const before = statements.slice(0, -1).filter((statement) => !isConst(statement));
-  faults.push(...before.map(() => 'holds a statement that is not a const'));
+  const before = statements.slice(0, -1);
+  const notConst = before.filter((statement) => !isConst(statement));
+  faults.push(...notConst.map(() => 'holds a statement that is not a const'));
+  faults.push(...constFaults(before.filter(isConst), imports));
   faults.push(...elementFaults(returnedElement(statements[statements.length - 1]), imports));
   const inner = descendants(fn).filter(
     (node) => ts.isArrowFunction(node) || ts.isFunctionExpression(node),

@@ -1,13 +1,19 @@
 // An app's record, TEMPLATE.md, as app-record.test.ts reads it (docs/app-standard.md 'The app's
 // record'): its line naming the template commit and the commit the standard was read at, its
-// 'Kept, removed, changed' table, and its 'Differences from the app standard' table, whose first
-// column cites a rule. Pure over strings (text in, a list of faults out); the test reads the files.
+// 'Kept, removed, changed' table, at least one part with every cell filled, and its 'Differences
+// from the app standard' table, whose first column cites a rule and whose other cells are filled.
+// Pure over strings (text in, a list of faults out); the test reads the files.
 // The standard's rule numbers come from standard-rules.json, which the template writes from its
 // docs/app-standard.md (scripts/generate-standard-rules.mjs) and every copy keeps.
 
 import { z } from 'zod';
 
-import { sectionStartingWith, tableWithColumns, type MarkdownTable } from './markdown';
+import {
+  sectionStartingWith,
+  tableWithColumns,
+  type MarkdownRow,
+  type MarkdownTable,
+} from './markdown';
 
 /** The record's one name, beside package.json. */
 export const RECORD_FILE = 'TEMPLATE.md';
@@ -21,8 +27,8 @@ export const DIFFERENCE_COLUMNS = [
   'Why',
   'Stays, or closes with',
 ] as const;
-/** The cells a difference may never leave blank. */
-const FILLED_COLUMNS = ['What this app does', 'Stays, or closes with'] as const;
+/** The cells a difference may never leave blank (its Rule is held by what it cites). */
+const DIFFERENCE_FILLED = ['What this app does', 'Why', 'Stays, or closes with'] as const;
 
 /** How many of the record's first lines (blank ones not counted) may hold the lineage line. */
 const LINEAGE_WITHIN = 3;
@@ -56,12 +62,15 @@ export function citableIds(rules: StandardRules): ReadonlySet<string> {
 }
 
 export type RecordOptions = Readonly<{
-  /** The standard's own example: a '<…>' stands where a commit goes. */
-  placeholders?: boolean;
+  /**
+   * The standard's own example: a '<…>' stands where a commit goes, and its 'Kept, removed,
+   * changed' table shows its columns with no row. A real record has neither.
+   */
+  example?: boolean;
 }>;
 
 function shaFault(what: string, value: string, shape: RegExp, options: RecordOptions): string[] {
-  if (shape.test(value) || (options.placeholders === true && PLACEHOLDER.test(value))) return [];
+  if (shape.test(value) || (options.example === true && PLACEHOLDER.test(value))) return [];
   return [`${what} '${value}' is not ${shape === FULL_SHA ? 'a 40-character sha' : 'a sha'}`];
 }
 
@@ -104,17 +113,35 @@ function citations(cell: string): string[] {
     .map((each) => each.trim());
 }
 
+/** Each named cell a row leaves blank, as '<where> leaves '<column>' blank'. */
+function blankCells(row: MarkdownRow, columns: readonly string[], where: string): string[] {
+  return columns
+    .filter((column) => (row[column] ?? '').trim() === '')
+    .map((column) => `${where} leaves '${column}' blank`);
+}
+
+/** Every part's row filled in all three cells, and at least one part but in the example. */
+function keptFaults(table: MarkdownTable, options: RecordOptions): string[] {
+  const empty =
+    table.rows.length === 0 && options.example !== true
+      ? [`'## ${KEPT_HEADING}' lists no part`]
+      : [];
+  return [
+    ...empty,
+    ...table.rows.flatMap((row, index) => blankCells(row, KEPT_COLUMNS, `kept ${index + 1}`)),
+  ];
+}
+
 function differenceFaults(table: MarkdownTable, cited: ReadonlySet<string>): string[] {
   return table.rows.flatMap((row, index) => {
     const where = `difference ${index + 1}`;
     const rules = citations(row.Rule ?? '');
     const unknown = rules.filter((rule) => !cited.has(rule));
-    const blank = FILLED_COLUMNS.filter((column) => (row[column] ?? '').trim() === '');
     return [
       ...unknown.map((rule) =>
         rule === '' ? `${where} cites no rule` : `${where} cites '${rule}', which is no rule`,
       ),
-      ...blank.map((column) => `${where} leaves '${column}' blank`),
+      ...blankCells(row, DIFFERENCE_FILLED, where),
     ];
   });
 }
@@ -130,6 +157,7 @@ export function recordFaults(
   return [
     ...lineageFaults(text, options),
     ...kept.faults,
+    ...(kept.table ? keptFaults(kept.table, options) : []),
     ...differences.faults,
     ...(differences.table ? differenceFaults(differences.table, cited) : []),
   ];
