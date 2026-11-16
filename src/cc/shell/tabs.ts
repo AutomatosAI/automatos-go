@@ -7,6 +7,7 @@
 // shows selected. A tap is decided from the live path, not the tab shown: it does nothing only on that
 // tab's own screen.
 
+import { screenPath } from '../../navigation/back';
 import { routes } from '../../navigation/routes';
 import { badgeText } from '../../ui/variants';
 import { joinLabel } from '../../ui/paint';
@@ -25,15 +26,10 @@ export const TAB_HREFS: Readonly<Record<CcTab, string>> = Object.freeze({
   deliverables: routes.cc.deliverables,
 });
 
-/** '/cc/calendar?x=1#y/' → '/cc/calendar'. */
-function bare(pathname: string): string {
-  const path = pathname.split(/[?#]/, 1)[0].trim();
-  return path.length > 1 ? path.replace(/\/+$/, '') : path;
-}
-
 /** The tab a path is, or null for anything else (a ticket, a post, a Deliverable, elsewhere). */
 export function tabFor(pathname: string): CcTab | null {
-  const path = bare(pathname);
+  // '/cc/calendar/?x=1#y' is '/cc/calendar', as the router matches it
+  const path = screenPath(pathname);
   if (path === routes.cc.board) return 'board';
   return CC_TABS.find((tab) => TAB_HREFS[tab] === path) ?? null;
 }

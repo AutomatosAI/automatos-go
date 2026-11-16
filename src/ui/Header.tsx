@@ -1,6 +1,8 @@
 // The one header (the app standard's rule 4.2, decision D3): a bar drawn from the tokens, never
 // the system's. Back, a title and at most two actions. Back goes through the one back hook, which
-// falls back to home when there is nothing behind, and is not drawn on a tab's root. Every word is
+// falls back to home when there is nothing behind, and is drawn only where pressing it would do
+// something: the bar reads the hook's move, one rule's answer (src/navigation/back.ts), and a
+// tab's root (`root`) is one of the cases where it says stay. Every word is
 // the Text primitive and every button the IconButton, so Dynamic Type, contrast, the 44 pt target
 // and each style's dress are the primitives' own: the bar paints no ground of its own and sits on
 // the Screen's. A screen with a large title at the top of its scrolling content passes
@@ -12,7 +14,7 @@ import type { LucideIcon } from 'lucide-react-native';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import { StyleSheet, View } from 'react-native';
 
-import { useGoBack } from '../navigation/use-go-back';
+import { useBack } from '../navigation/use-go-back';
 import { useTokens } from '../styles/theme';
 import { IconButton } from './IconButton';
 import { Text } from './Text';
@@ -55,7 +57,7 @@ export type HeaderProps = {
 
 export function Header({ title, root, actions, collapsing, backFallback }: HeaderProps) {
   const { spacing } = useTokens();
-  const goBack = useGoBack(backFallback);
+  const back = useBack(backFallback, root);
   return (
     <View
       style={[
@@ -67,11 +69,11 @@ export function Header({ title, root, actions, collapsing, backFallback }: Heade
         },
       ]}
     >
-      {showsBack(root) ? (
+      {showsBack(back.move) ? (
         <IconButton
           icon={ChevronLeft}
           accessibilityLabel={UI_COPY.back}
-          onPress={goBack}
+          onPress={back.goBack}
           size={HEADER_BUTTON_SIZE}
         />
       ) : null}
