@@ -110,19 +110,19 @@ cell says where the app is today, not where its open branches would put it.
 |---|---|---|---|---|
 | 1 Tokens | Follows | Differs | Follows | Follows |
 | 2 Type | Follows | Differs | Follows | Follows |
-| 3 Primitives | Partly: three owed | Differs | Follows | Follows |
-| 4 The screen | Partly: Header owed | Differs | Partly | Partly |
-| 5 Navigation | Follows | Differs | Partly | Not built |
-| 6 States | Partly: 6.2, 6.4 | Partly | Partly | Partly |
-| 7 First run and asks | Follows | Partly | Partly | Not built |
-| 8 Settings | Partly: 8.3 | Partly | Partly | Not built |
+| 3 Primitives | Follows | Differs | Follows | Follows |
+| 4 The screen | Partly: the Header is built, the template's own screens are not on it (T26) | Differs | Partly | Partly |
+| 5 Navigation | Follows. The Tabs shell is built and not mounted | Differs | Partly | Not built |
+| 6 States | Partly: 6.4, the out-of-date line on eight screens (T27) | Partly | Partly | Partly |
+| 7 First run and asks | Partly: 7.5, the speech recognition string (T28) | Partly | Partly | Not built |
+| 8 Settings | Partly: 8.4, pictures left in the phone's picture cache (T25) | Partly | Partly | Not built |
 | 9 Meeting an AI | Follows | Partly | Follows | 9.1 only in its first release |
-| 10 Accessibility | Partly: five pairs under AA (T16) | Partly | Follows | Follows |
+| 10 Accessibility | Partly: five pairs under AA (T16), the text field (T30), a spinner and the kind squares (T31) | Partly | Follows | Follows |
 | 11 Words | Follows | Partly | Follows | Follows |
 | 12 Motion, haptics, sound | Follows | Partly | Follows | Not built |
-| 13 Code | Partly: 13.2, file transfers | Differs | Follows | Partly |
-| 14 Release | Partly: 14.2 | Differs | Partly | Not built |
-| 15 Android | Follows | Partly | Not built | Not built |
+| 13 Code | Partly: 13.2, pictures and video (T25) and files sent (T32); 13.6, the backup (T23) | Differs | Follows | Partly |
+| 14 Release | Partly: 14.2 (T9), a plugin's order (T24) | Differs | Partly | Not built |
+| 15 Android | Follows. Before an Android release: T29 | Partly | Not built | Not built |
 | 16 The design handoff | Partly | Not checked | Not checked | Follows |
 
 ## What the template owes
@@ -131,28 +131,38 @@ The template is held to the standard too. Each line is a rule's "Owed".
 
 | | What | Rule | Where it comes from |
 |---|---|---|---|
-| T1 | A Header primitive | 4.2 | App C builds it to an agreed contract. Lifted from there |
-| T2 | The Tabs shell: a TabBar primitive | 5.4 | The same |
-| T3 | Switch and settings Section move into `src/ui/` | 3.1 | They live in one feature of the template today |
+| T1 | **Done, 16 Nov.** A Header primitive: back, a title and at most two actions, a third refused by its type. Back goes through `useGoBack`, whose rule is a pure function | 4.2 | Built to the agreed contract. The template's own screens are not on it yet: T26 |
+| T2 | **Done, 16 Nov.** The Tabs shell: a TabBar primitive and `src/shell/`, the app's tabs passed as data, a tab whose feature is off dropped, a list's faults named by a pure function | 5.4 | Built to the agreed contract. The template is One home and mounts none of it |
+| T3 | **Done, 16 Nov.** Switch, SwitchRow, Section and SectionNote are in `src/ui/` | 3.1 | They lived in one feature, and were copied by hand in others. Every copy now uses them |
 | T4 | **Done, 15 Nov.** A scale builder, so a second type scale is a list of sizes | 2.3 | Lifted from App B, with one addition: it refuses a role under 11 points |
-| T5 | Control sizes read from the theme | 3.5 | New |
+| T5 | **Done, 16 Nov.** Control sizes read from the style: one list for each style, built by `buildControlSizes`, which refuses a pressable under the 44-point target | 3.5 | New. It found the text field, 40 points tall with no slop: T30 |
 | T6 | **Done, 15 Nov.** One contrast test over every text colour and ground, in every palette | 10.4 | Lifted from App B. It found T16, and one style whose accent text could not be read, fixed with it |
 | T7 | **Done, 15 Nov.** The network guard covers `WebSocket`, `EventSource`, `sendBeacon`, other HTTP clients, and the same modules reached by `require()` or `import()` | 13.2 | Lifted from App C |
 | T8 | **Done, 15 Nov.** Inline disabling of a lint rule is refused | 13.5 | Lifted from App C |
 | T9 | One settings file per app that the audits read | 14.2 | New |
 | T10 | A test that `TEMPLATE.md` exists, names a commit and cites only rules that exist | The app's record | New |
-| T11 | A test that walks the words for the named states | 6.4 | Apps A and B each have one for their own fixed words |
-| T12 | The TabBar and Header contract's phone checks: VoiceOver's reading of a tab's position, and the swipe back with a drawn header | 10.7 | Cannot be proved in CI. Added to the phone pass |
-| T13 | A list of licences in About | 8.3 | New. The template has none |
-| T14 | A ninth error kind for a limit reached, carrying when it lifts | 6.2 | The template reads that answer as `server` today |
-| T15 | One transfer module in `src/api/` for files sent and fetched, and the guard on the file system's own download and upload calls outside it | 13.2 | Two features of the template download files on their own today, so the guard follows the module |
+| T11 | **Done, 16 Nov.** A test that walks the words for the named states, and the out-of-date line on the Command Centre's four tabs and the inbox | 6.4 | Apps A and B each have one for their own fixed words. Eight more screens and sheets owe the line: T27 |
+| T12 | The TabBar and Header contract's phone checks, on the first app that mounts the shell: VoiceOver's reading of a tab's position, and the swipe back with a drawn header | 10.7, 5.4 | Cannot be proved in CI. They go into the phone pass with that app |
+| T13 | **Done, 16 Nov.** Settings → About → Licences, its list generated from the lockfile and the installed packages, and a test that the list matches a fresh run | 8.3 | New. The native libraries a native build fetches are not in the list |
+| T14 | **Done, 16 Nov.** A ninth error kind, `limit`: every 429, carrying when the limit lifts, from Retry-After or the body, against a clock given to the client | 6.2 | A 402 stays `server`: no route the template calls answers one for a spent allowance |
+| T15 | **Done, 16 Nov.** One transfer module in `src/api/` writes every fetched file, and the guard refuses the file system's own download and upload calls outside `src/api/` | 13.2 | Both features that downloaded on their own now use it. Files sent are T32; pictures and video, T25 |
 | T16 | Five pairs of text and ground in Studio Light read under AA: the quietest text most of all, at 3.25 to 1 on the page | 10.4 | Found by T6 and listed in the test. The values are automatos-ai's own tokens, copied here and never retuned, so the fix is there. Until it is, text in the accent is held to the 3 to 1 a mark needs and not the 4.5 to 1 text needs: Studio Light's own accent is 4.23 on the page, and a stricter line would turn its links to ink |
 | T17 | **Done, 15 Nov.** Shared code painted the accent colour itself in ten places: a link in an answer, a field's invalid border, the failed state's icon, the text cursor, an unread dot, a calendar dot, a tab's rule, the reason chip and a blocked status's dot. In the one style whose accent is a quiet ground they did not read | 10.4 | Found by the reviews of T6 and of its fix. All of them, and the Text primitive, now read the accent from one lookup that picks a colour that reads on the palette's page and cards |
-| T18 | Tones on the Text primitive for a state and for the two quieter inks, and a scan that refuses a colour given to Text outside `src/ui/` | 2.1, 1.4 | App C. Without them a feature that paints a status word passes Text a colour, which rule 2.1 forbids |
-| T19 | The guards miss remote pictures loaded by address (`SvgUri` and its siblings), the `'use dom'` directive and 4-digit hex colours. The guard test has no case that the client file may not import `expo/fetch` | 13.2, 1.1 | App C |
+| T18 | **Done, 16 Nov.** Text has tones for a state's words, `danger` new among them, and for the two quieter inks, and a state's glyph is `StateGlyph`. A scan refuses a colour given to Text outside `src/ui/` | 2.1, 1.4 | App C. It moved a running or waiting chat line's mark off the raw accent, and the calendar's kind word onto the muted ink. What it found that is not Text is T31 |
+| T19 | **Done, 16 Nov.** The guards refuse remote pictures loaded by address (`SvgUri` and its siblings), the `'use dom'` directive and the DOM web view imports, four-digit hex and more colour forms where a colour goes, and `expo/fetch` anywhere but the transport, the file behind it included. The dependency audit refuses the DOM web view package | 13.2, 1.1, 13.8 | App C. Proved in `scripts/__tests__/eslint-rules*.test.ts`. The colour rule still misses an all-digit four-digit hex held in a constant, and a colour's name outside a colour's place |
 | T20 | **Done, 15 Nov.** Every body the client reads is read under a cap. The transport no longer has a way to read one whole without a limit | 13.2a | Lifted from App C, with the template's own caps and with an oversized error body still mapped by its status |
 | T21 | **Done, 15 Nov.** The address a build is given is held to a bare https address, at build time and again at launch. A server a person pairs their own phone with is a separate rule and may still be plain http on a home network | 13.2b | Lifted from App C |
 | T22 | **Done, 15 Nov.** A redirect is never followed and no cookie is kept. Pairing reads where one redirect pointed, to offer a server's own https address | 13.2c | App C refuses redirects outright. The template also serves people's own servers, so it reads the one case and follows none |
+| T23 | A native step that keeps a folder out of the phone's backup: the encrypted store's, and a downloads folder for an app that needs one | 13.6 | The store's folder is in the backup today. Its key is for this device only, so a backup restored onto another phone cannot be read |
+| T24 | The config plugin that pins the background modes listed first in `app.json` | 14.3 | Native. The change a plugin registers last runs first, so a plugin that pins a list must be listed first. The resolved list is right today. Goes with the next native change |
+| T25 | Pictures and video fetched through the transfer module and drawn from the file | 13.2, 13.2c, 8.4 | The platform's own loaders fetch them today with the bearer attached: a Deliverable's pictures, a social post's pictures and videos. What was shown may stay in the phone's picture cache after leaving. A video would be downloaded before it plays: a decision for the owner |
+| T26 | The template's own screens on the Header, and the three files that write the back rule by hand moved onto `useGoBack` | 4.2 | Each screen would change visibly (most settings screens have no bar: back sits at the top of the scrolling content), so each needs a phone check. The three files are listed in `go-back.test.ts` |
+| T27 | The out-of-date line on the eight screens and sheets that `named-states.test.ts` lists | 6.4 | Found by T11 |
+| T28 | The speech recognition usage string corrected in `app.json` | 7.5 | Native. It says recognition happens on the iPhone, which is not always true. The corrected sentence is in `docs/release/ipa-scan.md` |
+| T29 | Before any Android release: the sign-in library keeps a native copy of its token outside the registry, which sign-out does not remove | 15.1, 8.5 | The template has no Android release yet |
+| T30 | The text field: 40 points tall with no slop, the one control under 44 | 10.1 | Found by T5 |
+| T31 | One spinner that is not Text still paints the raw accent, and some of the calendar's kind squares read under 3 to 1 as marks on dark grounds | 10.4 | Found by T18. The kind colours are the server repository's own values, as T16's are, so that fix is there |
+| T32 | A file sent without being held in memory | 13.2 | The fetch implementation reads a request body whole before it sends it, and the file system's own uploader follows a redirect with its headers, so none is built. The 50 MB limit on an attachment bounds it |
 
 ## Open for the owner
 
@@ -181,7 +191,7 @@ The template is held to the standard too. Each line is a rule's "Owed".
 
 | Who | What |
 |---|---|
-| Template | T1 to T22. Record each in the standard's Changes as it lands |
+| Template | T9, T10, T12, T16 and T23 to T32. Record each in the standard's Changes as it lands |
 | App A | `TEMPLATE.md` is written, with a row per rule and the three stages sized. Ship what is waiting first. Nothing from the standard goes into that work |
 | App B | `TEMPLATE.md` is written. Give T4 and T6 back. Bring back and its one short control into line (4.2, 3.2). Rebuild its scene frame on Screen when it is next touched |
 | App C | Build its screens on the Tabs shell with drawn chrome. Build the Header and TabBar to the contract and hand them over. Move its lineage into `TEMPLATE.md` |

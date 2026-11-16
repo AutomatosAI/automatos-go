@@ -162,8 +162,10 @@ pair beside it, as `src/step-up/check-copy.ts`; the store-copy audit reads both)
   `~19.1.4`, while React Native 0.81.5's renderer requires react 19.1.0 exactly. The lockfile is generated with it under Node 22
   from a clean state, so it carries every platform's optional binaries (CI is linux-x64).
 - **Fingerprint = build quota.** `runtimeVersion.policy: fingerprint`: any native change
-  (a native dependency, a config plugin, `app.json`) changes the fingerprint. On a push to
-  `main`, `.eas/workflows/testflight.yml` looks for a finished `testflight` build with the
+  (a native dependency, a config plugin, `app.json`) changes the fingerprint. The fingerprint
+  reads `app.json`, `eas.json`, the scripts in `package.json`, patches and the config plugins' own
+  files, so a change to any of them, even a new script, makes the next merge a native build. On a
+  push to `main`, `.eas/workflows/testflight.yml` looks for a finished `testflight` build with the
   tree's iOS fingerprint. Found: the merge is JavaScript only and ships as an OTA update on
   channel `testflight`, which TestFlight installs of a build with that fingerprint download on
   launch and run from the next launch. Not found: a native iOS build (from the monthly quota
