@@ -118,41 +118,75 @@ export async function readBytes(
   }
 }
 
-/** The reads of `reader`, empty ones skipped, refused past the cap or a run of empty reads. */
+/** A body that ended short of, or ran past, the exact length its answer declared. */
+export class BodyLengthError extends Error {
+  constructor(declared: number, received: number) {
+    super(`the body was ${received} bytes, not the ${declared} its answer declared`);
+    this.name = 'BodyLengthError';
+  }
+}
+
+/** A Content-Length as a whole number of bytes; null when there is none or it is not one. */
+function declaredLength(contentLength: string | null): number | null {
+  const text = contentLength?.trim() ?? '';
+  return /^\d{1,15}$/.test(text) ? Number(text) : null;
+}
+
+/** Past the exact length, or (at the end) short of it: refused. Nothing when there is none. */
+function checkLength(exact: number | null, size: number, ended: boolean): void {
+  if (exact === null) return;
+  if (size > exact || (ended && size !== exact)) throw new BodyLengthError(exact, size);
+}
+
+/**
+ * The reads of `reader`, empty ones skipped, refused past the cap or a run of empty reads, and,
+ * when `exact` is a length, refused at the read that runs past it or at an end short of it.
+ */
 async function* counted(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   maxBytes: number,
+  exact: number | null,
 ): AsyncGenerator<Uint8Array> {
   let size = 0;
   let emptyReads = 0;
   for (;;) {
     const { done, value } = await reader.read();
-    if (done) return;
+    if (done) break;
     emptyReads = value.byteLength === 0 ? emptyReads + 1 : 0;
     if (emptyReads >= MAX_EMPTY_READS) throw new BodyStalledError();
     size += value.byteLength;
     if (size > maxBytes) throw new BodyTooLargeError(maxBytes);
+    checkLength(exact, size, false);
     if (value.byteLength > 0) yield value;
   }
+  checkLength(exact, size, true);
 }
 
 /**
  * A body as its bytes as they arrive, never more than `maxBytes` in all: a Content-Length over it
  * is refused before any byte is read, a body that grows past it is cancelled at that read, and so
- * is a run of empty reads. Leaving the loop early, or a read that fails, cancels the body too; the
- * reader's lock is released however it ends. Nothing is kept: each part is handed on as it comes.
+ * is a run of empty reads. When `lengthIsExact` (the body is not content-encoded, so its
+ * Content-Length counts the bytes read), a body that ends short of that length or runs past it is
+ * refused too (BodyLengthError): a body cut off with no error of its own is never kept as whole.
+ * Leaving the loop early, or a read that fails, cancels the body too; the reader's lock is released
+ * however it ends. Nothing is kept: each part is handed on as it comes.
  */
 export async function* readParts(
   body: ReadableStream<Uint8Array> | null,
   maxBytes: number,
   contentLength: string | null = null,
+  lengthIsExact = false,
 ): AsyncGenerator<Uint8Array> {
   refuseByLength(body, maxBytes, contentLength);
-  if (!body) return;
+  const exact = lengthIsExact ? declaredLength(contentLength) : null;
+  if (!body) {
+    if (exact) throw new BodyLengthError(exact, 0);
+    return;
+  }
   const reader = body.getReader();
   let finished = false;
   try {
-    yield* counted(reader, maxBytes);
+    yield* counted(reader, maxBytes, exact);
     finished = true;
   } finally {
     // after the end this is not needed; after a refusal, a failure or an early exit it stops the body

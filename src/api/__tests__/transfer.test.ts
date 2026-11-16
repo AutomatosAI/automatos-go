@@ -274,6 +274,16 @@ describe('a download under its cap', () => {
     nothingLeft();
   });
 
+  it('a body that ends short of its Content-Length is the network, and nothing lands', async () => {
+    const transport = answering(() =>
+      partsReply(200, [encode('%PDF')], { 'Content-Length': '4096' }),
+    );
+    const error = await failureOf(download(clientWith(transport), FILE_URL, target()));
+    expect(error).toMatchObject({ kind: 'network' });
+    expect(memoryFs.files.size).toBe(0);
+    nothingLeft();
+  });
+
   it('takes a file at exactly its cap', async () => {
     const transport = answering(() => partsReply(200, [encode('1234'), encode('5678')]));
     await download(clientWith(transport), FILE_URL, target(), { maxBytes: 8 });

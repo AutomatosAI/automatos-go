@@ -6,7 +6,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { BodyTooLargeError } from '../body';
+import { BodyLengthError, BodyTooLargeError } from '../body';
 import type { TransportRequest } from '../transport-types';
 import { streamOf } from './fake-transport';
 
@@ -118,13 +118,30 @@ describe('the real transport', () => {
     expect(new TextDecoder().decode(parts[0])).toBe(BODY);
     answerWith();
     const tooShort = await expoTransport.file(request());
-    const first = tooShort.parts(BYTES.byteLength - 1)[Symbol.asyncIterator]().next();
+    const first = tooShort
+      .parts(BYTES.byteLength - 1)
+      [Symbol.asyncIterator]()
+      .next();
     await expect(first).rejects.toBeInstanceOf(BodyTooLargeError);
     answerWith({ 'Content-Length': String(ROOM + 1) });
     const declared = await expoTransport.file(request());
     await expect(declared.parts(ROOM)[Symbol.asyncIterator]().next()).rejects.toBeInstanceOf(
       BodyTooLargeError,
     );
+  });
+
+  it('file refuses a body whose length is not its Content-Length, unless it is content-encoded', async () => {
+    const read = async (response: Awaited<ReturnType<typeof expoTransport.file>>) => {
+      let size = 0;
+      for await (const part of response.parts(ROOM)) size += part.byteLength;
+      return size;
+    };
+    answerWith({ 'Content-Length': String(BYTES.byteLength) });
+    expect(await read(await expoTransport.file(request()))).toBe(BYTES.byteLength);
+    answerWith({ 'Content-Length': String(BYTES.byteLength + 5) });
+    await expect(read(await expoTransport.file(request()))).rejects.toBeInstanceOf(BodyLengthError);
+    answerWith({ 'Content-Length': '3', 'Content-Encoding': 'gzip' });
+    expect(await read(await expoTransport.file(request()))).toBe(BYTES.byteLength);
   });
 
   it.each(['request', 'stream', 'binary', 'file'] as const)(
