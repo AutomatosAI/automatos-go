@@ -136,42 +136,45 @@ describe('storageAddress', () => {
     }
   });
 
-  const PRIVATE_STORAGE = [
+  const ON_A_HOME_NETWORK = [
     'https://10.0.0.5/q3.pdf',
     'https://172.20.1.1:9000/q3.pdf',
     'https://192.168.1.30/q3.pdf',
-    'https://127.0.0.1/q3.pdf',
-    'https://169.254.169.254/latest/meta-data',
-    'https://0x7f.1/q3.pdf',
-    'https://2130706433/q3.pdf',
-    'https://[::1]/q3.pdf',
-    'https://[fd00::5]/q3.pdf',
-    'https://[fe80::1]/q3.pdf',
-    'https://[::ffff:10.0.0.5]/q3.pdf',
-    'https://localhost/q3.pdf',
-    'https://minio.localhost/q3.pdf',
     'https://nas.local/q3.pdf',
     'https://minio.internal/q3.pdf',
     'https://files.lan/q3.pdf',
     'https://box.home.arpa/q3.pdf',
-    'https://NAS.LOCAL./q3.pdf',
+    'https://NAS.LOCAL/q3.pdf',
     'https://minio:9000/q3.pdf',
   ];
+  const NEVER = [
+    'https://127.0.0.1/q3.pdf',
+    'https://169.254.169.254/latest/meta-data',
+    'https://52.95.110.1/q3.pdf',
+    'https://0x7f.1/q3.pdf',
+    'https://2130706433/q3.pdf',
+    'https://[::1]/q3.pdf',
+    'https://[fd00::5]/q3.pdf',
+    'https://[2600:1f18::1]/q3.pdf',
+    'https://localhost/q3.pdf',
+    'https://minio.localhost/q3.pdf',
+    'https://nas.local./q3.pdf',
+  ];
 
-  it.each(PRIVATE_STORAGE)('refuses %s when the server is public', (location) => {
+  it.each([...ON_A_HOME_NETWORK, ...NEVER])('refuses %s when the server is public', (location) => {
     expect(storageAddress(location, PUBLIC_SERVER)).toBeNull();
   });
 
-  it.each(PRIVATE_STORAGE)('allows %s when the server is on a private network too', (location) => {
-    expect(storageAddress(location, HOME_SERVER)).toBe(location);
-    expect(storageAddress(location, 'https://nas.local')).toBe(location);
-  });
-
-  it('takes a public IP literal and public names from either server', () => {
-    for (const location of ['https://52.95.110.1/q3.pdf', 'https://[2600:1f18::1]/q3.pdf']) {
-      expect(storageAddress(location, PUBLIC_SERVER)).toBe(location);
+  it.each(ON_A_HOME_NETWORK)(
+    'allows %s when the server is on a private network too',
+    (location) => {
       expect(storageAddress(location, HOME_SERVER)).toBe(location);
-    }
+      expect(storageAddress(location, 'https://nas.local')).toBe(location);
+    },
+  );
+
+  it.each(NEVER)('refuses %s from a server on a private network as well', (location) => {
+    expect(storageAddress(location, HOME_SERVER)).toBeNull();
   });
 
   it('follows the hop into a private network only for a server on one', async () => {

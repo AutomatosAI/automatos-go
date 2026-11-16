@@ -1,11 +1,21 @@
-// Whether a host is on a private network, for the storage hop (transfer-request.ts, decided
-// policy): a public server may not point the phone into one. Pure; the IP parsing and the blocks
-// are src/lib/ip.ts's, shared with the server-address rule (src/connect/address.ts). Private is
-// an IP literal in a private (RFC 1918), loopback or link-local block, IPv6 too (::1, ::,
-// fc00::/7, fe80::/10, and an IPv4-mapped address in one of those blocks); localhost and every
-// name under it; a name ending .local, .internal, .lan or .home.arpa; a name of one label, which
-// only a local resolver answers; and any number a URL parser would read as an address but is not
-// a strict dotted quad (0x7f.1, 2130706433), which is never believed to be public.
+// Where the storage hop may lead (transfer-request.ts, decided policy), and whether the app's own
+// server is on a private network. Pure, but for the platform's URL, which reads the address too.
+//
+// A storage address's host is refused first, never classified from a reading the phone's
+// networking stack might not share (src/lib/host-text.ts): only ASCII letters, digits, hyphens and
+// dots in labels of legal length, with an optional numeric port, and the platform's own URL must
+// read the very same host from the same text, or the address is refused (the check is on what will
+// be connected to, not only on what was written). Then, from a public server, storage is a NAME:
+// two labels at least, not numeric in any form, never localhost, .local, .internal, .lan or
+// .home.arpa. From a server on a private network (an install on a home or office network),
+// storage may be any such name on that network, or a strict dotted quad in a private (RFC 1918)
+// block, which is what such a server sends; never the phone itself (localhost, loopback) and never
+// link-local. Nothing bracketed, no IPv6 literal, from either.
+//
+// The server's own host (from the build's address or a pairing, both already held to a strict
+// form) is private when it is an IP literal in a private, loopback or link-local block, IPv6 too
+// (::1, ::, fc00::/7, fe80::/10, an IPv4-mapped address in one of those), localhost or a name
+// under it, a name ending .local, .internal, .lan or .home.arpa, or a name of one label.
 
 import {
   inIpv4Range,
@@ -19,6 +29,7 @@ import {
   PRIVATE_IPV4_RANGES,
   type Ipv4Quad,
 } from '../lib/ip';
+import { comparableHost, plainLabels, readsAsNumber } from '../lib/host-text';
 
 const LOCAL_BLOCKS = [...PRIVATE_IPV4_RANGES, ...LOOPBACK_IPV4_RANGES, ...LINK_LOCAL_IPV4_RANGES];
 const LOCALHOST = 'localhost';
@@ -52,7 +63,10 @@ function isLocalName(name: string): boolean {
   return name === LOCALHOST || PRIVATE_NAME_SUFFIXES.some((suffix) => name.endsWith(suffix));
 }
 
-/** Is `host` (a name, an IPv4 literal or a bracketed IPv6 literal) on a private network? */
+/**
+ * Is the app's own server's `host` (a name, an IPv4 literal or a bracketed IPv6 literal, held to a
+ * strict form where it was set) on a private network?
+ */
 export function isPrivateNetworkHost(host: string): boolean {
   const name = host.toLowerCase().replace(/\.$/, '');
   if (name.startsWith('[')) return isLocalIpv6(name);
@@ -79,9 +93,57 @@ export function hostOfAddress(address: string): string | null {
   return host === '' ? null : host;
 }
 
-/** Whether a storage host may be reached for this server: a private one only from a private one. */
-export function storageHostAllowed(storageHost: string, apiUrl: string): boolean {
-  if (!isPrivateNetworkHost(storageHost)) return true;
+/** host[:port], the port digits only. */
+const AUTHORITY = /^([^:]+)(?::\d{1,5})?$/;
+
+/** The platform's own reading of an address's host (Expo's URL on a phone). */
+function platformHost(address: string): string {
+  return new URL(address).hostname;
+}
+
+/**
+ * A storage address's host, lower-cased, when it is written plainly and the platform's URL reads
+ * the same host from it; null for anything else, a parse that throws included.
+ */
+export function storageHost(
+  address: string,
+  readHost: (address: string) => string = platformHost,
+): string | null {
+  const start = address.indexOf(SCHEME_END);
+  const rest = start < 0 ? '' : address.slice(start + SCHEME_END.length);
+  const end = rest.search(AUTHORITY_END);
+  const host = AUTHORITY.exec(end < 0 ? rest : rest.slice(0, end))?.[1];
+  const labels = host === undefined ? null : plainLabels(host);
+  if (!labels) return null;
+  const ours = labels.join('.');
+  try {
+    return comparableHost(readHost(address)) === ours ? ours : null;
+  } catch {
+    return null; // the platform cannot read it: nothing will connect to it
+  }
+}
+
+function isPhoneItself(name: string): boolean {
+  return name === LOCALHOST || name.endsWith(`.${LOCALHOST}`);
+}
+
+/** A storage host from a server on a private network: a name, or a private dotted quad. */
+function allowedOnPrivateNetwork(host: string, labels: readonly string[]): boolean {
+  if (!readsAsNumber(labels)) return true;
+  const quad = parseIpv4(host);
+  return quad !== null && PRIVATE_IPV4_RANGES.some((range) => inIpv4Range(quad, range));
+}
+
+/**
+ * Whether a storage host (as storageHost read it) may be reached for this server: from a public
+ * server a public name only; from a server on a private network a name or a private dotted quad.
+ */
+export function storageHostAllowed(host: string, apiUrl: string): boolean {
+  const labels = plainLabels(host);
+  if (!labels || isPhoneItself(host)) return false;
   const serverHost = hostOfAddress(apiUrl);
-  return serverHost !== null && isPrivateNetworkHost(serverHost);
+  if (serverHost !== null && isPrivateNetworkHost(serverHost)) {
+    return allowedOnPrivateNetwork(host, labels);
+  }
+  return labels.length >= 2 && !readsAsNumber(labels) && !isLocalName(host);
 }
