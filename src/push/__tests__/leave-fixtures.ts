@@ -14,6 +14,7 @@ import { memoryStorage } from '../../storage/encrypted-storage';
 import { revokeDevice } from '../api';
 import { pushLeaveFor, type LeaveDeps } from '../bind/leave';
 import { PUSH_RECORD_ITEM } from '../config';
+import { learnRowId } from '../registration/attempts';
 import type { PushRecord } from '../registration/record';
 import { createRegistrar } from '../registration/registrar';
 import type { PushSource } from '../registration/state';
@@ -65,6 +66,8 @@ export async function leavingPhone(options: PhoneOptions = {}) {
     registrar,
     store: world.keys.store,
     revoke: (deviceId, signal) => revokeDevice(world.api.client, deviceId, signal),
+    learn: (signal) => learnRowId(world.deps, signal),
+    attempts: world.deps.attempts,
     teardown,
     timeoutMs: options.timeoutMs,
   };
@@ -75,6 +78,7 @@ export async function leavingPhone(options: PhoneOptions = {}) {
     removal: {
       deviceId: async () => null,
       remove: async () => ({ removed: false, status: { kind: 'ask' } }),
+      finish: async () => false,
     },
     leave,
   };

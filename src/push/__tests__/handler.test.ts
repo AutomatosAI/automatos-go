@@ -96,13 +96,22 @@ describe('handleResponse: a reply from the notification', () => {
     expect(run.requests().filter((call) => call.path === ANSWER_PATH)).toHaveLength(1);
   });
 
-  it('handled keys persist: a later launch over the same MMKV does nothing, and stores keys only', async () => {
+  it('handled keys persist: a later launch over the same MMKV does nothing, and stores keys and times only', async () => {
     const storage = memoryStorage();
     await handleResponse(REPLY, world({ script: ANSWERED, storage }).deps);
     const later = world({ script: ANSWERED, storage });
     expect(await handleResponse(REPLY, later.deps)).toBeNull();
     expect(later.requests()).toEqual([]);
-    expect(JSON.parse(storage.items.get(HANDLED_KEYS_ITEM) ?? '[]')).toEqual([`${IOS_ID}:reply`]);
+    expect(JSON.parse(storage.items.get(HANDLED_KEYS_ITEM) ?? '{}')).toEqual({
+      entries: [
+        { key: `${IOS_ID}:reply`, signedAt: NOW_S },
+        {
+          key: `signed:${QUESTION.workspace_id}:42:${NOTIFICATION_ID}:${NOW_S}`,
+          signedAt: NOW_S,
+        },
+      ],
+      floor: null,
+    });
   });
 
   it('422 → already answered; the notification is still read and dismissed', async () => {

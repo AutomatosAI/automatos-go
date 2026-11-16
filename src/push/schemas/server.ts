@@ -168,6 +168,30 @@ const GrantIdRows = z.array(z.unknown()).transform((items): string[] =>
 
 export const pendingQuestionsSchema = z.object({ grants: GrantIdRows });
 
+/**
+ * The same list, read for a notification Reply under an agent's title (inbound/confirm-sender.ts):
+ * of each grant only its id, its status, its words and the name of the agent that asked
+ * (owner.agent.name: the asker, else the agent the call ran as). A row without them is left out.
+ */
+const AskedQuestionRow = z.object({
+  id: z.number().int().positive(),
+  status: Text,
+  question_md: z.string(),
+  owner: z
+    .object({ agent: z.object({ name: Text }).nullable().catch(null) })
+    .nullable()
+    .catch(null),
+});
+
+const AskedQuestionRows = z.array(z.unknown()).transform((items) =>
+  items.flatMap((item) => {
+    const parsed = AskedQuestionRow.safeParse(item);
+    return parsed.success ? [parsed.data] : [];
+  }),
+);
+
+export const askedQuestionsSchema = z.object({ grants: AskedQuestionRows });
+
 /** A stale check needs only that the record is there and what it is now. */
 export const ticketCheckSchema = z.object({ id: z.number().int(), status: Text });
 export const socialPostCheckSchema = z.object({ id: z.string().min(1), status: Text });

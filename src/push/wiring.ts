@@ -29,11 +29,17 @@ import type { NotificationsPort } from './platform/expo';
 import { promptMemoryOver, type PromptMemory } from './prompt/memory';
 import type { DeviceSource } from './registration/device-facts';
 import type { PushKeyStore } from './registration/key-store';
+import {
+  learnRowId,
+  registrationAttemptsOver,
+  type RegistrationAttempts,
+} from './registration/attempts';
 import { askPermission } from './registration/permission';
 import { recoveryLogOver } from './registration/recovery-log';
-import type { RegistrationOutcome } from './registration/register';
+import type { RegisterDeps, RegistrationOutcome } from './registration/register';
 import { createRegistrar, type Registrar } from './registration/registrar';
 import { removalHoldOver, type RemovalHold } from './registration/removal-hold';
+import { removalOwedOver, type RemovalOwed } from './registration/removal-owed';
 import type { PermissionState } from './registration/state';
 import { registrationSessionOf, responseSessionOf, type PushSession } from './session';
 import type { Sha256 } from './signature/hmac';
@@ -103,26 +109,28 @@ export function reportingRegistrar(
     },
     latest: registrar.latest,
     close: registrar.close,
+    exclusive: registrar.exclusive,
   });
 }
 
-function registrarFor(
+/** What the session's registrar runs over; the leave learns a lost registration's row over it. */
+function registrationFor(
   input: WiringInput,
   natives: PushNatives,
   storage: KeyValueStorage,
   hold: RemovalHold,
-) {
-  const registrar = createRegistrar({
+): RegisterDeps {
+  return Object.freeze({
     session: registrationSessionOf(input.session, input.workspaceId),
     client: input.client,
     port: natives.port,
     device: natives.device,
     store: natives.store,
     recoveries: recoveryLogOver(storage),
+    attempts: registrationAttemptsOver(storage),
     hold,
     now: natives.now,
   });
-  return reportingRegistrar(registrar, input.onOutcome);
 }
 
 type Shared = Readonly<{ handled: HandledStore; refresh: () => void; taps: TapLog }>;
@@ -147,7 +155,13 @@ function responsesFor(
   });
 }
 
-type RemovalParts = Readonly<{ hold: RemovalHold; registrar: Registrar; teardown: TeardownDeps }>;
+type RemovalParts = Readonly<{
+  hold: RemovalHold;
+  registrar: Registrar;
+  teardown: TeardownDeps;
+  attempts: RegistrationAttempts;
+  owed: RemovalOwed;
+}>;
 
 function scopeOf(input: WiringInput) {
   return Object.freeze({
@@ -166,17 +180,26 @@ function removalFor(input: WiringInput, natives: PushNatives, parts: RemovalPart
   });
 }
 
-type LeavingParts = Readonly<{ registrar: Registrar; teardown: TeardownDeps }>;
+type LeavingParts = Readonly<{
+  registrar: Registrar;
+  teardown: TeardownDeps;
+  registration: RegisterDeps;
+  owed: RemovalOwed;
+}>;
 
 /** The session's leave, its expiry handler and the leftover check (bind/leave.ts, US-014i). */
 function leavingFor(input: WiringInput, natives: PushNatives, parts: LeavingParts) {
   const { source, serverOrigin } = input.session;
   const leave = pushLeaveFor({
-    ...parts,
+    registrar: parts.registrar,
+    teardown: parts.teardown,
     source,
     scope: scopeOf(input),
     store: natives.store,
     revoke: (deviceId, signal) => revokeDevice(input.client, deviceId, signal),
+    learn: (signal) => learnRowId(parts.registration, signal),
+    attempts: parts.registration.attempts,
+    owed: parts.owed,
   });
   return Object.freeze({
     leave,
@@ -194,7 +217,9 @@ export function pushWiringFor(input: WiringInput, natives: PushNatives): PushWir
   const responses = responsesFor(input, natives, { handled, refresh, taps });
   const prompt = promptMemoryOver(storage);
   const hold = removalHoldOver(storage);
-  const registrar = registrarFor(input, natives, storage, hold);
+  const owed = removalOwedOver(storage);
+  const registration = registrationFor(input, natives, storage, hold);
+  const registrar = reportingRegistrar(createRegistrar(registration), input.onOutcome);
   const teardown: TeardownDeps = Object.freeze({
     store: natives.store,
     port: natives.port,
@@ -215,7 +240,13 @@ export function pushWiringFor(input: WiringInput, natives: PushNatives): PushWir
     }),
     prompt,
     teardown,
-    removal: removalFor(input, natives, { hold, registrar, teardown }),
-    ...leavingFor(input, natives, { registrar, teardown }),
+    removal: removalFor(input, natives, {
+      hold,
+      registrar,
+      teardown,
+      attempts: registration.attempts,
+      owed,
+    }),
+    ...leavingFor(input, natives, { registrar, teardown, registration, owed }),
   });
 }

@@ -2,7 +2,14 @@
 // notification response → exactly one honest outcome. parse (parse.ts) → handled once
 // (handled-store.ts) → the push record's key (registration/key-store.ts) → verifyPushSignature →
 // intentFor → act. A reply posts its answer once (answer.ts) and lands on Questions with the
-// server's result; Open and a tap open the link's screen after its stale check (links/stale.ts);
+// server's result, only when its notification showed the signed question and nothing else
+// (shown.ts, intent.ts), its title is Auto's own or names the agent the server says asked
+// (confirm-sender.ts, read first), and its signed payload was never replied to before (dedupe.ts
+// signedReplyKey, claimed in the same store just before the send, so a reply that is not posted
+// never uses it up); otherwise it opens the question with nothing sent. Each claim keeps the time
+// its push was signed, so one signed before the newest dropped from the list counts as handled.
+// Open and a tap open the link's screen after its stale check (links/stale.ts), acting on the
+// signed payload only, never the words shown;
 // anything else opens the notifications inbox (the push's own row first), or the question, with
 // nothing done (outcomes.ts): a tap never lands on home with nothing to show. A tap on an approval's
 // push whose grant still waits also opens its approval sheet over that screen (PRD-268 US-G08),
@@ -30,7 +37,8 @@ import { parsePushData, type PushPayload } from '../schemas/payload';
 import type { Sha256 } from '../signature/hmac';
 import { checkPushSignature, type SignatureCheck } from '../signature/verify';
 import { sendAnswer, settlesQuestion } from './answer';
-import { responseKey } from './dedupe';
+import { confirmSender } from './confirm-sender';
+import { responseKey, signedTimeOf } from './dedupe';
 import type { HandledStore } from './handled-store';
 import { intentFor, type PushIntent } from './intent';
 import {
@@ -138,9 +146,9 @@ function record(deps: HandlerDeps, handled: Handled | null, repeat: TapReport | 
 }
 
 /** Marked once now; false when it was handled before. A store that throws lets it through. */
-function firstTime(handled: HandlerDeps['handled'], key: string): boolean {
+function firstTime(handled: HandlerDeps['handled'], key: string, signedAt: number | null): boolean {
   try {
-    return handled.claim(key);
+    return handled.claim(key, signedAt);
   } catch {
     logger.warn('[push] could not check whether a notification was handled');
     return true;
@@ -266,6 +274,53 @@ function openApproval(deps: HandlerDeps, sheet: SheetTarget): void {
   }
 }
 
+/** What act() read for a response: its event, its payload, the check's word and the role. */
+type Seen = Readonly<{
+  event: ReadableEvent;
+  payload: PushPayload | null;
+  verification: Verification;
+  role: WorkspaceRole | null;
+}>;
+
+const REPLIED_BEFORE: Intent<'neutral'> = Object.freeze({ kind: 'neutral', reason: 'replayed' });
+
+/** Nothing done: the inbox or the question, its line, and the diagnostics' words. */
+function neutralShown(deps: HandlerDeps, intent: Intent<'neutral'>, seen: Seen): Handled {
+  const { event, payload, verification, role } = seen;
+  const context = {
+    role,
+    focus: payload?.notification_id ?? null,
+    replied: event.action === REPLY_ACTION_ID,
+  };
+  return show(deps, neutralOutcome(intent, context), {
+    kind: 'neutral',
+    reason: intent.reason,
+    detail: intent.reason === 'unverified' ? verification : null,
+    linkType: payload?.link_type,
+  });
+}
+
+/** A title naming an agent is confirmed by the server before the reply posts (confirm-sender.ts). */
+async function answerConfirmed(
+  intent: Intent<'answer'>,
+  seen: Seen,
+  deps: HandlerDeps,
+): Promise<Handled> {
+  const check = intent.confirm
+    ? await confirmSender(intent.confirm, intent.grantId, deps.checks)
+    : 'confirmed';
+  if (check !== 'confirmed') {
+    return neutralShown(deps, Object.freeze({ kind: 'neutral', reason: check }), seen);
+  }
+  // claimed now, in the same turn as the send: a reply that is not posted never uses it up, and
+  // the same signed payload sent again under a new identifier posts nothing more
+  const signedAt = seen.payload?.iat ?? null;
+  if (!firstTime(deps.handled, intent.once, signedAt)) {
+    return neutralShown(deps, REPLIED_BEFORE, seen);
+  }
+  return answer(intent, seen.event, deps);
+}
+
 async function act(event: ReadableEvent, deps: HandlerDeps): Promise<Handled> {
   const payload = parsePushData(event.data);
   const verification = await verificationOf(payload, deps);
@@ -281,26 +336,14 @@ async function act(event: ReadableEvent, deps: HandlerDeps): Promise<Handled> {
     '[push] notification action',
     intent.kind === 'neutral' ? intent.reason : intent.kind,
   );
+  const seen: Seen = { event, payload, verification, role };
   switch (intent.kind) {
     case 'answer':
-      return answer(intent, event, deps);
+      return answerConfirmed(intent, seen, deps);
     case 'open':
       return open(intent, deps);
     case 'neutral':
-      return show(
-        deps,
-        neutralOutcome(intent, {
-          role,
-          focus: payload?.notification_id ?? null,
-          replied: event.action === REPLY_ACTION_ID,
-        }),
-        {
-          kind: 'neutral',
-          reason: intent.reason,
-          detail: intent.reason === 'unverified' ? verification : null,
-          linkType: payload?.link_type,
-        },
-      );
+      return neutralShown(deps, intent, seen);
   }
 }
 
@@ -313,6 +356,21 @@ async function handle(event: ReturnType<typeof fromResponse>, deps: HandlerDeps)
   return act(event, deps);
 }
 
+/** The time the response's claim keeps (dedupe.ts signedTimeOf); null when the clock fails. */
+function signedTimeFor(event: ReadableEvent, deps: HandlerDeps): number | null {
+  try {
+    return signedTimeOf(parsePushData(event.data), deps.nowSeconds());
+  } catch {
+    logger.warn("[push] could not read the phone's clock for a notification");
+    return null;
+  }
+}
+
+/** Claimed now, with the time its push was signed; false when it was handled before. */
+function firstResponse(event: ReadableEvent, deps: HandlerDeps): boolean {
+  return firstTime(deps.handled, responseKey(event), signedTimeFor(event, deps));
+}
+
 /** One response (a tap or an action on a notification) → its one outcome; null when seen before. */
 export async function handleResponse(
   response: unknown,
@@ -320,7 +378,7 @@ export async function handleResponse(
 ): Promise<HandledOutcome | null> {
   // read and claimed before the first await: a second delivery of it, however soon, finds the claim
   const event = fromResponse(response);
-  if (event.kind === 'readable' && !firstTime(deps.handled, responseKey(event))) {
+  if (event.kind === 'readable' && !firstResponse(event, deps)) {
     record(deps, null, { kind: 'unhandled', reason: 'repeat' });
     return null;
   }

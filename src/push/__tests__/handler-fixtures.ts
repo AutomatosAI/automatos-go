@@ -31,6 +31,8 @@ export const NOW_S = 1_792_540_800;
 export const ANSWER_PATH = '/api/v1/approval-grants/42/answer';
 export const READ_PATH = `/api/notifications/${NOTIFICATION_ID}/read`;
 export const REPLY_TEXT = 'Yes, ship it';
+/** The agent the server says asked the question. */
+export const ASKER = 'Ops Agent';
 
 type Fields = SignedFields & { readonly v: number };
 
@@ -70,11 +72,16 @@ export function signed(fields: Fields, key: string = PHONE_KEY) {
   return { ...fields, sig };
 }
 
+/** The title the server sets on a push no agent is named on (English badge). */
+export const SERVER_TITLE = 'Auto · AI';
+
 export type ResponseOptions = {
   readonly userText?: string;
   readonly identifier?: string;
-  readonly title?: string;
+  readonly title?: string | null;
+  readonly subtitle?: string | null;
   readonly body?: string;
+  readonly attachments?: readonly unknown[];
 };
 
 /** A response as expo-notifications 0.32.17 hands it over on iOS. */
@@ -85,8 +92,10 @@ export function response(data: unknown, actionIdentifier: string, options: Respo
       request: {
         identifier: options.identifier ?? IOS_ID,
         content: {
-          title: options.title ?? 'Auto needs an answer',
+          title: options.title === undefined ? SERVER_TITLE : options.title,
+          subtitle: options.subtitle ?? null,
           body: options.body ?? 'Ship the Lisbon deck?',
+          attachments: options.attachments ?? [],
           data,
           categoryIdentifier: 'automatos.question.3',
         },
@@ -112,7 +121,7 @@ export function received(
     request: {
       identifier: IOS_ID,
       content: {
-        title: text.title ?? 'Auto needs an answer',
+        title: text.title ?? SERVER_TITLE,
         body: text.body ?? 'Ship the Lisbon deck?',
         data,
         categoryIdentifier: category,
@@ -191,6 +200,8 @@ export const OPEN_CHECKS: StaleChecks = Object.freeze({
   getChat: async () => ({ id: 'chat' }),
   grantPlaces: async () => [{ id: 77, details: { conversation_id: CARD_CHAT_ID } }],
   missionPlace: async (id: string) => ({ id, config: { origin_chat_id: CARD_CHAT_ID } }),
+  /** The question as the server has it: open, the signed words, asked by ASKER. */
+  askedQuestion: async () => ({ open: true, words: QUESTION_FIELDS.question ?? '', asker: ASKER }),
 });
 
 export type WorldOptions = {
