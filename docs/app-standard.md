@@ -424,11 +424,14 @@ error. What the app holds to prove who is asking goes only to the address it was
 carries a cookie or stores one. An app that lets a person pair with a server of their own may read
 where one such answer pointed, to offer that same server's https address, and nothing else. One
 exception: a download marked as one whose route answers with a redirect to storage follows that
-redirect once, only to an https address, and carries no header at all. The platform's own picture
-and video loaders are not under this rule yet. Template: the request policy in
-`src/api/transport.ts`, `src/api/transfer-request.ts`, `src/connect/https-twin.ts`. Held by:
-`src/api/__tests__/transport.test.ts`, `client-redirect.test.ts`, `transfer.test.ts`,
-`src/connect/__tests__/https-twin.test.ts`.
+redirect once, only to an https address, and carries no header at all. A server on a public
+address cannot point that one step into a private network; a server on a home or office network
+may, since it is the same network. What storage answers is never read as the server's: its
+refusals sign no one out, and its address is kept on no error. The platform's own picture and
+video loaders are not under this rule yet. Template: the request policy in
+`src/api/transport.ts`, `src/api/transfer-request.ts`, `src/api/private-host.ts`,
+`src/connect/https-twin.ts`. Held by: `src/api/__tests__/transport.test.ts`,
+`client-redirect.test.ts`, `transfer-redirect.test.ts`, `src/connect/__tests__/https-twin.test.ts`.
 
 **13.2d An opened stream has limits. (Must)** An idle time (90 seconds for the live events, which
 carry a heartbeat every 20 seconds; 15 minutes for a chat turn, which has none), a cap on one line
