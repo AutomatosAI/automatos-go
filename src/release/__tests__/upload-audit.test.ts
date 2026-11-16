@@ -1,6 +1,6 @@
 // R09 as a test that keeps running in CI: a photo leaves the phone without its location. (a) The
 // whole product tree, comments removed, is scanned for every way a photo or a file could be got,
-// redrawn or sent; each file found is in support/uploads.ts's explicit list with exactly its
+// redrawn or sent; each file found is in settings/upload-audit.ts's explicit list with exactly its
 // markers, so a second upload path fails with its path. (b) needsReencode marks every photo type,
 // typed or known by its extension only, and no document. (c) The pipeline from what a picker hands
 // over to the bytes POSTed, with expo-image-manipulator, expo-file-system and the client faked:
@@ -16,9 +16,10 @@ import type { ApiClient } from '../../api/client';
 import { needsReencode, reencodeTarget } from '../../chat/attachments/attachments';
 import { pickedDocuments, pickedPhotos, type PickedFile } from '../../chat/attachments/picked';
 import { CHAT_ROUTES } from '../../chat/routes';
+import { UPLOAD_PATHS } from './settings/upload-audit';
 import { stripComments, codeOf } from './support/code';
 import { productFiles, readRepoFile } from './support/tree';
-import { MARKER_HINT, UPLOAD_MARKERS, UPLOAD_PATHS, markersIn } from './support/uploads';
+import { MARKER_HINT, UPLOAD_MARKERS, markersIn } from './support/uploads';
 
 // ── (a) the scan ─────────────────────────────────────────────────────────────────────────────
 

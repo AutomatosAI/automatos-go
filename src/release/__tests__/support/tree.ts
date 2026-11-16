@@ -1,15 +1,17 @@
 // The product tree the release audits read (KR4): every .ts and .tsx file the app ships, from the
-// repository itself, never from a module import. Test-only (node:fs and node:path): it lives under
-// __tests__/ so no screen can import it and it never reaches the bundle.
+// repository itself, never from a module import. Which folders those are, and the package the
+// repository must be, are the app's settings (settings/tree.ts, settings/identity.ts); a product
+// folder outside the repository is read through its path relative to it. Test-only (node:fs and
+// node:path): it lives under __tests__/ so no screen can import it and it never reaches the bundle.
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
-const PACKAGE_NAME = 'automatos-go';
-const PRODUCT_DIRS = ['src', 'app'] as const;
+import { APP_IDENTITY } from '../settings/identity';
+import { AUDIT_TREE, type AuditTree } from '../settings/tree';
+
 const SOURCE = /\.tsx?$/;
 const TEST_FILE = /\.test\.tsx?$/;
-const VENDORED_WEB = 'src/core/web/';
 const TEST_DIRS = ['__tests__', '__fixtures__'];
 
 /** The repository root: the nearest folder at or above process.cwd() with a package.json. */
@@ -20,8 +22,10 @@ export function repoRoot(): string {
 function findRoot(dir: string, start: string): string {
   const name = packageName(dir);
   if (name !== undefined) {
-    if (name !== PACKAGE_NAME) {
-      throw new Error(`${dir}/package.json is '${name}', not ${PACKAGE_NAME}: run from the repo`);
+    if (name !== APP_IDENTITY.packageName) {
+      throw new Error(
+        `${dir}/package.json is '${name}', not ${APP_IDENTITY.packageName}: run from the repo`,
+      );
     }
     return dir;
   }
@@ -39,8 +43,7 @@ function packageName(dir: string): string | undefined {
 }
 
 /** Every file under a repo-relative folder, as sorted repo-relative posix paths. */
-export function walkFiles(relDir: string): string[] {
-  const root = repoRoot();
+export function walkFiles(relDir: string, root: string = repoRoot()): string[] {
   const walk = (rel: string): string[] =>
     readdirSync(path.join(root, rel), { withFileTypes: true }).flatMap((entry) => {
       const child = path.posix.join(rel, entry.name);
@@ -50,25 +53,31 @@ export function walkFiles(relDir: string): string[] {
   return walk(relDir).sort();
 }
 
-/** True for a .ts/.tsx file the app ships: under src/ or app/, not vendored web code, not a test. */
-export function isProductFile(relPath: string): boolean {
-  if (!PRODUCT_DIRS.some((dir) => relPath.startsWith(`${dir}/`))) return false;
+const under = (relPath: string, folders: readonly string[]) =>
+  folders.some((folder) => relPath.startsWith(`${folder}/`));
+
+/** True for a .ts/.tsx file the app ships: in a product folder, not vendored code, not a test. */
+export function isProductFile(relPath: string, tree: AuditTree = AUDIT_TREE): boolean {
+  if (!under(relPath, tree.productFolders)) return false;
   if (!SOURCE.test(relPath) || TEST_FILE.test(relPath)) return false;
-  if (relPath.startsWith(VENDORED_WEB)) return false;
+  if (under(relPath, tree.vendoredFolders)) return false;
   const folders = relPath.split('/').slice(0, -1);
   return !folders.some((folder) => TEST_DIRS.includes(folder));
 }
 
-/** Every product .ts/.tsx under src/ and app/ (src/core/web, tests and fixtures excluded). */
-export function productFiles(): string[] {
-  return PRODUCT_DIRS.flatMap((dir) => walkFiles(dir))
-    .filter(isProductFile)
+/** Every product .ts/.tsx in the product folders (vendored code, tests and fixtures excluded). */
+export function productFiles(root: string = repoRoot(), tree: AuditTree = AUDIT_TREE): string[] {
+  return tree.productFolders
+    .flatMap((dir) => walkFiles(dir, root))
+    .filter((file) => isProductFile(file, tree))
     .sort();
 }
 
-/** Every feature's copy module: each strings.ts under src/. */
-export function stringsModules(): string[] {
-  return productFiles().filter((file) => file.startsWith('src/') && file.endsWith('/strings.ts'));
+/** Every feature's copy module: each strings.ts in a copy folder. */
+export function stringsModules(root: string = repoRoot(), tree: AuditTree = AUDIT_TREE): string[] {
+  return productFiles(root, tree).filter(
+    (file) => under(file, tree.copyFolders) && file.endsWith('/strings.ts'),
+  );
 }
 
 /** A copy module Metro picks by platform: its iPhone default and its .android.ts / .ios.ts twin. */
@@ -79,14 +88,14 @@ const PLATFORM_COPY = /\/[a-z0-9-]+-copy(\.android|\.ios)?\.ts$/;
  * check-copy.android.ts), whose words a strings.ts builds its sentences from, so the audit reads them
  * where they are written.
  */
-export function copyModules(): string[] {
-  const platform = productFiles().filter(
-    (file) => file.startsWith('src/') && PLATFORM_COPY.test(file),
+export function copyModules(root: string = repoRoot(), tree: AuditTree = AUDIT_TREE): string[] {
+  const platform = productFiles(root, tree).filter(
+    (file) => under(file, tree.copyFolders) && PLATFORM_COPY.test(file),
   );
-  return [...stringsModules(), ...platform];
+  return [...stringsModules(root, tree), ...platform];
 }
 
 /** One file's text, by repo-relative path. */
-export function readRepoFile(relPath: string): string {
-  return readFileSync(path.join(repoRoot(), relPath), 'utf8');
+export function readRepoFile(relPath: string, root: string = repoRoot()): string {
+  return readFileSync(path.join(root, relPath), 'utf8');
 }

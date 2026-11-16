@@ -1,7 +1,8 @@
-// The phrases the app's copy never uses (R12–R14), each list with the rule it enforces, the
-// ALLOWED true negatives (each an exact file and text, reviewed, with its reason), and the
+// The phrases the app's copy never uses (R12–R14), each list with the rule it enforces, and the
 // minimum-age statements (R16). store-copy.test.ts reads every strings module and every product
-// .tsx's literal text (copy-text.ts) against them. Every pattern ignores case.
+// .tsx's literal text (copy-text.ts) against them; its ALLOWED true negatives (each an exact file
+// and text, reviewed, with its reason) are the app's, in settings/store-copy.ts. Every pattern
+// ignores case.
 
 export type CopyRuleId = 'SIGNUP' | 'BILLING' | 'DELETION' | 'DATA_CLAIMS';
 
@@ -68,31 +69,6 @@ export const DATA_CLAIMS: CopyRule = {
 };
 
 export const FORBIDDEN_COPY: readonly CopyRule[] = [SIGNUP, BILLING, DELETION, DATA_CLAIMS];
-
-export type AllowedCopy = Readonly<{
-  file: string;
-  text: string;
-  rule: CopyRuleId;
-  reason: string;
-}>;
-
-/** True negatives: the exact text, where it is, the rule it trips and why it keeps the rule. */
-export const ALLOWED: readonly AllowedCopy[] = [
-  {
-    file: 'src/styles/strings.ts',
-    text: 'Can you make me a shortlist under £700?',
-    rule: 'BILLING',
-    reason:
-      "The look picker's sample conversation (US-016h): a person asks Auto for laptops within a budget. The app prices and sells nothing, and the line names no plan, credit or price of its own (D8).",
-  },
-  {
-    file: 'src/voice/strings.ts',
-    text: 'Download the ${…} speech model to talk to Auto. It stays on your phone.',
-    rule: 'DATA_CLAIMS',
-    reason:
-      "Android's offline speech model (A6 quick-ask): 'It' is the downloaded model, which is stored on the phone. The sentence claims nothing about the person's words, which go to Auto as typed words do (D70).",
-  },
-];
 
 /** The rules a piece of copy breaks: each rule once, with the first phrase that matched. */
 export function forbiddenIn(text: string): { rule: CopyRuleId; phrase: string }[] {

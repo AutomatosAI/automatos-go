@@ -20,7 +20,7 @@ screens themselves can only be checked on a phone. That is this owner step.
 
 The Text primitive cannot be told to stop scaling: `allowFontScaling` is not one of its props.
 Three exceptions are listed, each with its reason, in
-`src/release/__tests__/support/a11y-allowed.ts`: the header's menu button (its badge sits beside
+`src/release/__tests__/settings/a11y-audit.ts`: the header's menu button (its badge sits beside
 the icon), HUD's menu square (part of HUD's command row) and Lost's big '404' (a decoration hidden
 from VoiceOver, with the same meaning in text under it).
 

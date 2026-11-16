@@ -1,9 +1,9 @@
 // The way a photo could leave the phone (R09), as the upload audit reads it: the markers of code
 // that gets a photo or a file, redraws one, builds or carries a multipart body, names the
-// attachments route or reads a file as text a JSON body could carry, and the explicit list of the
-// product files allowed each marker. A product file whose code (comments removed) shows a marker
-// the list does not give it fails the audit with its path. Markers no file is given are allowed
-// nowhere: a second way out would have to use one of them.
+// attachments route or reads a file as text a JSON body could carry. The explicit list of the
+// product files allowed each marker is the app's (settings/upload-audit.ts). A product file whose
+// code (comments removed) shows a marker the list does not give it fails the audit with its path.
+// Markers no file is given are allowed nowhere: a second way out would have to use one of them.
 
 export type UploadMarker = Readonly<{ id: string; pattern: RegExp; what: string }>;
 
@@ -75,59 +75,6 @@ export const UPLOAD_MARKERS: readonly UploadMarker[] = [
     id: 'profile-image',
     pattern: /\bsetProfileImage\b/,
     what: "uploads a profile photo through Clerk's own API",
-  },
-];
-
-export type UploadPath = Readonly<{ file: string; markers: readonly string[]; reason: string }>;
-
-/** Every product file on a photo's way out, and exactly the markers each is allowed. */
-export const UPLOAD_PATHS: readonly UploadPath[] = [
-  {
-    file: 'src/chat/attachments/upload.ts',
-    markers: [
-      'builds-multipart',
-      'form-data',
-      'attachments-call',
-      'post-attachment',
-      'send-attachment',
-      'image-manipulator',
-    ],
-    reason:
-      'the one upload (A2 US-009b): sendAttachment redraws every image with expo-image-manipulator (prepareForUpload), then postAttachment POSTs the redrawn copy as the multipart `file` part',
-  },
-  {
-    file: 'src/chat/attachments/use-attachments.ts',
-    markers: ['send-attachment'],
-    reason:
-      "the composer's attachments hook: every picked file goes out through sendAttachment, never postAttachment",
-  },
-  {
-    file: 'src/chat/attachments/pickers.ts',
-    markers: ['image-source'],
-    reason:
-      "the camera, the system photo picker and Files behind the composer's [+], with picked.ts's options (exif: false, base64: false, photos only)",
-  },
-  {
-    file: 'src/chat/routes.ts',
-    markers: ['attachments-route'],
-    reason: 'the chat route table: CHAT_ROUTES.attachments is POST /api/attachments',
-  },
-  {
-    file: 'src/api/client.ts',
-    markers: ['form-data'],
-    reason:
-      "the foundation client's multipart helper (US-004a): encodeBody passes a FormData through untouched; it builds none",
-  },
-  {
-    file: 'src/api/transport-types.ts',
-    markers: ['form-data'],
-    reason: 'types a request body as a JSON string or a FormData',
-  },
-  {
-    file: 'src/connect/scanner/QrScanner.tsx',
-    markers: ['image-source'],
-    reason:
-      "expo-camera's CameraView reads QR codes for pairing; it takes no picture (camera-capture is allowed nowhere)",
   },
 ];
 

@@ -4,7 +4,8 @@
 // expo-secure-store import, every call that reaches the keychain (the module, the SecureKeyStore
 // port, the key registry) and the key it passes, every keychainAccessible value and keychain
 // class, every string literal. A file that writes the keychain with a key of its own, a literal
-// key, a weaker class or no options fails here with its path and line.
+// key, a weaker class or no options fails here with its path and line. Which files are the adapters,
+// pass on a key or write through a port is the app's (settings/secure-store-audit.ts).
 // src/release/__tests__/user-data.test.ts proves what the registry's lists do at sign-out and at
 // the first launch after a reinstall.
 
@@ -21,6 +22,12 @@ import {
   type SecureKeyEntry,
 } from '../../storage/secure-registry';
 import {
+  ADAPTER_FILES,
+  FORWARDERS,
+  PORT_WRITES,
+  WRITE_OPTION_NAMES,
+} from './settings/secure-store-audit';
+import {
   SECURE_STORE_MODULE,
   exportedStrings,
   scanKeychain,
@@ -29,60 +36,13 @@ import {
 import { productFiles, repoRoot } from './support/tree';
 
 const REGISTRY_FILE = 'src/storage/secure-registry.ts';
-/** The two files wired to the native module (the one keychain options object, the MMKV key). */
-const ADAPTERS: readonly string[] = ['src/lib/secure-store.ts', 'src/storage/mmkv.ts'];
 /** The classes that never leave this phone (KR9): no iCloud Keychain, no backup onto another. */
 const DEVICE_ONLY: readonly string[] = [
   'AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY',
   'WHEN_UNLOCKED_THIS_DEVICE_ONLY',
 ];
-/** The options a raw keychain write may pass: the app's KEYCHAIN_OPTIONS, under its names. */
-const WRITE_OPTIONS: readonly string[] = [
-  'options',
-  'KEYCHAIN_OPTIONS',
-  'keychain.options',
-  'registry.options',
-];
-
-type Forwarder = Readonly<{ file: string; arg: string; reason: string }>;
-
-/** Calls that pass on a key they were given; who gives it is audited here too. */
-const FORWARDERS: readonly Forwarder[] = [
-  {
-    file: 'src/lib/secure-keys.ts',
-    arg: 'key',
-    reason: "The registry's own write, remove and wipe: the key its caller passed.",
-  },
-  {
-    file: 'src/lib/secure-keys.ts',
-    arg: 'checkedKey(key)',
-    reason: "The registry's read: the caller's key, checked against expo-secure-store's rule.",
-  },
-  {
-    file: 'src/storage/mmkv.ts',
-    arg: 'key',
-    reason: "The SecureKeyStore adapter: encrypted-storage.ts's STORAGE_KEY_ITEM.",
-  },
-  {
-    file: 'src/auth/token-cache.ts',
-    arg: 'key',
-    reason: "Clerk's own key: the registry's write names it in the index before the item.",
-  },
-  {
-    file: REGISTRY_FILE,
-    arg: 'key',
-    reason: 'clearUserKeys deletes what the registry lists.',
-  },
-];
-
-/** Raw keychain writes with no options: a port whose one adapter adds them. */
-const PORT_WRITES: readonly Readonly<{ file: string; receiver: string; reason: string }>[] = [
-  {
-    file: 'src/storage/encrypted-storage.ts',
-    receiver: 'deps.secureStore',
-    reason: 'SecureKeyStore: its one adapter, src/storage/mmkv.ts, writes with KEYCHAIN_OPTIONS.',
-  },
-];
+const ADAPTERS = ADAPTER_FILES.entries;
+const WRITE_OPTIONS = WRITE_OPTION_NAMES.entries;
 
 const products = productFiles();
 const scans = products.map(scanKeychain);

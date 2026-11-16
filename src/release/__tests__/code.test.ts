@@ -21,9 +21,9 @@ describe('stripComments', () => {
   it("keeps a '//' inside a string and a template", () => {
     const code = stripComments(
       'b.ts',
-      "const url = 'https://automatos.app/privacy';\nconst t = `//x`;",
+      "const url = 'https://example.com/privacy';\nconst t = `//x`;",
     );
-    expect(code).toContain("'https://automatos.app/privacy'");
+    expect(code).toContain("'https://example.com/privacy'");
     expect(code).toContain('`//x`');
   });
 

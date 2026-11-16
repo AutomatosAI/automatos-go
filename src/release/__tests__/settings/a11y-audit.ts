@@ -2,6 +2,9 @@
 // reviewed, with its reason: an icon-only pressable that is not the IconButton primitive, and the
 // one text that does not grow with Dynamic Type. A new one fails the audit until it is moved to the
 // primitive (or scales) or is listed here with a reason. A listed one that is gone fails it too.
+// The audit's own rules (the 11 pt floor, the least cap, the IconButton file) are in support/a11y.ts.
+
+import { frozen } from './types';
 
 export type A11yRule = 'ICON_ONLY' | 'SCALING_OFF';
 
@@ -13,16 +16,7 @@ export type AllowedA11y = Readonly<{
   reason: string;
 }>;
 
-/** D38's floor: no text under 11 pt (src/styles/type.ts MIN_TEXT_SIZE). */
-export const MIN_TEXT_POINTS = 11;
-
-/** The least cap on Dynamic Type the audit accepts, with a one-line reason above it. */
-export const LEAST_FONT_SCALE_CAP = 2;
-
-/** The primitive every icon-only button goes through: its accessibilityLabel is required. */
-export const ICON_BUTTON_FILE = 'src/ui/IconButton.tsx';
-
-export const ALLOWED: readonly AllowedA11y[] = [
+export const ALLOWED: readonly AllowedA11y[] = frozen([
   {
     file: 'src/chat/home/MenuButton.tsx',
     text: 'Pressable in MenuButton',
@@ -72,4 +66,4 @@ export const ALLOWED: readonly AllowedA11y[] = [
     reason:
       "Lost's huge '404' (US-017f, D38): a mark behind Auto, not words to read. It is hidden from accessibility (accessibilityElementsHidden, no-hide-descendants) inside a stage of fixed height, and the screen's title and message under it say the same in Text that scales.",
   },
-];
+]);

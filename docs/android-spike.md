@@ -128,7 +128,7 @@ on-screen one still shows.
   (Android 17), from React Native 0.81.5's 36 and 36.0.0; `targetSdkVersion` stays 36, Google Play's
   requirement. React Native 0.81.5 pins 36, so compiling against 37 is past what it was tested with.
 - `app.json`: `REORDER_TASKS` blocked, with its reason in `docs/release/android-permissions.json` and the
-  expected list in `src/config/__tests__/store-rules.ts`. The badge permissions stay: the app sets the
+  expected list in `src/release/__tests__/settings/app-config.ts`. The badge permissions stay: the app sets the
   badge count. The install-referrer service stays for now: the app never calls `getInstallReferrerAsync`,
   so blocking it is a choice to make, not a fix.
 - `plugins/with-gradle-memory.js` and its test: raises the heap and Metaspace on the
