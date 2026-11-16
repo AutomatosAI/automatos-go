@@ -6,7 +6,9 @@
 
 import { describe, expect, it } from 'vitest';
 
+import { STUDIO_CONTROLS } from '../../styles/controls';
 import { STYLE_IDS, tokensFor } from '../../styles/tokens';
+import { STYLE_CONTROLS } from '../../styles/tokens/controls';
 import type { HeaderAction, HeaderActions } from '../Header';
 import {
   HEADER_BAR,
@@ -21,7 +23,6 @@ import {
   showsBack,
 } from '../header-model';
 import { MIN_TOUCH, hitSlopFor } from '../paint';
-import { ICON_BUTTON_SIZES } from '../variants';
 
 const SCHEMES = ['light', 'dark'] as const;
 const noop = () => undefined;
@@ -140,7 +141,7 @@ describe('a large title has scrolled away', () => {
 });
 
 describe('every button in the bar is a 44 pt target', () => {
-  const { box } = ICON_BUTTON_SIZES[HEADER_BUTTON_SIZE];
+  const { box } = STUDIO_CONTROLS.iconButton[HEADER_BUTTON_SIZE];
   const slop = hitSlopFor(box, box);
 
   it("is the template's header button, grown to 44 by its slop", () => {
@@ -150,15 +151,15 @@ describe('every button in the bar is a 44 pt target', () => {
 
   it('fits in a bar tall enough, padded enough and spaced enough for the slop', () => {
     const tightest = { minHeight: MIN_TOUCH, paddingX: slop.left, gap: slop.left + slop.right };
-    expect(headerKeepsTouch(tightest)).toBe(true);
-    expect(headerKeepsTouch({ minHeight: 48, paddingX: 12, gap: 8 })).toBe(true);
+    expect(headerKeepsTouch(tightest, STUDIO_CONTROLS)).toBe(true);
+    expect(headerKeepsTouch({ minHeight: 48, paddingX: 12, gap: 8 }, STUDIO_CONTROLS)).toBe(true);
   });
 
   it('does not fit in a bar that is too short, too tight at the sides or between two buttons', () => {
     const tightest = { minHeight: MIN_TOUCH, paddingX: slop.left, gap: slop.left + slop.right };
-    expect(headerKeepsTouch({ ...tightest, minHeight: tightest.minHeight - 1 })).toBe(false);
-    expect(headerKeepsTouch({ ...tightest, paddingX: tightest.paddingX - 1 })).toBe(false);
-    expect(headerKeepsTouch({ ...tightest, gap: tightest.gap - 1 })).toBe(false);
+    expect(headerKeepsTouch({ ...tightest, minHeight: tightest.minHeight - 1 }, STUDIO_CONTROLS)).toBe(false);
+    expect(headerKeepsTouch({ ...tightest, paddingX: tightest.paddingX - 1 }, STUDIO_CONTROLS)).toBe(false);
+    expect(headerKeepsTouch({ ...tightest, gap: tightest.gap - 1 }, STUDIO_CONTROLS)).toBe(false);
   });
 
   it.each(STYLE_IDS.flatMap((style) => SCHEMES.map((scheme) => [style, scheme] as const)))(
@@ -170,7 +171,7 @@ describe('every button in the bar is a 44 pt target', () => {
         paddingX: spacing[HEADER_BAR.paddingX],
         gap: spacing[HEADER_BAR.gap],
       };
-      expect(headerKeepsTouch(room)).toBe(true);
+      expect(headerKeepsTouch(room, STYLE_CONTROLS[style])).toBe(true);
     },
   );
 });

@@ -7,9 +7,10 @@
 // row of the bars home and Older chats share, D73), and headerKeepsTouch says whether such values
 // keep every button's slop inside the bar. An app sets its own here.
 
+import type { ControlSizes } from '../styles/controls';
 import type { SpaceName } from '../styles/tokens';
 import { MIN_TOUCH, hitSlopFor } from './paint';
-import { ICON_BUTTON_SIZES, type IconButtonSize, type TextLevel } from './variants';
+import type { IconButtonSize, TextLevel } from './variants';
 
 /** The bar's buttons, back and the actions: the template's size for a header's buttons. */
 export const HEADER_BUTTON_SIZE: IconButtonSize = 'md';
@@ -104,10 +105,14 @@ export type HeaderRoom = Readonly<{ minHeight: number; paddingX: number; gap: nu
  * Whether a bar of these sizes keeps every button's 44 pt touch inside it: a touch never lands
  * outside the parent's box, slop or not (paint.ts). The bar must be tall enough for the slop
  * above and below, its side padding wide enough for the slop at each end, and two buttons far
- * enough apart that their slops do not meet. The template's HEADER_BAR is held to this by a test.
+ * enough apart that their slops do not meet. The button's box is the style's (rule 3.5), so the
+ * style's control sizes are given. The template's HEADER_BAR is held to this in every style by a test.
  */
-export function headerKeepsTouch(room: HeaderRoom): boolean {
-  const { box } = ICON_BUTTON_SIZES[HEADER_BUTTON_SIZE];
+export function headerKeepsTouch(
+  room: HeaderRoom,
+  controls: Pick<ControlSizes, 'iconButton'>,
+): boolean {
+  const { box } = controls.iconButton[HEADER_BUTTON_SIZE];
   const slop = hitSlopFor(box, box);
   const tall = room.minHeight >= box + slop.top + slop.bottom;
   const wide = room.paddingX >= slop.left && room.paddingX >= slop.right;

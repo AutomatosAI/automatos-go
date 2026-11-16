@@ -27,12 +27,11 @@ import { PICKER_COPY } from '../../../src/styles/strings';
 import { ReadinessSection } from '../../../src/readiness/ReadinessSection';
 import { RemovePhone } from '../../../src/push/bind/RemovePhone';
 import { pushScreens } from '../../../src/push/nav';
-import { Section } from '../../../src/push/settings/components/Section';
 import { PUSH_ACCOUNT_COPY } from '../../../src/push/strings';
 import { PrivacySection } from '../../../src/release/components/PrivacySection';
 import { PauseSection } from '../../../src/suggestions/PauseSection';
 import { useTokens } from '../../../src/styles/theme';
-import { Card, Divider, IconButton, ListRow, Screen, Text } from '../../../src/ui';
+import { Card, Divider, IconButton, ListRow, Screen, Section, Text } from '../../../src/ui';
 import { VOICE_SCREENS } from '../../../src/voice/nav';
 import { VOICE_SETTINGS_COPY } from '../../../src/voice/strings';
 
