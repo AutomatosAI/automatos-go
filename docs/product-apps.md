@@ -44,7 +44,9 @@ app for consumers nearly always has. An app that knows nobody has its own sectio
    (the owner, 17 Nov 2026). It signs people in with the product's own Clerk application and
    checks each session token with that application's secret key (`verifyToken(token, {
    secretKey, authorizedParties })`, as the Academy's server does), never with a pasted public
-   key or a separate JWT setting.
+   key or a separate JWT setting. A token naming a key id the server has not verified before makes
+   Clerk's library fetch its keys again, so the server lets through at most a few unknown key ids
+   a minute across all callers and answers the rest with a server error, never a 401.
 4. **People are end users.** Consent is recorded before the first memory, a retention period
    applies, and erase is there when asked. Deleting in the product deletes in Automatos.
 5. **Businesses get workspaces** (the third shape only). Made when the business signs up, closed
