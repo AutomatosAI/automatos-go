@@ -117,10 +117,15 @@ keeping, and a product whose subject is sensitive writes its own profile.
 The app shows the person what is remembered, lets them forget one thing, and lets them erase
 everything.
 
-Forgetting one thing has a limit today (verified): a server key can delete only a memory it
-stored itself. What Automatos kept from the person's conversations is in the list, and a key
-cannot remove those one at a time; they go with a full erase. Until that changes, an app offers
-"forget" only on what the product stored, and tells the person that the rest goes with erase.
+Forgetting one thing works on every memory the list shows (automatos-ai #1533, 17 Nov 2026): a
+server key may forget any fact in that end user's own memory, whoever stored it, including what
+Automatos kept from their conversations. A refusal (`cannot_forget`) now means only an older core.
+
+When an account is deleted anywhere (in the app, by an admin, or at the product's Clerk
+application), the product's server runs the same delete: it erases the end user at Automatos,
+marks the install receipts deleted, and removes its own record (rule 8.4). A delete made at Clerk
+reaches the server through Clerk's `user.deleted` webhook, which the server checks with its
+Svix signature (`CLERK_WEBHOOK_SECRET`). A replay of the webhook changes nothing.
 
 ## Erase
 
