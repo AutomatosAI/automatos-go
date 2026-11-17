@@ -39,7 +39,9 @@ app for consumers nearly always has. An app that knows nobody has its own sectio
    exception is a public widget key on a customer's own website. It is held to that site only
    when the key lists the site's domains: a key that lists none answers any site (verified).
 3. **The product has its own server.** It signs people in and is the only thing that calls
-   Automatos.
+   Automatos. It names each agent by the agent's public id (its UUID `public_id`, shown in Studio),
+   never by the internal number: Automatos resolves the public id inside the key's own workspace
+   (the owner, 17 Nov 2026).
 4. **People are end users.** Consent is recorded before the first memory, a retention period
    applies, and erase is there when asked. Deleting in the product deletes in Automatos.
 5. **Businesses get workspaces** (the third shape only). Made when the business signs up, closed
