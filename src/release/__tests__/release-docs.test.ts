@@ -4,8 +4,8 @@
 // app's real labels (imported from each strings module, so a renamed button fails here until the
 // notes follow). The text pasted into a store form (each ```text block of the listing, the review
 // notes and Play's App access) uses no SIGNUP, BILLING or DATA_CLAIMS phrase (US-021k's lists) and
-// none of the words the app's terms rule out. Across every document: one minimum age, 16, but for
-// the ALLOWED quotes; every privacy, terms and support address is legal-links.ts's; and no
+// none of the words the app's terms rule out. Across every document: one minimum age, 18 (R16),
+// but for the ALLOWED quotes (none today); every privacy, terms and support address is legal-links.ts's; and no
 // secret-shaped string, password value or person's email address. Explanations around a block
 // (for Gerard) may name the rules they keep, which is why only the blocks are held to the phrases.
 // The ALLOWED quotes, the terms' words and the review labels are the app's
@@ -169,7 +169,7 @@ describe('the App Store listing (R22)', () => {
     expect(styleCountsIn(description)).toEqual([BUILT_IN_STYLE_IDS.length]);
   });
 
-  it('describes an AI assistant and states one age, 16', () => {
+  it('describes an AI assistant and states one age, 18', () => {
     expect(description).toContain('AI assistant');
     expect(agesIn(description)).toEqual([MINIMUM_AGE]);
   });
@@ -266,7 +266,7 @@ describe('every document in docs/release', () => {
     expect(wrong).toEqual([]);
   });
 
-  it('states one minimum age, 16, but for the ALLOWED quotes (R16)', () => {
+  it('states one minimum age, 18, but for the ALLOWED quotes (R16)', () => {
     const allowed = (file: string, unit: string, age: number) =>
       ALLOWED_AGES.some(
         (entry) => entry.file === file && entry.age === age && unit.includes(entry.text),
@@ -289,10 +289,10 @@ describe('every document in docs/release', () => {
         ),
     );
     expect(stale.map((entry) => `${entry.file}: ${entry.text}`)).toEqual([]);
-    ALLOWED_AGES.forEach((entry) => expect(entry.reason, entry.text).toMatch(/\(D12/));
+    ALLOWED_AGES.forEach((entry) => expect(entry.reason, entry.text).toMatch(/\(R16/));
   });
 
-  it('states 16 in the age rating and the listing', () => {
+  it('states 18 in the age rating and the listing', () => {
     expect(agesIn(readRepoFile(AGE_RATING_DOC))).toContain(MINIMUM_AGE);
     expect(agesIn(listing)).toContain(MINIMUM_AGE);
   });

@@ -1,5 +1,5 @@
 // The store-document audit's settings (release-docs.test.ts, US-021p): the ALLOWED statements of
-// an age other than 16, the words the app's terms rule out of its store text, and the labels the
+// an age other than 18 (none), the words the app's terms rule out of its store text, and the labels the
 // review notes send a reviewer to. The audit's rules (the limits, the minimum age, the secret
 // shapes) are its own (support/release-docs.ts, support/forbidden-copy.ts).
 
@@ -24,30 +24,15 @@ import { frozen } from './types';
 
 export type AllowedAge = Readonly<{ file: string; text: string; age: number; reason: string }>;
 
-/** Statements of an age other than 16 that keep the rule: each exact text, where, and why. */
-export const ALLOWED_AGES: readonly AllowedAge[] = frozen([
-  {
-    file: 'docs/release/age-rating.md',
-    text: 'The live Terms at https://automatos.app/terms (v2.3, section 02) say "You must be at least 18".',
-    age: 18,
-    reason:
-      "Quotes the live Terms' 18 to list it as Gerard's conflict with the one minimum age (D12, KR11, OT-R13). The page's own answers say 16.",
-  },
-  {
-    file: 'docs/release/age-rating.md',
-    text: 'tick only the age groups 16–17 and 18 and over',
-    age: 18,
-    reason:
-      "Play's Target audience names its age groups so; ticking 16–17 and the group above it is how Play shows the one minimum age, 16 (D12).",
-  },
-  {
-    file: 'docs/release/README.md',
-    text: "Resolve the live Terms' minimum age of 18 against D12's 16.",
-    age: 18,
-    reason:
-      "OT-R13's row names the live Terms' 18 as the conflict Gerard resolves (D12, KR11); the record states no age of its own but 16.",
-  },
-]);
+/**
+ * Statements of an age other than 18 that keep the rule: each exact text, where, and why (its
+ * reason cites R16). None since the owner's decision of 16 Nov 2026 (R16: one minimum age, 18,
+ * everywhere, in place of D12's 16). The three quotes this list held all stated 18 against D12's
+ * 16: the live Terms' "You must be at least 18" twice (age-rating.md, OT-R13's row in README.md),
+ * which is now simply the one age, and Play's age groups, where the app now ticks only "18 and
+ * over". Every age docs/release states is 18, with no exception.
+ */
+export const ALLOWED_AGES: readonly AllowedAge[] = frozen([]);
 
 /** The words of the app's terms (CLAUDE.md 'Terms') that its store text never uses. */
 export const RULED_OUT_TERMS: readonly RegExp[] = Object.freeze([

@@ -78,10 +78,13 @@ export function forbiddenIn(text: string): { rule: CopyRuleId; phrase: string }[
   });
 }
 
-/** The one minimum age (D12, KR11): store metadata, Terms, policy and app copy. */
-export const MINIMUM_AGE = 16;
+/**
+ * The one minimum age (R16, the owner, 16 Nov 2026, in place of D12's 16): store metadata, Terms,
+ * policy and app copy. No app asks the person's age.
+ */
+export const MINIMUM_AGE = 18;
 
-/** A statement of age, its number captured: '16 or older', 'aged 16', 'at least 16 years'. */
+/** A statement of age, its number captured: '18 or older', 'aged 18', 'at least 18 years'. */
 export const AGE_STATEMENTS: readonly RegExp[] = [
   /\b(\d{1,2}) ?(?:years? (?:old|of age)|or older|or over|and older|and over)\b/gi,
   /\b(?:aged?|ages|age of|minimum age(?: is| of)?) (\d{1,2})\b/gi,

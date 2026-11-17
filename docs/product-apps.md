@@ -39,7 +39,14 @@ app for consumers nearly always has. An app that knows nobody has its own sectio
    exception is a public widget key on a customer's own website. It is held to that site only
    when the key lists the site's domains: a key that lists none answers any site (verified).
 3. **The product has its own server.** It signs people in and is the only thing that calls
-   Automatos.
+   Automatos. It names each agent by the agent's public id (its UUID `public_id`, shown in Studio),
+   never by the internal number: Automatos resolves the public id inside the key's own workspace
+   (the owner, 17 Nov 2026). It signs people in with the product's own Clerk application and
+   checks each session token with that application's secret key (`verifyToken(token, {
+   secretKey, authorizedParties })`, as the Academy's server does), never with a pasted public
+   key or a separate JWT setting. A token naming a key id the server has not verified before makes
+   Clerk's library fetch its keys again, so the server lets through at most a few unknown key ids
+   a minute across all callers and answers the rest with a server error, never a 401.
 4. **People are end users.** Consent is recorded before the first memory, a retention period
    applies, and erase is there when asked. Deleting in the product deletes in Automatos.
 5. **Businesses get workspaces** (the third shape only). Made when the business signs up, closed
@@ -117,10 +124,15 @@ keeping, and a product whose subject is sensitive writes its own profile.
 The app shows the person what is remembered, lets them forget one thing, and lets them erase
 everything.
 
-Forgetting one thing has a limit today (verified): a server key can delete only a memory it
-stored itself. What Automatos kept from the person's conversations is in the list, and a key
-cannot remove those one at a time; they go with a full erase. Until that changes, an app offers
-"forget" only on what the product stored, and tells the person that the rest goes with erase.
+Forgetting one thing works on every memory the list shows (automatos-ai #1533, 17 Nov 2026): a
+server key may forget any fact in that end user's own memory, whoever stored it, including what
+Automatos kept from their conversations. A refusal (`cannot_forget`) now means only an older core.
+
+When an account is deleted anywhere (in the app, by an admin, or at the product's Clerk
+application), the product's server runs the same delete: it erases the end user at Automatos,
+marks the install receipts deleted, and removes its own record (rule 8.4). A delete made at Clerk
+reaches the server through Clerk's `user.deleted` webhook, which the server checks with its
+Svix signature (`CLERK_WEBHOOK_SECRET`). A replay of the webhook changes nothing.
 
 ## Erase
 
