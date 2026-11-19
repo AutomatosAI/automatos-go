@@ -166,6 +166,7 @@ The template is held to the standard too. Each line is a rule's "Owed".
 | T33 | One list footer's live region on `useAnnounce`: Older chats' footer, where Load more's failure appears after a tap | 10.2 | Found by the announcement audit (16 Nov), which lists it in `settings/announcements.ts`. Its file changed in parallel, so only the out-of-date line went in with that change |
 | T34 | A line a sighted person can read that says why the slider's thumb stops at its limit | 10.4 | The part past the limit is drawn faded and is decoration: it reads about 1 to 1 on its track, and the contrast test does not hold it. The thumb stops there and the value is said in words, but only a screen reader is told why (`src/ui/Slider.tsx`) |
 | T35 | `yaml`, which the audits use to read workflow files, declared in `package.json` | 14.2 | `settings/audit-imports.ts` lists it with its reason. It arrives today only through other packages (Expo's bundler config and vitest's vite), so it would be gone if they dropped it. Declaring it goes with the next change to `package.json` |
+| T36 | The brand lockup as one component, `src/ui/BrandLockup.tsx` (sail mark, **Automatos** bold, the product's name light), and one constant for the "Powered by Automatos AI" line | 8.6, 8.3 | Rule 8.6 was added 20 Nov 2026 after one app drew its own mark and set its name in capitals. The template today has `BrandMark` on Welcome only. Each app then takes the component; an app that keeps its own mark writes the difference down |
 
 ## Found by a copy while lifting, fixed 16 Nov
 
