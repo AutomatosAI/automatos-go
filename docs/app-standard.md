@@ -359,6 +359,19 @@ and then on the phone, is safe to repeat, and names on screen what was left undo
 half way. A second person who signs in on the same phone finds nothing of the first. Held by:
 `src/release/__tests__/user-data.test.ts`.
 
+**8.6 One brand, one lockup. (Must)** Every product app belongs to one brand. Where the app shows
+its name (the header of the first screen, the website, the About screen), the name is the
+lockup: the Automatos sail mark, then **Automatos** in the bold weight, then the product's name
+in the light weight, in the app's own face and in sentence case. The sail mark is always the
+shared one. An app does not draw its own mark beside the name or set the name in capitals. The
+"Powered by Automatos AI" line from rule 8.3 is the sail mark alone with those words, from one
+constant. The one place a product looks its own is the home-screen icon and the store listing,
+where an app must be told apart from its neighbours: the same tile shape and corner radius as
+the other apps, the product's own glyph and accent colour. A business that puts the app under its
+own name puts its own logo in the header and keeps the "Powered by" line. Held by: review. Owed:
+the template ships the lockup as one component, `src/ui/BrandLockup.tsx`, and the constant for
+the "Powered by" line.
+
 ## 9. Where a person meets an AI
 
 **9.1 The AI label. (Must)** Wherever a person talks to an AI or reads what an AI wrote, one small
